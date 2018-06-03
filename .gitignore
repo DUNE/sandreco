@@ -1,0 +1,5 @@
+*.so
+*.pcm
+*.d
+*.log
+*.root
