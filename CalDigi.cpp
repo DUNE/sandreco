@@ -105,13 +105,15 @@ C                      + 1ns  uncertainty
       TSCEX  0.588
   */
   
-  double tscin = 3.08E-9;
+  double tscin = 3.08;
   double tscex = 0.588;
   double vlfb = 5.85;
   
+  double mm_to_m = 1E-3;
+  
   double tdec = tscin * TMath::Power(1./r.Uniform()-1.,tscex);
   
-  double time = t0 + tdec + vlfb * d + r.Gaus();
+  double time = t0 + tdec + vlfb * d * mm_to_m + r.Gaus();
   
   if(debug)
     std::cout << "time: " << time << std::endl;
@@ -185,13 +187,6 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
   double cellw = dx / 12.;
   
   cellID = (Plocal[0] + dx*0.5) / cellw;
-  
-  /*
-  if(cellID == 4 && planeID == 0 && modID == 21)
-  {
-    std::cout << x << " " << y << " " << z << " " << g->FindNode(x,y,z)->GetName() << " " << g->GetCurrentNavigator()->GetCurrentPoint()[0] << " " << g->GetCurrentNavigator()->GetCurrentPoint()[1] << " " << g->GetCurrentNavigator()->GetCurrentPoint()[2] << " " << g->GetCurrentNavigator()->GetPath() << " " << g->GetTopVolume()->GetName() << " " << g->GetCurrentNode()->GetName() << " " << cellID << " " << planeID << " " << modID << " " << node->GetName() << std::endl;
-  }
-  */
   
   if(debug)
   {
@@ -324,8 +319,8 @@ void analize(const char* finname, const char* foutname)
     tev.Branch("cellADC","std::map<int, double>",&adc);
     tev.Branch("cellTDC","std::map<int, double>",&tdc);
     
-    //const int nev = t->GetEntries();
-    const int nev = 100;
+    const int nev = t->GetEntries();
+    //const int nev = 100;
     
     std::cout << "Events: " << nev << " [";
     std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -363,30 +358,59 @@ void checkfast(const char* fname)
   TTree* t = (TTree*) f.Get("Events");
       
   std::map<int, std::vector<double> >* list_pe = new std::map<int, std::vector<double> >;
+  std::map<int, double>* adc = new std::map<int, double>;
+  std::map<int, double>* tdc = new std::map<int, double>;
   
-  t->SetBranchAddress("cellPE", &list_pe);
+  t->SetBranchAddress("cellPE",  &list_pe);
+  t->SetBranchAddress("cellADC", &adc);
+  t->SetBranchAddress("cellTDC", &tdc);
   
-  TH1I* h_id = new TH1I("h_id","Cell ID",50000,-25000,25000);
-  TH1I* h_pe = new TH1I("h_pe","pe",1000,0,1000);
+  TH1I* h_id  = new TH1I("h_id","Cell ID",50000,-25000,25000);
+  TH1I* h_pe  = new TH1I("h_pe","pe",1000,0,1000);
+  TH1I* h_adc = new TH1I("h_adc","adc",1000,0,1000);
+  TH1I* h_tdc = new TH1I("h_tdc","tdc",250,0,25000);
   
-  h_id->SetDirectory(0);
-  h_pe->SetDirectory(0);
+  h_id ->SetDirectory(0);
+  h_pe ->SetDirectory(0);
+  h_adc->SetDirectory(0);
+  h_tdc->SetDirectory(0);
   
-  std::cout << "Entries: " << t->GetEntries() << std::endl;
+  const int nev = t->GetEntries();
+    
+  std::cout << "Events: " << nev << " [";
+  std::cout << std::setw(3) << int(0) << "%]" << std::flush;
   
   for(int i = 0; i < t->GetEntries(); i++)
   {
     t->GetEntry(i);
+    
+    std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i)/nev*100) << "%]" << std::flush;
     
     for(std::map<int, std::vector<double> >::iterator it=list_pe->begin(); it != list_pe->end(); ++it)
     {
       h_id->Fill(it->first);
       h_pe->Fill(it->second.size());
     }
+    
+    for(std::map<int, double>::iterator it=adc->begin(); it != adc->end(); ++it)
+    {
+      h_adc->Fill(it->second);
+    }
+    
+    for(std::map<int, double>::iterator it=tdc->begin(); it != tdc->end(); ++it)
+    {
+      h_tdc->Fill(it->second);
+    }
   }
+  std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
+  std::cout << std::endl;
   
   TCanvas* c1 = new TCanvas();
   h_id->Draw();
   TCanvas* c2 = new TCanvas();
   h_pe->Draw();
+  TCanvas* c3 = new TCanvas();
+  h_adc->Draw();
+  TCanvas* c4 = new TCanvas();
+  h_tdc->Draw();
 }
