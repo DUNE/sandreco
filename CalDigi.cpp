@@ -105,13 +105,15 @@ C                      + 1ns  uncertainty
       TSCEX  0.588
   */
   
-  double tscin = 3.08E-9;
+  double tscin = 3.08;
   double tscex = 0.588;
   double vlfb = 5.85;
   
+  double mm_to_m = 1E-3;
+  
   double tdec = tscin * TMath::Power(1./r.Uniform()-1.,tscex);
   
-  double time = t0 + tdec + vlfb * d + r.Gaus();
+  double time = t0 + tdec + vlfb * d * mm_to_m + r.Gaus();
   
   if(debug)
     std::cout << "time: " << time << std::endl;
@@ -317,8 +319,8 @@ void analize(const char* finname, const char* foutname)
     tev.Branch("cellADC","std::map<int, double>",&adc);
     tev.Branch("cellTDC","std::map<int, double>",&tdc);
     
-    //const int nev = t->GetEntries();
-    const int nev = 100;
+    const int nev = t->GetEntries();
+    //const int nev = 100;
     
     std::cout << "Events: " << nev << " [";
     std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -366,7 +368,7 @@ void checkfast(const char* fname)
   TH1I* h_id  = new TH1I("h_id","Cell ID",50000,-25000,25000);
   TH1I* h_pe  = new TH1I("h_pe","pe",1000,0,1000);
   TH1I* h_adc = new TH1I("h_adc","adc",1000,0,1000);
-  TH1I* h_tdc = new TH1I("h_tdc","tdc",250,0,25000);
+  TH1I* h_tdc = new TH1I("h_tdc","tdc",1000,0,100);
   
   h_id ->SetDirectory(0);
   h_pe ->SetDirectory(0);
@@ -374,11 +376,12 @@ void checkfast(const char* fname)
   h_tdc->SetDirectory(0);
   
   const int nev = t->GetEntries();
+  //const int nev = 100;
     
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
   
-  for(int i = 0; i < t->GetEntries(); i++)
+  for(int i = 0; i < nev; i++)
   {
     t->GetEntry(i);
     
