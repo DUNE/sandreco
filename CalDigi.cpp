@@ -365,19 +365,24 @@ void checkfast(const char* fname)
   
   TH1I* h_id  = new TH1I("h_id","Cell ID",50000,-25000,25000);
   TH1I* h_pe  = new TH1I("h_pe","pe",1000,0,1000);
-  TH1I* h_adc = new TH1I("h_adc","pe",100000,0,100000);
-  TH1I* h_tdc = new TH1I("h_tdc","pe",100000,0,100000);
+  TH1I* h_adc = new TH1I("h_adc","adc",1000,0,1000);
+  TH1I* h_tdc = new TH1I("h_tdc","tdc",250,0,25000);
   
   h_id ->SetDirectory(0);
   h_pe ->SetDirectory(0);
   h_adc->SetDirectory(0);
   h_tdc->SetDirectory(0);
   
-  std::cout << "Entries: " << t->GetEntries() << std::endl;
+  const int nev = t->GetEntries();
+    
+  std::cout << "Events: " << nev << " [";
+  std::cout << std::setw(3) << int(0) << "%]" << std::flush;
   
   for(int i = 0; i < t->GetEntries(); i++)
   {
     t->GetEntry(i);
+    
+    std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i)/nev*100) << "%]" << std::flush;
     
     for(std::map<int, std::vector<double> >::iterator it=list_pe->begin(); it != list_pe->end(); ++it)
     {
@@ -385,16 +390,18 @@ void checkfast(const char* fname)
       h_pe->Fill(it->second.size());
     }
     
-    for(std::map<int, double> >::iterator it=adc->begin(); it != adc->end(); ++it)
+    for(std::map<int, double>::iterator it=adc->begin(); it != adc->end(); ++it)
     {
       h_adc->Fill(it->second);
     }
     
-    for(std::map<int, double> >::iterator it=tdc->begin(); it != tdc->end(); ++it)
+    for(std::map<int, double>::iterator it=tdc->begin(); it != tdc->end(); ++it)
     {
       h_tdc->Fill(it->second);
     }
   }
+  std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
+  std::cout << std::endl;
   
   TCanvas* c1 = new TCanvas();
   h_id->Draw();
