@@ -154,6 +154,8 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
   
   delete obja;
   
+  // planeID==0 -> smallest slab
+  // planeID==208 -> biggest slab
   planeID = slabID/40;
   
   if (planeID > 4) planeID = 4;
@@ -366,9 +368,9 @@ void checkfast(const char* fname)
   t->SetBranchAddress("cellTDC", &tdc);
   
   TH1I* h_id  = new TH1I("h_id","Cell ID",50000,-25000,25000);
-  TH1I* h_pe  = new TH1I("h_pe","pe",1000,0,1000);
-  TH1I* h_adc = new TH1I("h_adc","adc",1000,0,1000);
-  TH1I* h_tdc = new TH1I("h_tdc","tdc",250,0,25000);
+  TH1I* h_pe  = new TH1I("h_pe","pe",100,0,100);
+  TH1I* h_adc = new TH1I("h_adc","adc",100,0,100);
+  TH1I* h_tdc = new TH1I("h_tdc","tdc",100,0,100);
   
   h_id ->SetDirectory(0);
   h_pe ->SetDirectory(0);
@@ -380,7 +382,7 @@ void checkfast(const char* fname)
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
   
-  for(int i = 0; i < t->GetEntries(); i++)
+  for(int i = 0; i < nev; i++)
   {
     t->GetEntry(i);
     
