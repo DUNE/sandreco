@@ -73,7 +73,7 @@ void init(const char* fname)
   dummyLoc[2] = 0.;
   geo->LocalToMaster(dummyLoc, centerKLOE);
   
-  int dzlay[nLay+1] = {115, 88, 66, 44, 22, 0};
+  int dzlay[nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
   double dx1[nLay];
   double dx2[nLay];
   
@@ -248,11 +248,57 @@ void show(int index)
   
   for(unsigned int i = 0; i < ev->Trajectories.size(); i++)
   {
-    for(unsigned int j = 0; j < ev->Trajectories[i].Points.size() - 1; j++)
+    TGraph* tr = new TGraph(ev->Trajectories[i].Points.size());
+    for(unsigned int j = 0; j < ev->Trajectories[i].Points.size(); j++)
     {
-      TLine* l = new TLine(ev->Trajectories[i].Points[j].Position.Z(),ev->Trajectories[i].Points[j].Position.Y(),ev->Trajectories[i].Points[j+1].Position.Z(),ev->Trajectories[i].Points[j+1].Position.Y());
-      
-      l->Draw();
+      tr->SetPoint(j, ev->Trajectories[i].Points[j].Position.Z(),ev->Trajectories[i].Points[j].Position.Y());
     }
+    
+    switch(ev->Trajectories[i].PDGCode)
+    {
+      // photons
+      case 22:
+        tr->SetLineStyle(7);
+      // e+/e-
+      case 11:
+      case -11:
+        tr->SetLineColor(kRed);
+      break;
+      
+      // mu+/mu-
+      case 13:
+      case -13:
+        tr->SetLineColor(kBlue);
+      break;
+      
+      // proton
+      case 2212:
+        tr->SetLineColor(kBlack);
+      break;
+      
+      // neutron
+      case 2112:
+        tr->SetLineStyle(7);
+        tr->SetLineColor(kGray);
+      break;
+      
+      // pion0
+      case 111:
+        tr->SetLineStyle(7);
+        tr->SetLineColor(kMagenta);
+      break;
+      
+      // pion+/pion- 
+      case 211:
+      case -211:;
+        tr->SetLineColor(kCyan);
+      break;
+      
+      default:
+        tr->SetLineColor(8);
+      break;        
+    }
+    
+    tr->Draw("l");
   }
 }
