@@ -38,23 +38,23 @@ double Attenuation(double d, int planeID)
        p1   0.35
 */
   const double p1 = 0.35;
-  const double alt1 = 50.;
+  const double alt1 = 500.;
   double alt2 = 0.0;
   
   switch (planeID)
   {
     case 0: 
     case 1: 
-      alt2 = 430.0;
+      alt2 = 4300.0;
     break;
      
     case 2: 
-      alt2 = 380.0;
+      alt2 = 3800.0;
     break;
      
     case 3: 
     case 4: 
-      alt2 = 330.0;
+      alt2 = 3300.0;
     break;
      
     default: 
