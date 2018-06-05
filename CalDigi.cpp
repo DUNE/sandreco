@@ -8,6 +8,7 @@
 #include <TFile.h>
 #include <TCanvas.h>
 #include <TH1I.h>
+#include <TH2D.h>
 #include <TRandom3.h>
 
 #include "/mnt/nas01/users/mtenti/sw/edep-sim/edep-sim-bin/include/edep-sim/TG4Event.h"
@@ -154,6 +155,8 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
   
   delete obja;
   
+  // planeID==0 -> smallest slab
+  // planeID==208 -> biggest slab
   planeID = slabID/40;
   
   if (planeID > 4) planeID = 4;
@@ -366,17 +369,24 @@ void checkfast(const char* fname)
   t->SetBranchAddress("cellTDC", &tdc);
   
   TH1I* h_id  = new TH1I("h_id","Cell ID",50000,-25000,25000);
-  TH1I* h_pe  = new TH1I("h_pe","pe",1000,0,1000);
-  TH1I* h_adc = new TH1I("h_adc","adc",1000,0,1000);
-  TH1I* h_tdc = new TH1I("h_tdc","tdc",1000,0,100);
+  TH1I* h_pe  = new TH1I("h_pe","pe",100,0,100);
+  TH1I* h_adc = new TH1I("h_adc","adc",100,0,100);
+  TH1D* h_tdc = new TH1D("h_tdc","tdc",200,0,100);
+  TH1D* h_tdif = new TH1D("h_tdif","diff",500,-100,100);
+  TH1D* h_tsum = new TH1D("h_tsum","sum",200,0,100);
+  TH2D* h1 = new TH2D("h1","",100,0,100,100,0,100);
   
   h_id ->SetDirectory(0);
   h_pe ->SetDirectory(0);
   h_adc->SetDirectory(0);
   h_tdc->SetDirectory(0);
   
-  const int nev = t->GetEntries();
-  //const int nev = 100;
+  h_tdif->SetDirectory(0);
+  h_tsum->SetDirectory(0);
+  h1->SetDirectory(0);
+  
+  //const int nev = t->GetEntries();
+  const int nev = 1000;
     
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -396,11 +406,20 @@ void checkfast(const char* fname)
     for(std::map<int, double>::iterator it=adc->begin(); it != adc->end(); ++it)
     {
       h_adc->Fill(it->second);
+      h1->Fill(it->second,(*tdc)[it->first]);
     }
     
     for(std::map<int, double>::iterator it=tdc->begin(); it != tdc->end(); ++it)
     {
       h_tdc->Fill(it->second);
+      if(it->first > 0)
+      {
+        if(it->second > 0 && (*tdc)[-1*it->first] > 0)
+        {
+          h_tsum->Fill(it->second + (*tdc)[-1*it->first]);
+          h_tdif->Fill(it->second - (*tdc)[-1*it->first]);
+        }
+      }
     }
   }
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
@@ -414,4 +433,10 @@ void checkfast(const char* fname)
   h_adc->Draw();
   TCanvas* c4 = new TCanvas();
   h_tdc->Draw();
+  TCanvas* c5 = new TCanvas();
+  h_tsum->Draw();
+  TCanvas* c6 = new TCanvas();
+  h_tdif->Draw();
+  TCanvas* c7 = new TCanvas();
+  h1->Draw("colz");
 }
