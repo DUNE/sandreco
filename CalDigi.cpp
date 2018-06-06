@@ -25,7 +25,7 @@
  
 TRandom3 r;
 
-const bool debug = false;
+const bool debug = true;
 
 double Attenuation(double d, int planeID)
 {
@@ -118,7 +118,12 @@ C                      + 1ns  uncertainty
   double time = t0 + tdec + vlfb * d * mm_to_m + r.Gaus();
   
   if(debug)
-    std::cout << "time: " << time << std::endl;
+  {
+    std::cout << "time : " << time << std::endl;
+    std::cout << "t0   : " << t0 << std::endl;
+    std::cout << "scint: " << tdec << std::endl;
+    std::cout << "prop : " << vlfb * d * mm_to_m << std::endl;
+  }
     
   
   return time;
@@ -241,12 +246,12 @@ void SimulatePE(TG4Event* ev, TGeoManager* g, int index, std::map<int, std::vect
             
             for(int i = 0; i < pe1; i++)
             {
-              list_pe[id].push_back(petime(de, d1));
+              list_pe[id].push_back(petime(t0, d1));
             }
             
             for(int i = 0; i < pe2; i++)
             {
-              list_pe[-1*id].push_back(petime(de, d2));
+              list_pe[-1*id].push_back(petime(t0, d2));
             }            
           }
         }
@@ -324,7 +329,7 @@ void analize(const char* finname, const char* foutname)
     tev.Branch("cellTDC","std::map<int, double>",&tdc);
     
     const int nev = t->GetEntries();
-    //const int nev = 100;
+    //const int nev = 1;
     
     std::cout << "Events: " << nev << " [";
     std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -392,6 +397,8 @@ void checkfast(const char* fname)
   TH1D* hlaysumADC4 = new TH1D("hlaysumADC4","",100,0,200);
   TH1D* hlaysumADC5 = new TH1D("hlaysumADC5","",100,0,200);
   
+  TH1D* htest1 = new TH1D("htest1","",100,0,10);
+  
   h_id ->SetDirectory(0);
   h_pe ->SetDirectory(0);
   h_adc->SetDirectory(0);
@@ -413,8 +420,9 @@ void checkfast(const char* fname)
   hlaysumADC4->SetDirectory(0);
   hlaysumADC5->SetDirectory(0);
   
-  //const int nev = t->GetEntries();
-  const int nev = 1000;
+  htest1->SetDirectory(0);
+  
+  const int nev = t->GetEntries();
     
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -495,6 +503,7 @@ void checkfast(const char* fname)
           {
              case 0:
                hlaysum1->Fill(it->second + (*tdc)[-1*it->first]);
+               htest1->Fill(0.5*(it->second + (*tdc)[-1*it->first]) - 0.5*4.3*5.85);
              break;
              case 1:
                hlaysum2->Fill(it->second + (*tdc)[-1*it->first]);
@@ -519,6 +528,7 @@ void checkfast(const char* fname)
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
   
+  /*
   TCanvas* c1 = new TCanvas();
   h_id->Draw();
   TCanvas* c2 = new TCanvas();
@@ -562,4 +572,8 @@ void checkfast(const char* fname)
   hlaysumADC4->Draw("E0");
   TCanvas* c17 = new TCanvas();
   hlaysumADC5->Draw("E0");
+  */
+  
+  TCanvas* c18 = new TCanvas();
+  htest1->Draw();
 }
