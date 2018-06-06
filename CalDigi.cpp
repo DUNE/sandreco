@@ -25,7 +25,7 @@
  
 TRandom3 r;
 
-const bool debug = true;
+const bool debug = false;
 
 double Attenuation(double d, int planeID)
 {
