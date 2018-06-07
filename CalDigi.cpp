@@ -378,26 +378,26 @@ void checkfast(const char* fname)
   TH1I* h_pe  = new TH1I("h_pe","pe",100,0,100);
   
   TH1I* h_adc = new TH1I("h_adc","adc",100,0,100);
-  TH1D* h_tdc = new TH1D("h_tdc","tdc",200,0,100);
+  TH1D* h_tdc = new TH1D("h_tdc","tdc",200,10,40);
   
-  TH1D* h_tdif = new TH1D("h_tdif","diff",100,-20,20);
-  TH1D* h_tsum = new TH1D("h_tsum","sum",100,20,40);
+  TH1D* h_tdif = new TH1D("h_tdif","diff",100,-10,10);
+  TH1D* h_tsum = new TH1D("h_tsum","sum",100,35,55);
   
   TH2D* h1 = new TH2D("h1","",100,0,100,100,0,100);
   
-  TH1D* hlaysum1 = new TH1D("hlaysum1","",100,20,35);
-  TH1D* hlaysum2 = new TH1D("hlaysum2","",100,20,35);
-  TH1D* hlaysum3 = new TH1D("hlaysum3","",100,20,35);
-  TH1D* hlaysum4 = new TH1D("hlaysum4","",100,20,35);
-  TH1D* hlaysum5 = new TH1D("hlaysum5","",100,20,35);
+  TH1D* hlaysum1 = new TH1D("hlaysum1","",100,40,50);
+  TH1D* hlaysum2 = new TH1D("hlaysum2","",100,40,50);
+  TH1D* hlaysum3 = new TH1D("hlaysum3","",100,40,50);
+  TH1D* hlaysum4 = new TH1D("hlaysum4","",100,40,50);
+  TH1D* hlaysum5 = new TH1D("hlaysum5","",100,40,50);
   
-  TH1D* hlaysumADC1 = new TH1D("hlaysumADC1","",100,0,200);
-  TH1D* hlaysumADC2 = new TH1D("hlaysumADC2","",100,0,200);
-  TH1D* hlaysumADC3 = new TH1D("hlaysumADC3","",100,0,200);
-  TH1D* hlaysumADC4 = new TH1D("hlaysumADC4","",100,0,200);
-  TH1D* hlaysumADC5 = new TH1D("hlaysumADC5","",100,0,200);
+  TH1D* hlaysumADC1 = new TH1D("hlaysumADC1","",100,50,400);
+  TH1D* hlaysumADC2 = new TH1D("hlaysumADC2","",100,50,400);
+  TH1D* hlaysumADC3 = new TH1D("hlaysumADC3","",100,50,400);
+  TH1D* hlaysumADC4 = new TH1D("hlaysumADC4","",100,50,400);
+  TH1D* hlaysumADC5 = new TH1D("hlaysumADC5","",100,50,400);
   
-  TH1D* htest1 = new TH1D("htest1","",100,0,10);
+  TH1D* htest1 = new TH1D("htest1","",100,6,12);
   
   h_id ->SetDirectory(0);
   h_pe ->SetDirectory(0);
@@ -528,7 +528,6 @@ void checkfast(const char* fname)
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
   
-  /*
   TCanvas* c1 = new TCanvas();
   h_id->Draw();
   TCanvas* c2 = new TCanvas();
@@ -572,8 +571,8 @@ void checkfast(const char* fname)
   hlaysumADC4->Draw("E0");
   TCanvas* c17 = new TCanvas();
   hlaysumADC5->Draw("E0");
-  */
   
   TCanvas* c18 = new TCanvas();
-  htest1->Draw();
+  htest1->Fit("gaus");
+  htest1->Draw("E0");
 }
