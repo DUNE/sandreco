@@ -18,7 +18,7 @@ void searchRad(TGeoVolume* vol)
 
 void radmass()
 {
-  TGeoManager* geo = TGeoManager::Import("../../../wd/config/geo/files/geometry_v11.gdml");
+  TGeoManager* geo = TGeoManager::Import("../../../wd/config/geo/files/geometry_v12.gdml");
   
   rmass = 0.;
   
