@@ -378,26 +378,29 @@ void checkfast(const char* fname)
   TH1I* h_pe  = new TH1I("h_pe","pe",100,0,100);
   
   TH1I* h_adc = new TH1I("h_adc","adc",100,0,100);
-  TH1D* h_tdc = new TH1D("h_tdc","tdc",200,0,100);
+  TH1D* h_tdc = new TH1D("h_tdc","tdc",200,10,40);
   
   TH1D* h_tdif = new TH1D("h_tdif","diff",100,-20,20);
-  TH1D* h_tsum = new TH1D("h_tsum","sum",100,20,40);
+  TH1D* h_tsum = new TH1D("h_tsum","sum",100,30,60);
   
   TH2D* h1 = new TH2D("h1","",100,0,100,100,0,100);
   
-  TH1D* hlaysum1 = new TH1D("hlaysum1","",100,20,35);
-  TH1D* hlaysum2 = new TH1D("hlaysum2","",100,20,35);
-  TH1D* hlaysum3 = new TH1D("hlaysum3","",100,20,35);
-  TH1D* hlaysum4 = new TH1D("hlaysum4","",100,20,35);
-  TH1D* hlaysum5 = new TH1D("hlaysum5","",100,20,35);
+  TH1D* hlaysum1 = new TH1D("hlaysum1","",100,0,20);
+  TH1D* hlaysum2 = new TH1D("hlaysum2","",100,0,20);
+  TH1D* hlaysum3 = new TH1D("hlaysum3","",100,0,20);
+  TH1D* hlaysum4 = new TH1D("hlaysum4","",100,0,20);
+  TH1D* hlaysum5 = new TH1D("hlaysum5","",100,0,20);
   
-  TH1D* hlaysumADC1 = new TH1D("hlaysumADC1","",100,0,200);
-  TH1D* hlaysumADC2 = new TH1D("hlaysumADC2","",100,0,200);
-  TH1D* hlaysumADC3 = new TH1D("hlaysumADC3","",100,0,200);
-  TH1D* hlaysumADC4 = new TH1D("hlaysumADC4","",100,0,200);
-  TH1D* hlaysumADC5 = new TH1D("hlaysumADC5","",100,0,200);
+  TH1D* hlaysumADC1 = new TH1D("hlaysumADC1","",100,0,5000);
+  TH1D* hlaysumADC2 = new TH1D("hlaysumADC2","",100,0,5000);
+  TH1D* hlaysumADC3 = new TH1D("hlaysumADC3","",100,0,5000);
+  TH1D* hlaysumADC4 = new TH1D("hlaysumADC4","",100,0,5000);
+  TH1D* hlaysumADC5 = new TH1D("hlaysumADC5","",100,0,5000);
   
-  TH1D* htest1 = new TH1D("htest1","",100,0,10);
+  TH1D* htres = new TH1D("htres","",100,4,14);
+  
+  TH1D* hADCtotSum = new TH1D("hADCtotSum","",100,1500,5000);
+  TH1D* hADCtotSumContained = new TH1D("hADCtotSumContained","",100,1500,5000);
   
   h_id ->SetDirectory(0);
   h_pe ->SetDirectory(0);
@@ -420,7 +423,10 @@ void checkfast(const char* fname)
   hlaysumADC4->SetDirectory(0);
   hlaysumADC5->SetDirectory(0);
   
-  htest1->SetDirectory(0);
+  htres->SetDirectory(0);
+  
+  hADCtotSum->SetDirectory(0);
+  hADCtotSumContained->SetDirectory(0);
   
   const int nev = t->GetEntries();
     
@@ -481,6 +487,11 @@ void checkfast(const char* fname)
     hlaysumADC4->Fill(ADClay4);
     hlaysumADC5->Fill(ADClay5);
     
+    if(ADClay5 < 175)
+      hADCtotSumContained->Fill(ADClay1+ADClay2+ADClay3+ADClay4+ADClay5);
+    
+    hADCtotSum->Fill(ADClay1+ADClay2+ADClay3+ADClay4+ADClay5);
+    
     for(std::map<int, double>::iterator it=tdc->begin(); it != tdc->end(); ++it)
     {
       h_tdc->Fill(it->second);
@@ -503,7 +514,7 @@ void checkfast(const char* fname)
           {
              case 0:
                hlaysum1->Fill(it->second + (*tdc)[-1*it->first]);
-               htest1->Fill(0.5*(it->second + (*tdc)[-1*it->first]) - 0.5*4.3*5.85);
+               htres->Fill(0.5*(it->second + (*tdc)[-1*it->first]) - 0.5*4.3*5.85);
              break;
              case 1:
                hlaysum2->Fill(it->second + (*tdc)[-1*it->first]);
@@ -528,7 +539,8 @@ void checkfast(const char* fname)
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
   
-  /*
+  gStyle->SetOptFit(1);
+  
   TCanvas* c1 = new TCanvas();
   h_id->Draw();
   TCanvas* c2 = new TCanvas();
@@ -545,7 +557,6 @@ void checkfast(const char* fname)
   h_tdif->Draw("E0");
   TCanvas* c7 = new TCanvas();
   h1->Draw("colz");
-  gStyle->SetOptFit(1);
   TCanvas* c8 = new TCanvas();
   hlaysum1->Fit("gaus");
   hlaysum1->Draw("E0");
@@ -563,17 +574,28 @@ void checkfast(const char* fname)
   hlaysum5->Draw("E0");
   
   TCanvas* c13 = new TCanvas();
+  //hlaysumADC1->Fit("landau");
   hlaysumADC1->Draw("E0");
   TCanvas* c14 = new TCanvas();
+  //hlaysumADC2->Fit("landau");
   hlaysumADC2->Draw("E0");
   TCanvas* c15 = new TCanvas();
+  //hlaysumADC3->Fit("landau");
   hlaysumADC3->Draw("E0");
   TCanvas* c16 = new TCanvas();
+  //hlaysumADC4->Fit("landau");
   hlaysumADC4->Draw("E0");
   TCanvas* c17 = new TCanvas();
+  //hlaysumADC5->Fit("landau");
   hlaysumADC5->Draw("E0");
-  */
-  
   TCanvas* c18 = new TCanvas();
-  htest1->Draw();
+  hADCtotSum->Fit("gaus");
+  hADCtotSum->Draw("E0");
+  TCanvas* c19 = new TCanvas();
+  hADCtotSumContained->Fit("gaus");
+  hADCtotSumContained->Draw("E0");
+  
+  TCanvas* c20 = new TCanvas();
+  htres->Fit("gaus");
+  htres->Draw("E0");
 }
