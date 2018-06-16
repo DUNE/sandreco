@@ -476,14 +476,17 @@ void primNeut(const char* finname,const char* foutname)
         {
           for(unsigned int k = 0; k < it->second.size(); k++)
           {
-            if(vhit->at(it->second.at(k)).PrimaryId == id)
+            if(vhit->at(it->second.at(k)).PrimaryId == id && vhit->at(it->second.at(k)).Contrib.size() == 1)
             {
-              if(vhit->at(it->second.at(k)).Start.T() < cellFirstHit.Start.T())
+              if(vhit->at(it->second.at(k)).Contrib[0] == id)
               {
-                if(adc->find(it->first) != adc->end() && adc->find(-1*it->first) != adc->end())
+                if(vhit->at(it->second.at(k)).Start.T() < cellFirstHit.Start.T())
                 {
-                  cellFirstHit = vhit->at(it->second.at(k));
-                  cellFirst = it->first;
+                  if(adc->find(it->first) != adc->end() && adc->find(-1*it->first) != adc->end())
+                  {
+                    cellFirstHit = vhit->at(it->second.at(k));
+                    cellFirst = it->first;
+                  }
                 }
               }
             } 

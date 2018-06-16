@@ -4,3 +4,4 @@
 *.log
 *.root
 .nfs*
+*.dump
