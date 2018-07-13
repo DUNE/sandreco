@@ -5,3 +5,4 @@
 *.root
 .nfs*
 *.dump
+reco/old/*
