@@ -25,8 +25,6 @@
  
 TRandom3 r;
 
-const bool debug = false;
-
 void TestPoisson(double l, double nlayer, int nexp)
 {  
   TH1I* h1 = new TH1I("h1","",100,0,100);

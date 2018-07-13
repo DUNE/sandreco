@@ -19,6 +19,12 @@
 #include <map>
 #include <iostream>
 
+#ifdef __MAKECINT__ 
+#pragma link C++ class map<int,vector<double> >+; 
+#pragma link C++ class map<int,vector<int> >+;
+#pragma link C++ class map<int,double>+; 
+#endif
+
 // Energy MeV
 // Distance mm
 // Time ns
@@ -285,7 +291,13 @@ void Digitize(std::map<int, std::vector<double> >& time_pe, std::map<int, double
 void Process(const char* finname, const char* foutname)
 {
 	  TChain* t = new TChain("EDepSimEvents","EDepSimEvents");
+    TChain* InputKinem = new TChain("DetSimPassThru/InputKinem");
+    TChain* InputFiles = new TChain("DetSimPassThru/InputFiles");
+    TChain* gRooTracker = new TChain("DetSimPassThru/gRooTracker");
 	  t->Add(finname);
+	  InputKinem->Add(finname);
+	  InputFiles->Add(finname);
+	  gRooTracker->Add(finname);
 	  TFile f(t->GetListOfFiles()->At(0)->GetTitle());
     TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
     
@@ -329,8 +341,15 @@ void Process(const char* finname, const char* foutname)
     std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
     std::cout << std::endl;
     
+    TTree* tKin = InputKinem->CloneTree();
+    TTree* tFil = InputFiles->CloneTree();
+    TTree* tRoo = gRooTracker->CloneTree();
+    
     fout.cd();
     tev.Write();
+    tKin->Write();
+    tFil->Write();
+    tRoo->Write();
     geo->Write();
     fout.Close();
     
