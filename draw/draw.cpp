@@ -73,7 +73,7 @@ void init(const char* fname)
   dummyLoc[2] = 0.;
   geo->LocalToMaster(dummyLoc, centerKLOE);
   
-  int dzlay[nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
+  double dzlay[nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
   double dx1[nLay];
   double dx2[nLay];
   

@@ -9,6 +9,8 @@
 #include <TTree.h>
 #include <TGeoManager.h>
 #include <TGeoNode.h>
+#include <TGeoTrd2.h>
+#include <TChain.h>
 
 struct hit {
   std::string det;
@@ -34,7 +36,6 @@ struct digit {
   double de;
   bool hor;
   std::vector<int> hindex;
-  std::vector<int> pid;
 };
 
 #ifdef __MAKECINT__ 
@@ -49,23 +50,28 @@ bool isbefore(hit h1, hit h2)
 
 void STTDigi()
 {
+  std::cout << "DigitizeSTT(const char* finname, const char* foutname)" << std::endl;
+  std::cout << "finname could contain wild card" << std::endl;
 }
 
-void Digitize(const char* ifname)
+void DigitizeSTT(const char* finname, const char* foutname)
 {
-  TFile f(ifname,"UPDATE");
+  
+  TChain* t = new TChain("EDepSimEvents","EDepSimEvents");
+  t->Add(finname);
+  TFile f(t->GetListOfFiles()->At(0)->GetTitle());
+  TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
   
   TG4Event* ev = new TG4Event;
   
-  TTree* t = (TTree*) f.Get("Events");
   t->SetBranchAddress("Event",&ev);
   
   std::map<std::string,std::vector<hit> > cluster_map;
   std::vector<digit> digit_vec;
   
-  TBranch* b = t->Branch("STTDigi","std::vector<digit>",&digit_vec);
-  
-  TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
+  TFile fout(foutname,"RECREATE");
+  TTree tstt("tSttDigi","KLOE Stt Digitization");
+  tstt.Branch("Stt","std::vector<digit>",&digit_vec);
     
   const int nev = t->GetEntries();
   
@@ -120,10 +126,10 @@ void Digitize(const char* ifname)
       for(unsigned int k = 0; k < it->second.size(); k++)
       {
         d.hindex.push_back(it->second[k].index);
-        d.pid.push_back(it->second[k].pid);
         d.de += it->second[k].de;
       }
       
+      d.hor = (d.det.find("STTPlane1FULL") != std::string::npos) ? false : true;
       
       std::sort(it->second.begin(), it->second.end(), isbefore);
       
@@ -135,10 +141,15 @@ void Digitize(const char* ifname)
       digit_vec.push_back(d);
     }
     
-    b->Fill();
+    tstt.Fill();
   }
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
+    
+  fout.cd();
+  tstt.Write();
+  fout.Close();
   
-  t->Write("",TObject::kOverwrite);
+  delete t;
+  f.Close();
 }

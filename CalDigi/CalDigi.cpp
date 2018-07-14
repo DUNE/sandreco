@@ -23,6 +23,7 @@
 #pragma link C++ class map<int,vector<double> >+; 
 #pragma link C++ class map<int,vector<int> >+;
 #pragma link C++ class map<int,double>+; 
+#pragma link C++ class vector<cell>+; 
 #endif
 
 // Energy MeV
@@ -33,11 +34,32 @@ TRandom3 r;
 
 const bool debug = false;
 
+struct cell {
+  int id;
+  double z;
+  double y;
+  double adc1;
+  double tdc1;
+  double adc2;
+  double tdc2;
+  int mod;
+  int lay;
+  int cel;
+  std::vector<double> pe_time1;
+  std::vector<int> hindex1;
+  std::vector<double> pe_time2;
+  std::vector<int> hindex2;
+};
+
+static const int nMod = 24;
+static const int nLay = 5;
+static const int nCel = 12;
+
 double Attenuation(double d, int planeID)
 {
 /*
      dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
-       d    distance from photocatode - 2 PMTs/cell; d1 and d2 
+       d    distance from photocatode - 2 cells/cell; d1 and d2 
       atl1  50. cm
       atl2  430 cm planes 1-2    innermost plane is 1 
             380 cm plane 3
@@ -100,7 +122,7 @@ double petime(double t0, double d)
 
 C  PHOTOELECTRON TIME :  Particle TIME in the cell  
 C                      + SCINTILLATION DECAY TIME + 
-C                      + signal propagation to the PMT
+C                      + signal propagation to the cell
 C                      + 1ns  uncertainty
      
                TPHE = Part_time+TSDEC+DPM1*VLFB+Gauss(1ns)
@@ -247,8 +269,8 @@ void SimulatePE(TG4Event* ev, TGeoManager* g, int index, std::map<int, std::vect
               std::cout << "\t" << pe1 << " " << pe2 << std::endl;
             }
             
-            //PMT 1 -> x < 0 -> ID > 0
-            //PMT 2 -> x > 0 -> ID < 0
+            //cell 1 -> x < 0 -> ID > 0
+            //cell 2 -> x > 0 -> ID < 0
             
             for(int i = 0; i < pe1; i++)
             {
@@ -288,20 +310,38 @@ void Digitize(std::map<int, std::vector<double> >& time_pe, std::map<int, double
   }
 }
 
-void Process(const char* finname, const char* foutname)
+void DigitizeCal(const char* finname, const char* foutname)
 {
 	  TChain* t = new TChain("EDepSimEvents","EDepSimEvents");
-    TChain* InputKinem = new TChain("DetSimPassThru/InputKinem");
-    TChain* InputFiles = new TChain("DetSimPassThru/InputFiles");
-    TChain* gRooTracker = new TChain("DetSimPassThru/gRooTracker");
 	  t->Add(finname);
-	  InputKinem->Add(finname);
-	  InputFiles->Add(finname);
-	  gRooTracker->Add(finname);
 	  TFile f(t->GetListOfFiles()->At(0)->GetTitle());
     TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
+  
+    const char* path_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
+  
+    TGeoTrd2* mod = (TGeoTrd2*) geo->FindVolumeFast("KLOEBarrelECAL_0_volume_PV")->GetShape();
     
-    TG4Event* ev = 0;
+    double xmax = mod->GetDx1();
+    double xmin = mod->GetDx2();
+    double dz = mod->GetDz();
+    
+    double dzlay[nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
+    double czlay[nLay];
+    double cxlay[nLay][nCel];
+    
+    for(int i = 0; i < nLay; i++)
+    {
+      czlay[i] = 0.5 * (dzlay[i] + dzlay[i+1]);
+      
+      double dx = xmax - (xmax - xmin)/dz * czlay[i];
+      
+      for(int j = 0; j < nCel; j++)
+      {
+        cxlay[i][j] = 2*dx/nCel * (j - nCel/2. + 0.5);
+      }
+    }    
+    
+    TG4Event* ev = new TG4Event;
     t->SetBranchAddress("Event",&ev);
       
     std::map<int, std::vector<double> > time_pe;
@@ -309,13 +349,11 @@ void Process(const char* finname, const char* foutname)
     std::map<int, double> adc;
     std::map<int, double> tdc;
     
+    std::vector<cell> vec_cell;
+    
     TFile fout(foutname,"RECREATE");
-    TTree tev("Events","Events");
-    tev.Branch("Event","TG4Event",&ev);
-    tev.Branch("cellPE","std::map<int, std::vector<double> >",&time_pe);
-    tev.Branch("hitIndex","std::map<int, std::vector<int> >",&id_hit);
-    tev.Branch("cellADC","std::map<int, double>",&adc);
-    tev.Branch("cellTDC","std::map<int, double>",&tdc);
+    TTree tcal("tCalDigi","KLOE Calorimeter Digitization");
+    tcal.Branch("cell","std::vector<cell>",&vec_cell);
     
     const int nev = t->GetEntries();
     
@@ -332,27 +370,63 @@ void Process(const char* finname, const char* foutname)
       id_hit.clear();
       adc.clear();
       tdc.clear();
+      vec_cell.clear();
       
       SimulatePE(ev, geo, i, time_pe, id_hit); 
       Digitize(time_pe,adc,tdc);
+      
+      for(std::map<int, std::vector<double> >::iterator it = time_pe.begin(); it != time_pe.end(); ++it)
+      {
+        if(it->first < 0)
+          continue;
+        
+        cell c;
+        c.id = it->first;
+        c.adc1 = adc[it->first];
+        c.tdc1 = tdc[it->first];
+        c.adc2 = adc[-1*it->first];
+        c.tdc2 = tdc[-1*it->first];
+        c.pe_time1 = time_pe[it->first];
+        c.pe_time2 = time_pe[-1*it->first];
+        c.hindex1 = id_hit[it->first];
+        c.hindex2 = id_hit[-1*it->first];
+            
+        c.mod = c.id / 1000;
+        c.lay = (c.id - c.mod * 1000) / 100;
+        c.cel = c.id - c.mod * 1000 - c.lay *100;
+                
+        double dummyLoc[3];
+        double dummyMas[3];
+        
+        dummyLoc[0] = cxlay[c.lay][c.cel];
+        dummyLoc[1] = 0.;
+        dummyLoc[2] = czlay[c.lay];
+        
+        geo->cd(TString::Format(path_template,c.mod).Data());
+        
+        geo->LocalToMaster(dummyLoc, dummyMas);
+        
+        c.y = dummyMas[1];
+        c.z = dummyMas[2];
+        
+        vec_cell.push_back(c);
+      }
          
-      tev.Fill();
+      tcal.Fill();
     }
     std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
     std::cout << std::endl;
     
-    TTree* tKin = InputKinem->CloneTree();
-    TTree* tFil = InputFiles->CloneTree();
-    TTree* tRoo = gRooTracker->CloneTree();
-    
     fout.cd();
-    tev.Write();
-    tKin->Write();
-    tFil->Write();
-    tRoo->Write();
-    geo->Write();
+    tcal.Write();
     fout.Close();
     
     delete t;
     f.Close();
+}
+
+void CalDigi()
+{
+  std::cout << "DigitizeCal(const char* finname, const char* foutname)" << std::endl;
+  std::cout << "finname could contain wild card" << std::endl;
 }
