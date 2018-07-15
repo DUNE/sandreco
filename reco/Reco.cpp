@@ -263,7 +263,7 @@ void RecoSTTTrack(const char* fSttDigi, const char* fTrueMC, const char* fOut)
   TTree ttr("tTrack","Track");
   ttr.Branch("track","std::vector<track>",&vec_tr);
     
-  const int nev = 2/*t->GetEntries()*/;
+  const int nev = t->GetEntries();
   
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;

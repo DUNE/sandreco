@@ -39,7 +39,7 @@ void DigitizeSTT(const char* finname, const char* foutname)
   TTree tstt("tSttDigi","KLOE Stt Digitization");
   tstt.Branch("Stt","std::vector<digit>",&digit_vec);
     
-  const int nev = 2/*t->GetEntries()*/;
+  const int nev = t->GetEntries();
   
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
