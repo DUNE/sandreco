@@ -19,41 +19,21 @@
 #include <map>
 #include <iostream>
 
-#ifdef __MAKECINT__ 
-#pragma link C++ class map<int,vector<double> >+; 
-#pragma link C++ class map<int,vector<int> >+;
-#pragma link C++ class map<int,double>+; 
-#pragma link C++ class vector<cell>+; 
-#endif
+#include "/mnt/nas01/users/mtenti/wd/analysis/KLOEcal/loader/loader.C"
 
 // Energy MeV
 // Distance mm
 // Time ns
+
+namespace ns_CalDigi {
+  const bool debug = false;
+  
+  static const int nMod = 24;
+  static const int nLay = 5;
+  static const int nCel = 12;
  
-TRandom3 r;
-
-const bool debug = false;
-
-struct cell {
-  int id;
-  double z;
-  double y;
-  double adc1;
-  double tdc1;
-  double adc2;
-  double tdc2;
-  int mod;
-  int lay;
-  int cel;
-  std::vector<double> pe_time1;
-  std::vector<int> hindex1;
-  std::vector<double> pe_time2;
-  std::vector<int> hindex2;
-};
-
-static const int nMod = 24;
-static const int nLay = 5;
-static const int nCel = 12;
+  TRandom3 r;
+}
 
 double Attenuation(double d, int planeID)
 {
@@ -92,7 +72,7 @@ double Attenuation(double d, int planeID)
     break;
   }
   
-  if(debug)
+  if(ns_CalDigi::debug)
   {
     std::cout << "planeID = " << planeID << std::endl;
     std::cout << "\tp1   = " << p1 << std::endl;
@@ -109,7 +89,7 @@ double E2PE(double E)
   // Average number of photoelectrons = 25*Ea(MeV)
   const double e2p2 = 25.;
   
-  if(debug)
+  if(ns_CalDigi::debug)
     std::cout << "E = " << E << " -> p.e. = " << e2p2*E << std::endl;
   
   return e2p2*E;
@@ -141,11 +121,11 @@ C                      + 1ns  uncertainty
   
   double mm_to_m = 1E-3;
   
-  double tdec = tscin * TMath::Power(1./r.Uniform()-1.,tscex);
+  double tdec = tscin * TMath::Power(1./ns_CalDigi::r.Uniform()-1.,tscex);
   
-  double time = t0 + tdec + vlfb * d * mm_to_m + r.Gaus();
+  double time = t0 + tdec + vlfb * d * mm_to_m + ns_CalDigi::r.Gaus();
   
-  if(debug)
+  if(ns_CalDigi::debug)
   {
     std::cout << "time : " << time << std::endl;
     std::cout << "t0   : " << t0 << std::endl;
@@ -225,7 +205,7 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
   
   cellID = (Plocal[0] + dx*0.5) / cellw;
   
-  if(debug)
+  if(ns_CalDigi::debug)
   {
     std::cout << "hit" << std::endl;
     std::cout << "\t[x,y,z]                " << x << " " << y << " " << z << std::endl;
@@ -256,12 +236,12 @@ void SimulatePE(TG4Event* ev, TGeoManager* g, int index, std::map<int, std::vect
             double ave_pe1 = E2PE(en1);
             double ave_pe2 = E2PE(en2);
             
-            int pe1 = r.Poisson(ave_pe1);
-            int pe2 = r.Poisson(ave_pe2);
+            int pe1 = ns_CalDigi::r.Poisson(ave_pe1);
+            int pe2 = ns_CalDigi::r.Poisson(ave_pe2);
             
             id = cellID + 100 * planeID + 1000 * modID;
             
-            if(debug)
+            if(ns_CalDigi::debug)
             {
               std::cout << "cell ID: " << id << std::endl;
               std::cout << "\t" << de << " " << en1 << " " << en2 << std::endl;
@@ -325,19 +305,19 @@ void DigitizeCal(const char* finname, const char* foutname)
     double xmin = mod->GetDx2();
     double dz = mod->GetDz();
     
-    double dzlay[nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
-    double czlay[nLay];
-    double cxlay[nLay][nCel];
+    double dzlay[ns_CalDigi::nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
+    double czlay[ns_CalDigi::nLay];
+    double cxlay[ns_CalDigi::nLay][ns_CalDigi::nCel];
     
-    for(int i = 0; i < nLay; i++)
+    for(int i = 0; i < ns_CalDigi::nLay; i++)
     {
       czlay[i] = 0.5 * (dzlay[i] + dzlay[i+1]);
       
       double dx = xmax - (xmax - xmin)/dz * czlay[i];
       
-      for(int j = 0; j < nCel; j++)
+      for(int j = 0; j < ns_CalDigi::nCel; j++)
       {
-        cxlay[i][j] = 2*dx/nCel * (j - nCel/2. + 0.5);
+        cxlay[i][j] = 2*dx/ns_CalDigi::nCel * (j - ns_CalDigi::nCel/2. + 0.5);
       }
     }    
     
