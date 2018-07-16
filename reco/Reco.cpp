@@ -48,29 +48,27 @@ bool ishitok(TG4Event* ev, int trackid, TG4HitSegment hit,
     double x = 0.5*(hit.Start.X()+hit.Stop.X());
     double y = 0.5*(hit.Start.Y()+hit.Stop.Y());
     double z = 0.5*(hit.Start.Z()+hit.Stop.Z());
-
-    std::vector<double> dpos;
-    std::vector<double> dang;
     
     for(unsigned int jj = 0; jj < ev->Trajectories.size(); jj++)
     {
+        //if(ev->Trajectories[jj].TrackId == hit.PrimaryId)
         if(ev->Trajectories[jj].TrackId == trackid)
         {
             for(unsigned int kk = 0; kk < ev->Trajectories[jj].Points.size()-1; kk++)
             {
-                dpos.push_back(mindist(ev->Trajectories[jj].Points[kk].Position.X(),
+                double dpos = mindist(ev->Trajectories[jj].Points[kk].Position.X(),
                                        ev->Trajectories[jj].Points[kk].Position.Y(),
                                        ev->Trajectories[jj].Points[kk].Position.Z(),
                                        ev->Trajectories[jj].Points[kk+1].Position.X(),
                                        ev->Trajectories[jj].Points[kk+1].Position.Y(),
                                        ev->Trajectories[jj].Points[kk+1].Position.Z(),
-                                       x,y,z));
-                dang.push_back(angle(ev->Trajectories[jj].Points[kk+1].Position.X()-ev->Trajectories[jj].Points[kk].Position.X(),
+                                       x,y,z);
+                double dang = angle(ev->Trajectories[jj].Points[kk+1].Position.X()-ev->Trajectories[jj].Points[kk].Position.X(),
                                      ev->Trajectories[jj].Points[kk+1].Position.Y()-ev->Trajectories[jj].Points[kk].Position.Y(),
                                      ev->Trajectories[jj].Points[kk+1].Position.Z()-ev->Trajectories[jj].Points[kk].Position.Z(),
                                      hit.Stop.X()-hit.Start.X(),
                                      hit.Stop.Y()-hit.Start.Y(),
-                                     hit.Stop.Z()-hit.Start.Z()));
+                                     hit.Stop.Z()-hit.Start.Z());
                 /*
                 std::cout << ev->Trajectories[jj].Points[kk].Position.X() << " " <<
                              ev->Trajectories[jj].Points[kk].Position.Y() << " " <<
@@ -81,17 +79,13 @@ bool ishitok(TG4Event* ev, int trackid, TG4HitSegment hit,
                              x << " " << y << " " << z << " " << dpos.back() << " " <<
                              ev->Trajectories[jj].TrackId << " " << ev->Trajectories[jj].PDGCode << std::endl;
                 */
+                
+                if(dpos < postol && dang < angtol)
+                  return true;
             }
         }
     }
-    int index = std::distance(dpos.begin(), std::min_element(dpos.begin(),dpos.end()));
-
-    //std::cout << dpos[index] << " " << dang[index] << std::endl;
-
-    if(dpos[index] > postol || dang[index] > angtol)
-        return false;
-    else
-        return true;
+    return false;
 }
 
 int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y, double &xc, double &yc, double &r, double &errr, double &chi2)
@@ -300,11 +294,17 @@ void RecoSTTTrack(const char* fSttDigi, const char* fTrueMC, const char* fOut)
       {
         for(unsigned int m = 0; m < digit_vec->at(k).hindex.size(); m++)
         {
-          if(ishitok(ev, tr.tid, ev->SegmentDetectors["StrawTracker"].at(digit_vec->at(k).hindex.at(m))))
-          {
-            tr.digits.push_back(digit_vec->at(k));
-            break;
-          }
+          const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(digit_vec->at(k).hindex.at(m)); 
+                 
+          //if(hseg.PrimaryId == tr.tid)
+          //{
+            //if(ishitok(ev, hseg->PrimaryId, hseg))
+            if(ishitok(ev, tr.tid, hseg))
+            {
+              tr.digits.push_back(digit_vec->at(k));
+              break;
+            }
+          //}
         }
       }
       
