@@ -2,6 +2,14 @@
 #include <vector> 
 #include <map>
 
+#include "/mnt/nas01/users/mtenti/sw/edep-sim/edep-sim-bin/include/edep-sim/TG4Event.h"
+#include "/mnt/nas01/users/mtenti/sw/edep-sim/edep-sim-bin/include/edep-sim/TG4HitSegment.h"
+
+#include <TRandom3.h>
+#include <TChain.h>
+#include <TGeoManager.h>
+#include <TCanvas.h>
+
 #ifndef LOADER_C
 #define LOADER_C
 
@@ -80,6 +88,55 @@ bool isHitBefore(hit h1, hit h2)
 bool isDigBefore(digit d1, digit d2)
 {
   return d1.t < d2.t;
+}
+
+namespace ns_Digit {
+  const bool debug = false;
+  
+  static const int nMod = 24;
+  static const int nLay = 5;
+  static const int nCel = 12;
+    
+  double dzlay[ns_Digit::nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
+  double czlay[ns_Digit::nLay];
+  double cxlay[ns_Digit::nLay][ns_Digit::nCel];
+  
+  const char* path_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
+ 
+  TRandom3 r;
+}
+
+namespace ns_draw {
+  const bool debug = false;
+  
+  static const int nMod = 24;
+  static const int nLay = 5;
+  static const int nCel = 12;
+  
+  static const int nTotCells = nMod * nLay * nCel; 
+  static const int nCellModule = nLay * nCel;
+  
+  double centerKLOE[3];
+  double CellLocalX[nCellModule][4];
+  double CellLocalZ[nCellModule][4];
+  
+  int palette = 87;
+  
+  bool initialized = false;
+  
+  double dwx = 2500.;
+  double dwy = 2500.;
+  double dwz = 2500.;
+  
+  TChain* t = 0;
+  TG4Event* ev = new TG4Event;
+  TGeoManager* geo = 0;
+  TCanvas* cev = 0;
+
+  std::vector<cell>* vec_cell;
+  std::vector<digit>* vec_digi;
+  std::vector<track>* vec_tr;
+  std::map<int, gcell> calocell;
 }
 
 #endif

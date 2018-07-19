@@ -234,16 +234,16 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
     return 0;
 }
 
-void RecoSTTTrack(const char* fSttDigi, const char* fTrueMC, const char* fOut)
+void RecoSTtoutack(const char* fDigit, const char* fTrueMC, const char* fOut)
 {
-  TChain tSttDigi("tSttDigi");
-  TChain tTrueMC("EDepSimEvents");
-  tSttDigi.Add(fSttDigi);
-  tTrueMC.Add(fTrueMC);
+  TChain tDigit("tDigit");
+  TChain toutueMC("EDepSimEvents");
+  tDigit.Add(fDigit);
+  toutueMC.Add(fTrueMC);
   
-  tSttDigi.AddFriend(&tTrueMC);
+  tDigit.AddFriend(&toutueMC);
   
-  TChain* t = &tSttDigi;
+  TChain* t = &tDigit;
   
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event",&ev);
@@ -254,8 +254,8 @@ void RecoSTTTrack(const char* fSttDigi, const char* fTrueMC, const char* fOut)
   std::vector<track> vec_tr;
     
   TFile fout(fOut,"RECREATE");
-  TTree ttr("tTrack","Track");
-  ttr.Branch("track","std::vector<track>",&vec_tr);
+  toutee tout("toutack","Track");
+  tout.Branch("track","std::vector<track>",&vec_tr);
     
   const int nev = t->GetEntries();
   
@@ -378,13 +378,13 @@ void RecoSTTTrack(const char* fSttDigi, const char* fTrueMC, const char* fOut)
         vec_tr.push_back(tr);
       }
     }
-    ttr.Fill();
+    tout.Fill();
   }
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
   
   fout.cd();
-  ttr.Write();
+  tout.Write();
   fout.Close();
 }
 
