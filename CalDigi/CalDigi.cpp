@@ -31,6 +31,12 @@ namespace ns_CalDigi {
   static const int nMod = 24;
   static const int nLay = 5;
   static const int nCel = 12;
+    
+  double dzlay[ns_CalDigi::nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
+  double czlay[ns_CalDigi::nLay];
+  double cxlay[ns_CalDigi::nLay][ns_CalDigi::nCel];
+  
+  const char* path_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
  
   TRandom3 r;
 }
@@ -216,7 +222,7 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
   return true;
 }
 
-void SimulatePE(TG4Event* ev, TGeoManager* g, int index, std::map<int, std::vector<double> >& time_pe, std::map<int, std::vector<int> >& id_hit)
+void SimulatePE(TG4Event* ev, TGeoManager* g, std::map<int, std::vector<double> >& time_pe, std::map<int, std::vector<int> >& id_hit)
 {    
     int modID, planeID, cellID, id;
     double d1, d2, t0, de;
@@ -290,44 +296,95 @@ void Digitize(std::map<int, std::vector<double> >& time_pe, std::map<int, double
   }
 }
 
-void DigitizeCal(const char* finname, const char* foutname)
+void FillCells(TGeoManager* geo, 
+    std::map<int, std::vector<double> >& time_pe, 
+    std::map<int, double>& adc, 
+    std::map<int, double>& tdc, 
+    std::map<int, std::vector<int> >& id_hit,
+    std::vector<cell>& vec_cell)
 {
-	  TChain* t = new TChain("EDepSimEvents","EDepSimEvents");
-	  t->Add(finname);
-	  TFile f(t->GetListOfFiles()->At(0)->GetTitle());
-    TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
-  
-    const char* path_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
-  
+    for(std::map<int, std::vector<double> >::iterator it = time_pe.begin(); it != time_pe.end(); ++it)
+    {
+      if(it->first < 0)
+        continue;
+      
+      cell c;
+      c.id = it->first;
+      c.adc1 = adc[it->first];
+      c.tdc1 = tdc[it->first];
+      c.adc2 = adc[-1*it->first];
+      c.tdc2 = tdc[-1*it->first];
+      c.pe_time1 = time_pe[it->first];
+      c.pe_time2 = time_pe[-1*it->first];
+      c.hindex1 = id_hit[it->first];
+      c.hindex2 = id_hit[-1*it->first];
+          
+      c.mod = c.id / 1000;
+      c.lay = (c.id - c.mod * 1000) / 100;
+      c.cel = c.id - c.mod * 1000 - c.lay *100;
+              
+      double dummyLoc[3];
+      double dummyMas[3];
+      
+      dummyLoc[0] = ns_CalDigi::cxlay[c.lay][c.cel];
+      dummyLoc[1] = 0.;
+      dummyLoc[2] = ns_CalDigi::czlay[c.lay];
+      
+      geo->cd(TString::Format(ns_CalDigi::path_template,c.mod).Data());
+      
+      geo->LocalToMaster(dummyLoc, dummyMas);
+      
+      c.y = dummyMas[1];
+      c.z = dummyMas[2];
+      
+      vec_cell.push_back(c);
+    }
+}
+
+void init(TGeoManager* geo)
+{
     TGeoTrd2* mod = (TGeoTrd2*) geo->FindVolumeFast("KLOEBarrelECAL_0_volume_PV")->GetShape();
     
     double xmax = mod->GetDx1();
     double xmin = mod->GetDx2();
     double dz = mod->GetDz();
     
-    double dzlay[ns_CalDigi::nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
-    double czlay[ns_CalDigi::nLay];
-    double cxlay[ns_CalDigi::nLay][ns_CalDigi::nCel];
-    
     for(int i = 0; i < ns_CalDigi::nLay; i++)
     {
-      czlay[i] = 0.5 * (dzlay[i] + dzlay[i+1]);
+      ns_CalDigi::czlay[i] = 0.5 * (ns_CalDigi::dzlay[i] + ns_CalDigi::dzlay[i+1]);
       
-      double dx = xmax - (xmax - xmin)/dz * czlay[i];
+      double dx = xmax - (xmax - xmin)/dz * ns_CalDigi::czlay[i];
       
       for(int j = 0; j < ns_CalDigi::nCel; j++)
       {
-        cxlay[i][j] = 2*dx/ns_CalDigi::nCel * (j - ns_CalDigi::nCel/2. + 0.5);
+        ns_CalDigi::cxlay[i][j] = 2*dx/ns_CalDigi::nCel * (j - ns_CalDigi::nCel/2. + 0.5);
       }
-    }    
-    
-    TG4Event* ev = new TG4Event;
-    t->SetBranchAddress("Event",&ev);
-      
+    }   
+}
+
+void Digitize(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
+{     
     std::map<int, std::vector<double> > time_pe;
     std::map<int, std::vector<int> > id_hit;
     std::map<int, double> adc;
     std::map<int, double> tdc;
+    
+    vec_cell.clear();
+      
+    SimulatePE(ev, geo, time_pe, id_hit); 
+    Digitize(time_pe,adc,tdc);
+    FillCells(geo, time_pe, adc, tdc, id_hit, vec_cell);
+}
+
+void DigitizeCal(const char* finname, const char* foutname)
+{
+	  TChain* t = new TChain("EDepSimEvents","EDepSimEvents");
+	  t->Add(finname);
+	  TFile f(t->GetListOfFiles()->At(0)->GetTitle());
+    TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry"); 
+    
+    TG4Event* ev = new TG4Event;
+    t->SetBranchAddress("Event",&ev);
     
     std::vector<cell> vec_cell;
     
@@ -346,51 +403,7 @@ void DigitizeCal(const char* finname, const char* foutname)
     
       std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i)/nev*100) << "%]" << std::flush;
       
-      time_pe.clear();
-      id_hit.clear();
-      adc.clear();
-      tdc.clear();
-      vec_cell.clear();
-      
-      SimulatePE(ev, geo, i, time_pe, id_hit); 
-      Digitize(time_pe,adc,tdc);
-      
-      for(std::map<int, std::vector<double> >::iterator it = time_pe.begin(); it != time_pe.end(); ++it)
-      {
-        if(it->first < 0)
-          continue;
-        
-        cell c;
-        c.id = it->first;
-        c.adc1 = adc[it->first];
-        c.tdc1 = tdc[it->first];
-        c.adc2 = adc[-1*it->first];
-        c.tdc2 = tdc[-1*it->first];
-        c.pe_time1 = time_pe[it->first];
-        c.pe_time2 = time_pe[-1*it->first];
-        c.hindex1 = id_hit[it->first];
-        c.hindex2 = id_hit[-1*it->first];
-            
-        c.mod = c.id / 1000;
-        c.lay = (c.id - c.mod * 1000) / 100;
-        c.cel = c.id - c.mod * 1000 - c.lay *100;
-                
-        double dummyLoc[3];
-        double dummyMas[3];
-        
-        dummyLoc[0] = cxlay[c.lay][c.cel];
-        dummyLoc[1] = 0.;
-        dummyLoc[2] = czlay[c.lay];
-        
-        geo->cd(TString::Format(path_template,c.mod).Data());
-        
-        geo->LocalToMaster(dummyLoc, dummyMas);
-        
-        c.y = dummyMas[1];
-        c.z = dummyMas[2];
-        
-        vec_cell.push_back(c);
-      }
+      Digitize(ev, geo, vec_cell);
          
       tcal.Fill();
     }

@@ -20,6 +20,77 @@ void STTDigi()
   std::cout << "finname could contain wild card" << std::endl;
 }
 
+void Cluster(TG4Event* ev, TGeoManager* geo, std::map<std::string,std::vector<hit> >& cluster_map)
+{
+  cluster_map.clear();
+    
+  for(unsigned int j = 0; j < ev->SegmentDetectors["StrawTracker"].size(); j++)
+  {
+    const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(j);
+    
+    double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
+    double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
+    double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
+    
+    std:string sttname = geo->FindNode(x,y,z)->GetName();
+    
+    hit h;
+    h.det = sttname;
+    h.x1 = hseg.Start.X();
+    h.y1 = hseg.Start.Y();
+    h.z1 = hseg.Start.Z();
+    h.t1 = hseg.Start.T();
+    h.x2 = hseg.Stop.X();
+    h.y2 = hseg.Stop.Y();
+    h.z2 = hseg.Stop.Z();
+    h.t2 = hseg.Stop.T();
+    h.de = hseg.EnergyDeposit;
+    h.pid = hseg.PrimaryId;
+    h.index = j;
+    
+    std::string cluster_name(sttname);
+    cluster_name += "_" + std::to_string(hseg.PrimaryId);
+    
+    cluster_map[cluster_name].push_back(h);
+  }
+}
+
+void Cluster2Digit(std::map<std::string,std::vector<hit> >& cluster_map, std::vector<digit>& digit_vec)
+{    
+  for(std::map<std::string,std::vector<hit> >::iterator it = cluster_map.begin(); it != cluster_map.end(); ++it)
+  {      
+    digit d;
+    d.de = 0;    
+    d.det = it->second[0].det;  
+  
+    for(unsigned int k = 0; k < it->second.size(); k++)
+    {
+      d.hindex.push_back(it->second[k].index);
+      d.de += it->second[k].de;
+    }
+    
+    d.hor = (d.det.find("STTPlane1FULL") != std::string::npos) ? false : true;
+    
+    std::sort(it->second.begin(), it->second.end(), isHitBefore);
+    
+    d.t = it->second.at(0).t1;
+    d.x = 0.5 * (it->second.front().x1 + it->second.back().x2);
+    d.y = 0.5 * (it->second.front().y1 + it->second.back().y2);
+    d.z = 0.5 * (it->second.front().z1 + it->second.back().z2);
+    
+    digit_vec.push_back(d);
+  }
+}
+
+void Digitize(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
+{
+  std::map<std::string,std::vector<hit> > cluster_map;
+  digit_vec.clear();
+  
+  Cluster(ev, geo, cluster_map);
+  Cluster2Digit(cluster_map, digit_vec);
+}
+
 void DigitizeSTT(const char* finname, const char* foutname)
 {
   
@@ -32,7 +103,6 @@ void DigitizeSTT(const char* finname, const char* foutname)
   
   t->SetBranchAddress("Event",&ev);
   
-  std::map<std::string,std::vector<hit> > cluster_map;
   std::vector<digit> digit_vec;
   
   TFile fout(foutname,"RECREATE");
@@ -50,62 +120,7 @@ void DigitizeSTT(const char* finname, const char* foutname)
       
     t->GetEntry(i);
     
-    digit_vec.clear();
-    cluster_map.clear();
-    
-    for(unsigned int j = 0; j < ev->SegmentDetectors["StrawTracker"].size(); j++)
-    {
-      const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(j);
-      
-      double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
-      double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
-      double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
-      
-      std:string sttname = geo->FindNode(x,y,z)->GetName();
-      
-      hit h;
-      h.det = sttname;
-      h.x1 = hseg.Start.X();
-      h.y1 = hseg.Start.Y();
-      h.z1 = hseg.Start.Z();
-      h.t1 = hseg.Start.T();
-      h.x2 = hseg.Stop.X();
-      h.y2 = hseg.Stop.Y();
-      h.z2 = hseg.Stop.Z();
-      h.t2 = hseg.Stop.T();
-      h.de = hseg.EnergyDeposit;
-      h.pid = hseg.PrimaryId;
-      h.index = j;
-      
-      std::string cluster_name(sttname);
-      cluster_name += "_" + std::to_string(hseg.PrimaryId);
-      
-      cluster_map[cluster_name].push_back(h);
-    }
-    
-    for(std::map<std::string,std::vector<hit> >::iterator it = cluster_map.begin(); it != cluster_map.end(); ++it)
-    {      
-      digit d;
-      d.de = 0;    
-      d.det = it->second[0].det;  
-    
-      for(unsigned int k = 0; k < it->second.size(); k++)
-      {
-        d.hindex.push_back(it->second[k].index);
-        d.de += it->second[k].de;
-      }
-      
-      d.hor = (d.det.find("STTPlane1FULL") != std::string::npos) ? false : true;
-      
-      std::sort(it->second.begin(), it->second.end(), isHitBefore);
-      
-      d.t = it->second.at(0).t1;
-      d.x = 0.5 * (it->second.front().x1 + it->second.back().x2);
-      d.y = 0.5 * (it->second.front().y1 + it->second.back().y2);
-      d.z = 0.5 * (it->second.front().z1 + it->second.back().z2);
-      
-      digit_vec.push_back(d);
-    }
+    Digitize(ev, geo, digit_vec);
     
     tstt.Fill();
   }
