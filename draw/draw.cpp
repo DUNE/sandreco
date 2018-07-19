@@ -39,21 +39,23 @@ namespace ns_draw {
   double dwx = 2500.;
   double dwy = 2500.;
   double dwz = 2500.;
+  
+  TChain* t = 0;
+  TG4Event* ev = new TG4Event;
+  TGeoManager* geo = 0;
+  TCanvas* cev = 0;
+
+  std::vector<cell>* vec_cell;
+  std::vector<digit>* vec_digi;
+  std::vector<track>* vec_tr;
+  std::map<int, gcell> calocell;
 }
 
-std::vector<cell>* vec_cell;
-std::vector<digit>* vec_digi;
-std::vector<track>* vec_tr;
-std::map<int, gcell> calocell;
-
-TChain* t = 0;
-TG4Event* ev = new TG4Event;
-TGeoManager* geo = 0;
-TCanvas* cev = 0;
+using namespace ns_draw;
 
 void init(const char* fTrueMC, const char* fCalDigi, const char* fSttDigi, const char* fTrack)
 {
-  gStyle->SetPalette(ns_draw::palette);
+  gStyle->SetPalette(palette);
   
   TChain* tTrueMC = new TChain("EDepSimEvents","EDepSimEvents");
   tTrueMC->Add(fTrueMC);
@@ -84,11 +86,11 @@ void init(const char* fTrueMC, const char* fCalDigi, const char* fSttDigi, const
   dummyLoc[0] = 0.;
   dummyLoc[1] = 0.;
   dummyLoc[2] = 0.;
-  geo->LocalToMaster(dummyLoc, ns_draw::centerKLOE);
+  geo->LocalToMaster(dummyLoc, centerKLOE);
   
-  double dzlay[ns_draw::nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
-  double dx1[ns_draw::nLay];
-  double dx2[ns_draw::nLay];
+  double dzlay[nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
+  double dx1[nLay];
+  double dx2[nLay];
   
   TGeoTrd2* mod = (TGeoTrd2*) geo->FindVolumeFast("KLOEBarrelECAL_0_volume_PV")->GetShape();
   
@@ -96,90 +98,103 @@ void init(const char* fTrueMC, const char* fCalDigi, const char* fSttDigi, const
   double xmin = mod->GetDx2();
   double dz = mod->GetDz();
   
-  if(ns_draw::debug)
+  if(debug)
   {
     std::cout << dz << " " << xmax << " " << xmin << std::endl;
   }
   
-  for(int i = 0; i < ns_draw::nLay; i++)
+  for(int i = 0; i < nLay; i++)
   {    
     dx1[i] = xmax - (xmax - xmin)/dz * dzlay[i];
     dx2[i] = xmax - (xmax - xmin)/dz * dzlay[i+1];
   }
   
-  if(ns_draw::debug)
+  if(debug)
   {
-    for(int i = 0; i < ns_draw::nLay; i++)
+    for(int i = 0; i < nLay; i++)
     {  
       std::cout << dx1[i] << " " << dx2[i] << " " << dzlay[i] << " " << dzlay[i+1] << std::endl;
     }
   }
   
-  for(int i = 0; i < ns_draw::nLay; i++)
+  for(int i = 0; i < nLay; i++)
   {
-    for(int j = 0; j < ns_draw::nCel; j++)
+    for(int j = 0; j < nCel; j++)
     {
       // from bottom-left to top-right 
     
-      ns_draw::CellLocalX[i*ns_draw::nCel+j][0] =  -dx1[i] + 2 * dx1[i]/12. * j;
-      ns_draw::CellLocalX[i*ns_draw::nCel+j][1] =  -dx1[i] + 2 * dx1[i]/12. * (j+1);
-      ns_draw::CellLocalX[i*ns_draw::nCel+j][2] =  -dx2[i] + 2 * dx2[i]/12. * (j+1);
-      ns_draw::CellLocalX[i*ns_draw::nCel+j][3] =  -dx2[i] + 2 * dx2[i]/12. * j;
+      CellLocalX[i*nCel+j][0] =  -dx1[i] + 2 * dx1[i]/12. * j;
+      CellLocalX[i*nCel+j][1] =  -dx1[i] + 2 * dx1[i]/12. * (j+1);
+      CellLocalX[i*nCel+j][2] =  -dx2[i] + 2 * dx2[i]/12. * (j+1);
+      CellLocalX[i*nCel+j][3] =  -dx2[i] + 2 * dx2[i]/12. * j;
             
-      ns_draw::CellLocalZ[i*ns_draw::nCel+j][0] =  -dz + 2 * dzlay[i];
-      ns_draw::CellLocalZ[i*ns_draw::nCel+j][1] =  -dz + 2 * dzlay[i];
-      ns_draw::CellLocalZ[i*ns_draw::nCel+j][2] =  -dz + 2 * dzlay[i+1];
-      ns_draw::CellLocalZ[i*ns_draw::nCel+j][3] =  -dz + 2 * dzlay[i+1];
+      CellLocalZ[i*nCel+j][0] =  -dz + 2 * dzlay[i];
+      CellLocalZ[i*nCel+j][1] =  -dz + 2 * dzlay[i];
+      CellLocalZ[i*nCel+j][2] =  -dz + 2 * dzlay[i+1];
+      CellLocalZ[i*nCel+j][3] =  -dz + 2 * dzlay[i+1];
       
-      if(ns_draw::debug)
-        std::cout << ns_draw::CellLocalZ[i*ns_draw::nCel+j][0] << " " << ns_draw::CellLocalX[i*ns_draw::nCel+j][0] << " " << 
-                     ns_draw::CellLocalZ[i*ns_draw::nCel+j][1] << " " << ns_draw::CellLocalX[i*ns_draw::nCel+j][1] << " " << 
-                     ns_draw::CellLocalZ[i*ns_draw::nCel+j][2] << " " << ns_draw::CellLocalX[i*ns_draw::nCel+j][2] << " " << 
-                     ns_draw::CellLocalZ[i*ns_draw::nCel+j][3] << " " << ns_draw::CellLocalX[i*ns_draw::nCel+j][3] << std::endl;
+      if(debug)
+        std::cout << CellLocalZ[i*nCel+j][0] << " " << CellLocalX[i*nCel+j][0] << " " << 
+                     CellLocalZ[i*nCel+j][1] << " " << CellLocalX[i*nCel+j][1] << " " << 
+                     CellLocalZ[i*nCel+j][2] << " " << CellLocalX[i*nCel+j][2] << " " << 
+                     CellLocalZ[i*nCel+j][3] << " " << CellLocalX[i*nCel+j][3] << std::endl;
     }
   }
   
   const char* path_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
   
-  double CellMasterY[ns_draw::nCellModule][4];
-  double CellMasterZ[ns_draw::nCellModule][4];
+  double CellMasterY[nCellModule][4];
+  double CellMasterZ[nCellModule][4];
   
-  if(ns_draw::debug)
+  if(debug)
   {
     cev = new TCanvas("cev","", 700, 700);
-    cev->DrawFrame(ns_draw::centerKLOE[2] - 2500,ns_draw::centerKLOE[1] - 2500,ns_draw::centerKLOE[2] + 2500,ns_draw::centerKLOE[1] + 2500);
+    cev->DrawFrame(centerKLOE[2] - 2500,
+                            centerKLOE[1] - 2500,
+                            centerKLOE[2] + 2500,
+                            centerKLOE[1] + 2500);
   }
   
-  for(int i = 0; i < ns_draw::nMod; i++)
+  for(int i = 0; i < nMod; i++)
   {
     geo->cd(TString::Format(path_template,i).Data());
     
-    if(ns_draw::debug)
-      std::cout << "node: " << i << " " << geo->GetCurrentNode() << " " << geo->GetCurrentNode()->GetName() << " " << TString::Format(path_template,i).Data() << std::endl;
+    if(debug)
+      std::cout << "node: " << i << " " << geo->GetCurrentNode() 
+                                 << " " << geo->GetCurrentNode()->GetName() 
+                                 << " " << TString::Format(path_template,i).Data() << std::endl;
     
-    for(int j = 0; j < ns_draw::nLay; j++)
+    for(int j = 0; j < nLay; j++)
     {
-      for(int k = 0; k < ns_draw::nCel; k++)
+      for(int k = 0; k < nCel; k++)
       {
-        int index = i * (ns_draw::nLay * ns_draw::nCel) + j * (ns_draw::nCel) + k;
+        int index = i * (nLay * nCel) + j * (nCel) + k;
         int id = k + 100 * j + 1000 * i;
         
-        int local_index = j*ns_draw::nCel+k;
+        int local_index = j*nCel+k;
         
         calocell[id].id = id;
         
-        if(ns_draw::debug)
-          std::cout << i << " " << j << " " << k << " " << index << " " << id << " " << local_index << " " << ns_draw::nMod << " " << ns_draw::nLay << " " << ns_draw::nCel << std::endl;
+        if(debug)
+          std::cout << i << " " 
+                    << j << " " 
+                    << k << " " 
+                    << index << " " 
+                    << id << " " 
+                    << local_index << " " 
+                    << nMod << " " 
+                    << nLay << " " 
+                    << nCel << std::endl;
         
         for(int m = 0; m < 4; m++)
         {
-          dummyLoc[0] = ns_draw::CellLocalX[local_index][m];
+          dummyLoc[0] = CellLocalX[local_index][m];
           dummyLoc[1] = 0.;
-          dummyLoc[2] = ns_draw::CellLocalZ[local_index][m];
+          dummyLoc[2] = CellLocalZ[local_index][m];
           
           geo->LocalToMaster(dummyLoc, dummyMas);
           
-          if(ns_draw::debug)
+          if(debug)
           {
             std::cout << "local : " << dummyLoc[0] << " " << dummyLoc[1] << " " << dummyLoc[2] << std::endl;
             std::cout << "master: " << dummyMas[0] << " " << dummyMas[1] << " " << dummyMas[2] << std::endl;
@@ -192,7 +207,7 @@ void init(const char* fTrueMC, const char* fCalDigi, const char* fSttDigi, const
           CellMasterZ[local_index][m] = dummyMas[2];
         }                    
         
-        if(ns_draw::debug)
+        if(debug)
         {
           TGraph* gr1 = new TGraph(4, CellMasterZ[local_index], CellMasterY[local_index]);
           gr1->Draw("f");
@@ -201,12 +216,12 @@ void init(const char* fTrueMC, const char* fCalDigi, const char* fSttDigi, const
     }
   }
   
-  ns_draw::initialized = true;
+  initialized = true;
 }
 
 void show(int index)
 {
-  if(!ns_draw::initialized)
+  if(!initialized)
   {
     std::cout << "not initialized" << std::endl;
     return;
@@ -219,15 +234,15 @@ void show(int index)
     cev->Divide(2,1);
   }
   
-  cev->cd(1)->DrawFrame(ns_draw::centerKLOE[2] - ns_draw::dwz,
-                 ns_draw::centerKLOE[1] - ns_draw::dwy,
-                 ns_draw::centerKLOE[2] + ns_draw::dwz,
-                 ns_draw::centerKLOE[1] + ns_draw::dwy);
+  cev->cd(1)->DrawFrame(centerKLOE[2] - dwz,
+                 centerKLOE[1] - dwy,
+                 centerKLOE[2] + dwz,
+                 centerKLOE[1] + dwy);
   
-  cev->cd(2)->DrawFrame(ns_draw::centerKLOE[2] - ns_draw::dwz,
-                 ns_draw::centerKLOE[0] - ns_draw::dwx,
-                 ns_draw::centerKLOE[2] + ns_draw::dwz,
-                 ns_draw::centerKLOE[0] + ns_draw::dwx);
+  cev->cd(2)->DrawFrame(centerKLOE[2] - dwz,
+                 centerKLOE[0] - dwx,
+                 centerKLOE[2] + dwz,
+                 centerKLOE[0] + dwx);
   
   t->GetEntry(index);
   
@@ -310,8 +325,8 @@ void show(int index)
     
     cev->cd(2);
     TLine* l = new TLine(vec_tr->at(i).z0, vec_tr->at(i).x0, 
-                         ns_draw::centerKLOE[2] + ns_draw::dwz, 
-                         vec_tr->at(i).x0 + vec_tr->at(i).b * (ns_draw::centerKLOE[2] + ns_draw::dwz - vec_tr->at(i).z0));
+                         centerKLOE[2] + dwz, 
+                         vec_tr->at(i).x0 + vec_tr->at(i).b * (centerKLOE[2] + dwz - vec_tr->at(i).z0));
     l->Draw();
   }
   
