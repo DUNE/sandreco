@@ -53,26 +53,23 @@ namespace ns_draw {
 
 using namespace ns_draw;
 
-void init(const char* fTrueMC, const char* fCalDigi, const char* fSttDigi, const char* fTrack)
+void init(const char* fTrueMC, const char* fDigit, const char* fTrack)
 {
   gStyle->SetPalette(palette);
   
   TChain* tTrueMC = new TChain("EDepSimEvents","EDepSimEvents");
   tTrueMC->Add(fTrueMC);
-  TChain* tCalDigi = new TChain("tCalDigi","tCalDigi");
-  tCalDigi->Add(fCalDigi);
-  TChain* tSttDigi = new TChain("tSttDigi","tSttDigi");
-  tSttDigi->Add(fSttDigi);
+  TChain* tDigit = new TChain("tDigit","Digitization");
+  tDigit->Add(fDigit);
   TChain* tTrack = new TChain("tTrack","tTrack");
   tTrack->Add(fTrack);
   tTrueMC->SetBranchAddress("Event",&ev);
-  tCalDigi->SetBranchAddress("cell",&vec_cell);
-  tSttDigi->SetBranchAddress("Stt",&vec_digi);
+  tDigit->SetBranchAddress("cell",&vec_cell);
+  tDigit->SetBranchAddress("Stt",&vec_digi);
   tTrack->SetBranchAddress("track",&vec_tr);
   
   t = tTrueMC;
-  t->AddFriend(tCalDigi);
-  t->AddFriend(tSttDigi);
+  t->AddFriend(tDigit);
   t->AddFriend(tTrack);
   
   TFile f(tTrueMC->GetListOfFiles()->At(0)->GetTitle());
