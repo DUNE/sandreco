@@ -275,7 +275,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g, std::map<int, std::vector<double> 
     }
 }
 
-void Digitize(std::map<int, std::vector<double> >& time_pe, std::map<int, double>& adc, std::map<int, double>& tdc)
+void TimeAndSignal(std::map<int, std::vector<double> >& time_pe, std::map<int, double>& adc, std::map<int, double>& tdc)
 {
   /*
     -  ADC - Proportional to NPHE 
@@ -296,7 +296,7 @@ void Digitize(std::map<int, std::vector<double> >& time_pe, std::map<int, double
   }
 }
 
-void FillCells(TGeoManager* geo, 
+void CollectSignal(TGeoManager* geo, 
     std::map<int, std::vector<double> >& time_pe, 
     std::map<int, double>& adc, 
     std::map<int, double>& tdc, 
@@ -362,7 +362,7 @@ void init(TGeoManager* geo)
     }   
 }
 
-void Digitize(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
+void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
 {     
     std::map<int, std::vector<double> > time_pe;
     std::map<int, std::vector<int> > id_hit;
@@ -372,11 +372,82 @@ void Digitize(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
     vec_cell.clear();
       
     SimulatePE(ev, geo, time_pe, id_hit); 
-    Digitize(time_pe,adc,tdc);
-    FillCells(geo, time_pe, adc, tdc, id_hit, vec_cell);
+    TimeAndSignal(time_pe,adc,tdc);
+    CollectSignal(geo, time_pe, adc, tdc, id_hit, vec_cell);
 }
 
-void DigitizeCal(const char* finname, const char* foutname)
+void Cluster(TG4Event* ev, TGeoManager* geo, std::map<std::string,std::vector<hit> >& cluster_map)
+{
+  cluster_map.clear();
+    
+  for(unsigned int j = 0; j < ev->SegmentDetectors["StrawTracker"].size(); j++)
+  {
+    const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(j);
+    
+    double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
+    double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
+    double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
+    
+    std:string sttname = geo->FindNode(x,y,z)->GetName();
+    
+    hit h;
+    h.det = sttname;
+    h.x1 = hseg.Start.X();
+    h.y1 = hseg.Start.Y();
+    h.z1 = hseg.Start.Z();
+    h.t1 = hseg.Start.T();
+    h.x2 = hseg.Stop.X();
+    h.y2 = hseg.Stop.Y();
+    h.z2 = hseg.Stop.Z();
+    h.t2 = hseg.Stop.T();
+    h.de = hseg.EnergyDeposit;
+    h.pid = hseg.PrimaryId;
+    h.index = j;
+    
+    std::string cluster_name(sttname);
+    cluster_name += "_" + std::to_string(hseg.PrimaryId);
+    
+    cluster_map[cluster_name].push_back(h);
+  }
+}
+
+void Cluster2Digit(std::map<std::string,std::vector<hit> >& cluster_map, std::vector<digit>& digit_vec)
+{    
+  for(std::map<std::string,std::vector<hit> >::iterator it = cluster_map.begin(); it != cluster_map.end(); ++it)
+  {      
+    digit d;
+    d.de = 0;    
+    d.det = it->second[0].det;  
+  
+    for(unsigned int k = 0; k < it->second.size(); k++)
+    {
+      d.hindex.push_back(it->second[k].index);
+      d.de += it->second[k].de;
+    }
+    
+    d.hor = (d.det.find("STTPlane1FULL") != std::string::npos) ? false : true;
+    
+    std::sort(it->second.begin(), it->second.end(), isHitBefore);
+    
+    d.t = it->second.at(0).t1;
+    d.x = 0.5 * (it->second.front().x1 + it->second.back().x2);
+    d.y = 0.5 * (it->second.front().y1 + it->second.back().y2);
+    d.z = 0.5 * (it->second.front().z1 + it->second.back().z2);
+    
+    digit_vec.push_back(d);
+  }
+}
+
+void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
+{
+  std::map<std::string,std::vector<hit> > cluster_map;
+  digit_vec.clear();
+  
+  Cluster(ev, geo, cluster_map);
+  Cluster2Digit(cluster_map, digit_vec);
+}
+
+void Digitize(const char* finname, const char* foutname)
 {
 	  TChain* t = new TChain("EDepSimEvents","EDepSimEvents");
 	  t->Add(finname);
@@ -385,12 +456,14 @@ void DigitizeCal(const char* finname, const char* foutname)
     
     TG4Event* ev = new TG4Event;
     t->SetBranchAddress("Event",&ev);
-    
+  
+    std::vector<digit> digit_vec;    
     std::vector<cell> vec_cell;
     
     TFile fout(foutname,"RECREATE");
-    TTree tcal("tCalDigi","KLOE Calorimeter Digitization");
-    tcal.Branch("cell","std::vector<cell>",&vec_cell);
+    TTree tout("tDigit","Digitization");
+    tout.Branch("cell","std::vector<cell>",&vec_cell);
+    tout.Branch("Stt","std::vector<digit>",&digit_vec);
     
     const int nev = t->GetEntries();
     
@@ -403,23 +476,24 @@ void DigitizeCal(const char* finname, const char* foutname)
     
       std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i)/nev*100) << "%]" << std::flush;
       
-      Digitize(ev, geo, vec_cell);
+      DigitizeCal(ev, geo, vec_cell);
+      DigitizeStt(ev, geo, digit_vec);
          
-      tcal.Fill();
+      tout.Fill();
     }
     std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
     std::cout << std::endl;
     
     fout.cd();
-    tcal.Write();
+    tout.Write();
     fout.Close();
     
     delete t;
     f.Close();
 }
 
-void CalDigi()
+void digitization()
 {
-  std::cout << "DigitizeCal(const char* finname, const char* foutname)" << std::endl;
+  std::cout << "Digitize(const char* finname, const char* foutname)" << std::endl;
   std::cout << "finname could contain wild card" << std::endl;
-}
+} 

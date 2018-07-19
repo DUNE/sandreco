@@ -7,121 +7,209 @@
 #include <TFile.h>
 #include <TTree.h>
 
-TFile* f;
-TTree* t;
-TG4Event* ev;
+namespace ns_dump {
+  TFile* f;
+  TTree* t;
+  TG4Event* ev;
+}
 
-void init(const char* fname, const char* tname, const char* bname)
+using namespace ns_dump;
+
+void init(const char* fname, const char* tname = "EDepSimEvents", const char* bname = "Event")
 {
   f = new TFile(fname);
   t = (TTree*) f->Get(tname);
   t->SetBranchAddress(bname,&ev);
 }
 
-void dumpPrt(int entry)
+void dumpPrt()
 {
-  for(unsigned int i = 0; i < ev->Primaries[entry].Particles.size(); i++)
+  std::cout << std::setw(7)  << std::right << "vertex"  
+            << std::setw(7)  << std::right << "track"   
+            << std::setw(7)  << std::right << "id"    
+            << std::setw(20) << std::right << "name"   
+            << std::setw(10) << std::right << "pdg"    
+            << std::setw(10) << std::right << "px"    
+            << std::setw(10) << std::right << "py"    
+            << std::setw(10) << std::right << "pz"    
+            << std::setw(10) << std::right << "E"      
+            << std::endl;
+                              
+  for(unsigned int j = 0; j < ev->Primaries.size(); j++)
   {
-    std::cout << entry << "." << i <<  ")" << std::endl; 
-    std::cout << "TID: " << ev->Primaries[entry].Particles[i].TrackId << 
-                 " NAM: " << ev->Primaries[entry].Particles[i].Name << 
-                 " PDG: " << ev->Primaries[entry].Particles[i].PDGCode << std::endl;
-    std::cout << "MOM: " << ev->Primaries[entry].Particles[i].Momentum.X() << " " 
-                         << ev->Primaries[entry].Particles[i].Momentum.Y() << " " 
-                         << ev->Primaries[entry].Particles[i].Momentum.Z() << " " 
-                         << ev->Primaries[entry].Particles[i].Momentum.T() << std::endl;
+    for(unsigned int i = 0; i < ev->Primaries[j].Particles.size(); i++)
+    {
+      std::cout << std::setw(7)  << std::right << j 
+                << std::setw(7)  << std::right << i 
+                << std::setw(7)  << std::right << ev->Primaries[j].Particles[i].TrackId 
+                << std::setw(20) << std::right << ev->Primaries[j].Particles[i].Name 
+                << std::setw(10) << std::right << ev->Primaries[j].Particles[i].PDGCode 
+                << std::setw(10) << std::right << ev->Primaries[j].Particles[i].Momentum.X()
+                << std::setw(10) << std::right << ev->Primaries[j].Particles[i].Momentum.Y()
+                << std::setw(10) << std::right << ev->Primaries[j].Particles[i].Momentum.Z()
+                << std::setw(10) << std::right << ev->Primaries[j].Particles[i].Momentum.T() 
+                << std::endl;
+    }
   }
+  std::cout << "==========================================================================" << std::endl;
 }
 
 void dumpVtx()
 {
+  std::cout << std::setw(7)   << std::right << "entry" 
+            << std::setw(30)  << std::right << "generator" 
+            << std::setw(100) << std::right << "reaction" 
+            << std::setw(100) << std::right << "file" 
+            << std::setw(10)  << std::right << "X"  
+            << std::setw(10)  << std::right << "Y"  
+            << std::setw(10)  << std::right << "Z" 
+            << std::setw(10)  << std::right << "T"  
+            << std::setw(10)  << std::right << "inter"
+            << std::setw(20)  << std::right << "XS" 
+            << std::setw(20)  << std::right << "diffXS" 
+            << std::setw(20)  << std::right << "weigth" 
+            << std::setw(20)  << std::right << "prob" 
+            << std::setw(10)  << std::right << "npart"
+            << std::endl;
+
   for(unsigned int i = 0; i < ev->Primaries.size(); i++)
   {
-    std::cout << i << ")" << std::endl;
-    std::cout << "GEN: " << ev->Primaries[i].GeneratorName.c_str() << std::endl;
-    std::cout << "REA: " << ev->Primaries[i].Reaction.c_str() << std::endl;
-    std::cout << "FIL: " << ev->Primaries[i].Filename.c_str() << std::endl;
-    std::cout << "POS: " << ev->Primaries[i].Position.X() << " " << ev->Primaries[i].Position.Y() << " " << ev->Primaries[i].Position.Z() << std::endl;
-    std::cout << "INT: " << ev->Primaries[i].InteractionNumber 
-              << " XSC: " << ev->Primaries[i].CrossSection 
-              << " DFX: " << ev->Primaries[i].DiffCrossSection << std::endl;
-    std::cout << "WGT: " << ev->Primaries[i].Weight << " PRB: " << ev->Primaries[i].Probability << " PRT: " << ev->Primaries[i].Particles.size() << std::endl;
-    
-    dumpPrt(i);
+    std::cout << std::setw(7)   << std::right << i
+              << std::setw(30)  << std::right << ev->Primaries[i].GeneratorName.c_str() 
+              << std::setw(100) << std::right << ev->Primaries[i].Reaction.c_str() 
+              << std::setw(100) << std::right << ev->Primaries[i].Filename.c_str() 
+              << std::setw(10)  << std::right << ev->Primaries[i].Position.X() 
+              << std::setw(10)  << std::right << ev->Primaries[i].Position.Y() 
+              << std::setw(10)  << std::right << ev->Primaries[i].Position.Z() 
+              << std::setw(10)  << std::right << ev->Primaries[i].Position.T() 
+              << std::setw(10)  << std::right << ev->Primaries[i].InteractionNumber 
+              << std::setw(20)  << std::right << ev->Primaries[i].CrossSection 
+              << std::setw(20)  << std::right << ev->Primaries[i].DiffCrossSection 
+              << std::setw(20)  << std::right << ev->Primaries[i].Weight 
+              << std::setw(20)  << std::right << ev->Primaries[i].Probability 
+              << std::setw(10)  << std::right << ev->Primaries[i].Particles.size() 
+              << std::endl;
   }
-}
-
-void dumpPnt(int entry)
-{
-  for(unsigned int i = 0; i < ev->Trajectories[entry].Points.size(); i++)
-  {
-    std::cout << entry << "." << i << ")" << std::endl;
-    std::cout << "POS: " << ev->Trajectories[entry].Points[i].Position.X() << " " 
-                         << ev->Trajectories[entry].Points[i].Position.Y() << " "
-                         << ev->Trajectories[entry].Points[i].Position.Z() << " "
-                         << ev->Trajectories[entry].Points[i].Position.T() << std::endl;
-    std::cout << "MOM: " << ev->Trajectories[entry].Points[i].Momentum.X() << " " 
-                         << ev->Trajectories[entry].Points[i].Momentum.Y() << " " 
-                         << ev->Trajectories[entry].Points[i].Momentum.Z() << std::endl;
-    std::cout << "PRC: " << ev->Trajectories[entry].Points[i].Process << " "
-                 " SPR: " << ev->Trajectories[entry].Points[i].Subprocess << std::endl;
-  }
+  std::cout << "==========================================================================" << std::endl;
 }
 
 void dumpTrj()
 {
+  std::cout << std::setw(7)  << std::right << "entry" 
+            << std::setw(7)  << std::right << "id" 
+            << std::setw(7)  << std::right << "pid"
+            << std::setw(10) << std::right << "name" 
+            << std::setw(10) << std::right << "pdg" 
+            << std::setw(10) << std::right << "npoints" 
+            << std::setw(10) << std::right << "ipx" 
+            << std::setw(10) << std::right << "ipy" 
+            << std::setw(10) << std::right << "ipz" 
+            << std::setw(10) << std::right << "iE" 
+            << std::setw(7)  << std::right << "point" 
+            << std::setw(10) << std::right << "X" 
+            << std::setw(10) << std::right << "Y" 
+            << std::setw(10) << std::right << "Z" 
+            << std::setw(10) << std::right << "T" 
+            << std::setw(10) << std::right << "px" 
+            << std::setw(10) << std::right << "py" 
+            << std::setw(10) << std::right << "pz" 
+            << std::setw(5)  << std::right << "proc" 
+            << std::setw(5)  << std::right << "subp"
+            << std::endl;
+                
   for(unsigned int i = 0; i < ev->Trajectories.size(); i++)
   {
-    std::cout << i << ")" << std::endl;
-    std::cout << "TID: " << ev->Trajectories[i].TrackId << 
-                 " PID: " << ev->Trajectories[i].ParentId <<
-                 " NAM: " << ev->Trajectories[i].Name.c_str() << 
-                 " PDG: " << ev->Trajectories[i].PDGCode << 
-                 " NPT: " << ev->Trajectories[i].Points.size() << std::endl;
-    std::cout << "MOM: " << ev->Trajectories[i].InitialMomentum.X() << " " 
-                         << ev->Trajectories[i].InitialMomentum.Y() << " " 
-                         << ev->Trajectories[i].InitialMomentum.Z() << " " 
-                         << ev->Trajectories[i].InitialMomentum.T() << std::endl;
-    dumpPnt(i);
+    for(unsigned int j = 0; j < ev->Trajectories[i].Points.size(); j++)
+    {
+      std::cout << std::setw(7) << i 
+                << std::setw(7)  << std::right << ev->Trajectories[i].TrackId 
+                << std::setw(7)  << std::right << ev->Trajectories[i].ParentId 
+                << std::setw(10) << std::right << ev->Trajectories[i].Name.c_str() 
+                << std::setw(10) << std::right << ev->Trajectories[i].PDGCode 
+                << std::setw(10) << std::right << ev->Trajectories[i].Points.size() 
+                << std::setw(10) << std::right << ev->Trajectories[i].InitialMomentum.X() 
+                << std::setw(10) << std::right << ev->Trajectories[i].InitialMomentum.Y() 
+                << std::setw(10) << std::right << ev->Trajectories[i].InitialMomentum.Z() 
+                << std::setw(10) << std::right << ev->Trajectories[i].InitialMomentum.T() 
+                << std::setw(7)  << std::right << j 
+                << std::setw(10) << std::right << ev->Trajectories[i].Points[j].Position.X() 
+                << std::setw(10) << std::right << ev->Trajectories[i].Points[j].Position.Y() 
+                << std::setw(10) << std::right << ev->Trajectories[i].Points[j].Position.Z() 
+                << std::setw(10) << std::right << ev->Trajectories[i].Points[j].Position.T() 
+                << std::setw(10) << std::right << ev->Trajectories[i].Points[j].Momentum.X() 
+                << std::setw(10) << std::right << ev->Trajectories[i].Points[j].Momentum.Y() 
+                << std::setw(10) << std::right << ev->Trajectories[i].Points[j].Momentum.Z() 
+                << std::setw(5) <<  std::right << ev->Trajectories[i].Points[j].Process 
+                << std::setw(5) <<  std::right << ev->Trajectories[i].Points[j].Subprocess 
+                << std::endl;
+    }
+    std::cout << "----------------------------------------------------------------------------" << std::endl;
   }
+  std::cout << "==========================================================================" << std::endl;
 }
 
 void dumpHit()
 {
+  std::cout << std::setw(7)  << std::right << "index"
+            << std::setw(20) << std::right << "type" 
+            << std::setw(10) << std::right << "X1"   
+            << std::setw(10) << std::right << "Y1"   
+            << std::setw(10) << std::right << "Z1"   
+            << std::setw(10) << std::right << "T1"  
+            << std::setw(10) << std::right << "X2"   
+            << std::setw(10) << std::right << "Y2"   
+            << std::setw(10) << std::right << "Z2"   
+            << std::setw(10) << std::right << "T2"    
+            << std::setw(7)  << std::right << "pid"   
+            << std::setw(15) << std::right << "dE"    
+            << std::setw(15) << std::right << "dE2"   
+            << std::setw(15) << std::right << "L" 
+            << std::setw(20) << std::right << "Contrib"
+            << std::endl;
+                  
   for(map<string,vector<TG4HitSegment> >::iterator it = ev->SegmentDetectors.begin(); it != ev->SegmentDetectors.end(); ++it)
   {
-    std::cout << "----------------------------------------------------------------------------" << std::endl;  
-    std::cout << "HIT: " << it->first.c_str() << "\t[ " << it->second.size() << " ]" << std::endl;
-    std::cout << "----------------------------------------------------------------------------" << std::endl;  
-    
     for(unsigned int j = 0; j < it->second.size(); j++)
     {
-      std::cout << j << ")" << std::endl;
-      std::cout << "STR: " << it->second.at(j).Start.X() << " " << it->second.at(j).Start.Y() << " " << it->second.at(j).Start.Z() << std::endl;
-      std::cout << "STP: " << it->second.at(j).Stop.X() << " " << it->second.at(j).Stop.Y() << " " << it->second.at(j).Stop.Z() << std::endl;
-      std::cout << "PRI: " << it->second.at(j).PrimaryId << 
-                  " DE : " << it->second.at(j).EnergyDeposit << 
-                  " DE2: " << it->second.at(j).SecondaryDeposit << 
-                  " TRL: " << it->second.at(j).TrackLength << std::endl;
-      std::ostringstream str;
-      str << "CRB: ";
-      for(unsigned int k = 0; k < it->second.at(j).Contrib.size(); k++)
-      {
-        str << it->second.at(j).Contrib[k] << ", ";
-      }
-      
-      std::cout << str.str() << std::endl;
+      std::cout << std::setw(7)  << std::right << j
+                << std::setw(20) << std::right << it->first 
+                << std::setw(10) << std::right << it->second.at(j).Start.X()
+                << std::setw(10) << std::right << it->second.at(j).Start.Y()
+                << std::setw(10) << std::right << it->second.at(j).Start.Z()
+                << std::setw(10) << std::right << it->second.at(j).Start.T() 
+                << std::setw(10) << std::right << it->second.at(j).Stop.X()  
+                << std::setw(10) << std::right << it->second.at(j).Stop.Y()  
+                << std::setw(10) << std::right << it->second.at(j).Stop.Z()  
+                << std::setw(10) << std::right << it->second.at(j).Stop.T()
+                << std::setw(7)  << std::right << it->second.at(j).PrimaryId   
+                << std::setw(15) << std::right << it->second.at(j).EnergyDeposit    
+                << std::setw(15) << std::right << it->second.at(j).SecondaryDeposit   
+                << std::setw(15) << std::right << it->second.at(j).TrackLength
+                << "\t";
+                
+                for(unsigned int k = 0; k < it->second.at(j).Contrib.size(); k++)
+                {
+                  std::cout << it->second.at(j).Contrib[k] << ", ";
+                }
+                
+                std::cout << std::endl;
     }
+    std::cout << "----------------------------------------------------------------------------" << std::endl;
   }
+  std::cout << "==========================================================================" << std::endl;
 }
 
 void dumpEvent()
 {
   std::cout << "==========================================================================" << std::endl;
-  std::cout << "run: " << ev->RunId << " event: " << ev->EventId << " vtx: " << ev->Primaries.size() << " trj: " << ev->Trajectories.size() << std::endl;
+  std::cout << "run: " << std::setw(6) << ev->RunId << 
+            " event: " << std::setw(6) << ev->EventId << 
+         " vertices: " << std::setw(6) << ev->Primaries.size() << 
+           " tracks: " << std::setw(6) << ev->Trajectories.size() << std::endl;
   std::cout << "==========================================================================" << std::endl;
   
   dumpVtx();
+  dumpPrt();
   dumpTrj();
   dumpHit();
 }
