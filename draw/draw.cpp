@@ -9,6 +9,7 @@
 #include <TChain.h>
 #include <TMarker.h>
 #include <TEllipse.h>
+#include <TBox.h>
 
 #include "/mnt/nas01/users/mtenti/sw/edep-sim/edep-sim-bin/include/edep-sim/TG4Event.h"
 #include "/mnt/nas01/users/mtenti/sw/edep-sim/edep-sim-bin/include/edep-sim/TG4HitSegment.h"
@@ -40,6 +41,9 @@ namespace ns_draw {
   double dwy = 2500.;
   double dwz = 2500.;
   
+  double kloe_int_R = 2000.;
+  double kloe_int_dx = 1690.;
+  
   TChain* t = 0;
   TG4Event* ev = new TG4Event;
   TGeoManager* geo = 0;
@@ -64,7 +68,7 @@ void init(const char* fTrueMC, const char* fDigit, const char* fReco)
   tDigit->Add(fDigit);
   TChain* tReco = new TChain("tReco","tReco");
   tReco->Add(fReco);
-  tTrueMC->SetBranchAddress("event",&ev);
+  tTrueMC->SetBranchAddress("Event",&ev);
   tDigit->SetBranchAddress("cell",&vec_cell);
   tDigit->SetBranchAddress("Stt",&vec_digi);
   tReco->SetBranchAddress("track",&vec_tr);
@@ -299,6 +303,11 @@ void show(int index)
     
     gr->Draw("f");
   }
+  
+  cev->cd(2);
+  TBox* kloe_int_xz = new TBox(centerKLOE[2] - kloe_int_R, centerKLOE[0] - kloe_int_dx, centerKLOE[2] + kloe_int_R, centerKLOE[0] + kloe_int_dx);
+  kloe_int_xz->SetFillStyle(0);
+  kloe_int_xz->Draw();
   
   for(unsigned int i = 0; i < vec_digi->size(); i++)
   {
