@@ -30,6 +30,15 @@ struct cell {
   std::vector<int> hindex2;
 };
 
+struct cluster {
+  double x;
+  double z;
+  double y;
+  double t;
+  double e;
+  std::vector<cell> cells;
+};
+
 struct hit {
   std::string det;
   double x1;
@@ -68,16 +77,19 @@ struct track {
   double y0;
   double z0;
   double t0;
+  int ret_ln;
+  double chi2_ln;
+  int ret_cr;
+  double chi2_cr;
   std::vector<digit> digits;
 };
 
-class gcell {
-  public:
-    int id;
-    double Z[4];
-    double Y[4];
-    double adc;
-    double tdc;
+struct gcell {
+  int id;
+  double Z[4];
+  double Y[4];
+  double adc;
+  double tdc;
 };
 
 bool isHitBefore(hit h1, hit h2)
@@ -104,42 +116,13 @@ namespace ns_Digit {
   const char* path_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
  
   TRandom3 r;
+  
+  const double tscin = 3.08;
+  const double tscex = 0.588;
+  const double vlfb = 5.85;
+  
+  const double lCalBarrel = 4.3; // meter
 }
-
-namespace ns_draw {
-  const bool debug = false;
-  
-  static const int nMod = 24;
-  static const int nLay = 5;
-  static const int nCel = 12;
-  
-  static const int nTotCells = nMod * nLay * nCel; 
-  static const int nCellModule = nLay * nCel;
-  
-  double centerKLOE[3];
-  double CellLocalX[nCellModule][4];
-  double CellLocalZ[nCellModule][4];
-  
-  int palette = 87;
-  
-  bool initialized = false;
-  
-  double dwx = 2500.;
-  double dwy = 2500.;
-  double dwz = 2500.;
-  
-  TChain* t = 0;
-  TG4Event* ev = new TG4Event;
-  TGeoManager* geo = 0;
-  TCanvas* cev = 0;
-
-  std::vector<cell>* vec_cell;
-  std::vector<digit>* vec_digi;
-  std::vector<track>* vec_tr;
-  std::map<int, gcell> calocell;
-}
-
-#endif
 
 #ifdef __MAKECINT__ 
 #pragma link C++ class std::map<int,std::vector<double> >+; 
@@ -149,4 +132,6 @@ namespace ns_draw {
 #pragma link C++ class std::map<std::string,std::vector<hit> >+; 
 #pragma link C++ class std::vector<digit>+; 
 #pragma link C++ class std::vector<track>+;
+#pragma link C++ class std::vector<cluster>+;
+#endif
 #endif

@@ -18,9 +18,43 @@
 
 #include "/mnt/nas01/users/mtenti/wd/analysis/KLOEcal/loader/loader.C"
 
+namespace ns_draw {
+  const bool debug = false;
+  
+  static const int nMod = 24;
+  static const int nLay = 5;
+  static const int nCel = 12;
+  
+  static const int nTotCells = nMod * nLay * nCel; 
+  static const int nCellModule = nLay * nCel;
+  
+  double centerKLOE[3];
+  double CellLocalX[nCellModule][4];
+  double CellLocalZ[nCellModule][4];
+  
+  int palette = 87;
+  
+  bool initialized = false;
+  
+  double dwx = 2500.;
+  double dwy = 2500.;
+  double dwz = 2500.;
+  
+  TChain* t = 0;
+  TG4Event* ev = new TG4Event;
+  TGeoManager* geo = 0;
+  TCanvas* cev = 0;
+
+  std::vector<cell>* vec_cell;
+  std::vector<digit>* vec_digi;
+  std::vector<track>* vec_tr;
+  std::vector<cluster>* vec_cl;
+  std::map<int, gcell> calocell;
+}
+
 using namespace ns_draw;
 
-void init(const char* fTrueMC, const char* fDigit, const char* fTrack)
+void init(const char* fTrueMC, const char* fDigit, const char* fReco)
 {
   gStyle->SetPalette(palette);
   
@@ -28,16 +62,17 @@ void init(const char* fTrueMC, const char* fDigit, const char* fTrack)
   tTrueMC->Add(fTrueMC);
   TChain* tDigit = new TChain("tDigit","Digitization");
   tDigit->Add(fDigit);
-  TChain* tTrack = new TChain("tTrack","tTrack");
-  tTrack->Add(fTrack);
-  tTrueMC->SetBranchAddress("Event",&ev);
+  TChain* tReco = new TChain("tReco","tReco");
+  tReco->Add(fReco);
+  tTrueMC->SetBranchAddress("event",&ev);
   tDigit->SetBranchAddress("cell",&vec_cell);
   tDigit->SetBranchAddress("Stt",&vec_digi);
-  tTrack->SetBranchAddress("track",&vec_tr);
+  tReco->SetBranchAddress("track",&vec_tr);
+  tReco->SetBranchAddress("cluster",&vec_cl);
   
   t = tTrueMC;
   t->AddFriend(tDigit);
-  t->AddFriend(tTrack);
+  t->AddFriend(tReco);
   
   TFile f(tTrueMC->GetListOfFiles()->At(0)->GetTitle());
   geo = (TGeoManager*) f.Get("EDepSimGeometry");
@@ -132,6 +167,7 @@ void init(const char* fTrueMC, const char* fDigit, const char* fTrack)
     {
       for(int k = 0; k < nCel; k++)
       {
+        
         int index = i * (nLay * nCel) + j * (nCel) + k;
         int id = k + 100 * j + 1000 * i;
         
@@ -169,7 +205,7 @@ void init(const char* fTrueMC, const char* fDigit, const char* fTrack)
           
           CellMasterY[local_index][m] = dummyMas[1];
           CellMasterZ[local_index][m] = dummyMas[2];
-        }                    
+        }                 
         
         if(debug)
         {
@@ -179,7 +215,7 @@ void init(const char* fTrueMC, const char* fDigit, const char* fTrack)
       }
     }
   }
-  
+    
   initialized = true;
 }
 
@@ -194,7 +230,7 @@ void show(int index)
 
   if(cev == 0 )
   {
-    cev = new TCanvas("cev",TString::Format("event: %d",index).Data(), 1200, 600);
+    cev = new TCanvas("cev",TString::Format("Event: %d",index).Data(), 1200, 600);
     cev->Divide(2,1);
   }
   
@@ -282,16 +318,30 @@ void show(int index)
   
   for(unsigned int i = 0; i < vec_tr->size(); i++)
   {
+    if(vec_tr->at(i).ret_cr == 0 && vec_tr->at(i).ret_ln == 0)
+    {
+      cev->cd(1);
+      TEllipse* e = new TEllipse(vec_tr->at(i).zc, vec_tr->at(i).yc, vec_tr->at(i).r);
+      e->SetFillStyle(0);
+      e->Draw();
+      
+      cev->cd(2);
+      TLine* l = new TLine(vec_tr->at(i).z0, vec_tr->at(i).x0, 
+                           centerKLOE[2] + dwz, 
+                           vec_tr->at(i).x0 + vec_tr->at(i).b * (centerKLOE[2] + dwz - vec_tr->at(i).z0));
+      l->Draw();
+    }
+  }
+  
+  for(unsigned int i = 0; i < vec_cl->size(); i++)
+  {
+    TMarker* m1 = new TMarker(vec_cl->at(i).z,vec_cl->at(i).y,2);
     cev->cd(1);
-    TEllipse* e = new TEllipse(vec_tr->at(i).zc, vec_tr->at(i).yc, vec_tr->at(i).r);
-    e->SetFillStyle(0);
-    e->Draw();
+    m1->Draw();
     
+    TMarker* m2 = new TMarker(vec_cl->at(i).z,vec_cl->at(i).x,2);
     cev->cd(2);
-    TLine* l = new TLine(vec_tr->at(i).z0, vec_tr->at(i).x0, 
-                         centerKLOE[2] + dwz, 
-                         vec_tr->at(i).x0 + vec_tr->at(i).b * (centerKLOE[2] + dwz - vec_tr->at(i).z0));
-    l->Draw();
+    m2->Draw();
   }
   
   for(unsigned int i = 0; i < ev->Trajectories.size(); i++)

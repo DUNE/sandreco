@@ -234,7 +234,254 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
     return 0;
 }
 
-void RecoSTtoutack(const char* fDigit, const char* fTrueMC, const char* fOut)
+void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& vec_tr)
+{
+  vec_tr.clear();    
+          
+  //for(unsigned int j = 0; j < ev->Primaries[0].Particles.size(); j++)
+  for(unsigned int j = 0; j < ev->Trajectories.size(); j++)
+  {
+    track tr;
+          
+    tr.tid = ev->Trajectories.at(j).TrackId;
+    
+    for(unsigned int k = 0; k < vec_digi->size(); k++)
+    {
+      for(unsigned int m = 0; m < vec_digi->at(k).hindex.size(); m++)
+      {
+        const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(vec_digi->at(k).hindex.at(m)); 
+               
+        //if(hseg.PrimaryId == tr.tid)
+        //{
+          //if(ishitok(ev, hseg->PrimaryId, hseg))
+          if(ishitok(ev, tr.tid, hseg))
+          {
+            tr.digits.push_back(vec_digi->at(k));
+            break;
+          }
+        //}
+      }
+    }
+    
+    std::sort(tr.digits.begin(), tr.digits.end(), isDigBefore);
+    
+    vec_tr.push_back(tr);
+  }
+}
+
+void TrackFit(std::vector<track>& vec_tr)
+{
+    
+  std::vector<double> y_h;
+  std::vector<double> z_h;
+  std::vector<double> x_v;
+  std::vector<double> y_v;
+  std::vector<double> z_v;
+  std::vector<double> rho;
+  
+  for(unsigned int j = 0; j < vec_tr.size(); j++)
+  {
+    y_h.clear();
+    z_h.clear();
+    x_v.clear();
+    y_v.clear();
+    z_v.clear();
+    rho.clear();
+    
+    for(unsigned int k = 0; k < vec_tr[j].digits.size(); k++)
+    {
+      if(vec_tr[j].digits.at(k).hor)
+      {
+        y_h.push_back(vec_tr[j].digits.at(k).y);
+        z_h.push_back(vec_tr[j].digits.at(k).z);
+      }
+      else
+      {
+        x_v.push_back(vec_tr[j].digits.at(k).x);
+        z_v.push_back(vec_tr[j].digits.at(k).z);
+      }
+    }
+    
+    double chi2_cir, chi2_lin;
+    double errr;
+    
+    double cov[2][2];
+    
+    int n_h = z_h.size();
+    int n_v = z_v.size();
+    
+    //std::cout << n_h << " " << n_v << std::endl;
+    
+    if(n_v <= 2 || n_h <= 2)
+      continue;
+    
+    n_v = 2;
+    
+    while((n_v < int(z_v.size())) && (z_v[n_v-1]-z_v[n_v-2])*(z_v[1]-z_v[0]) > 0.)
+      n_v++;
+    
+    int ret1 = fitCircle(n_h, z_h, y_h, vec_tr[j].zc, vec_tr[j].yc, vec_tr[j].r, errr, chi2_cir);
+      
+    if( (z_h[1] - z_h[0]) * (vec_tr[j].yc - y_h[0]) > 0 )
+      vec_tr[j].h = -1;
+    else
+      vec_tr[j].h = 1;
+      
+    for(int k = 0; k < n_v; k++)
+    {
+      y_v.push_back(vec_tr[j].yc + vec_tr[j].h * sqrt(vec_tr[j].r*vec_tr[j].r - (z_v[k] - vec_tr[j].zc)*(z_v[k] - vec_tr[j].zc)));
+    }
+  
+    double cos =  vec_tr[j].h * (y_v[0] - vec_tr[j].yc)/vec_tr[j].r;
+    double sin = -vec_tr[j].h * (z_v[0] - vec_tr[j].zc)/vec_tr[j].r;
+    
+    for(int k = 0; k < n_v; k++)
+    {
+        rho.push_back(z_v[k] * cos + y_v[k] * sin);
+    }
+    
+    x_v.resize(n_v);
+    
+    int ret2 = fitLinear(n_v, rho, x_v, vec_tr[j].a, vec_tr[j].b, cov, chi2_lin);  
+    
+    vec_tr[j].z0 = vec_tr[j].digits.front().z;
+    vec_tr[j].y0 = vec_tr[j].yc + vec_tr[j].h * TMath::Sqrt(vec_tr[j].r*vec_tr[j].r - (vec_tr[j].z0 - vec_tr[j].zc)*(vec_tr[j].z0 - vec_tr[j].zc));
+    vec_tr[j].x0 = vec_tr[j].a + vec_tr[j].b * (vec_tr[j].z0 * cos + vec_tr[j].y0 * sin);
+    vec_tr[j].t0 = vec_tr[j].digits.front().t;
+    
+    vec_tr[j].ret_ln = ret2;
+    vec_tr[j].chi2_ln = chi2_lin;
+    vec_tr[j].ret_cr = ret1;
+    vec_tr[j].chi2_cr = chi2_cir;
+  }
+}
+
+bool IsContiguous(const cell& c1, const cell& c2)
+{
+  if(c1.mod == c2.mod)
+  {
+    if(TMath::Abs(c1.lay - c2.lay) <= 1)
+    {
+      if(TMath::Abs(c1.cel - c2.cel) <= 1)
+      {
+        return true;
+      }
+    }
+  }
+  else if(TMath::Abs(c1.mod - c2.mod) == 1)
+  {
+    if(TMath::Abs(c1.lay - c2.lay) <= 1)
+    {
+      if((c1.cel == 0 && c2.cel == 11) || (c2.cel == 0 && c1.cel == 11))
+      {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool IsContiguous(cluster cl, const cell& c)
+{
+  for(unsigned int i = 0; i < cl.cells.size(); i++)
+  {
+    if(IsContiguous(cl.cells.at(i), c))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void PreCluster(std::vector<cell>*  vec_cell, std::vector<cluster>& vec_precl)
+{
+  vec_precl.clear();
+
+  std::vector<cell> vec_tmpcell(*vec_cell);
+  
+  while(vec_tmpcell.size() != 0)
+  {
+    cell c = vec_tmpcell.front();
+    
+    //std::cout << vec_tmpcell.size() << std::endl;
+    
+    bool found = false;
+    
+    for(unsigned int i = 0; i < vec_precl.size(); i++)
+    {
+      if(IsContiguous(vec_precl.at(i), c))
+      {
+        vec_precl.at(i).cells.push_back(c);
+        found = true;
+        break;
+      }
+    }
+    
+    if(found == false)
+    {
+      cluster cl;
+      cl.cells.push_back(c);
+      vec_precl.push_back(cl);
+    }
+    vec_tmpcell.erase(vec_tmpcell.begin());
+  }
+  
+  //std::cout << vec_precl.size() << std::endl;
+}
+
+void Filter(std::vector<cluster>& vec_cl)
+{
+  for(unsigned int i = 0; i < vec_cl.size(); i++)
+  {
+    for(unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++)
+    {
+      if(vec_cl.at(i).cells.at(k).adc1 == 0. || vec_cl.at(i).cells.at(k).adc2 == 0.)
+      {
+        vec_cl.at(i).cells.erase(vec_cl.at(i).cells.begin() + k);
+      }
+    }
+  }
+}
+
+void Merge(std::vector<cluster>& vec_cl)
+{
+  const double m_to_mm = 1000.;
+
+  for(unsigned int i = 0; i < vec_cl.size(); i++)
+  {
+    vec_cl.at(i).e = 0.;
+    vec_cl.at(i).x = 0.;
+    vec_cl.at(i).y = 0.;
+    vec_cl.at(i).z = 0.;
+    vec_cl.at(i).t = 0.;
+    
+    for(unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++)
+    {
+      double e = vec_cl.at(i).cells.at(k).adc1 + vec_cl.at(i).cells.at(k).adc2;
+      double x = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm;
+      double t = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 + vec_cl.at(i).cells.at(k).tdc2 - ns_Digit::vlfb * ns_Digit::lCalBarrel);
+      vec_cl.at(i).e += e;
+      vec_cl.at(i).x += e * x;
+      vec_cl.at(i).y += e * vec_cl.at(i).cells.at(k).y;
+      vec_cl.at(i).z += e * vec_cl.at(i).cells.at(k).z;
+      vec_cl.at(i).t += e * t;
+    }
+    
+    vec_cl.at(i).x /= vec_cl.at(i).e;
+    vec_cl.at(i).y /= vec_cl.at(i).e;
+    vec_cl.at(i).z /= vec_cl.at(i).e;
+    vec_cl.at(i).t /= vec_cl.at(i).e;
+    
+    /*std::cout << vec_cl.at(i).x << " " 
+      << vec_cl.at(i).y << " " 
+      << vec_cl.at(i).z << " " 
+      << vec_cl.at(i).t << " " 
+      << vec_cl.at(i).e << " " 
+      << vec_cl.at(i).cells.size() << std::endl;*/
+  }
+}
+
+void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
 {
   TChain tDigit("tDigit");
   TChain toutueMC("EDepSimEvents");
@@ -248,16 +495,21 @@ void RecoSTtoutack(const char* fDigit, const char* fTrueMC, const char* fOut)
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event",&ev);
   
-  std::vector<digit>* digit_vec = new std::vector<digit>;
-  t->SetBranchAddress("Stt",&digit_vec);
+  std::vector<digit>* vec_digi = new std::vector<digit>;
+  std::vector<cell>*  vec_cell = new std::vector<cell>;
+  
+  t->SetBranchAddress("Stt",&vec_digi);
+  t->SetBranchAddress("cell",&vec_cell);
   
   std::vector<track> vec_tr;
+  std::vector<cluster> vec_cl;
     
   TFile fout(fOut,"RECREATE");
-  toutee tout("toutack","Track");
+  TTree tout("tReco","tReco");
   tout.Branch("track","std::vector<track>",&vec_tr);
+  tout.Branch("cluster","std::vector<cluster>",&vec_cl);
     
-  const int nev = t->GetEntries();
+  const int nev = 10/*t->GetEntries()*/;
   
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -268,126 +520,37 @@ void RecoSTtoutack(const char* fDigit, const char* fTrueMC, const char* fOut)
     
     t->GetEntry(i);
     
-    /*
-    std::cout << "===================================" << std::endl;
-    std::cout << i << std::endl;
-    std::cout << "===================================" << std::endl;
-    */
-    
-    vec_tr.clear();
-    
-    //for(unsigned int j = 0; j < ev->Primaries[0].Particles.size(); j++)
-    for(unsigned int j = 0; j < ev->Trajectories.size(); j++)
-    {
-      track tr;
-            
-      tr.tid = ev->Trajectories.at(j).TrackId;
-      
-      std::vector<double> y_h;
-      std::vector<double> z_h;
-      std::vector<double> x_v;
-      std::vector<double> y_v;
-      std::vector<double> z_v;
-      std::vector<double> rho;
-      
-      for(unsigned int k = 0; k < digit_vec->size(); k++)
-      {
-        for(unsigned int m = 0; m < digit_vec->at(k).hindex.size(); m++)
-        {
-          const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(digit_vec->at(k).hindex.at(m)); 
-                 
-          //if(hseg.PrimaryId == tr.tid)
-          //{
-            //if(ishitok(ev, hseg->PrimaryId, hseg))
-            if(ishitok(ev, tr.tid, hseg))
-            {
-              tr.digits.push_back(digit_vec->at(k));
-              break;
-            }
-          //}
-        }
-      }
-      
-      std::sort(tr.digits.begin(), tr.digits.end(), isDigBefore);
-      
-      for(unsigned int k = 0; k < tr.digits.size(); k++)
-      {
-        if(tr.digits.at(k).hor)
-        {
-          y_h.push_back(tr.digits.at(k).y);
-          z_h.push_back(tr.digits.at(k).z);
-        }
-        else
-        {
-          x_v.push_back(tr.digits.at(k).x);
-          z_v.push_back(tr.digits.at(k).z);
-        }
-      }
-      
-      double chi2_cir, chi2_lin;
-      double errr;
-      
-      double cov[2][2];
-      
-      int n_h = z_h.size();
-      int n_v = z_v.size();
-      
-      //std::cout << n_h << " " << n_v << std::endl;
-      
-      if(n_v <= 2 || n_h <= 2)
-        continue;
-      
-      n_v = 2;
-      
-      while((n_v < int(z_v.size())) && (z_v[n_v-1]-z_v[n_v-2])*(z_v[1]-z_v[0]) > 0.)
-        n_v++;
-      
-      int ret1 = fitCircle(n_h, z_h, y_h, tr.zc, tr.yc, tr.r, errr, chi2_cir);
-        
-      if( (z_h[1] - z_h[0]) * (tr.yc - y_h[0]) > 0 )
-        tr.h = -1;
-      else
-        tr.h = 1;
-        
-      for(int k = 0; k < n_v; k++)
-      {
-        y_v.push_back(tr.yc + tr.h * sqrt(tr.r*tr.r - (z_v[k] - tr.zc)*(z_v[k] - tr.zc)));
-      }
-    
-      double cos =  tr.h * (y_v[0] - tr.yc)/tr.r;
-      double sin = -tr.h * (z_v[0] - tr.zc)/tr.r;
-      
-      for(int k = 0; k < n_v; k++)
-      {
-          rho.push_back(z_v[k] * cos + y_v[i] * sin);
-      }
-      
-      x_v.resize(n_v);
-      
-      int ret2 = fitLinear(n_v, rho, x_v, tr.a, tr.b, cov, chi2_lin);  
-      
-      tr.z0 = tr.digits.front().z;
-      tr.y0 = tr.yc + tr.h * TMath::Sqrt(tr.r*tr.r - (tr.z0 - tr.zc)*(tr.z0 - tr.zc));
-      tr.x0 = tr.a + tr.b * (tr.z0 * cos + tr.y0 * sin);
-      tr.t0 = tr.digits.front().t;
-      
-      //std::cout << "ret1: " << ret1 << " ret2: " << ret2 << std::endl;
-           
-      if(ret1 == 0 && ret2 == 0)
-      {
-        vec_tr.push_back(tr);
-      }
-    }
+    TrackFind(ev, vec_digi, vec_tr);
+    TrackFit(vec_tr);
+    PreCluster(vec_cell, vec_cl);
+    Filter(vec_cl);
+    Merge(vec_cl);
     tout.Fill();
   }
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
+  
+  vec_tr.clear();
+  vec_cl.clear();
+  
+  vec_digi->clear();
+  vec_cell->clear();
+  
+  delete vec_digi;
+  delete vec_cell;
   
   fout.cd();
   tout.Write();
   fout.Close();
 }
 
-void Reco()
+void help_reco()
 {
-}
+  std::cout << "Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)" << std::endl;
+  std::cout << "input   file names could contain wild card" << std::endl;
+} 
+
+void reconstruction()
+{
+  help_reco();
+} 

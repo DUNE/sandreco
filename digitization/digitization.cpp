@@ -105,22 +105,18 @@ C                      + 1ns  uncertainty
       TSCEX  0.588
   */
   
-  double tscin = 3.08;
-  double tscex = 0.588;
-  double vlfb = 5.85;
-  
   double mm_to_m = 1E-3;
   
-  double tdec = tscin * TMath::Power(1./ns_Digit::r.Uniform()-1.,tscex);
+  double tdec = ns_Digit::tscin * TMath::Power(1./ns_Digit::r.Uniform()-1.,ns_Digit::tscex);
   
-  double time = t0 + tdec + vlfb * d * mm_to_m + ns_Digit::r.Gaus();
+  double time = t0 + tdec + ns_Digit::vlfb * d * mm_to_m + ns_Digit::r.Gaus();
   
   if(ns_Digit::debug)
   {
     std::cout << "time : " << time << std::endl;
     std::cout << "t0   : " << t0 << std::endl;
     std::cout << "scint: " << tdec << std::endl;
-    std::cout << "prop : " << vlfb * d * mm_to_m << std::endl;
+    std::cout << "prop : " << ns_Digit::vlfb * d * mm_to_m << std::endl;
   }
     
   
@@ -335,9 +331,9 @@ void init(TGeoManager* geo)
     
     for(int i = 0; i < ns_Digit::nLay; i++)
     {
-      ns_Digit::czlay[i] = 0.5 * (ns_Digit::dzlay[i] + ns_Digit::dzlay[i+1]);
+      ns_Digit::czlay[i] = (ns_Digit::dzlay[i] + ns_Digit::dzlay[i+1]) - ns_Digit::dzlay[0];
       
-      double dx = xmax - (xmax - xmin)/dz * ns_Digit::czlay[i];
+      double dx = xmax - (xmax - xmin)/dz * (0.5 * (ns_Digit::dzlay[i] + ns_Digit::dzlay[i+1]));
       
       for(int j = 0; j < ns_Digit::nCel; j++)
       {
@@ -372,7 +368,7 @@ void Cluster(TG4Event* ev, TGeoManager* geo, std::map<std::string,std::vector<hi
     double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
     
-    std:string sttname = geo->FindNode(x,y,z)->GetName();
+    std::string sttname = geo->FindNode(x,y,z)->GetName();
     
     hit h;
     h.det = sttname;
@@ -438,6 +434,8 @@ void Digitize(const char* finname, const char* foutname)
 	  TFile f(t->GetListOfFiles()->At(0)->GetTitle());
     TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry"); 
     
+    init(geo);
+    
     TG4Event* ev = new TG4Event;
     t->SetBranchAddress("Event",&ev);
   
@@ -476,8 +474,23 @@ void Digitize(const char* finname, const char* foutname)
     f.Close();
 }
 
-void digitization()
+void help_digit()
 {
   std::cout << "Digitize(const char* finname, const char* foutname)" << std::endl;
-  std::cout << "finname could contain wild card" << std::endl;
+  std::cout << "input file name could contain wild card" << std::endl;
 } 
+
+void digitization()
+{
+  help_digit();
+} 
+
+/*
+int main(int argc, char* argv[])
+{
+  if(argc != 3)
+    help_digit();
+  else
+    Digitize(argv[1], argv[2]);
+}
+*/

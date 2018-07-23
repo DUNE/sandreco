@@ -5,4 +5,5 @@
 *.root
 .nfs*
 *.dump
-reco/old/*
+reconstruction/old/*
+loader/code.txt
