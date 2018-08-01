@@ -484,11 +484,11 @@ void Merge(std::vector<cluster>& vec_cl)
 void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
 {
   TChain tDigit("tDigit");
-  TChain toutueMC("EDepSimEvents");
+  TChain tTrueMC("EDepSimEvents");
   tDigit.Add(fDigit);
-  toutueMC.Add(fTrueMC);
+  tTrueMC.Add(fTrueMC);
   
-  tDigit.AddFriend(&toutueMC);
+  tDigit.AddFriend(&tTrueMC);
   
   TChain* t = &tDigit;
   
@@ -509,7 +509,7 @@ void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
   tout.Branch("track","std::vector<track>",&vec_tr);
   tout.Branch("cluster","std::vector<cluster>",&vec_cl);
     
-  const int nev = 10/*t->GetEntries()*/;
+  const int nev = t->GetEntries();
   
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;

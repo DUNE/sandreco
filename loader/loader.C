@@ -84,6 +84,29 @@ struct track {
   std::vector<digit> digits;
 };
 
+struct particle {
+  int primary;
+  int pdg;
+  int tid;
+  double mass;
+  double pxtrue;
+  double pytrue;
+  double pztrue;
+  double Etrue;
+  double pxreco;
+  double pyreco;
+  double pzreco;
+  double Ereco;
+  double x0dig;
+  double y0dig;
+  double z0dig;
+  double t0dig;
+  double x0trj;
+  double y0trj;
+  double z0trj;
+  double t0trj;
+};
+
 struct gcell {
   int id;
   double Z[4];
@@ -133,5 +156,6 @@ namespace ns_Digit {
 #pragma link C++ class std::vector<digit>+; 
 #pragma link C++ class std::vector<track>+;
 #pragma link C++ class std::vector<cluster>+;
+#pragma link C++ class std::vector<particle>+;
 #endif
 #endif

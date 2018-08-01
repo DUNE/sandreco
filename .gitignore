@@ -7,3 +7,4 @@
 *.dump
 reconstruction/old/*
 loader/code.txt
+analysis/old/*
