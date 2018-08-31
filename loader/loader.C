@@ -17,6 +17,8 @@ struct cell {
   int id;
   double z;
   double y;
+  double x;
+  double l;
   double adc1;
   double tdc1;
   double adc2;
@@ -31,6 +33,8 @@ struct cell {
 };
 
 struct cluster {
+  int flag;
+  int tid;
   double x;
   double z;
   double y;
@@ -93,18 +97,30 @@ struct particle {
   double pytrue;
   double pztrue;
   double Etrue;
-  double pxreco;
-  double pyreco;
-  double pzreco;
-  double Ereco;
-  double x0dig;
-  double y0dig;
-  double z0dig;
-  double t0dig;
-  double x0trj;
-  double y0trj;
-  double z0trj;
-  double t0trj;
+  double xtrue;
+  double ytrue;
+  double ztrue;
+  double ttrue;
+  
+  bool has_track;
+  double px_tr;
+  double py_tr;
+  double pz_tr;
+  double E_tr;
+  double x_tr;
+  double y_tr;
+  double z_tr;
+  double t_tr;
+  
+  bool has_cluster;
+  double px_cl;
+  double py_cl;
+  double pz_cl;
+  double E_cl;
+  double x_cl;
+  double y_cl;
+  double z_cl;
+  double t_cl;
 };
 
 struct gcell {
@@ -136,7 +152,12 @@ namespace ns_Digit {
   double czlay[ns_Digit::nLay];
   double cxlay[ns_Digit::nLay][ns_Digit::nCel];
   
-  const char* path_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
+  double ec_r;
+  double ec_dz;
+  
+  const char* path_barrel_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
+  const char* path_endcapL_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEEndcapECALL_volume_PV_0";
+  const char* path_endcapR_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEEndcapECALR_volume_PV_0";
  
   TRandom3 r;
   

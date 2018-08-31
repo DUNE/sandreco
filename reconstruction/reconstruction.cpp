@@ -455,29 +455,136 @@ void Merge(std::vector<cluster>& vec_cl)
     vec_cl.at(i).z = 0.;
     vec_cl.at(i).t = 0.;
     
-    for(unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++)
+    if(vec_cl.at(i).flag == 0)
     {
-      double e = vec_cl.at(i).cells.at(k).adc1 + vec_cl.at(i).cells.at(k).adc2;
-      double x = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm;
-      double t = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 + vec_cl.at(i).cells.at(k).tdc2 - ns_Digit::vlfb * ns_Digit::lCalBarrel);
-      vec_cl.at(i).e += e;
-      vec_cl.at(i).x += e * x;
-      vec_cl.at(i).y += e * vec_cl.at(i).cells.at(k).y;
-      vec_cl.at(i).z += e * vec_cl.at(i).cells.at(k).z;
-      vec_cl.at(i).t += e * t;
+      for(unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++)
+      {
+        double e = vec_cl.at(i).cells.at(k).adc1 + vec_cl.at(i).cells.at(k).adc2;
+        double x = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm + vec_cl.at(i).cells.at(k).x;
+        double t = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 + vec_cl.at(i).cells.at(k).tdc2 - ns_Digit::vlfb * vec_cl.at(i).cells.at(k).l / m_to_mm);
+        
+        // time reference at center of first layer
+        // t -= ( (ns_Digit::dzlay[0] + ns_Digit::dzlay[1]) - 
+        //       (ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay] + ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay + 1]) ) 
+        //       * 3.335640951981520495756E-3;
+        
+        vec_cl.at(i).e += e;
+        vec_cl.at(i).x += e * x;
+        vec_cl.at(i).y += e * vec_cl.at(i).cells.at(k).y;
+        vec_cl.at(i).z += e * vec_cl.at(i).cells.at(k).z;
+        vec_cl.at(i).t += e * t;
+      }
+      
+      vec_cl.at(i).x /= vec_cl.at(i).e;
+      vec_cl.at(i).y /= vec_cl.at(i).e;
+      vec_cl.at(i).z /= vec_cl.at(i).e;
+      vec_cl.at(i).t /= vec_cl.at(i).e;
+      
+      /*std::cout << vec_cl.at(i).x << " " 
+        << vec_cl.at(i).y << " " 
+        << vec_cl.at(i).z << " " 
+        << vec_cl.at(i).t << " " 
+        << vec_cl.at(i).e << " " 
+        << vec_cl.at(i).cells.size() << std::endl;*/
+    }
+    else
+    {
+      for(unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++)
+      {
+        double e = vec_cl.at(i).cells.at(k).adc1 + vec_cl.at(i).cells.at(k).adc2;
+        double y = -0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm + vec_cl.at(i).cells.at(k).y;
+        double t = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 + vec_cl.at(i).cells.at(k).tdc2 - ns_Digit::vlfb * vec_cl.at(i).cells.at(k).l / m_to_mm);
+        
+        // time reference at center of first layer
+        // t -= ( (ns_Digit::dzlay[0] + ns_Digit::dzlay[1]) - 
+        //       (ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay] + ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay + 1]) ) 
+        //       * 3.335640951981520495756E-3;
+        
+        vec_cl.at(i).e += e;
+        vec_cl.at(i).y += e * y;
+        vec_cl.at(i).x += e * vec_cl.at(i).cells.at(k).x;
+        vec_cl.at(i).z += e * vec_cl.at(i).cells.at(k).z;
+        vec_cl.at(i).t += e * t;
+      }
+      
+      vec_cl.at(i).x /= vec_cl.at(i).e;
+      vec_cl.at(i).y /= vec_cl.at(i).e;
+      vec_cl.at(i).z /= vec_cl.at(i).e;
+      vec_cl.at(i).t /= vec_cl.at(i).e;
+      
+      /*std::cout << vec_cl.at(i).x << " " 
+        << vec_cl.at(i).y << " " 
+        << vec_cl.at(i).z << " " 
+        << vec_cl.at(i).t << " " 
+        << vec_cl.at(i).e << " " 
+        << vec_cl.at(i).cells.size() << std::endl;*/
+    }
+  }
+}
+
+bool value_comparer(std::map<int, int>::value_type &i1, std::map<int, int>::value_type &i2)
+{
+  return i1.second < i2.second;
+}
+
+void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell, std::vector<cluster>& vec_cl)
+{
+  std::vector<int> pid(vec_cell->size());
+  std::map<int, int> hit_pid;
+  
+  for(unsigned int i = 0; i < vec_cell->size(); i++)
+  {
+    // find particle corresponding to more p.e.
+    hit_pid.clear();
+    
+    for(unsigned int j = 0; j < vec_cell->at(i).hindex1.size(); j++)
+    {
+      hit_pid[ev->SegmentDetectors["EMCalSci"].at(vec_cell->at(i).hindex1.at(j)).PrimaryId]++;
     }
     
-    vec_cl.at(i).x /= vec_cl.at(i).e;
-    vec_cl.at(i).y /= vec_cl.at(i).e;
-    vec_cl.at(i).z /= vec_cl.at(i).e;
-    vec_cl.at(i).t /= vec_cl.at(i).e;
+    for(unsigned int j = 0; j < vec_cell->at(i).hindex2.size(); j++)
+    {
+      hit_pid[ev->SegmentDetectors["EMCalSci"].at(vec_cell->at(i).hindex2.at(j)).PrimaryId]++;
+    }
     
-    /*std::cout << vec_cl.at(i).x << " " 
-      << vec_cl.at(i).y << " " 
-      << vec_cl.at(i).z << " " 
-      << vec_cl.at(i).t << " " 
-      << vec_cl.at(i).e << " " 
-      << vec_cl.at(i).cells.size() << std::endl;*/
+    pid[i] = std::max_element(hit_pid.begin(), hit_pid.end(), value_comparer)->first;
+  }
+  
+  std::vector<int> unique_pid = pid;
+  std::sort(unique_pid.begin(), unique_pid.end());
+  std::vector<int>::iterator last = std::unique(unique_pid.begin(), unique_pid.end());
+  unique_pid.erase(last, unique_pid.end());
+  
+  for(unsigned int i = 0; i < unique_pid.size(); i++)
+  {
+    cluster clB;
+    clB.tid = unique_pid[i];
+    clB.flag = 0;
+    cluster clL;
+    clL.tid = unique_pid[i];
+    clL.flag = -1;
+    cluster clR;
+    clR.tid = unique_pid[i];
+    clR.flag = 1;
+    
+    for(unsigned int j = 0; j < pid.size(); j++)
+    {
+      if(pid[j] == unique_pid[i])
+      {
+        if(vec_cell->at(j).adc1 == 0 || vec_cell->at(j).adc2 == 0)
+          continue;
+      
+        if(vec_cell->at(j).id < 25000)
+          clB.cells.push_back(vec_cell->at(j));
+        else if(vec_cell->at(j).id > 25000 && vec_cell->at(j).id < 40000)
+          clR.cells.push_back(vec_cell->at(j));
+        else if(vec_cell->at(j).id >= 40000)
+          clL.cells.push_back(vec_cell->at(j));
+      }
+    }
+    if(clB.cells.size() != 0) vec_cl.push_back(clB);
+    if(clL.cells.size() != 0) vec_cl.push_back(clL);
+    if(clR.cells.size() != 0) vec_cl.push_back(clR);
   }
 }
 
@@ -509,7 +616,7 @@ void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
   tout.Branch("track","std::vector<track>",&vec_tr);
   tout.Branch("cluster","std::vector<cluster>",&vec_cl);
     
-  const int nev = t->GetEntries();
+  const int nev = 1000/*t->GetEntries()*/;
   
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -520,10 +627,14 @@ void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
     
     t->GetEntry(i);
     
+    vec_tr.clear();
+    vec_cl.clear();
+    
     TrackFind(ev, vec_digi, vec_tr);
     TrackFit(vec_tr);
-    PreCluster(vec_cell, vec_cl);
-    Filter(vec_cl);
+    //PreCluster(vec_cell, vec_cl);
+    //Filter(vec_cl);
+    PidBasedClustering(ev, vec_cell, vec_cl);
     Merge(vec_cl);
     tout.Fill();
   }
