@@ -616,7 +616,7 @@ void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
   tout.Branch("track","std::vector<track>",&vec_tr);
   tout.Branch("cluster","std::vector<cluster>",&vec_cl);
     
-  const int nev = 1000/*t->GetEntries()*/;
+  const int nev = t->GetEntries();
   
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
