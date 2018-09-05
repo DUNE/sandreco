@@ -54,6 +54,11 @@ void reset(particle& p)
   p.t_cl = -999.;
 }
 
+bool isDigitBefore(digit d1, digit d2)
+{
+  return (d1.t < d2.t);
+}
+
 bool IsPrimary(TG4Event* ev, int tid)
 {
   for(unsigned int i = 0; i < ev->Primaries.at(0).Particles.size(); i++)
@@ -74,7 +79,11 @@ void FillParticleInfo(TG4Event* ev, particle& p)
     {
       p.pdg = ev->Trajectories.at(i).PDGCode;
       TParticlePDG* part = db.GetParticle(p.pdg);
-      if(part != 0) p.mass = part->Mass() * GeV_to_MeV;
+      if(part != 0) 
+      {
+        p.mass = part->Mass() * GeV_to_MeV;
+        p.charge = part->Charge()/3.;
+      }
       
       p.pxtrue = ev->Trajectories.at(i).InitialMomentum.X();
       p.pytrue = ev->Trajectories.at(i).InitialMomentum.Y();
@@ -89,23 +98,51 @@ void FillParticleInfo(TG4Event* ev, particle& p)
   }
 }
 
-void FillTrackInfo(const track& tr, particle& p)
+void FillTrackInfo(track& tr, particle& p)
 {
+  std::sort(tr.digits.begin(), tr.digits.end(), isDigBefore);
+  
+  double yc = tr.yc;
+  double zc = tr.zc;
+  
+  double l = 0.;
+  
+  for(unsigned int i = 0; i < tr.digits.size() - 1; i++)
+  {
+    double y0 = tr.digits.at(i).y;
+    double z0 = tr.digits.at(i).z;
+    double y1 = tr.digits.at(i+1).y;
+    double z1 = tr.digits.at(i+1).z;
+    
+    double rz = z0 - zc;
+    double ry = y0 - yc;
+    double vz = z1 - z0;
+    double vy = y1 - y0;
+    
+    l += ry * vz - rz * vy;
+  }
+  
+  l /= TMath::Abs(l);
+  
+  double r0z = tr.z0 - tr.zc;
+  double r0y = tr.y0 - tr.yc;
+  
   double mom_yz = k * tr.r * B;
-  double dz = (tr.zc - tr.z0);
-  double dy = (tr.yc - tr.y0);
-  double ang_yz = TMath::ATan2(dz, -dy); 
+  double ang_yz = TMath::ATan2(r0z, -r0y); 
   double ang_x = 0.5 * TMath::Pi() - TMath::ATan(1./tr.b);
   
   p.has_track = true;
+  p.charge_reco = -l;
   p.px_tr = mom_yz * TMath::Tan(ang_x);
-  p.py_tr = mom_yz * TMath::Sin(ang_yz);
-  p.pz_tr = mom_yz * TMath::Cos(ang_yz);
+  p.py_tr = p.charge_reco * mom_yz * TMath::Sin(ang_yz);
+  p.pz_tr = p.charge_reco * mom_yz * TMath::Cos(ang_yz);
   p.E_tr = TMath::Sqrt(p.px_tr*p.px_tr + p.py_tr*p.py_tr + p.pz_tr*p.pz_tr + p.mass*p.mass);
   p.x_tr = tr.x0;
   p.y_tr = tr.y0;
   p.z_tr = tr.z0;
   p.t_tr = tr.t0;
+  
+  p.tr = tr;
 }
 
 bool isCellBefore(cell c1, cell c2) 
@@ -118,9 +155,9 @@ bool isCellBefore(cell c1, cell c2)
     return ((c1.tdc1 + c1.tdc2) < (c2.tdc1 + c2.tdc2));
 }
 
-double TfromTDC(double t1, double t2)
+double TfromTDC(double t1, double t2, double L)
 {
-  return 0.5 * (t1 + t2 - ns_Digit::vlfb * ns_Digit::lCalBarrel);
+  return 0.5 * (t1 + t2 - ns_Digit::vlfb * L / m_to_mm );
 }
 
 double XfromTDC(double t1, double t2)
@@ -138,11 +175,31 @@ void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
     case 2112: // neutron
     {
       // evaluate neutron velocity using earlier cell 
-      int idx_min = std::distance(cl.cells.begin(), std::min_element(cl.cells.begin(), cl.cells.end(), isCellBefore));
+      std::vector<double> cell_time(cl.cells.size());
       
-      double tmin = TfromTDC(cl.cells.at(idx_min).tdc1, cl.cells.at(idx_min).tdc2);
-      double xmin = XfromTDC(cl.cells.at(idx_min).tdc1, cl.cells.at(idx_min).tdc2);
-      double ymin = cl.cells.at(idx_min).y;
+      for(unsigned int i = 0; i < cl.cells.size(); i++)
+      {
+        cell_time[i] = TfromTDC(cl.cells.at(i).tdc1, cl.cells.at(i).tdc2, cl.cells.at(i).l);
+        
+        std::cout << cell_time[i] << " " << cl.cells.at(i).tdc1 << " " << cl.cells.at(i).tdc2 << " " << cl.cells.at(i).l << std::endl;
+      }
+      
+      int idx_min = std::distance(cell_time.begin(), std::min_element(cell_time.begin(), cell_time.end()));
+      
+      double xmin, ymin;
+      
+      if(cl.cells.at(idx_min).id < 25000)
+      {
+        xmin = XfromTDC(cl.cells.at(idx_min).tdc1, cl.cells.at(idx_min).tdc2);
+        ymin = cl.cells.at(idx_min).y;
+      }
+      else
+      {
+        ymin = XfromTDC(cl.cells.at(idx_min).tdc1, cl.cells.at(idx_min).tdc2);
+        xmin = cl.cells.at(idx_min).x;
+      }
+      
+      double tmin = cell_time.at(idx_min);
       double zmin = cl.cells.at(idx_min).z;
       
       double dt = tmin - ev->Primaries.at(0).Position.T();
@@ -153,10 +210,18 @@ void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
       double beta = dr / dt / c;
       double gamma = 1. / TMath::Sqrt(1 - beta*beta);
       
+      /*
+      std::cout << "-> " << idx_min << " " << cell_time[i] << " " 
+        << cl.cells.at(i).tdc1 << " " << cl.cells.at(i).tdc2 << " " << cl.cells.at(i).l 
+        << xmin << " " << ymin << " " << zmin << " " << dt << " " << std::endl;
+      */
+      
       p.E_cl = p.mass * gamma;
       p.px_cl = p.mass * gamma * beta * dx/dr;
       p.py_cl = p.mass * gamma * beta * dy/dr;
       p.pz_cl = p.mass * gamma * beta * dz/dr;
+      
+      p.cl = cl; 
       
       //std::cout << idx_min << " " << tmin << " " << xmin << " " << ymin << " " << zmin << " " << dt << " " << dx << " " << dy << " " << dz << " " << dr << " " << beta << " " << gamma << " " << p.mass << std::endl;
       break;
@@ -224,6 +289,8 @@ void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
       p.px_cl = etot * ax / TMath::Sqrt(1+ax*ax+ay*ay);
       p.py_cl = etot * ay / TMath::Sqrt(1+ax*ax+ay*ay);
       p.pz_cl = etot / TMath::Sqrt(1+ax*ax+ay*ay);
+      
+      p.cl = cl;
       
       break;
     }
@@ -303,6 +370,8 @@ void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
       p.py_cl = etot * emk * dir * ay / TMath::Sqrt(1+ax*ax+ay*ay);
       p.pz_cl = etot * emk * dir / TMath::Sqrt(1+ax*ax+ay*ay);
       
+      p.cl = cl;
+      
       break;
     }
     case 111: // pi zero
@@ -380,6 +449,8 @@ void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
       p.px_cl = etot * emk * dir * ax / TMath::Sqrt(1+ax*ax+ay*ay);
       p.py_cl = etot * emk * dir * ay / TMath::Sqrt(1+ax*ax+ay*ay);
       p.pz_cl = etot * emk * dir / TMath::Sqrt(1+ax*ax+ay*ay);
+      
+      p.cl = cl;
       
       break;
     }

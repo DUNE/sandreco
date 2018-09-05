@@ -33,7 +33,6 @@ struct cell {
 };
 
 struct cluster {
-  int flag;
   int tid;
   double x;
   double z;
@@ -92,6 +91,7 @@ struct particle {
   int primary;
   int pdg;
   int tid;
+  double charge;
   double mass;
   double pxtrue;
   double pytrue;
@@ -103,6 +103,7 @@ struct particle {
   double ttrue;
   
   bool has_track;
+  double charge_reco;
   double px_tr;
   double py_tr;
   double pz_tr;
@@ -111,6 +112,7 @@ struct particle {
   double y_tr;
   double z_tr;
   double t_tr;
+  track tr;
   
   bool has_cluster;
   double px_cl;
@@ -121,6 +123,7 @@ struct particle {
   double y_cl;
   double z_cl;
   double t_cl;
+  cluster cl;
 };
 
 struct gcell {
@@ -178,5 +181,7 @@ namespace ns_Digit {
 #pragma link C++ class std::vector<track>+;
 #pragma link C++ class std::vector<cluster>+;
 #pragma link C++ class std::vector<particle>+;
+#pragma link C++ class cluster+;
+#pragma link C++ class track+;
 #endif
 #endif

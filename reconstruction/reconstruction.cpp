@@ -455,70 +455,49 @@ void Merge(std::vector<cluster>& vec_cl)
     vec_cl.at(i).z = 0.;
     vec_cl.at(i).t = 0.;
     
-    if(vec_cl.at(i).flag == 0)
+    
+    for(unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++)
     {
-      for(unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++)
+      double e = vec_cl.at(i).cells.at(k).adc1 + vec_cl.at(i).cells.at(k).adc2;
+      double t = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 + vec_cl.at(i).cells.at(k).tdc2 - ns_Digit::vlfb * vec_cl.at(i).cells.at(k).l / m_to_mm);
+      double z = vec_cl.at(i).cells.at(k).z;
+      
+      double x,y;
+      
+      if(vec_cl.at(i).cells.at(k).id < 25000) //Barrel
       {
-        double e = vec_cl.at(i).cells.at(k).adc1 + vec_cl.at(i).cells.at(k).adc2;
-        double x = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm + vec_cl.at(i).cells.at(k).x;
-        double t = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 + vec_cl.at(i).cells.at(k).tdc2 - ns_Digit::vlfb * vec_cl.at(i).cells.at(k).l / m_to_mm);
-        
-        // time reference at center of first layer
-        // t -= ( (ns_Digit::dzlay[0] + ns_Digit::dzlay[1]) - 
-        //       (ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay] + ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay + 1]) ) 
-        //       * 3.335640951981520495756E-3;
-        
-        vec_cl.at(i).e += e;
-        vec_cl.at(i).x += e * x;
-        vec_cl.at(i).y += e * vec_cl.at(i).cells.at(k).y;
-        vec_cl.at(i).z += e * vec_cl.at(i).cells.at(k).z;
-        vec_cl.at(i).t += e * t;
+        x = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm + vec_cl.at(i).cells.at(k).x;
+        y = vec_cl.at(i).cells.at(k).y;
+      }
+      else
+      {
+        y = -0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm + vec_cl.at(i).cells.at(k).y;
+        x = vec_cl.at(i).cells.at(k).x;
       }
       
-      vec_cl.at(i).x /= vec_cl.at(i).e;
-      vec_cl.at(i).y /= vec_cl.at(i).e;
-      vec_cl.at(i).z /= vec_cl.at(i).e;
-      vec_cl.at(i).t /= vec_cl.at(i).e;
+      // time reference at center of first layer
+      // t -= ( (ns_Digit::dzlay[0] + ns_Digit::dzlay[1]) - 
+      //       (ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay] + ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay + 1]) ) 
+      //       * 3.335640951981520495756E-3;
       
-      /*std::cout << vec_cl.at(i).x << " " 
-        << vec_cl.at(i).y << " " 
-        << vec_cl.at(i).z << " " 
-        << vec_cl.at(i).t << " " 
-        << vec_cl.at(i).e << " " 
-        << vec_cl.at(i).cells.size() << std::endl;*/
+      vec_cl.at(i).e += e;
+      vec_cl.at(i).x += e * x;
+      vec_cl.at(i).y += e * y;
+      vec_cl.at(i).z += e * z;
+      vec_cl.at(i).t += e * t;
     }
-    else
-    {
-      for(unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++)
-      {
-        double e = vec_cl.at(i).cells.at(k).adc1 + vec_cl.at(i).cells.at(k).adc2;
-        double y = -0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm + vec_cl.at(i).cells.at(k).y;
-        double t = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 + vec_cl.at(i).cells.at(k).tdc2 - ns_Digit::vlfb * vec_cl.at(i).cells.at(k).l / m_to_mm);
-        
-        // time reference at center of first layer
-        // t -= ( (ns_Digit::dzlay[0] + ns_Digit::dzlay[1]) - 
-        //       (ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay] + ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay + 1]) ) 
-        //       * 3.335640951981520495756E-3;
-        
-        vec_cl.at(i).e += e;
-        vec_cl.at(i).y += e * y;
-        vec_cl.at(i).x += e * vec_cl.at(i).cells.at(k).x;
-        vec_cl.at(i).z += e * vec_cl.at(i).cells.at(k).z;
-        vec_cl.at(i).t += e * t;
-      }
-      
-      vec_cl.at(i).x /= vec_cl.at(i).e;
-      vec_cl.at(i).y /= vec_cl.at(i).e;
-      vec_cl.at(i).z /= vec_cl.at(i).e;
-      vec_cl.at(i).t /= vec_cl.at(i).e;
-      
-      /*std::cout << vec_cl.at(i).x << " " 
-        << vec_cl.at(i).y << " " 
-        << vec_cl.at(i).z << " " 
-        << vec_cl.at(i).t << " " 
-        << vec_cl.at(i).e << " " 
-        << vec_cl.at(i).cells.size() << std::endl;*/
-    }
+    
+    vec_cl.at(i).x /= vec_cl.at(i).e;
+    vec_cl.at(i).y /= vec_cl.at(i).e;
+    vec_cl.at(i).z /= vec_cl.at(i).e;
+    vec_cl.at(i).t /= vec_cl.at(i).e;
+    
+    /*std::cout << vec_cl.at(i).x << " " 
+      << vec_cl.at(i).y << " " 
+      << vec_cl.at(i).z << " " 
+      << vec_cl.at(i).t << " " 
+      << vec_cl.at(i).e << " " 
+      << vec_cl.at(i).cells.size() << std::endl;*/
   }
 }
 
@@ -557,15 +536,8 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell, std::vector<c
   
   for(unsigned int i = 0; i < unique_pid.size(); i++)
   {
-    cluster clB;
-    clB.tid = unique_pid[i];
-    clB.flag = 0;
-    cluster clL;
-    clL.tid = unique_pid[i];
-    clL.flag = -1;
-    cluster clR;
-    clR.tid = unique_pid[i];
-    clR.flag = 1;
+    cluster cl;
+    cl.tid = unique_pid[i];
     
     for(unsigned int j = 0; j < pid.size(); j++)
     {
@@ -574,17 +546,10 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell, std::vector<c
         if(vec_cell->at(j).adc1 == 0 || vec_cell->at(j).adc2 == 0)
           continue;
       
-        if(vec_cell->at(j).id < 25000)
-          clB.cells.push_back(vec_cell->at(j));
-        else if(vec_cell->at(j).id > 25000 && vec_cell->at(j).id < 40000)
-          clR.cells.push_back(vec_cell->at(j));
-        else if(vec_cell->at(j).id >= 40000)
-          clL.cells.push_back(vec_cell->at(j));
+        cl.cells.push_back(vec_cell->at(j));
       }
     }
-    if(clB.cells.size() != 0) vec_cl.push_back(clB);
-    if(clL.cells.size() != 0) vec_cl.push_back(clL);
-    if(clR.cells.size() != 0) vec_cl.push_back(clR);
+    if(cl.cells.size() != 0) vec_cl.push_back(cl);
   }
 }
 
