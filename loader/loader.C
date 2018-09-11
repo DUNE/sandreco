@@ -91,6 +91,7 @@ struct particle {
   int primary;
   int pdg;
   int tid;
+  int parent_tid;
   double charge;
   double mass;
   double pxtrue;
@@ -101,6 +102,15 @@ struct particle {
   double ytrue;
   double ztrue;
   double ttrue;
+  
+  double pxreco;
+  double pyreco;
+  double pzreco;
+  double Ereco;
+  double xreoc;
+  double yreco;
+  double zreco;
+  double treco;
   
   bool has_track;
   double charge_reco;
@@ -124,6 +134,21 @@ struct particle {
   double z_cl;
   double t_cl;
   cluster cl;
+  double x_cl_var;
+  double y_cl_var;
+  double z_cl_var;
+};
+
+struct event {
+  double Enu;
+  double pxnu;
+  double pynu;
+  double pznu;
+  double Enureco;
+  double pxnureco;
+  double pynureco;
+  double pznureco;
+  std::vector<particle> particles;
 };
 
 struct gcell {
@@ -181,7 +206,11 @@ namespace ns_Digit {
 #pragma link C++ class std::vector<track>+;
 #pragma link C++ class std::vector<cluster>+;
 #pragma link C++ class std::vector<particle>+;
+#pragma link C++ class digit+;
+#pragma link C++ class cell+;
 #pragma link C++ class cluster+;
 #pragma link C++ class track+;
+#pragma link C++ class particle+;
+#pragma link C++ class event+;
 #endif
 #endif

@@ -342,7 +342,7 @@ void init(const char* fTrueMC, const char* fDigit, const char* fReco)
   initialized = true;
 }
 
-void show(int index)
+void show(int index, bool showtrj = true, bool showfit = true, bool showdig = true)
 {
   if(!initialized)
   {
@@ -364,85 +364,22 @@ void show(int index)
   cev->cd(1)->DrawFrame(centerKLOE[2] - dwz,
                  centerKLOE[1] - dwy,
                  centerKLOE[2] + dwz,
-                 centerKLOE[1] + dwy);
+                 centerKLOE[1] + dwy,
+                 "ZY (side); (mm); (mm)");
   
   cev->cd(2)->DrawFrame(centerKLOE[2] - dwz,
                  centerKLOE[0] - dwx,
                  centerKLOE[2] + dwz,
-                 centerKLOE[0] + dwx);
+                 centerKLOE[0] + dwx,
+                 "XZ (top); (mm); (mm)");
+                 
+  
+  cev->cd(2);
+  TBox* kloe_int_xz = new TBox(centerKLOE[2] - kloe_int_R, centerKLOE[0] - kloe_int_dx, centerKLOE[2] + kloe_int_R, centerKLOE[0] + kloe_int_dx);
+  kloe_int_xz->SetFillStyle(0);
+  kloe_int_xz->Draw();
   
   t->GetEntry(index);
-  for(unsigned int i = 0; i < ev->Trajectories.size(); i++)
-  {
-    TGraph* tr_zy = new TGraph(ev->Trajectories[i].Points.size());
-    TGraph* tr_zx = new TGraph(ev->Trajectories[i].Points.size());
-    
-    for(unsigned int j = 0; j < ev->Trajectories[i].Points.size(); j++)
-    {
-      tr_zy->SetPoint(j, ev->Trajectories[i].Points[j].Position.Z(),ev->Trajectories[i].Points[j].Position.Y());
-      tr_zx->SetPoint(j, ev->Trajectories[i].Points[j].Position.Z(),ev->Trajectories[i].Points[j].Position.X());
-    }
-    
-    switch(ev->Trajectories[i].PDGCode)
-    {
-      // photons
-      case 22:
-        tr_zy->SetLineStyle(7);
-        tr_zx->SetLineStyle(7);
-      // e+/e-
-      case 11:
-      case -11:
-        tr_zy->SetLineColor(kRed);
-        tr_zx->SetLineColor(kRed);
-      break;
-      
-      // mu+/mu-
-      case 13:
-      case -13:
-        tr_zy->SetLineColor(kBlue);
-        tr_zx->SetLineColor(kBlue);
-      break;
-      
-      // proton
-      case 2212:
-        tr_zy->SetLineColor(kBlack);
-        tr_zx->SetLineColor(kBlack);
-      break;
-      
-      // neutron
-      case 2112:
-        tr_zy->SetLineStyle(7);
-        tr_zx->SetLineStyle(7);
-        tr_zy->SetLineColor(kGray);
-        tr_zx->SetLineColor(kGray);
-      break;
-      
-      // pion0
-      case 111:
-        tr_zy->SetLineStyle(7);
-        tr_zx->SetLineStyle(7);
-        tr_zy->SetLineColor(kMagenta);
-        tr_zx->SetLineColor(kMagenta);
-      break;
-      
-      // pion+/pion- 
-      case 211:
-      case -211:;
-        tr_zy->SetLineColor(kCyan);
-        tr_zx->SetLineColor(kCyan);
-      break;
-      
-      default:
-        tr_zy->SetLineColor(8);
-        tr_zx->SetLineColor(8);
-      break;        
-    }
-    
-    cev->cd(1);
-    tr_zy->Draw("l");
-    cev->cd(2);
-    tr_zx->Draw("l");
-  }
   
   for(std::map<int, gcell>::iterator it=calocell.begin(); it != calocell.end(); ++it)
   {
@@ -513,6 +450,81 @@ void show(int index)
     gr->Draw("f");
   }
   
+  if(showtrj)
+  {
+    for(unsigned int i = 0; i < ev->Trajectories.size(); i++)
+    {
+      TGraph* tr_zy = new TGraph(ev->Trajectories[i].Points.size());
+      TGraph* tr_zx = new TGraph(ev->Trajectories[i].Points.size());
+      
+      for(unsigned int j = 0; j < ev->Trajectories[i].Points.size(); j++)
+      {
+        tr_zy->SetPoint(j, ev->Trajectories[i].Points[j].Position.Z(),ev->Trajectories[i].Points[j].Position.Y());
+        tr_zx->SetPoint(j, ev->Trajectories[i].Points[j].Position.Z(),ev->Trajectories[i].Points[j].Position.X());
+      }
+      
+      switch(ev->Trajectories[i].PDGCode)
+      {
+        // photons
+        case 22:
+          tr_zy->SetLineStyle(7);
+          tr_zx->SetLineStyle(7);
+        // e+/e-
+        case 11:
+        case -11:
+          tr_zy->SetLineColor(kRed);
+          tr_zx->SetLineColor(kRed);
+        break;
+        
+        // mu+/mu-
+        case 13:
+        case -13:
+          tr_zy->SetLineColor(kBlue);
+          tr_zx->SetLineColor(kBlue);
+        break;
+        
+        // proton
+        case 2212:
+          tr_zy->SetLineColor(kBlack);
+          tr_zx->SetLineColor(kBlack);
+        break;
+        
+        // neutron
+        case 2112:
+          tr_zy->SetLineStyle(7);
+          tr_zx->SetLineStyle(7);
+          tr_zy->SetLineColor(kGray);
+          tr_zx->SetLineColor(kGray);
+        break;
+        
+        // pion0
+        case 111:
+          tr_zy->SetLineStyle(7);
+          tr_zx->SetLineStyle(7);
+          tr_zy->SetLineColor(kMagenta);
+          tr_zx->SetLineColor(kMagenta);
+        break;
+        
+        // pion+/pion- 
+        case 211:
+        case -211:;
+          tr_zy->SetLineColor(kCyan);
+          tr_zx->SetLineColor(kCyan);
+        break;
+        
+        default:
+          tr_zy->SetLineColor(8);
+          tr_zx->SetLineColor(8);
+        break;        
+      }
+      
+      cev->cd(1);
+      tr_zy->Draw("l");
+      cev->cd(2);
+      tr_zx->Draw("l");
+    }
+  }
+  
   for(unsigned int j = 0; j < vec_cl->size(); j++)
   {
     for(unsigned int i = 0; i < vec_cl->at(j).cells.size(); i++)
@@ -523,69 +535,73 @@ void show(int index)
       calocell[id].tdc = vec_cl->at(j).cells.at(i).tdc1;
       calocell[-id].adc = vec_cl->at(j).cells.at(i).adc2;
       calocell[-id].tdc = vec_cl->at(j).cells.at(i).tdc2;
-  
-      TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y); 
-      int color = (vec_cl->at(j).tid == 0) ? 632 : vec_cl->at(j).tid;
-      gr->SetFillColor(color);
-      if(id < 25000) 
-        cev->cd(1);
-      else
-        cev->cd(2);
-      gr->Draw("f");
-    }
-  }
-  
-  cev->cd(2);
-  TBox* kloe_int_xz = new TBox(centerKLOE[2] - kloe_int_R, centerKLOE[0] - kloe_int_dx, centerKLOE[2] + kloe_int_R, centerKLOE[0] + kloe_int_dx);
-  kloe_int_xz->SetFillStyle(0);
-  kloe_int_xz->Draw();
-  
-  for(unsigned int i = 0; i < vec_digi->size(); i++)
-  {
-    if(vec_digi->at(i).hor)
-    {
-      TMarker* m = new TMarker(vec_digi->at(i).z,vec_digi->at(i).y,6);
-      cev->cd(1);
-      m->Draw();
-    }
-    else
-    {
-      TMarker* m = new TMarker(vec_digi->at(i).z,vec_digi->at(i).x,6);
-      cev->cd(2);
-      m->Draw();
-    }
-  }
-  
-  for(unsigned int i = 0; i < vec_tr->size(); i++)
-  {
-    if(vec_tr->at(i).ret_cr == 0 && vec_tr->at(i).ret_ln == 0)
-    {
-      cev->cd(1);
-      TEllipse* e = new TEllipse(vec_tr->at(i).zc, vec_tr->at(i).yc, vec_tr->at(i).r);
-      e->SetFillStyle(0);
-      e->Draw();
       
-      cev->cd(2);
-      TLine* l = new TLine(vec_tr->at(i).z0, vec_tr->at(i).x0, 
-                           centerKLOE[2] + dwz, 
-                           vec_tr->at(i).x0 + vec_tr->at(i).b * (centerKLOE[2] + dwz - vec_tr->at(i).z0));
-      l->Draw();
+      if(showdig)
+      {
+        TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y); 
+        int color = (vec_cl->at(j).tid == 0) ? 632 : vec_cl->at(j).tid;
+        gr->SetFillColor(color);
+        if(id < 25000) 
+          cev->cd(1);
+        else
+          cev->cd(2);
+        gr->Draw("f");
+      }
     }
   }
   
-  for(unsigned int i = 0; i < vec_cl->size(); i++)
+  if(showdig)
   {
-    int color = (vec_cl->at(i).tid == 0) ? 632 : vec_cl->at(i).tid;
+    for(unsigned int i = 0; i < vec_digi->size(); i++)
+    {
+      if(vec_digi->at(i).hor)
+      {
+        TMarker* m = new TMarker(vec_digi->at(i).z,vec_digi->at(i).y,6);
+        cev->cd(1);
+        m->Draw();
+      }
+      else
+      {
+        TMarker* m = new TMarker(vec_digi->at(i).z,vec_digi->at(i).x,6);
+        cev->cd(2);
+        m->Draw();
+      }
+    }
+  }
+  
+  if(showfit)
+  {
+    for(unsigned int i = 0; i < vec_tr->size(); i++)
+    {
+      if(vec_tr->at(i).ret_cr == 0 && vec_tr->at(i).ret_ln == 0)
+      {
+        cev->cd(1);
+        TEllipse* e = new TEllipse(vec_tr->at(i).zc, vec_tr->at(i).yc, vec_tr->at(i).r);
+        e->SetFillStyle(0);
+        e->Draw();
+        
+        cev->cd(2);
+        TLine* l = new TLine(vec_tr->at(i).z0, vec_tr->at(i).x0, 
+                             centerKLOE[2] + dwz, 
+                             vec_tr->at(i).x0 + vec_tr->at(i).b * (centerKLOE[2] + dwz - vec_tr->at(i).z0));
+        l->Draw();
+      }
+    }
     
-    TMarker* m1 = new TMarker(vec_cl->at(i).z,vec_cl->at(i).y,34);
-    //m1->SetMarkerColor(color);
-    cev->cd(1);
-    m1->Draw();
-    
-    TMarker* m2 = new TMarker(vec_cl->at(i).z,vec_cl->at(i).x,34);
-    //m2->SetMarkerColor(color);
-    cev->cd(2);
-    m2->Draw();
+    for(unsigned int i = 0; i < vec_cl->size(); i++)
+    {
+      int color = (vec_cl->at(i).tid == 0) ? 632 : vec_cl->at(i).tid;
+      
+      TMarker* m1 = new TMarker(vec_cl->at(i).z,vec_cl->at(i).y,34);
+      //m1->SetMarkerColor(color);
+      cev->cd(1);
+      m1->Draw();
+      
+      TMarker* m2 = new TMarker(vec_cl->at(i).z,vec_cl->at(i).x,34);
+      //m2->SetMarkerColor(color);
+      cev->cd(2);
+      m2->Draw();
+    }
   }
 }
 
@@ -608,9 +624,9 @@ void showPri(int index)
     cpr->SetTitle(TString::Format("Event: %d",index).Data());
   }
   
-  cpr->cd(1)->DrawFrame(-1,-1,1,1);
-  cpr->cd(2)->DrawFrame(-1,-1,1,1);
-  cpr->cd(3)->DrawFrame(-1,-1,1,1);
+  cpr->cd(1)->DrawFrame(-1,-1,1,1,"XY (front)");
+  cpr->cd(2)->DrawFrame(-1,-1,1,1,"ZY (side)");
+  cpr->cd(3)->DrawFrame(-1,-1,1,1,"ZX (top)");
   
   t->GetEntry(index);
   

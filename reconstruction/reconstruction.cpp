@@ -194,6 +194,8 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
     
     for(int i = 0; i < n; i++)
     {
+        //std::cout << "XY: " <<  x.at(i) << " " <<  y.at(i) << std::endl;
+    
         S1 += 1;
         SX += x.at(i);
         SY += y.at(i);
@@ -203,8 +205,12 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
     
     double D = S1*SXX - SX*SX;
     
+    //std::cout << "D: " << D << " " << S1 << " " << SX << " " << SY << " " << SXX << " " << SYX << std::endl;
+    
     a = (SY*SXX - SX*SYX)/D;  // i.p. at x = 0
     b = (S1*SYX - SX*SY)/D;   // tg(theta)
+    
+    //std::cout << a << " " << b << std::endl;
     
     cov[0][0] = SXX/D;
     cov[0][1] = -SX/D;
@@ -289,7 +295,7 @@ void TrackFit(std::vector<track>& vec_tr)
     rho.clear();
     
     for(unsigned int k = 0; k < vec_tr[j].digits.size(); k++)
-    {
+    {    
       if(vec_tr[j].digits.at(k).hor)
       {
         y_h.push_back(vec_tr[j].digits.at(k).y);
@@ -326,23 +332,42 @@ void TrackFit(std::vector<track>& vec_tr)
       vec_tr[j].h = -1;
     else
       vec_tr[j].h = 1;
+    
+    int n_v_fit = 0;
       
     for(int k = 0; k < n_v; k++)
     {
-      y_v.push_back(vec_tr[j].yc + vec_tr[j].h * sqrt(vec_tr[j].r*vec_tr[j].r - (z_v[k] - vec_tr[j].zc)*(z_v[k] - vec_tr[j].zc)));
+      if(vec_tr[j].r > z_v[k] - vec_tr[j].zc)
+      {
+        y_v.push_back(vec_tr[j].yc + vec_tr[j].h * sqrt(vec_tr[j].r*vec_tr[j].r - (z_v[k] - vec_tr[j].zc)*(z_v[k] - vec_tr[j].zc)));
+        n_v_fit++;
+      }
+      else
+      {
+        break;
+      }
     }
+
+	double sin = 0.0;
+	double cos = 0.0;
+
+	if(n_v_fit > 0)
+	{
   
-    double cos =  vec_tr[j].h * (y_v[0] - vec_tr[j].yc)/vec_tr[j].r;
-    double sin = -vec_tr[j].h * (z_v[0] - vec_tr[j].zc)/vec_tr[j].r;
+      cos =  vec_tr[j].h * (y_v[0] - vec_tr[j].yc)/vec_tr[j].r;
+      sin = -vec_tr[j].h * (z_v[0] - vec_tr[j].zc)/vec_tr[j].r;
+	}
     
-    for(int k = 0; k < n_v; k++)
+    for(int k = 0; k < n_v_fit; k++)
     {
         rho.push_back(z_v[k] * cos + y_v[k] * sin);
     }
     
-    x_v.resize(n_v);
+    x_v.resize(n_v_fit);
     
-    int ret2 = fitLinear(n_v, rho, x_v, vec_tr[j].a, vec_tr[j].b, cov, chi2_lin);  
+    int ret2 = fitLinear(n_v_fit, rho, x_v, vec_tr[j].a, vec_tr[j].b, cov, chi2_lin);  
+    
+    //std::cout << vec_tr[j].tid << " " << vec_tr[j].a << " " << vec_tr[j].b << std::endl;
     
     vec_tr[j].z0 = vec_tr[j].digits.front().z;
     vec_tr[j].y0 = vec_tr[j].yc + vec_tr[j].h * TMath::Sqrt(vec_tr[j].r*vec_tr[j].r - (vec_tr[j].z0 - vec_tr[j].zc)*(vec_tr[j].z0 - vec_tr[j].zc));
