@@ -35,10 +35,16 @@ struct cell {
 struct cluster {
   int tid;
   double x;
-  double z;
   double y;
+  double z;
   double t;
   double e;
+  double sx;
+  double sy;
+  double sz;
+  double varx;
+  double vary;
+  double varz;
   std::vector<cell> cells;
 };
 
@@ -107,39 +113,27 @@ struct particle {
   double pyreco;
   double pzreco;
   double Ereco;
-  double xreoc;
+  double xreco;
   double yreco;
   double zreco;
   double treco;
   
   bool has_track;
   double charge_reco;
-  double px_tr;
-  double py_tr;
-  double pz_tr;
-  double E_tr;
-  double x_tr;
-  double y_tr;
-  double z_tr;
-  double t_tr;
   track tr;
   
   bool has_cluster;
-  double px_cl;
-  double py_cl;
-  double pz_cl;
-  double E_cl;
-  double x_cl;
-  double y_cl;
-  double z_cl;
-  double t_cl;
   cluster cl;
-  double x_cl_var;
-  double y_cl_var;
-  double z_cl_var;
+  
+  bool has_daughter;
+  std::vector<particle> daughters;
 };
 
 struct event {
+  double x;
+  double y;
+  double z;
+  double t;
   double Enu;
   double pxnu;
   double pynu;

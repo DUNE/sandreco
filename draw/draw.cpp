@@ -33,6 +33,8 @@ namespace ns_draw {
   static const int nTotCells = nMod * nLay * nCel; 
   static const int nCellModule = nLay * nCel;
   
+  static const double dt = 500;
+  
   double centerKLOE[3];
   double CellLocalX[nCellModule][4];
   double CellLocalZ[nCellModule][4];
@@ -601,6 +603,20 @@ void show(int index, bool showtrj = true, bool showfit = true, bool showdig = tr
       //m2->SetMarkerColor(color);
       cev->cd(2);
       m2->Draw();
+      
+      TArrow* arr1 = new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt, 
+         vec_cl->at(i).y - vec_cl->at(i).sy * 0.5 * dt,
+         vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt, 
+         vec_cl->at(i).y + vec_cl->at(i).sy * 0.5 * dt, 0.01, ">");
+      cev->cd(1);
+      arr1->Draw();
+      
+     	TArrow* arr2 = new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt, 
+         vec_cl->at(i).x - vec_cl->at(i).sx * 0.5 * dt,
+         vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt, 
+         vec_cl->at(i).x + vec_cl->at(i).sx * 0.5 * dt, 0.01, ">");
+      cev->cd(2);
+      arr2->Draw();
     }
   }
 }

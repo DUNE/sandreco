@@ -27,6 +27,7 @@ void reset(particle& p)
   p.pdg = 0;
   p.tid = 0;
   p.mass = 0.;
+  p.charge = 0.;
   p.pxtrue = 0.;
   p.pytrue = 0.;
   p.pztrue = 0.;
@@ -36,26 +37,17 @@ void reset(particle& p)
   p.ztrue = 0.;
   p.ttrue = 0.;
   p.has_track = false;
-  p.px_tr = 0.;
-  p.py_tr = 0.;
-  p.pz_tr = 0.;
-  p.E_tr = 0.;
-  p.x_tr = 0.;
-  p.y_tr = 0.;
-  p.z_tr = 0.;
-  p.t_tr = 0.;
+  p.charge_reco = 0.;
+  p.pxreco = 0.;
+  p.pyreco = 0.;
+  p.pzreco = 0.;
+  p.Ereco = 0.;
+  p.xreco = 0.;
+  p.yreco = 0.;
+  p.zreco = 0.;
+  p.treco = 0.;
   p.has_cluster = false;
-  p.px_cl = 0.;
-  p.py_cl = 0.;
-  p.pz_cl = 0.;
-  p.E_cl = 0.;
-  p.x_cl = 0.;
-  p.y_cl = 0.;
-  p.z_cl = 0.;
-  p.t_cl = 0.;
-  p.x_cl_var = 0.;
-  p.y_cl_var = 0.;
-  p.z_cl_var = 0.;
+  p.has_daughter = false;
 }
 
 bool isDigitBefore(digit d1, digit d2)
@@ -107,6 +99,7 @@ void FillParticleInfo(TG4Event* ev, std::map<int, particle>& map_part)
   }
 }
 
+/*
 void FillTrackInfo(track& tr, particle& p)
 {
   p.has_track = (tr.ret_ln == 0 && tr.ret_cr == 0) ? true : false;
@@ -157,6 +150,7 @@ void FillTrackInfo(track& tr, particle& p)
     p.tr = tr;
   }
 }
+*/
 
 bool isCellBefore(cell c1, cell c2) 
 {
@@ -178,6 +172,232 @@ double XfromTDC(double t1, double t2, double x0)
   return 0.5 * (t1 - t2)/ns_Digit::vlfb * m_to_mm + x0;
 }
 
+void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e)
+{      
+  if(c.id < 25000) //Barrel
+  {
+    x = 0.5 * (c.tdc1 - c.tdc2)/ns_Digit::vlfb * m_to_mm + c.x;
+    y = c.y;
+  }
+  else
+  {
+    x = c.x;
+    y = -0.5 * (c.tdc1 - c.tdc2)/ns_Digit::vlfb * m_to_mm + c.y;
+  }
+  z = c.z;
+  t = 0.5 * (c.tdc1 + c.tdc2 - ns_Digit::vlfb * c.l / m_to_mm );
+  e = c.adc1 + c.adc2;
+}
+
+void RecoFromTrack(particle& p)
+{
+  if(p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
+  {
+    std::sort(p.tr.digits.begin(), p.tr.digits.end(), isDigBefore);
+    
+    double yc = p.tr.yc;
+    double zc = p.tr.zc;
+    
+    double l = 0.;
+    
+    for(unsigned int i = 0; i < p.tr.digits.size() - 1; i++)
+    {
+      double y0 = p.tr.digits.at(i).y;
+      double z0 = p.tr.digits.at(i).z;
+      double y1 = p.tr.digits.at(i+1).y;
+      double z1 = p.tr.digits.at(i+1).z;
+      
+      double rz = z0 - zc;
+      double ry = y0 - yc;
+      double vz = z1 - z0;
+      double vy = y1 - y0;
+      
+      l += ry * vz - rz * vy;
+    }
+    
+    l /= TMath::Abs(l);
+    
+    double r0z = p.tr.z0 - p.tr.zc;
+    double r0y = p.tr.y0 - p.tr.yc;
+    
+    double mom_yz = k * p.tr.r * B;
+    double ang_yz = TMath::ATan2(r0z, -r0y); 
+    double ang_x = 0.5 * TMath::Pi() - TMath::ATan(1./p.tr.b);
+    
+    p.charge_reco = -l;
+    p.pxreco = mom_yz * TMath::Tan(ang_x);
+    p.pyreco = p.charge_reco * mom_yz * TMath::Sin(ang_yz);
+    p.pzreco = p.charge_reco * mom_yz * TMath::Cos(ang_yz);
+    p.Ereco = TMath::Sqrt(p.pxreco*p.pxreco + p.pyreco*p.pyreco + p.pzreco*p.pzreco + p.mass*p.mass);
+    p.xreco = p.tr.x0;
+    p.yreco = p.tr.y0;
+    p.zreco = p.tr.z0;
+    p.treco = p.tr.t0;
+  }
+  else
+  {
+    p.charge_reco = 0.;
+    p.pxreco = 0.;
+    p.pyreco = 0.;
+    p.pzreco = 0.;
+    p.Ereco = 0.;
+    p.xreco = 0.;
+    p.yreco = 0.;
+    p.zreco = 0.;
+    p.treco = 0.;
+  }
+}
+
+void RecoFromBeta(particle& p, double x0, double y0, double z0, double t0)
+{      
+  // evaluate neutron velocity using earlier cell 
+  std::vector<double> cell_t(p.cl.cells.size());
+  std::vector<double> cell_x(p.cl.cells.size());
+  std::vector<double> cell_y(p.cl.cells.size());
+  std::vector<double> cell_z(p.cl.cells.size());
+  
+  double e;
+  
+  for(unsigned int i = 0; i < p.cl.cells.size(); i++)
+  {
+    CellXYZTE(p.cl.cells.at(i), cell_x.at(i), cell_y.at(i), cell_z.at(i), cell_t.at(i), e);
+  }
+  
+  int idx_min = std::distance(cell_t.begin(), std::min_element(cell_t.begin(), cell_t.end()));
+  
+  double dt = cell_t.at(idx_min) - t0;
+  double dx = cell_x.at(idx_min) - x0;
+  double dy = cell_y.at(idx_min) - y0;
+  double dz = cell_z.at(idx_min) - z0;
+  double dr = TMath::Sqrt(dx*dx+dy*dy+dz*dz);
+  double beta = dr / dt / c;
+  double gamma = 1. / TMath::Sqrt(1 - beta*beta);
+  
+  if(beta < 1.)
+  {
+    p.Ereco = p.mass * gamma;
+    p.pxreco = p.mass * gamma * beta * dx/dr;
+    p.pyreco = p.mass * gamma * beta * dy/dr;
+    p.pzreco = p.mass * gamma * beta * dz/dr;
+  }
+  else
+  {
+    p.Ereco = -0.;
+    p.pxreco = -0.;
+    p.pyreco = -0.;
+    p.pzreco = -0.;
+  }
+}
+
+void RecoFromEMShower(particle& p)
+{
+  p.Ereco = p.cl.e * emk;
+  
+  double mom = TMath::Sqrt(p.Ereco*p.Ereco - p.mass*p.mass);
+  
+  p.pxreco = mom * emk * p.cl.sx;
+  p.pyreco = mom * emk * p.cl.sy;
+  p.pzreco = mom * emk * p.cl.sz;
+}
+
+void RecoFromHadShower(particle& p)
+{
+  p.Ereco = p.cl.e * hadk;
+  
+  double mom = TMath::Sqrt(p.Ereco*p.Ereco - p.mass*p.mass);
+  
+  p.pxreco = hadk * emk * p.cl.sx;
+  p.pyreco = hadk * emk * p.cl.sy;
+  p.pzreco = hadk * emk * p.cl.sz;
+}
+
+void RecoFromDaugthers(particle& p)
+{
+  for(unsigned int i = 0; i < p.daughters.size(); i++)
+  {
+    if(p.daughters.at(i).pdg == 22 && p.daughters.at(i).has_daughter == 1)
+      RecoFromDaugthers(p.daughters.at(i));
+      
+    p.Ereco += p.daughters.at(i).Ereco;
+    p.pxreco += p.daughters.at(i).pxreco;
+    p.pyreco += p.daughters.at(i).pyreco;
+    p.pzreco += p.daughters.at(i).pzreco;
+  }
+}
+
+void ProcessParticle(event& evt, int index)
+{
+  particle& p = evt.particles.at(index);
+
+  switch(p.pdg)
+  {
+    case -2212: // antiproton
+    case  2212: // proton
+    {
+      if(p.has_track == 1 && p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
+        RecoFromTrack(p);
+      else if(p.has_cluster == 1)
+        RecoFromBeta(p,evt.x,evt.y,evt.z,evt.t);
+      break;
+    }
+    case  -211: // antipion
+    case   211: // pion
+    {
+      if(p.has_track == 1 && p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
+        RecoFromTrack(p);
+      else if(p.has_cluster == 1)
+        RecoFromHadShower(p);
+      break;
+    }
+    case    11: // electron
+    case   -11: // positron
+    {
+      if(p.has_track == 1 && p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
+        RecoFromTrack(p);
+      else if(p.has_cluster == 1)
+        RecoFromEMShower(p);
+      break;
+    }
+    case  2112: // neutron
+    case -2112: // antineutron
+    {
+      if(p.has_cluster == 1)
+        RecoFromBeta(p,evt.x,evt.y,evt.z,evt.t);
+      break;
+    }
+    case 22: // gamma
+    {
+      if(p.has_daughter == 1)
+        RecoFromDaugthers(p);
+      else if(p.has_cluster == 1)
+        RecoFromEMShower(p);
+      break;
+    }
+    case 111: // pi zero
+    {
+      RecoFromDaugthers(p);
+      break;
+    }
+    default: // other (assuming hadron)
+    {
+      if(p.has_track == 1 && p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
+        RecoFromTrack(p);
+      else if(p.has_cluster == 1)
+        RecoFromHadShower(p);
+      break;
+    }
+  }
+}
+
+void ProcessParticles(event& evt)
+{
+  for(unsigned int i = 0; i < evt.particles.size(); i++)
+  {
+    ProcessParticle(evt, i);
+  }
+}
+
+/*
 void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
 { 
   p.has_cluster = true;
@@ -225,13 +445,11 @@ void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
       double beta = dr / dt / c;
       double gamma = 1. / TMath::Sqrt(1 - beta*beta);
       
-      /*
-      std::cout << "-> " << idx_min << " " << cell_time[idx_min] << " " 
-        << cl.cells.at(idx_min).tdc1 << " " << cl.cells.at(idx_min).tdc2 << " " << cl.cells.at(idx_min).l << " "  
-        << xmin << " " << ymin << " " << zmin << " " 
-        << ev->Primaries.at(0).Position.X() << " " << ev->Primaries.at(0).Position.Y() << " " << ev->Primaries.at(0).Position.Z() << " "
-        << ev->Primaries.at(0).Position.T() << " " << dt << " " << dr << " " << beta << std::endl;
-      */
+      //std::cout << "-> " << idx_min << " " << cell_time[idx_min] << " " 
+      //  << cl.cells.at(idx_min).tdc1 << " " << cl.cells.at(idx_min).tdc2 << " " << cl.cells.at(idx_min).l << " "  
+      //  << xmin << " " << ymin << " " << zmin << " " 
+      //  << ev->Primaries.at(0).Position.X() << " " << ev->Primaries.at(0).Position.Y() << " " << ev->Primaries.at(0).Position.Z() << " "
+      //  << ev->Primaries.at(0).Position.T() << " " << dt << " " << dr << " " << beta << std::endl;
       
       if(beta < 1.)
       {
@@ -455,35 +673,32 @@ void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
     }
   }
 }
+*/
 
-void ProcessGamma(event& ev, particle& p)
+void FindGammaConversion(event& ev, particle& p)
 {     
   for(unsigned int j = 0; j < ev.particles.size(); j++)
   {
-    if(ev.particles.at(j).parent_tid == p.tid && ev.particles.at(j).has_track == 1)
+    if(ev.particles.at(j).parent_tid == p.tid)
     {
-      p.has_track = 1;
-      
-      p.px_tr += ev.particles.at(j).px_tr;
-      p.py_tr += ev.particles.at(j).py_tr;
-      p.pz_tr += ev.particles.at(j).pz_tr;
-      p.E_tr += ev.particles.at(j).E_tr;
+      p.has_daughter = 1;
+      p.daughters.push_back(ev.particles.at(j));
     }
   }
 }
 
-void ProcessPriGamma(event& ev)
+void FindPriGammaConversion(event& ev)
 {
   for(unsigned int i = 0; i < ev.particles.size(); i++)
   {
     if(ev.particles.at(i).primary == 1 && ev.particles.at(i).pdg == 22)
     {
-      ProcessGamma(ev, ev.particles.at(i));
+      FindGammaConversion(ev, ev.particles.at(i));
     }
   }
 }
 
-void ProcessPriPi0(event& ev)
+void FindPriPi0Decay(event& ev)
 {
   for(unsigned int i = 0; i < ev.particles.size(); i++)
   {
@@ -495,24 +710,11 @@ void ProcessPriPi0(event& ev)
         {
           if(ev.particles.at(j).pdg == 22)
           {
-            ProcessGamma(ev, ev.particles.at(j));
+            FindGammaConversion(ev, ev.particles.at(j));
             
-            if(ev.particles.at(j).has_track == 1)
-            {
-              ev.particles.at(i).has_track = 1;
-              ev.particles.at(i).px_tr += ev.particles.at(j).px_tr;
-              ev.particles.at(i).py_tr += ev.particles.at(j).py_tr;
-              ev.particles.at(i).pz_tr += ev.particles.at(j).pz_tr;
-              ev.particles.at(i).E_tr += ev.particles.at(j).E_tr;
-            }
-            else if(ev.particles.at(j).has_cluster == 1)
-            {
-              ev.particles.at(i).has_cluster = 1;
-              ev.particles.at(i).px_cl += ev.particles.at(j).px_cl;
-              ev.particles.at(i).py_cl += ev.particles.at(j).py_cl;
-              ev.particles.at(i).pz_cl += ev.particles.at(j).pz_cl;
-              ev.particles.at(i).E_cl += ev.particles.at(j).E_cl;
-            }
+            ev.particles.at(i).has_daughter = 1;
+            ev.particles.at(i).daughters.push_back(ev.particles.at(j));
+            
           }
         }
       }
@@ -531,89 +733,25 @@ void EvalNuEnergy(event& ev)
   {
     if(ev.particles.at(i).primary == 1)
     {
-      if(ev.particles.at(i).pdg == 2212) //proton
+      if((ev.particles.at(i).pdg == 2212 || ev.particles.at(i).pdg == 2112) && ev.particles.at(i).Ereco > 0) //proton
       {
-        if(ev.particles.at(i).has_track == 1) // with track
-        {
-          ev.Enureco  += ev.particles.at(i).E_tr - ev.particles.at(i).mass;
-          ev.pxnureco += ev.particles.at(i).px_tr;
-          ev.pynureco += ev.particles.at(i).py_tr;
-          ev.pznureco += ev.particles.at(i).pz_tr;
-        }
-        else if(ev.particles.at(i).has_cluster == 1 && ev.particles.at(i).E_cl > 0) // with cluster and no track
-        {
-          ev.Enureco  += ev.particles.at(i).E_cl - ev.particles.at(i).mass;
-          ev.pxnureco += ev.particles.at(i).px_cl;
-          ev.pynureco += ev.particles.at(i).py_cl;
-          ev.pznureco += ev.particles.at(i).pz_cl;
-        }
-      }
-      else if(ev.particles.at(i).pdg == 2112 && ev.particles.at(i).E_cl > 0) // neutron
-      {
-        if(ev.particles.at(i).has_cluster == 1) // with cluster
-        {
-          ev.Enureco  += ev.particles.at(i).E_cl - ev.particles.at(i).mass;
-          ev.pxnureco += ev.particles.at(i).px_cl;
-          ev.pynureco += ev.particles.at(i).py_cl;
-          ev.pznureco += ev.particles.at(i).pz_cl;
-        }
-      }
-      else if(ev.particles.at(i).pdg == 22) // photon
-      {
-        if(ev.particles.at(i).has_track == 1) // with cluster
-        {
-          ev.Enureco += ev.particles.at(i).E_tr;
-          ev.pxnureco += ev.particles.at(i).px_tr;
-          ev.pynureco += ev.particles.at(i).py_tr;
-          ev.pznureco += ev.particles.at(i).pz_tr;
-        }
-        else if(ev.particles.at(i).has_cluster == 1) // with cluster
-        {
-          ev.Enureco += ev.particles.at(i).E_cl;
-          ev.pxnureco += ev.particles.at(i).px_cl;
-          ev.pynureco += ev.particles.at(i).py_cl;
-          ev.pznureco += ev.particles.at(i).pz_cl;
-        }
-      }
-      else if(ev.particles.at(i).pdg == 111) // pion0
-      {
-        if(ev.particles.at(i).has_track == 1) // with cluster
-        {
-          ev.Enureco += ev.particles.at(i).E_tr;
-          ev.pxnureco += ev.particles.at(i).px_tr;
-          ev.pynureco += ev.particles.at(i).py_tr;
-          ev.pznureco += ev.particles.at(i).pz_tr;
-        }
-        if(ev.particles.at(i).has_cluster == 1) // with cluster
-        {
-          ev.Enureco += ev.particles.at(i).E_cl;
-          ev.pxnureco += ev.particles.at(i).px_cl;
-          ev.pynureco += ev.particles.at(i).py_cl;
-          ev.pznureco += ev.particles.at(i).pz_cl;
-        }
+        ev.Enureco  += ev.particles.at(i).Ereco - ev.particles.at(i).mass;
+        ev.pxnureco += ev.particles.at(i).pxreco;
+        ev.pynureco += ev.particles.at(i).pyreco;
+        ev.pznureco += ev.particles.at(i).pzreco;
       }
       else
       {
-        if(ev.particles.at(i).has_track == 1) // with track
-        {
-          ev.Enureco  += ev.particles.at(i).E_tr;
-          ev.pxnureco += ev.particles.at(i).px_tr;
-          ev.pynureco += ev.particles.at(i).py_tr;
-          ev.pznureco += ev.particles.at(i).pz_tr;
-        }
-        else if(ev.particles.at(i).has_cluster == 1 && ev.particles.at(i).E_cl > 0)
-        {
-          ev.Enureco  += ev.particles.at(i).E_cl;
-          ev.pxnureco += ev.particles.at(i).px_cl;
-          ev.pynureco += ev.particles.at(i).py_cl;
-          ev.pznureco += ev.particles.at(i).pz_cl;
-        }
+        ev.Enureco  += ev.particles.at(i).Ereco;
+        ev.pxnureco += ev.particles.at(i).pxreco;
+        ev.pynureco += ev.particles.at(i).pyreco;
+        ev.pznureco += ev.particles.at(i).pzreco;
       }
     }
   }
 }
 
-void analysis(const char* fReco, const char* fTrueMC, const char* fOut)
+void Analyze(const char* fReco, const char* fTrueMC, const char* fOut)
 {
   TChain tReco("tReco");
   TChain tTrueMC("EDepSimEvents");
@@ -658,6 +796,11 @@ void analysis(const char* fReco, const char* fTrueMC, const char* fOut)
     map_part.clear();
     evt.particles.clear();
     
+    evt.x = ev->Primaries.at(0).Position.X();
+    evt.y = ev->Primaries.at(0).Position.Y();
+    evt.z = ev->Primaries.at(0).Position.Z();
+    evt.t = ev->Primaries.at(0).Position.T();
+    
     evt.pxnu = part_mom[0][0]*GeV_to_MeV;
     evt.pynu = part_mom[0][1]*GeV_to_MeV;
     evt.pznu = part_mom[0][2]*GeV_to_MeV;
@@ -668,13 +811,17 @@ void analysis(const char* fReco, const char* fTrueMC, const char* fOut)
     for(unsigned int j = 0; j < vec_tr->size(); j++)
     {
       std::map<int, particle>::iterator it = map_part.find(vec_tr->at(j).tid);
-      FillTrackInfo(vec_tr->at(j), it->second);
+      //FillTrackInfo(vec_tr->at(j), it->second);
+      it->second.has_track = true;
+      it->second.tr = vec_tr->at(j);
     } 
     
     for(unsigned int j = 0; j < vec_cl->size(); j++)
     {
       std::map<int, particle>::iterator it = map_part.find(vec_cl->at(j).tid);
-      FillClusterInfo(ev, vec_cl->at(j), it->second);
+      //FillClusterInfo(ev, vec_cl->at(j), it->second);
+      it->second.has_cluster = true;
+      it->second.cl = vec_cl->at(j);
     }
     
     for(std::map<int, particle>::iterator it = map_part.begin(); it != map_part.end(); ++it) 
@@ -682,8 +829,10 @@ void analysis(const char* fReco, const char* fTrueMC, const char* fOut)
         evt.particles.push_back(it->second);
     }
     
-    ProcessPriGamma(evt);
-    ProcessPriPi0(evt);
+    FindPriGammaConversion(evt);
+    FindPriPi0Decay(evt);
+    
+    ProcessParticles(evt);
     
     EvalNuEnergy(evt);
        

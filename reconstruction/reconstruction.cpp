@@ -9,6 +9,8 @@
 #include <iostream>
 #include <algorithm>
 
+const double m_to_mm = 1000.;
+
 double mindist(double s1x, double s1y, double s1z,
                double s2x, double s2y, double s2z,
                double px, double py, double pz)
@@ -468,10 +470,30 @@ void Filter(std::vector<cluster>& vec_cl)
   }
 }
 
+double TfromTDC(double t1, double t2, double L)
+{
+  return 0.5 * (t1 + t2 - ns_Digit::vlfb * L / m_to_mm );
+}
+
+void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e)
+{      
+  if(c.id < 25000) //Barrel
+  {
+    x = 0.5 * (c.tdc1 - c.tdc2)/ns_Digit::vlfb * m_to_mm + c.x;
+    y = c.y;
+  }
+  else
+  {
+    x = c.x;
+    y = -0.5 * (c.tdc1 - c.tdc2)/ns_Digit::vlfb * m_to_mm + c.y;
+  }
+  z = c.z;
+  t = 0.5 * (c.tdc1 + c.tdc2 - ns_Digit::vlfb * c.l / m_to_mm );
+  e = c.adc1 + c.adc2;
+}
+
 void Merge(std::vector<cluster>& vec_cl)
 {
-  const double m_to_mm = 1000.;
-
   for(unsigned int i = 0; i < vec_cl.size(); i++)
   {
     vec_cl.at(i).e = 0.;
@@ -480,25 +502,20 @@ void Merge(std::vector<cluster>& vec_cl)
     vec_cl.at(i).z = 0.;
     vec_cl.at(i).t = 0.;
     
+    std::vector<double> xv(5);
+    std::vector<double> yv(5);
+    std::vector<double> zv(5);
+    std::vector<double> tv(5);
+    std::vector<double> elayer(5);
+    
+    double x2_cl_mean = 0.;
+    double y2_cl_mean = 0.;
+    double z2_cl_mean = 0.;    
     
     for(unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++)
-    {
-      double e = vec_cl.at(i).cells.at(k).adc1 + vec_cl.at(i).cells.at(k).adc2;
-      double t = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 + vec_cl.at(i).cells.at(k).tdc2 - ns_Digit::vlfb * vec_cl.at(i).cells.at(k).l / m_to_mm);
-      double z = vec_cl.at(i).cells.at(k).z;
-      
-      double x,y;
-      
-      if(vec_cl.at(i).cells.at(k).id < 25000) //Barrel
-      {
-        x = 0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm + vec_cl.at(i).cells.at(k).x;
-        y = vec_cl.at(i).cells.at(k).y;
-      }
-      else
-      {
-        y = -0.5 * (vec_cl.at(i).cells.at(k).tdc1 - vec_cl.at(i).cells.at(k).tdc2)/ns_Digit::vlfb * m_to_mm + vec_cl.at(i).cells.at(k).y;
-        x = vec_cl.at(i).cells.at(k).x;
-      }
+    {      
+      double x,y,z,t,e;
+      CellXYZTE(vec_cl.at(i).cells.at(k), x, y, z, t, e);
       
       // time reference at center of first layer
       // t -= ( (ns_Digit::dzlay[0] + ns_Digit::dzlay[1]) - 
@@ -510,6 +527,17 @@ void Merge(std::vector<cluster>& vec_cl)
       vec_cl.at(i).y += e * y;
       vec_cl.at(i).z += e * z;
       vec_cl.at(i).t += e * t;
+      
+      elayer[vec_cl.at(i).cells.at(k).lay] += e; 
+        
+      xv[vec_cl.at(i).cells.at(k).lay] += e * x;
+      yv[vec_cl.at(i).cells.at(k).lay] += e * y;
+      zv[vec_cl.at(i).cells.at(k).lay] += e * z;
+      tv[vec_cl.at(i).cells.at(k).lay] += e * t;
+      
+      x2_cl_mean += x*x;
+      y2_cl_mean += y*y;
+      z2_cl_mean += z*z;
     }
     
     vec_cl.at(i).x /= vec_cl.at(i).e;
@@ -517,12 +545,76 @@ void Merge(std::vector<cluster>& vec_cl)
     vec_cl.at(i).z /= vec_cl.at(i).e;
     vec_cl.at(i).t /= vec_cl.at(i).e;
     
-    /*std::cout << vec_cl.at(i).x << " " 
-      << vec_cl.at(i).y << " " 
-      << vec_cl.at(i).z << " " 
-      << vec_cl.at(i).t << " " 
-      << vec_cl.at(i).e << " " 
-      << vec_cl.at(i).cells.size() << std::endl;*/
+    x2_cl_mean /= vec_cl.at(i).cells.size();
+    y2_cl_mean /= vec_cl.at(i).cells.size();
+    z2_cl_mean /= vec_cl.at(i).cells.size();
+    
+    vec_cl.at(i).varx = x2_cl_mean - vec_cl.at(i).x*vec_cl.at(i).x;
+    vec_cl.at(i).vary = y2_cl_mean - vec_cl.at(i).y*vec_cl.at(i).y;
+    vec_cl.at(i).varz = z2_cl_mean - vec_cl.at(i).z*vec_cl.at(i).z;
+    
+    double sx = 0;
+    double sy = 0;
+    double sz = 0;
+    double sxz = 0;
+    double syz = 0;
+    double sx2 = 0;
+    double sy2 = 0;
+    double sz2 = 0;
+    int nlayer = 0;
+    
+    double tinner = -999.;
+    double touter = -999.;
+    double zinner = -999.;
+    double zouter = -999.;
+    double dir = 0.;
+    
+    for(int i = 0; i < 5; i++)
+    {
+      if(elayer[i] != 0.)
+      {        
+        xv[i] /= elayer[i];
+        yv[i] /= elayer[i];
+        zv[i] /= elayer[i];
+        tv[i] /= elayer[i];
+        
+        if(tinner < 0)
+        {
+          tinner = tv[i]; 
+          zinner = zv[i]; 
+        }
+        
+        touter = tv[i];
+        zouter = zv[i];
+        
+        sx += xv[i];
+        sy += yv[i];
+        sz += zv[i];
+        sxz += xv[i]*zv[i];
+        syz += yv[i]*zv[i];
+        sx2 += xv[i]*xv[i];
+        sy2 += yv[i]*yv[i];
+        sz2 += zv[i]*zv[i];
+        
+        nlayer++;
+      }
+    }
+    
+    if(tinner != touter)
+      dir = (zouter - zinner)*(touter - tinner)/TMath::Abs((touter - tinner)*(zouter - zinner));
+    else
+      dir = 0.;
+    
+    double ax = (nlayer * sxz - sz*sx)/(nlayer*sz2 - sz*sz);
+    double bx = (sx*sz2 - sz*sxz)/(nlayer*sz2 - sz*sz);
+    double ay = (nlayer * syz - sz*sy)/(nlayer*sz2 - sz*sz);
+    double by = (sy*sz2 - sz*syz)/(nlayer*sz2 - sz*sz);
+    
+    double mod = TMath::Sqrt(1+ax*ax+ay*ay);
+    
+    vec_cl.at(i).sx = dir * ax/mod;
+    vec_cl.at(i).sy = dir * ay/mod;
+    vec_cl.at(i).sz = dir * 1./mod;
   }
 }
 
