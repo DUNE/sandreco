@@ -314,14 +314,96 @@ void RecoFromHadShower(particle& p)
 void RecoFromDaugthers(particle& p)
 {
   for(unsigned int i = 0; i < p.daughters.size(); i++)
-  {
-    if(p.daughters.at(i).pdg == 22 && p.daughters.at(i).has_daughter == 1)
-      RecoFromDaugthers(p.daughters.at(i));
-      
+  {      
     p.Ereco += p.daughters.at(i).Ereco;
     p.pxreco += p.daughters.at(i).pxreco;
     p.pyreco += p.daughters.at(i).pyreco;
     p.pzreco += p.daughters.at(i).pzreco;
+  }
+}
+
+void RecoGamma(particle& p)
+{
+  bool ok = false;
+  if(p.has_daughter == 1)
+  {
+    for(unsigned int i = 0; i < p.daughters.size(); i++)
+    {
+      if(p.daughters.at(i).has_track == 1 && p.daughters.at(i).tr.ret_ln == 0 && p.daughters.at(i).tr.ret_cr == 0)
+      {
+        ok = true;
+      }
+    }
+  }  
+  
+  if(ok)
+    RecoFromDaugthers(p);
+  else if(p.has_cluster == 1)
+    RecoFromEMShower(p);
+}
+
+void RecoPi0(particle& p)
+{
+  for(unsigned int i = 0; i < p.daughters.size(); i++)
+  {
+    if(p.daughters.at(i).pdg == 22 && p.daughters.at(i).has_daughter == 1)
+    {
+      RecoGamma(p.daughters.at(i));
+    }
+  }
+  
+  RecoFromDaugthers(p);
+}
+
+void FindGammaConversion(event& ev, particle& p)
+{     
+  for(unsigned int j = 0; j < ev.particles.size(); j++)
+  {
+    if(ev.particles.at(j).parent_tid == p.tid)
+    {
+      p.has_daughter = 1;
+      p.daughters.push_back(ev.particles.at(j));
+    }
+  }
+}
+
+void FindPriGammaConversion(event& ev)
+{
+  for(unsigned int i = 0; i < ev.particles.size(); i++)
+  {
+    if(ev.particles.at(i).primary == 1 && ev.particles.at(i).pdg == 22)
+    {
+      FindGammaConversion(ev, ev.particles.at(i));
+    }
+  }
+}
+
+void FindPi0Decay(event& ev, particle& p)
+{
+  for(unsigned int j = 0; j < ev.particles.size(); j++)
+  {
+    if(ev.particles.at(j).parent_tid == p.tid)
+    {
+      if(ev.particles.at(j).pdg == 22)
+      {
+        FindGammaConversion(ev, ev.particles.at(j));
+        
+        p.has_daughter = 1;
+        p.daughters.push_back(ev.particles.at(j));
+        
+      }
+    }
+  }
+}
+
+void FindPriPi0Decay(event& ev)
+{
+  for(unsigned int i = 0; i < ev.particles.size(); i++)
+  {
+    if(ev.particles.at(i).primary == 1 && ev.particles.at(i).pdg == 111)
+    { 
+      FindPi0Decay(ev, ev.particles.at(i));
+    }
   }
 }
 
@@ -367,15 +449,20 @@ void ProcessParticle(event& evt, int index)
     }
     case 22: // gamma
     {
-      if(p.has_daughter == 1)
-        RecoFromDaugthers(p);
-      else if(p.has_cluster == 1)
-        RecoFromEMShower(p);
+      if(p.primary==1)
+      {
+        FindGammaConversion(evt, p);
+      }
+      RecoGamma(p);
       break;
     }
     case 111: // pi zero
     {
-      RecoFromDaugthers(p);
+      if(p.primary==1)
+      {
+        FindPi0Decay(evt, p);
+      }
+      RecoPi0(p);
       break;
     }
     default: // other (assuming hadron)
@@ -392,7 +479,7 @@ void ProcessParticle(event& evt, int index)
 void ProcessParticles(event& evt)
 {
   for(unsigned int i = 0; i < evt.particles.size(); i++)
-  {
+  { 
     ProcessParticle(evt, i);
   }
 }
@@ -675,51 +762,9 @@ void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
 }
 */
 
-void FindGammaConversion(event& ev, particle& p)
-{     
-  for(unsigned int j = 0; j < ev.particles.size(); j++)
-  {
-    if(ev.particles.at(j).parent_tid == p.tid)
-    {
-      p.has_daughter = 1;
-      p.daughters.push_back(ev.particles.at(j));
-    }
-  }
-}
-
-void FindPriGammaConversion(event& ev)
+bool isAfter(particle p1, particle p2)
 {
-  for(unsigned int i = 0; i < ev.particles.size(); i++)
-  {
-    if(ev.particles.at(i).primary == 1 && ev.particles.at(i).pdg == 22)
-    {
-      FindGammaConversion(ev, ev.particles.at(i));
-    }
-  }
-}
-
-void FindPriPi0Decay(event& ev)
-{
-  for(unsigned int i = 0; i < ev.particles.size(); i++)
-  {
-    if(ev.particles.at(i).primary == 1 && ev.particles.at(i).pdg == 111)
-    {      
-      for(unsigned int j = 0; j < ev.particles.size(); j++)
-      {
-        if(ev.particles.at(j).parent_tid == ev.particles.at(i).tid)
-        {
-          if(ev.particles.at(j).pdg == 22)
-          {
-            FindGammaConversion(ev, ev.particles.at(j));
-            
-            ev.particles.at(i).has_daughter = 1;
-            ev.particles.at(i).daughters.push_back(ev.particles.at(j));
-            
-          }
-        }
-      }
-    }
-  }
+  return p1.tid > p2.tid;
 }
 
 void EvalNuEnergy(event& ev)
@@ -829,8 +874,10 @@ void Analyze(const char* fReco, const char* fTrueMC, const char* fOut)
         evt.particles.push_back(it->second);
     }
     
-    FindPriGammaConversion(evt);
-    FindPriPi0Decay(evt);
+    std::sort(evt.particles.begin(), evt.particles.end(), isAfter);
+    
+    //FindPriGammaConversion(evt);
+    //FindPriPi0Decay(evt);
     
     ProcessParticles(evt);
     
