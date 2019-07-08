@@ -1,10 +1,10 @@
 #include <TChain.h>
 #include <TFile.h>
 
-#include "/mnt/nas01/users/mtenti/wd/analysis/KLOEcal/loader/loader.C"
+#include "/wd/dune-it/enurec/analysis/kloe-simu/loader/loader.C"
 
-#include "/mnt/nas01/users/mtenti/sw/edep-sim/edep-sim-bin/include/edep-sim/TG4Event.h"
-#include "/mnt/nas01/users/mtenti/sw/edep-sim/edep-sim-bin/include/edep-sim/TG4HitSegment.h"
+#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
+#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
 
 #include <iostream>
 #include <algorithm>
