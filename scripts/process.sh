@@ -14,7 +14,7 @@ dlib="/wd/dune-it/enurec/analysis/kloe-simu/digitization/digitization_cpp.so"
 rlib="/wd/dune-it/enurec/analysis/kloe-simu/reconstruction/reconstruction_cpp.so"
 alib="/wd/dune-it/enurec/analysis/kloe-simu/analysis/analysis_cpp.so"
 
-input=${1}
+ifile=${1}
 
 iname=$(basename ${ifile})
 idir=$(dirname ${ifile})
