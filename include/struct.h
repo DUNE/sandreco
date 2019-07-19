@@ -1,17 +1,9 @@
-// File loader.C 
+// File struct.h 
 #include <vector> 
 #include <map>
 
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
-
-#include <TRandom3.h>
-#include <TChain.h>
-#include <TGeoManager.h>
-#include <TCanvas.h>
-
-#ifndef LOADER_C
-#define LOADER_C
+#ifndef STRUCT_H
+#define STRUCT_H
 
 struct cell {
   int id;
@@ -152,41 +144,6 @@ struct gcell {
   double adc;
   double tdc;
 };
-
-bool isHitBefore(hit h1, hit h2)
-{
-  return h1.t1 < h2.t1;
-}
-
-bool isDigBefore(digit d1, digit d2)
-{
-  return d1.t < d2.t;
-}
-
-namespace ns_Digit {
-  const bool debug = false;
-  
-  static const int nMod = 24;
-  static const int nLay = 5;
-  static const int nCel = 12;
-    
-  double dzlay[nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
-  double czlay[nLay];
-  double cxlay[nLay][nCel];
-  
-  double ec_r;
-  double ec_dz;
-  
-  const char* path_barrel_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
-  const char* path_endcapL_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEEndcapECALL_volume_PV_0";
-  const char* path_endcapR_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEEndcapECALR_volume_PV_0";
-  
-  const double tscin = 3.08;
-  const double tscex = 0.588;
-  const double vlfb = 5.85;
-  
-  const double lCalBarrel = 4.3; // meter
-}
 
 #ifdef __MAKECINT__ 
 #pragma link C++ class std::map<int,std::vector<double> >+; 

@@ -3,13 +3,14 @@
 #include <TGeoManager.h>
 #include <TDirectoryFile.h>
 
-#include "/wd/dune-it/enurec/analysis/kloe-simu/loader/loader.C"
-
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
+#include "TG4Event.h"
+#include "TG4HitSegment.h"
 
 #include <iostream>
 #include <algorithm>
+
+#include "struct.h"
+#include "utils.h"
 
 const double m_to_mm = 1000.;
 
@@ -740,17 +741,19 @@ void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
   fout.cd();
   tout.Write();
   geo->Write();
-  dirfile->Write();
   fout.Close();
 }
 
 void help_reco()
 {
   std::cout << "Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)" << std::endl;
-  std::cout << "input   file names could contain wild card" << std::endl;
+  std::cout << "input file names could contain wild card" << std::endl;
 } 
 
-void reconstruction()
+int main(int argc, char* argv[])
 {
-  help_reco();
-} 
+  if(argc != 4)
+    help_reco();
+  else
+    Reconstruct(argv[1], argv[2], argv[3]);
+}

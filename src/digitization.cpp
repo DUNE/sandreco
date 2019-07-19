@@ -21,8 +21,8 @@
 #include <map>
 #include <iostream>
 
-//#include "/wd/dune-it/enurec/analysis/kloe-simu/loader/loader.C"
 #include "struct.h"
+#include "utils.h"
 
 // Energy MeV
 // Distance mm
@@ -673,11 +673,6 @@ void help_digit()
 {
   std::cout << "Digitize(const char* finname, const char* foutname)" << std::endl;
   std::cout << "input file name could contain wild card" << std::endl;
-} 
-
-void digitization()
-{
-  help_digit();
 } 
 
 int main(int argc, char* argv[])

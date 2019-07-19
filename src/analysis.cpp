@@ -4,10 +4,11 @@
 #include <TParticlePDG.h>
 #include <TDirectoryFile.h>
 
-#include "/wd/dune-it/enurec/analysis/kloe-simu/loader/loader.C"
+#include "TG4Event.h"
+#include "TG4HitSegment.h"
 
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
+#include "struct.h"
+#include "utils.h"
 
 #include <iostream>
 
@@ -894,6 +895,21 @@ void Analyze(const char* fReco, const char* fTrueMC, const char* fOut)
   fout.cd();
   tout.Write();
   geo->Write();
-  dirfile->Write();
   fout.Close();
 }
+
+void help_ana()
+{
+  std::cout << "Analyze(const char* fReco, const char* fTrueMC, const char* fOut)" << std::endl;
+  std::cout << "input file names could contain wild card" << std::endl;
+} 
+
+int main(int argc, char* argv[])
+{
+  if(argc != 4)
+    help_ana();
+  else
+    Analyze(argv[1], argv[2], argv[3]);
+}
+
+
