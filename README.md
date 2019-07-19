@@ -1,11 +1,29 @@
+Build
+- make sure you have *root-config* in your ${PATH} environment variable
+- open Makefile and customize the location of *Edep-sim* installation
+- Then:
+
+```
+$ make
+```
+
+Before running application
+- To have dictionaties of the structs loaded at run time:
+```
+$ source scripts/env.sh
+```
+
+Using with ROOT
+- To load dictionaries of structs:
+```
+root [0] gSystem->Load("libStruct.so")
+```
+
 Digitization
 - Create digits of STT and cells of calorimeter
 
 ```
-mtenti@neut05:KLOEcal (master)$ root -l
-root [0] .L digitization/digitization.cpp+
-void Digitize(const char* finname, const char* foutname)
-root [1] Digitize("muon-LArTarget_volume-geometry_v12.1E7-CC/muon-LArTarget_volume-geometry_v12.1E7-CC.*.root","output.digits.root")
+$ Digitize <input file> <output file>
 ```
 
 Reconstruction
@@ -13,9 +31,7 @@ Reconstruction
 - Clustering of calorimeter cells
 
 ```
-root [0] .L reconstruction/reconstruction.cpp+
-void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
-root [1] Reconstruct("output.digits.root","muon-LArTarget_volume-geometry_v12.1E7-CC/muon-LArTarget_volume-geometry_v12.1E7-CC.*.root","output.reco.root")
+$ Reconstruct <input file>
 ```
 
 Analysis
@@ -23,9 +39,6 @@ Analysis
 - Evaluate neutrino energy
 
 ```
-mtenti@neut05:KLOEcal (master)$ root -l
-root [0] .L analysis/analysis.cpp+
-void analysis(const char* fReco, const char* fTrueMC, const char* fOut)
-root [1] analysis("output.reco.root","muon-LArTarget_volume-geometrroot [2] analysis(LArTarget_volume-geometry_v12.1E7-CC.*.root","output.analysis.root")
+Analyze <input file>
 ```
 
