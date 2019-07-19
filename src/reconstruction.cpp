@@ -3,13 +3,14 @@
 #include <TGeoManager.h>
 #include <TDirectoryFile.h>
 
-#include "/wd/dune-it/enurec/analysis/kloe-simu/loader/loader.C"
-
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
+#include "TG4Event.h"
+#include "TG4HitSegment.h"
 
 #include <iostream>
 #include <algorithm>
+
+#include "struct.h"
+#include "utils.h"
 
 const double m_to_mm = 1000.;
 
@@ -672,19 +673,16 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell, std::vector<c
   }
 }
 
-void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
+void Reconstruct(const char* fIn)
 {
-  TChain tDigit("tDigit");
-  TChain tTrueMC("EDepSimEvents");
-  tDigit.Add(fDigit);
-  tTrueMC.Add(fTrueMC);
+  TFile f(fIn,"UPDATE");
+  TTree* tDigit = (TTree*) f.Get("tDigit");
+  TTree* tTrueMC = (TTree*) f.Get("EDepSimEvents");
+  TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
   
-  tDigit.AddFriend(&tTrueMC);
+  tDigit->AddFriend(tTrueMC);
   
-  TChain* t = &tDigit;
-  TFile f(t->GetListOfFiles()->At(0)->GetTitle());
-  TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry"); 
-  TDirectoryFile* dirfile = (TDirectoryFile*) f.Get("DetSimPassThru");
+  TTree* t = tDigit;
   
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event",&ev);
@@ -697,8 +695,7 @@ void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
   
   std::vector<track> vec_tr;
   std::vector<cluster> vec_cl;
-    
-  TFile fout(fOut,"RECREATE");
+
   TTree tout("tReco","tReco");
   tout.Branch("track","std::vector<track>",&vec_tr);
   tout.Branch("cluster","std::vector<cluster>",&vec_cl);
@@ -737,20 +734,20 @@ void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
   delete vec_digi;
   delete vec_cell;
   
-  fout.cd();
+  f.cd();
   tout.Write();
-  geo->Write();
-  dirfile->Write();
-  fout.Close();
+  f.Close();
 }
 
 void help_reco()
 {
-  std::cout << "Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)" << std::endl;
-  std::cout << "input   file names could contain wild card" << std::endl;
+  std::cout << "Reconstruct <input file>" << std::endl;
 } 
 
-void reconstruction()
+int main(int argc, char* argv[])
 {
-  help_reco();
-} 
+  if(argc != 2)
+    help_reco();
+  else
+    Reconstruct(argv[1]);
+}
