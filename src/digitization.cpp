@@ -21,8 +21,8 @@
 #include <map>
 #include <iostream>
 
-//#include "/wd/dune-it/enurec/analysis/kloe-simu/loader/loader.C"
 #include "struct.h"
+#include "utils.h"
 
 // Energy MeV
 // Distance mm
@@ -637,8 +637,7 @@ void Digitize(const char* finname, const char* foutname)
     tout.Branch("cell","std::vector<cell>",&vec_cell);
     tout.Branch("Stt","std::vector<digit>",&digit_vec);
     
-    //const int nev = t->GetEntries();
-    const int nev = 5;
+    const int nev = t->GetEntries();
     
     std::cout << "Events: " << nev << " [";
     std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -671,13 +670,8 @@ void Digitize(const char* finname, const char* foutname)
 
 void help_digit()
 {
-  std::cout << "Digitize(const char* finname, const char* foutname)" << std::endl;
+  std::cout << "Digitize <input file> <output file>" << std::endl;
   std::cout << "input file name could contain wild card" << std::endl;
-} 
-
-void digitization()
-{
-  help_digit();
 } 
 
 int main(int argc, char* argv[])

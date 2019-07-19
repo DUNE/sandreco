@@ -188,6 +188,48 @@ namespace ns_Digit {
   const double lCalBarrel = 4.3; // meter
 }
 
+namespace ns_Draw {
+  const bool debug = false;
+  
+  static const int nMod = 24;
+  static const int nLay = 5;
+  static const int nCel = 12;
+  static const int nLay_ec = 5;
+  static const int nCel_ec = 90;
+  
+  static const int nTotCells = nMod * nLay * nCel; 
+  static const int nCellModule = nLay * nCel;
+  
+  static const double dt = 500;
+  
+  double centerKLOE[3];
+  double CellLocalX[nCellModule][4];
+  double CellLocalZ[nCellModule][4];
+  
+  int palette = 87;
+  
+  bool initialized = false;
+  
+  double dwx = 2500.;
+  double dwy = 2500.;
+  double dwz = 2500.;
+  
+  double kloe_int_R = 2000.;
+  double kloe_int_dx = 1690.;
+  
+  TChain* t = 0;
+  TG4Event* ev = new TG4Event;
+  TGeoManager* geo = 0;
+  TCanvas* cev = 0;
+  TCanvas* cpr = 0;
+
+  std::vector<cell>* vec_cell;
+  std::vector<digit>* vec_digi;
+  std::vector<track>* vec_tr;
+  std::vector<cluster>* vec_cl;
+  std::map<int, gcell> calocell;
+}
+
 #ifdef __MAKECINT__ 
 #pragma link C++ class std::map<int,std::vector<double> >+; 
 #pragma link C++ class std::map<int,std::vector<int> >+;
