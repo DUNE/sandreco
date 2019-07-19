@@ -797,22 +797,18 @@ void EvalNuEnergy(event& ev)
   }
 }
 
-void Analyze(const char* fReco, const char* fTrueMC, const char* fOut)
+void Analyze(const char* fIn)
 {
-  TChain tReco("tReco");
-  TChain tTrueMC("EDepSimEvents");
-  TChain tGenieMC("DetSimPassThru/gRooTracker");
-  tReco.Add(fReco);
-  tTrueMC.Add(fTrueMC);
-  tGenieMC.Add(fTrueMC);
+  TFile f(fIn,"UPDATE");
+  TTree* tReco = (TTree*) f.Get("tReco");
+  TTree* tTrueMC = (TTree*) f.Get("EDepSimEvents");
+  TTree* gRooTracker = (TTree*) f.Get("gRooTracker");
+  TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
   
-  tReco.AddFriend(&tTrueMC);
-  tReco.AddFriend(&tGenieMC);
+  tReco->AddFriend(tTrueMC);
+  tReco->AddFriend(gRooTracker);
   
-  TChain* t = &tReco;
-  TFile f(t->GetListOfFiles()->At(0)->GetTitle());
-  TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry"); 
-  TDirectoryFile* dirfile = (TDirectoryFile*) f.Get("DetSimPassThru");
+  TTree* t = tReco;
   
   std::vector<track>* vec_tr = new std::vector<track>;
   std::vector<cluster>* vec_cl = new std::vector<cluster>;
@@ -827,8 +823,7 @@ void Analyze(const char* fReco, const char* fTrueMC, const char* fOut)
   std::map<int, particle> map_part;
   
   event evt;
-    
-  TFile fout(fOut,"RECREATE");
+
   TTree tout("tEvent","tEvent");
   tout.Branch("event","event",&evt);
     
@@ -892,24 +887,22 @@ void Analyze(const char* fReco, const char* fTrueMC, const char* fOut)
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
   
-  fout.cd();
+  f.cd();
   tout.Write();
-  geo->Write();
-  fout.Close();
+  f.Close();
 }
 
 void help_ana()
 {
-  std::cout << "Analyze(const char* fReco, const char* fTrueMC, const char* fOut)" << std::endl;
-  std::cout << "input file names could contain wild card" << std::endl;
+  std::cout << "Analyze <input file>" << std::endl;
 } 
 
 int main(int argc, char* argv[])
 {
-  if(argc != 4)
+  if(argc != 2)
     help_ana();
   else
-    Analyze(argv[1], argv[2], argv[3]);
+    Analyze(argv[1]);
 }
 
 

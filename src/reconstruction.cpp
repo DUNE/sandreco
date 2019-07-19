@@ -673,19 +673,16 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell, std::vector<c
   }
 }
 
-void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
+void Reconstruct(const char* fIn)
 {
-  TChain tDigit("tDigit");
-  TChain tTrueMC("EDepSimEvents");
-  tDigit.Add(fDigit);
-  tTrueMC.Add(fTrueMC);
+  TFile f(fIn,"UPDATE");
+  TTree* tDigit = (TTree*) f.Get("tDigit");
+  TTree* tTrueMC = (TTree*) f.Get("EDepSimEvents");
+  TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
   
-  tDigit.AddFriend(&tTrueMC);
+  tDigit->AddFriend(tTrueMC);
   
-  TChain* t = &tDigit;
-  TFile f(t->GetListOfFiles()->At(0)->GetTitle());
-  TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry"); 
-  TDirectoryFile* dirfile = (TDirectoryFile*) f.Get("DetSimPassThru");
+  TTree* t = tDigit;
   
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event",&ev);
@@ -698,8 +695,7 @@ void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
   
   std::vector<track> vec_tr;
   std::vector<cluster> vec_cl;
-    
-  TFile fout(fOut,"RECREATE");
+
   TTree tout("tReco","tReco");
   tout.Branch("track","std::vector<track>",&vec_tr);
   tout.Branch("cluster","std::vector<cluster>",&vec_cl);
@@ -738,22 +734,20 @@ void Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)
   delete vec_digi;
   delete vec_cell;
   
-  fout.cd();
+  f.cd();
   tout.Write();
-  geo->Write();
-  fout.Close();
+  f.Close();
 }
 
 void help_reco()
 {
-  std::cout << "Reconstruct(const char* fDigit, const char* fTrueMC, const char* fOut)" << std::endl;
-  std::cout << "input file names could contain wild card" << std::endl;
+  std::cout << "Reconstruct <input file>" << std::endl;
 } 
 
 int main(int argc, char* argv[])
 {
-  if(argc != 4)
+  if(argc != 2)
     help_reco();
   else
-    Reconstruct(argv[1], argv[2], argv[3]);
+    Reconstruct(argv[1]);
 }

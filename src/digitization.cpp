@@ -671,7 +671,7 @@ void Digitize(const char* finname, const char* foutname)
 
 void help_digit()
 {
-  std::cout << "Digitize(const char* finname, const char* foutname)" << std::endl;
+  std::cout << "Digitize <input file> <output file>" << std::endl;
   std::cout << "input file name could contain wild card" << std::endl;
 } 
 

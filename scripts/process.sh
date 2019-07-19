@@ -70,9 +70,9 @@ Digitize "${ifile}" "${dfile}"
 echo "===============================" &&
 echo "Reconstruction                =" && 
 echo "===============================" && 
-Reconstruct "${dfile}" "${ifile}" "${rfile}"
+Reconstruct "${dfile}"
 
 echo "===============================" &&
 echo "Analysis                      =" && 
 echo "===============================" && 
-Analyze "${rfile}" "${ifile}" "${afile}"
+Analyze "${dfile}"
