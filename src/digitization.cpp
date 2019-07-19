@@ -637,8 +637,7 @@ void Digitize(const char* finname, const char* foutname)
     tout.Branch("cell","std::vector<cell>",&vec_cell);
     tout.Branch("Stt","std::vector<digit>",&digit_vec);
     
-    //const int nev = t->GetEntries();
-    const int nev = 5;
+    const int nev = t->GetEntries();
     
     std::cout << "Events: " << nev << " [";
     std::cout << std::setw(3) << int(0) << "%]" << std::flush;

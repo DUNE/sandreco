@@ -20,9 +20,7 @@ ifile=${1}
 iname=$(basename ${ifile})
 idir=$(dirname ${ifile})
 
-ddir="/wd/dune-it/enurec/analysis/files/digits"
-rdir=$(echo ${ddir} | sed "s/digits/reco/g")
-adir=$(echo ${rdir} | sed "s/reco/analysis/g")
+rdir="/wd/dune-it/enurec/analysis/files/results"
 
 if [ ! -f "${ifile}" ]
 then
@@ -30,49 +28,27 @@ then
    return 1
 fi
 
-if [ ! -d "${ddir}" ]
-then
-	 echo -e "\e[5m\e[91mERROR\e[0m: digit directory ${ddir} does not exist. Please create it or change path in the script."
-   return 1
-fi
-
 if [ ! -d "${rdir}" ]
 then
-	 echo -e "\e[5m\e[91mERROR\e[0m: reco directory ${rdir} does not exist. Please create it or change path in the script."
+	 echo -e "\e[5m\e[91mERROR\e[0m: digit directory ${rdir} does not exist. Please create it or change path in the script."
    return 1
 fi
 
-if [ ! -d "${rdir}" ]
-then
-	 echo -e "\e[5m\e[91mERROR\e[0m: reco directory ${rdir} does not exist. Please create it or change path in the script."
-   return 1
-fi
+rname=$(echo ${iname} | sed "s/edep-sim/result/g")
 
-if [ ! -d "${adir}" ]
-then
-	 echo -e "\e[5m\e[91mERROR\e[0m: analysis directory ${adir} does not exist. Please create it or change path in the script."
-   return 1
-fi
-
-dname=$(echo ${iname} | sed "s/edep-sim/digits/g")
-rname=$(echo ${dname} | sed "s/digits/reco/g")
-aname=$(echo ${rname} | sed "s/reco/analysis/g")
-
-dfile="${ddir}/${dname}"
 rfile="${rdir}/${rname}"
-afile="${adir}/${aname}"
 
 echo "===============================" &&
 echo "Digitization                  =" && 
 echo "===============================" && 
-Digitize "${ifile}" "${dfile}"
+Digitize "${ifile}" "${rfile}"
 
 echo "===============================" &&
 echo "Reconstruction                =" && 
 echo "===============================" && 
-Reconstruct "${dfile}"
+Reconstruct "${rfile}"
 
 echo "===============================" &&
 echo "Analysis                      =" && 
 echo "===============================" && 
-Analyze "${dfile}"
+Analyze "${rfile}"
