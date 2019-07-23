@@ -735,7 +735,7 @@ void Reconstruct(const char* fIn)
   delete vec_cell;
   
   f.cd();
-  tout.Write();
+  tout.Write("",TObject::kOverwrite);
   f.Close();
 }
 

@@ -11,6 +11,7 @@
 #include "utils.h"
 
 #include <iostream>
+#include <string>
 
 const double k = 0.299792458;
 const double B = 0.6;
@@ -812,13 +813,18 @@ void Analyze(const char* fIn)
   
   std::vector<track>* vec_tr = new std::vector<track>;
   std::vector<cluster>* vec_cl = new std::vector<cluster>;
-  double part_mom[200][4];
+
+  const int kMaxStdHepN = 200;
+
+  double part_mom[kMaxStdHepN][4];
+  int part_pdg[kMaxStdHepN];
   
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event",&ev);
   t->SetBranchAddress("track",&vec_tr);
   t->SetBranchAddress("cluster",&vec_cl);
   t->SetBranchAddress("StdHepP4",part_mom);
+  t->SetBranchAddress("StdHepPdg",part_pdg);
   
   std::map<int, particle> map_part;
   
@@ -839,7 +845,7 @@ void Analyze(const char* fIn)
     t->GetEntry(i);
     map_part.clear();
     evt.particles.clear();
-    
+
     evt.x = ev->Primaries.at(0).Position.X();
     evt.y = ev->Primaries.at(0).Position.Y();
     evt.z = ev->Primaries.at(0).Position.Z();
@@ -849,6 +855,17 @@ void Analyze(const char* fIn)
     evt.pynu = part_mom[0][1]*GeV_to_MeV;
     evt.pznu = part_mom[0][2]*GeV_to_MeV;
     evt.Enu = part_mom[0][3]*GeV_to_MeV;
+
+    //std::string volname = geo->FindNode(evt.x, evt.y, evt.z)->GetName();
+    //strcpy(evt.vol, geo->FindNode(evt.x, evt.y, evt.z)->GetName());
+    //strcpy(evt.intType, ev->Primaries.at(0).Reaction.c_str());
+    //evt.vol = volname;
+    //evt.pdgnu = 1;//part_pdg[0];
+    //evt.isCC = false;
+    //evt.intType = ev->Primaries.at(0).Reaction;
+    //evt.isCC = (strstr(evt.intType,"CC") != 0);
+
+    //std::cout << evt.vol << " " << evt.intType << std::endl;
     
     FillParticleInfo(ev, map_part);
     
@@ -881,15 +898,20 @@ void Analyze(const char* fIn)
     ProcessParticles(evt);
     
     EvalNuEnergy(evt);
-       
+    
     tout.Fill();
   }
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
   
   f.cd();
-  tout.Write();
+  tout.Write("",TObject::kOverwrite);
   f.Close();
+
+  vec_tr->clear();
+  vec_cl->clear();
+  delete vec_tr;
+  delete vec_cl;
 }
 
 void help_ana()

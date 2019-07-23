@@ -17,10 +17,16 @@ done
 
 ifile=${1}
 
+if [ "${ifile}" == "" ]
+then
+	echo -e "\e[5m\e[91mERROR\e[0m: source ${BASH_SOURCE[0]} <input file>"
+	return 1
+fi
+
 iname=$(basename ${ifile})
 idir=$(dirname ${ifile})
 
-rdir="/wd/dune-it/enurec/analysis/files/results"
+rdir="/home/dune-it/data/reco"
 
 if [ ! -f "${ifile}" ]
 then
@@ -34,7 +40,7 @@ then
    return 1
 fi
 
-rname=$(echo ${iname} | sed "s/edep-sim/result/g")
+rname=$(echo ${iname} | sed "s/edep-sim/reco/g")
 
 rfile="${rdir}/${rname}"
 
