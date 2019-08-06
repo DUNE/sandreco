@@ -50,7 +50,8 @@ namespace ns_draw {
   double kloe_int_R = 2000.;
   double kloe_int_dx = 1690.;
   
-  TChain* t = 0;
+  TFile* f = 0;  
+  TTree* t = 0;
   TG4Event* ev = new TG4Event;
   TGeoManager* geo = 0;
   TCanvas* cev = 0;
@@ -65,28 +66,31 @@ namespace ns_draw {
 
 using namespace ns_draw;
 
-void init(const char* fTrueMC, const char* fDigit, const char* fReco)
+void init(const char* ifile)
 {
   gStyle->SetPalette(palette);
+
+  f = new TFile(ifile);
+  TTree* tEvent = reinterpret_cast<TTree*>(f->Get("tEvent"));
+  TTree* tReco = reinterpret_cast<TTree*>(f->Get("tReco"));
+  TTree* tDigit = reinterpret_cast<TTree*>(f->Get("tDigit"));
+  TTree* tEdep = reinterpret_cast<TTree*>(f->Get("EDepSimEvents"));
+  TTree* tGenie = reinterpret_cast<TTree*>(f->Get("gRooTracker"));
+
+  tEvent->AddFriend(tReco);
+  tEvent->AddFriend(tDigit);
+  tEvent->AddFriend(tEdep);
+  tEvent->AddFriend(tGenie);
   
-  TChain* tTrueMC = new TChain("EDepSimEvents","EDepSimEvents");
-  tTrueMC->Add(fTrueMC);
-  TChain* tDigit = new TChain("tDigit","Digitization");
-  tDigit->Add(fDigit);
-  TChain* tReco = new TChain("tReco","tReco");
-  tReco->Add(fReco);
-  tTrueMC->SetBranchAddress("Event",&ev);
+  tEdep->SetBranchAddress("Event",&ev);
   tDigit->SetBranchAddress("cell",&vec_cell);
   tDigit->SetBranchAddress("Stt",&vec_digi);
   tReco->SetBranchAddress("track",&vec_tr);
   tReco->SetBranchAddress("cluster",&vec_cl);
-  
-  t = tTrueMC;
-  t->AddFriend(tDigit);
-  t->AddFriend(tReco);
-  
-  TFile f(tTrueMC->GetListOfFiles()->At(0)->GetTitle());
-  geo = (TGeoManager*) f.Get("EDepSimGeometry");
+
+  t = tEvent;
+
+  geo = reinterpret_cast<TGeoManager*>(f->Get("EDepSimGeometry"));
   
   double dummyLoc[3];
   double dummyMas[3];

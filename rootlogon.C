@@ -1,4 +1,4 @@
 void rootlogon()
 {
-  gSystem->Load("lib/libStruct.so");
+  gSystem->Load("libStruct.so");
 }

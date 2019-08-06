@@ -5,6 +5,7 @@
 *.root
 .nfs*
 *.dump
+*.pdf
 reconstruction/old/*
 loader/code.txt
 analysis/old/*
