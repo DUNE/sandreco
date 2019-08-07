@@ -6,6 +6,7 @@
 .nfs*
 *.dump
 *.pdf
+*.txt
 reconstruction/old/*
 loader/code.txt
 analysis/old/*
