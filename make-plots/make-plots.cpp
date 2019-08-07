@@ -32,6 +32,7 @@ TCut isP = "particles.pdg==2212";
 TCut isN = "particles.pdg==2112";
 TCut isGamma = "particles.pdg==22";
 TCut isPrimary = "particles.primary==1";
+TCut isGoodTrack = "particles.tr.@digits.size()>=3";
 
 double p_loc[] = {0, 0, 0};
 double p_mst[] = {0, 0, 0};
@@ -230,14 +231,18 @@ void make_plots(const char* ofile)
   c.Print(pdffile.Data());  
   
   // muon
-  TH1D hmu_pperp_LAr("hmu_pperp_LAr","P_{perp} [#mu] (LAr); p_t/p_r-1",100,-1,1);
-  t->Draw("pperp_true/pperp_reco-1>>hmu_pperp_LAr",isMu && isPrimary && isLAr,"E0");
-  hmu_pperp_LAr.Fit("gaus","Q","",-0.05,0.1);
+  TH1D hmu_pperp_res("hmu_pperp_res","#sigma(P_{perp}) [#mu] (Stt); p_{t}/p_{r}-1",100,-1,1);
+  t->Draw("pperp_true/pperp_reco-1>>hmu_pperp_res",isMu && isPrimary && isStt,"E0");
+  hmu_pperp_res.Fit("gaus","Q","",-0.05,0.1);
   c.Print(pdffile.Data()); 
   
-  TH2D hmu_pperp_LAr_vs_ndigits("hmu_pperp_LAr_vs_ndigits","P_{perp} vs n_digits [#mu] (LAr); p_t/p_r-1; n_digits",100,-1,1,500,0,500);
-  t->Draw("particles.tr.@digits.size():pperp_true/pperp_reco-1>>hmu_pperp_LAr_vs_ndigits",isMu && isPrimary && isLAr,"COLZ");
-  c.Print(pdffile.Data());  
+  TH2D hmu_pperp_res_vs_pperp("hmu_pperp_res_vs_pperp","#sigma(P_{perp}) vs P_{perp} [#mu] (Stt); p_{t}; p_{t}/p_{r}-1",100,0,10000,100,-1,1);
+  t->Draw("pperp_true/pperp_reco-1:pperp_true>>hmu_pperp_res_vs_pperp",isMu && isPrimary && isStt,"COLZ");
+  c.Print(pdffile.Data()); 
+  
+  TH2D hmu_pperp_res_vs_ndigits("hmu_pperp_res_vs_ndigits","#sigma(P_{perp}) vs n_digits [#mu] (Stt); n_digits; p_{t}/p_{r}-1",500,0,500,100,-1,1);
+  t->Draw("pperp_true/pperp_reco-1:particles.tr.@digits.size()>>hmu_pperp_res_vs_ndigits",isMu && isPrimary && isStt,"COLZ");
+  c.Print(pdffile.Data()); 
   
   /*
   TH1D hmu_dip_LAr("hmu_dip_LAr","dip angle  [#mu](LAr); #Delta#rho (rad)",50,-0.2,0.2);
