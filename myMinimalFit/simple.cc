@@ -17,6 +17,7 @@
 #include <TEveManager.h>
 #include <TGeoManager.h>
 #include <TVector3.h>
+#include <TRandom3.h>
 #include <vector>
 #include <iomanip>
 
@@ -134,8 +135,12 @@ int main(int argc, char* argv[]) {
   genfit::AbsKalmanFitter* fitter = new genfit::KalmanFitterRefTrack();
 
   // start values for the fit, e.g. from pattern recognition
-  TVector3 pos(x0, y0, z0);
-  TVector3 mom(px, py, pz);
+  TRandom3 rand(0);
+  // with a value around 2 the fit is not precise
+  double xsigma = 1.;
+  double psigma = 1.;
+  TVector3 pos(x0*(1+xsigma*rand.Gaus()), y0*(1+xsigma*rand.Gaus()), z0*(1+xsigma*rand.Gaus()));
+  TVector3 mom(px*(1+psigma*rand.Gaus()), py*(1+psigma*rand.Gaus()), pz*(1+psigma*rand.Gaus()));
 
   // trackrep
   genfit::AbsTrackRep* rep = new genfit::RKTrackRep(pdg);
