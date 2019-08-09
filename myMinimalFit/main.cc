@@ -26,6 +26,8 @@
 #include "TDatabasePDG.h"
 #include <TMath.h>
 
+#include "struct.h"
+
 
 int main(int argc, char* argv[]) {
 
@@ -136,6 +138,8 @@ int main(int argc, char* argv[]) {
   std::vector<double> momz = {1.1047786, 0.4623711, 0.5307823, 1.5532702, 0.6347997, 0.1777255, 0.4895646}; 
   
   std::vector<int> part_pdg = {13, 13, 13, 13, 13, 211, 2212};
+  
+  event evt;
   
   // init geometry and mag. field
   TGeoManager::Import("geo_v12.root");
