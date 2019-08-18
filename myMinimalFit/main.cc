@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
   // geometry should be in cm and g/cm^3 
   
   
-  TFile f("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.root");
+  TFile f("/home/dune-it/data/reco/numu_geoV12_100000.0.reco.root");
 
   TTree* tev = (TTree*) f.Get("tEvent");
   
@@ -70,6 +70,9 @@ int main(int argc, char* argv[]) {
   const double mm2cm = 0.1;
   const double kG2T = 0.1;
   const double m2cm = 100.;
+  const double cm2m = 1./m2cm;
+  const double GeV2MeV = 1000.;
+  const double MeV2GeV = 1./GeV2MeV;
   
   const double Bx = 6.; // kGauss
 
@@ -79,7 +82,7 @@ int main(int argc, char* argv[]) {
   genfit::MaterialEffects::getInstance()->setDebugLvl(dbgLvl);
 
   // init event display
-  genfit::EventDisplay* display = genfit::EventDisplay::getInstance();
+  //genfit::EventDisplay* display = genfit::EventDisplay::getInstance();
   
   TDatabasePDG pdgdb;
   pdgdb.ReadPDGTable();
@@ -104,6 +107,12 @@ int main(int argc, char* argv[]) {
   double px_guess, py_guess, pz_guess;
   double x0_reco, y0_reco, z0_reco;
   double px_reco, py_reco, pz_reco;
+  double x0_true, y0_true, z0_true;
+  double px_true, py_true, pz_true;
+  double x0_old, y0_old, z0_old;
+  double px_old, py_old, pz_old;
+  double x0_new, y0_new, z0_new;
+  double px_new, py_new, pz_new;
   double p_reco, pt_reco;
   double ey, ez;
   
@@ -111,9 +120,42 @@ int main(int argc, char* argv[]) {
   
   const bool debug = false;
   
-  for(int i = 0; i < nev; i++)
+  //TFile fout("numu_geoV12_100000.0.check.root","RECREATE");
+  TFile fout(argv[3],"RECREATE");
+  TTree tout("tCheck","tCheck");
+  
+  tout.Branch("px_old",&px_old,"px_old/D");
+  tout.Branch("py_old",&py_old,"py_old/D");
+  tout.Branch("pz_old",&pz_old,"pz_old/D");
+  
+  tout.Branch("px_new",&px_new,"px_new/D");
+  tout.Branch("py_new",&py_new,"py_new/D");
+  tout.Branch("pz_new",&pz_new,"pz_new/D");
+  
+  tout.Branch("px_true",&px_true,"px_true/D");
+  tout.Branch("py_true",&py_true,"py_true/D");
+  tout.Branch("pz_true",&pz_true,"pz_true/D");
+  
+  tout.Branch("x0_old",&x0_old,"x0_old/D");
+  tout.Branch("y0_old",&y0_old,"y0_old/D");
+  tout.Branch("z0_old",&z0_old,"z0_old/D");
+  
+  tout.Branch("x0_new",&x0_new,"x0_new/D");
+  tout.Branch("y0_new",&y0_new,"y0_new/D");
+  tout.Branch("z0_new",&z0_new,"z0_new/D");
+  
+  tout.Branch("x0_true",&x0_true,"x0_true/D");
+  tout.Branch("y0_true",&y0_true,"y0_true/D");
+  tout.Branch("z0_true",&z0_true,"z0_true/D");
+  
+  int istart = atoi(argv[1]);
+  int istop  = atoi(argv[2]); 
+  
+  for(int i = istart; i < istop; i++)
   {
-    tev->GetEntry(i);
+    if(i%1000 == 0) std::cout << i << std::endl;
+  
+    tev->GetEntry(i);      
     
     for(int k = 0; k < evt->particles.size(); k++)
     {    
@@ -121,9 +163,9 @@ int main(int argc, char* argv[]) {
       {
         pdg = evt->particles[k].pdg;
     
-        px = evt->particles[k].pxtrue;
-        py = evt->particles[k].pytrue;
-        pz = evt->particles[k].pztrue;
+        px = evt->particles[k].pxtrue*MeV2GeV;
+        py = evt->particles[k].pytrue*MeV2GeV;
+        pz = evt->particles[k].pztrue*MeV2GeV;
         
         mass = pdgdb.GetParticle(pdg)->Mass();
         Z = pdgdb.GetParticle(pdg)->Charge()/3;
@@ -132,7 +174,7 @@ int main(int argc, char* argv[]) {
         if(debug)
         {
           std::cout << "pdg   :" << std::setw(25) << pdg << std::endl;
-          std::cout << "mass  :" << std::setw(25) << mass << std::endl;
+          std::cout << "mass  :" << std::setw(25) << mass << " (GeV)" << std::endl;
           std::cout << "charge:" << std::setw(25) << Z << std::endl;
         }
       
@@ -140,6 +182,22 @@ int main(int argc, char* argv[]) {
         y0 = evt->particles[k].tr.y0*mm2cm;
         z0 = evt->particles[k].tr.z0*mm2cm;
         t0 = evt->particles[k].tr.t0;
+        
+        px_old = evt->particles[k].pxreco*MeV2GeV;
+        py_old = evt->particles[k].pyreco*MeV2GeV;
+        pz_old = evt->particles[k].pzreco*MeV2GeV;
+        
+        x0_old = evt->particles[k].xreco*mm2cm;
+        y0_old = evt->particles[k].yreco*mm2cm;
+        z0_old = evt->particles[k].zreco*mm2cm;
+        
+        px_true = px;
+        py_true = py;
+        pz_true = pz;
+        
+        x0_true = evt->x*mm2cm;
+        y0_true = evt->y*mm2cm;
+        z0_true = evt->z*mm2cm;
       
         // problematic events. Check why
         if(isnan(x0) || t0 < 1.)
@@ -147,16 +205,16 @@ int main(int argc, char* argv[]) {
       
         if(debug)
         {
-          std::cout << "x0    :" << std::setw(25) << x0 << std::endl;
-          std::cout << "y0    :" << std::setw(25) << y0 << std::endl;
-          std::cout << "z0    :" << std::setw(25) << z0 << std::endl;
-          std::cout << "t0    :" << std::setw(25) << t0 << std::endl;
+          std::cout << "x0    :" << std::setw(25) << x0 << " (cm)" << std::endl;
+          std::cout << "y0    :" << std::setw(25) << y0 << " (cm)" << std::endl;
+          std::cout << "z0    :" << std::setw(25) << z0 << " (cm)" << std::endl;
+          std::cout << "t0    :" << std::setw(25) << t0 << " (ns)" << std::endl;
         
-          std::cout << "Bx    :" << std::setw(25) << Bx << std::endl;
+          std::cout << "Bx    :" << std::setw(25) << Bx << " (kG)" << std::endl;
         
-          std::cout << "px    :" << std::setw(25) << px << std::endl;
-          std::cout << "py    :" << std::setw(25) << py << std::endl;
-          std::cout << "pz    :" << std::setw(25) << pz << std::endl;
+          std::cout << "px    :" << std::setw(25) << px << " (GeV)" << std::endl;
+          std::cout << "py    :" << std::setw(25) << py << " (GeV)" << std::endl;
+          std::cout << "pz    :" << std::setw(25) << pz << " (GeV)" << std::endl;
         }
       
         pt = TMath::Sqrt(py*py+pz*pz);
@@ -171,9 +229,9 @@ int main(int argc, char* argv[]) {
         
         if(debug)
         {
-          std::cout << "pt    :" << std::setw(25) << pt << std::endl;
-          std::cout << "p     :" << std::setw(25) << p << std::endl;
-          std::cout << "e     :" << std::setw(25) << e << std::endl;
+          std::cout << "pt    :" << std::setw(25) << pt << " (GeV)" << std::endl;
+          std::cout << "p     :" << std::setw(25) << p << " (GeV)" << std::endl;
+          std::cout << "e     :" << std::setw(25) << e << " (GeV)" << std::endl;
           std::cout << "gamma :" << std::setw(25) << gamma << std::endl;
           std::cout << "beta  :" << std::setw(25) << beta << std::endl;
         }
@@ -194,23 +252,23 @@ int main(int argc, char* argv[]) {
       
         r = pt/(c/1E9*Bx*kG2T*TMath::Abs(Z))*m2cm;
       
-        period = 2*TMath::Pi()*r/(bt*c);
+        period = 2*TMath::Pi()*r*cm2m/(bt*c);
       
         yC = y0 + pz/pt * r * sign;
         zC = z0 - py/pt * r * sign;
       
         if(debug)
         {
-          std::cout << "r     :" << std::setw(25) << r << std::endl;
-          std::cout << "T     :" << std::setw(25) << period << std::endl;
-          std::cout << "yC    :" << std::setw(25) << yC << std::endl;
-          std::cout << "zC    :" << std::setw(25) << zC << std::endl;
+          std::cout << "r     :" << std::setw(25) << r << " (cm)" << std::endl;
+          std::cout << "T     :" << std::setw(25) << period << " (s)" << std::endl;
+          std::cout << "yC    :" << std::setw(25) << yC << " (cm)" << std::endl;
+          std::cout << "zC    :" << std::setw(25) << zC << " (cm)" << std::endl;
         
           std::cout << "q/|p| :" << std::setw(25) << Z/p << std::endl;
           std::cout << "px/pz :" << std::setw(25) << px/pz << std::endl;
           std::cout << "py/pz :" << std::setw(25) << py/pz << std::endl;
-          std::cout << "x0    :" << std::setw(25) << x0 << std::endl;
-          std::cout << "y0    :" << std::setw(25) << y0 << std::endl;
+          std::cout << "x0    :" << std::setw(25) << x0 << " (cm)" << std::endl;
+          std::cout << "y0    :" << std::setw(25) << y0 << " (cm)" << std::endl;
         }
       
         // init fitter
@@ -262,7 +320,14 @@ int main(int argc, char* argv[]) {
         fitTrack.checkConsistency();
       
         // do the fit
-        fitter->processTrack(&fitTrack);
+        try
+        {
+          fitter->processTrack(&fitTrack);
+        }
+        catch(char* a)
+        {
+          continue;
+        }
       
         // print fit result
         p_reco = fitTrack.getFittedState().getMom().Mag();
@@ -272,6 +337,14 @@ int main(int argc, char* argv[]) {
         pt_reco = TMath::Sqrt(px_reco*px_reco+py_reco*py_reco+pz_reco*pz_reco);
         x0_reco = fitTrack.getFittedState().getPos().X();
         y0_reco = fitTrack.getFittedState().getPos().Y();
+        z0_reco = fitTrack.getFittedState().getPos().Z();
+        
+        x0_new = x0_reco;
+        y0_new = y0_reco;
+        z0_new = z0_reco;
+        px_new = px_reco;
+        py_new = py_reco;
+        pz_new = pz_reco;
         
         if(debug)
         {
@@ -280,8 +353,8 @@ int main(int argc, char* argv[]) {
           std::cout << "q/|p|   :" << std::setw(25) << Z/p << std::setw(25) << fitTrack.getFittedState().getQop() << std::setw(25) << 100*TMath::Abs(1. - fitTrack.getFittedState().getQop()/(Z/p)) << std::endl;
           std::cout << "px/pz   :" << std::setw(25) << px/pz << std::setw(25) << px_reco/pz_reco << std::setw(25) << 100*TMath::Abs(1. - (px_reco/pz_reco)/(px/pz)) << std::endl;
           std::cout << "py/pz   :" << std::setw(25) << py/pz << std::setw(25) << py_reco/pz_reco << std::setw(25) << 100*TMath::Abs(1. - (py_reco/pz_reco)/(py/pz)) << std::endl;
-          std::cout << "x0      :" << std::setw(25) << x0 << std::setw(25) << x0_reco << std::setw(25) << 100*TMath::Abs(1. - x0_reco/x0) << std::endl;
-          std::cout << "y0      :" << std::setw(25) << y0 << std::setw(25) << y0_reco << std::setw(25) << 100*TMath::Abs(1. - y0_reco/y0) << std::endl;
+          std::cout << "x0 (cm) :" << std::setw(25) << x0 << std::setw(25) << x0_reco << std::setw(25) << 100*TMath::Abs(1. - x0_reco/x0) << std::endl;
+          std::cout << "y0 (cm) :" << std::setw(25) << y0 << std::setw(25) << y0_reco << std::setw(25) << 100*TMath::Abs(1. - y0_reco/y0) << std::endl;
           //fitTrack.getFittedState().Print();
           //fitTrack.Print();
           std::cout << "*************************" << std::endl;
@@ -292,10 +365,10 @@ int main(int argc, char* argv[]) {
           // print particle parameters
           std::cout << "****** particle momentum *******" << std::endl;
           std::cout << "         " << std::setw(25) << "true" << std::setw(25) << "reco" << std::setw(25) << "residual(%)" << std::endl;
-          std::cout << "p       :" << std::setw(25) << p << std::setw(25) << p_reco << std::setw(25) << 100*TMath::Abs(1. - p_reco/p) << std::endl;
-          std::cout << "px      :" << std::setw(25) << px << std::setw(25) << px_reco << std::setw(25) << 100*TMath::Abs(1. - px_reco/px) << std::endl;
-          std::cout << "py      :" << std::setw(25) << py << std::setw(25) << py_reco << std::setw(25) << 100*TMath::Abs(1. - py_reco/py) << std::endl;
-          std::cout << "pz      :" << std::setw(25) << pz << std::setw(25) << pz_reco << std::setw(25) << 100*TMath::Abs(1. - pz_reco/pz) << std::endl;
+          std::cout << "p  (GeV):" << std::setw(25) << p << std::setw(25) << p_reco << std::setw(25) << 100*TMath::Abs(1. - p_reco/p) << std::endl;
+          std::cout << "px (GeV):" << std::setw(25) << px << std::setw(25) << px_reco << std::setw(25) << 100*TMath::Abs(1. - px_reco/px) << std::endl;
+          std::cout << "py (GeV):" << std::setw(25) << py << std::setw(25) << py_reco << std::setw(25) << 100*TMath::Abs(1. - py_reco/py) << std::endl;
+          std::cout << "pz (GeV):" << std::setw(25) << pz << std::setw(25) << pz_reco << std::setw(25) << 100*TMath::Abs(1. - pz_reco/pz) << std::endl;
           std::cout << "*************************" << std::endl;
         }
       
@@ -310,22 +383,27 @@ int main(int argc, char* argv[]) {
         {
           std::cout << "****** track parameters *******" << std::endl;
           std::cout << "         " << std::setw(25) << "true" << std::setw(25) << "reco" << std::setw(25) << "residual" << std::endl;
-          std::cout << "R       :" << std::setw(25) << r << std::setw(25) << r_reco << std::setw(25) << 100*TMath::Abs(1. - r_reco/r) << std::endl;
-          std::cout << "yC      :" << std::setw(25) << yC << std::setw(25) << yC_reco << std::setw(25) << 100*TMath::Abs(1. - yC_reco/yC) << std::endl;
-          std::cout << "zC      :" << std::setw(25) << zC << std::setw(25) << zC_reco << std::setw(25) << 100*TMath::Abs(1. - zC_reco/zC) << std::endl;
+          std::cout << "R  (cm) :" << std::setw(25) << r << std::setw(25) << r_reco << std::setw(25) << 100*TMath::Abs(1. - r_reco/r) << std::endl;
+          std::cout << "yC (cm) :" << std::setw(25) << yC << std::setw(25) << yC_reco << std::setw(25) << 100*TMath::Abs(1. - yC_reco/yC) << std::endl;
+          std::cout << "zC (cm) :" << std::setw(25) << zC << std::setw(25) << zC_reco << std::setw(25) << 100*TMath::Abs(1. - zC_reco/zC) << std::endl;
           std::cout << "*************************" << std::endl;
         }
       
-        display->addEvent(&fitTrack);
-      
+        //display->addEvent(&fitTrack);
+        
+        tout.Fill();
       
         delete fitter;
       }
     }
   }
+  
+  fout.cd();
+  tout.Write();
+  fout.Close();
 
   // open event display
-  display->open();
+  //display->open();
 
 }
 
