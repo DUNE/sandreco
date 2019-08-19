@@ -32,7 +32,7 @@ TCut isP = "particles.pdg==2212";
 TCut isN = "particles.pdg==2112";
 TCut isGamma = "particles.pdg==22";
 TCut isPrimary = "particles.primary==1";
-TCut isGoodTrack = "particles.tr.@digits.size()>=3";
+TCut isGoodTrack = "particles.tr.ret_cr==0&&particles.tr.ret_ln==0";
 
 double p_loc[] = {0, 0, 0};
 double p_mst[] = {0, 0, 0};

@@ -14,6 +14,25 @@
 
 const double m_to_mm = 1000.;
 
+void reset(track& tr)
+{
+  tr.tid = -1;
+  tr.yc = 0.;
+  tr.zc = 0.;
+  tr.r = 0.;
+  tr.a = 0.;
+  tr.b = 0.;
+  tr.h = 0.;
+  tr.x0 = 0.;
+  tr.y0 = 0.;
+  tr.z0 = 0.;
+  tr.t0 = 0.;
+  tr.ret_ln = -1;
+  tr.chi2_ln = 0.;
+  tr.ret_cr = -1;
+  tr.chi2_cr = 0.;
+}
+
 double mindist(double s1x, double s1y, double s1z,
                double s2x, double s2y, double s2z,
                double px, double py, double pz)
@@ -104,9 +123,6 @@ int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y,
     if(x.size() != y.size())
       return 1;
     
-    if(n < 3)
-      return 2;
-    
     double sumx = 0, sumy = 0;                            // linear    terms
     double sumx2 = 0, sumy2 = 0, sumxy = 0;               // quadratic terms
     double sumxy2 = 0, sumx2y = 0, sumx3 = 0, sumy3 = 0;  // cubic     terms
@@ -127,7 +143,7 @@ int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y,
     double e = 0.5*(n*sumx2y - sumy*sumx2 + n*sumy3 - sumy*sumy2);
     
     if(a*c - b*b == 0.)
-      return 3;
+      return 2;
 
     xc = (d*c - b*e) / (a*c - b*b);
     yc = (a*e - b*d) / (a*c - b*b);
@@ -183,37 +199,45 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
     if(x.size() != y.size())
       return 1;
     
-    if(n < 2)
-      return 2;
-    
     cov[0][0] = -999;;
     cov[0][1] = -999;
     cov[1][0] = -999;
     cov[1][1] = -999;
     
-    double S1  = 0;
-    double SX  = 0;
-    double SY  = 0;
-    double SYX = 0;
-    double SXX = 0;
+    double S1  = 0.;
+    double SX  = 0.;
+    double SY  = 0.;
+    double SYX = 0.;
+    double SXX = 0.;
     
     for(int i = 0; i < n; i++)
     {
         //std::cout << "XY: " <<  x.at(i) << " " <<  y.at(i) << std::endl;
+        
+        //if(isnan(x.at(i)) || isnan(y.at(i)))
+        //  std::cout << x.at(i) << " " << y.at(i) << std::endl; 
     
-        S1 += 1;
+        S1 += 1.;
         SX += x.at(i);
         SY += y.at(i);
         SYX += x.at(i)*y.at(i);
         SXX += x.at(i)*x.at(i);
     }
-    
+
     double D = S1*SXX - SX*SX;
+    
+    if(D == 0.)
+      return 2;
     
     //std::cout << "D: " << D << " " << S1 << " " << SX << " " << SY << " " << SXX << " " << SYX << std::endl;
     
     a = (SY*SXX - SX*SYX)/D;  // i.p. at x = 0
     b = (S1*SYX - SX*SY)/D;   // tg(theta)
+    
+    //if(isnan(a) || isnan(b))
+    //{
+    //  std::cout << a << " " << b << " " << SY << " " << SXX << " " << SX << " " << SYX << " " << S1 << " " << D << std::endl;
+    //}
     
     //std::cout << a << " " << b << std::endl;
     
@@ -253,6 +277,8 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& v
   for(unsigned int j = 0; j < ev->Trajectories.size(); j++)
   {
     track tr;
+    
+    reset(tr);
           
     tr.tid = ev->Trajectories.at(j).TrackId;
     
@@ -323,28 +349,50 @@ void TrackFit(std::vector<track>& vec_tr)
     
     //std::cout << n_h << " " << n_v << std::endl;
     
-    if(n_v <= 2 || n_h <= 2)
+    if(n_h <= 2)
+    {
+      vec_tr[j].ret_cr = -2;
       continue;
-    
-    n_v = 2;
-    
-    while((n_v < int(z_v.size())) && (z_v[n_v-1]-z_v[n_v-2])*(z_v[1]-z_v[0]) > 0.)
-      n_v++;
+    }
     
     int ret1 = fitCircle(n_h, z_h, y_h, vec_tr[j].zc, vec_tr[j].yc, vec_tr[j].r, errr, chi2_cir);
+    
+    vec_tr[j].ret_cr = ret1;
+    vec_tr[j].chi2_cr = chi2_cir;
+    
+    if(vec_tr[j].ret_cr != 0)
+      continue;
       
     if( (z_h[1] - z_h[0]) * (vec_tr[j].yc - y_h[0]) > 0 )
       vec_tr[j].h = -1;
     else
       vec_tr[j].h = 1;
     
+    if(n_v <= 2)
+    {
+      vec_tr[j].ret_ln = -2;
+      continue;
+    }
+    
+    n_v = 2;
+    
+    while((n_v < int(z_v.size())) && (z_v[n_v-1]-z_v[n_v-2])*(z_v[1]-z_v[0]) > 0.)
+      n_v++;
+    
     int n_v_fit = 0;
-      
+    
     for(int k = 0; k < n_v; k++)
     {
       if(vec_tr[j].r > z_v[k] - vec_tr[j].zc)
       {
-        y_v.push_back(vec_tr[j].yc + vec_tr[j].h * sqrt(vec_tr[j].r*vec_tr[j].r - (z_v[k] - vec_tr[j].zc)*(z_v[k] - vec_tr[j].zc)));
+        double dz2 = vec_tr[j].r*vec_tr[j].r - (z_v[k] - vec_tr[j].zc)*(z_v[k] - vec_tr[j].zc);
+        double dz = dz2 < 0. ? 0. : TMath::Sqrt(dz2);
+        y_v.push_back(vec_tr[j].yc + vec_tr[j].h * dz);
+        
+        //if(isnan(vec_tr[j].yc + vec_tr[j].h * dz))
+        //{
+        //  std::cout << vec_tr[j].yc << " " << vec_tr[j].h << " " << dz << std::endl;
+        //}
         n_v_fit++;
       }
       else
@@ -352,37 +400,54 @@ void TrackFit(std::vector<track>& vec_tr)
         break;
       }
     }
-
-	double sin = 0.0;
-	double cos = 0.0;
-
-	if(n_v_fit > 0)
-	{
+    
+    if(n_v_fit <= 2)
+    {
+      vec_tr[j].ret_ln = -3;
+      continue;
+    }
   
-      cos =  vec_tr[j].h * (y_v[0] - vec_tr[j].yc)/vec_tr[j].r;
-      sin = -vec_tr[j].h * (z_v[0] - vec_tr[j].zc)/vec_tr[j].r;
-	}
+    double cos =  vec_tr[j].h * (y_v[0] - vec_tr[j].yc)/vec_tr[j].r;
+    double sin = -vec_tr[j].h * (z_v[0] - vec_tr[j].zc)/vec_tr[j].r;
     
     for(int k = 0; k < n_v_fit; k++)
     {
         rho.push_back(z_v[k] * cos + y_v[k] * sin);
+        //if(isnan(z_v[k] * cos + y_v[k] * sin))
+        //{
+        //  std::cout << z_v[k] << " " << cos << " " << y_v[k] << " " << sin << std::endl;
+        //}
     }
     
     x_v.resize(n_v_fit);
     
-    int ret2 = fitLinear(n_v_fit, rho, x_v, vec_tr[j].a, vec_tr[j].b, cov, chi2_lin);  
-    
-    //std::cout << vec_tr[j].tid << " " << vec_tr[j].a << " " << vec_tr[j].b << std::endl;
-    
-    vec_tr[j].z0 = vec_tr[j].digits.front().z;
-    vec_tr[j].y0 = vec_tr[j].yc + vec_tr[j].h * TMath::Sqrt(vec_tr[j].r*vec_tr[j].r - (vec_tr[j].z0 - vec_tr[j].zc)*(vec_tr[j].z0 - vec_tr[j].zc));
-    vec_tr[j].x0 = vec_tr[j].a + vec_tr[j].b * (vec_tr[j].z0 * cos + vec_tr[j].y0 * sin);
-    vec_tr[j].t0 = vec_tr[j].digits.front().t;
+    int ret2 = fitLinear(n_v_fit, rho, x_v, vec_tr[j].a, vec_tr[j].b, cov, chi2_lin);
     
     vec_tr[j].ret_ln = ret2;
     vec_tr[j].chi2_ln = chi2_lin;
-    vec_tr[j].ret_cr = ret1;
-    vec_tr[j].chi2_cr = chi2_cir;
+    
+    if(vec_tr[j].ret_ln != 0)
+      continue;
+    
+    //std::cout << vec_tr[j].tid << " " << vec_tr[j].a << " " << vec_tr[j].b << std::endl;
+    
+    double z0 = vec_tr[j].digits.front().z;
+    double dz2 = vec_tr[j].r*vec_tr[j].r - (z0 - vec_tr[j].zc)*(z0 - vec_tr[j].zc);
+    double dz = dz2 < 0. ? 0. : TMath::Sqrt(dz2);
+    double y0 = vec_tr[j].yc + vec_tr[j].h * dz;
+    double x0 = vec_tr[j].a + vec_tr[j].b * (z0 * cos + y0 * sin);
+    double t0 = vec_tr[j].digits.front().t;
+    
+    vec_tr[j].z0 = z0;
+    vec_tr[j].y0 = y0;
+    vec_tr[j].x0 = x0;
+    vec_tr[j].t0 = t0;
+    
+    //if(isnan(vec_tr[j].x0))
+    //{
+    //  std::cout << vec_tr[j].a  << " " << vec_tr[j].b << " " << vec_tr[j].z0 << " " << cos << " " << vec_tr[j].y0 << " " <<  sin << std::endl;
+    //  std::cout << vec_tr[j].yc << " " << vec_tr[j].h << " " << vec_tr[j].r << " " << vec_tr[j].zc << " " << dz << " " << y_v[0] << std::endl;
+    //}
   }
 }
 
