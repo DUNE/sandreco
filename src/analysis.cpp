@@ -7,6 +7,18 @@
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
 
+#include <ConstField.h>
+#include <FieldManager.h>
+#include <KalmanFitterRefTrack.h>
+#include <StateOnPlane.h>
+#include <Track.h>
+#include <TrackPoint.h>
+#include <MaterialEffects.h>
+#include <RKTrackRep.h>
+#include <TGeoMaterialInterface.h>
+#include <PlanarMeasurement.h>
+#include <Exception.h>
+
 #include "struct.h"
 #include "utils.h"
 
@@ -193,7 +205,20 @@ void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e)
 
 void RecoFromTrack(particle& p)
 {
-  if(p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
+  if(p.pdg > 10000 || !(p.tr.ret_ln == 0 && p.tr.ret_cr == 0))
+  {
+    p.charge_reco = 0.;
+    p.pxreco = 0.;
+    p.pyreco = 0.;
+    p.pzreco = 0.;
+    p.Ereco = 0.;
+    p.xreco = 0.;
+    p.yreco = 0.;
+    p.zreco = 0.;
+    p.treco = 0.;
+    return;
+  }
+  else
   {
     std::sort(p.tr.digits.begin(), p.tr.digits.end(), isDigBefore);
     
@@ -219,6 +244,11 @@ void RecoFromTrack(particle& p)
     
     l /= TMath::Abs(l);
     
+    const double mm2cm = 0.1;
+    const double cm2mm = 1./mm2cm;
+    const double GeV2MeV = 1000.;
+    const double MeV2GeV = 1./GeV2MeV;
+    
     double r0z = p.tr.z0 - p.tr.zc;
     double r0y = p.tr.y0 - p.tr.yc;
     
@@ -226,27 +256,105 @@ void RecoFromTrack(particle& p)
     double ang_yz = TMath::ATan2(r0z, -r0y); 
     double ang_x = 0.5 * TMath::Pi() - TMath::ATan(1./p.tr.b);
     
-    p.charge_reco = -l;
-    p.pxreco = mom_yz * TMath::Tan(ang_x);
-    p.pyreco = p.charge_reco * mom_yz * TMath::Sin(ang_yz);
-    p.pzreco = p.charge_reco * mom_yz * TMath::Cos(ang_yz);
-    p.Ereco = TMath::Sqrt(p.pxreco*p.pxreco + p.pyreco*p.pyreco + p.pzreco*p.pzreco + p.mass*p.mass);
-    p.xreco = p.tr.x0;
-    p.yreco = p.tr.y0;
-    p.zreco = p.tr.z0;
-    p.treco = p.tr.t0;
-  }
-  else
-  {
-    p.charge_reco = 0.;
-    p.pxreco = 0.;
-    p.pyreco = 0.;
-    p.pzreco = 0.;
-    p.Ereco = 0.;
-    p.xreco = 0.;
-    p.yreco = 0.;
-    p.zreco = 0.;
-    p.treco = 0.;
+    double px_guess = mom_yz * TMath::Tan(ang_x) * MeV2GeV;
+    double py_guess = p.charge_reco * mom_yz * TMath::Sin(ang_yz) * MeV2GeV;
+    double pz_guess = p.charge_reco * mom_yz * TMath::Cos(ang_yz) * MeV2GeV;
+    double x_guess = p.tr.x0*mm2cm;
+    double y_guess = p.tr.y0*mm2cm;
+    double z_guess = p.tr.z0*mm2cm;
+    
+    // init fitter
+    genfit::AbsKalmanFitter* fitter = new genfit::KalmanFitterRefTrack();
+    
+    TVector3 pos(x_guess, y_guess, z_guess);
+    TVector3 mom(px_guess, py_guess, pz_guess);
+      
+    // trackrep
+    genfit::AbsTrackRep* rep = new genfit::RKTrackRep(p.pdg);
+      
+    // create track
+    genfit::Track fitTrack(rep, pos, mom);
+      
+    const int detId(0); // detector ID
+    int planeId(0); // detector plane ID
+    int hitId(0); // hit ID
+  
+    double detectorResolutionT(0.02); // resolution of planar detectors (tranverse) cm
+    double detectorResolutionL(2.); // resolution of planar detectors (longitudinal) cm
+    TMatrixDSym hitCovH(2);
+    hitCovH.UnitMatrix();
+    hitCovH[0][0] = 0.;
+    hitCovH[0][1] = detectorResolutionL*detectorResolutionL;
+    hitCovH[1][0] = 0.;
+    hitCovH[1][1] = detectorResolutionT*detectorResolutionT;
+    
+    TMatrixDSym hitCovV(2);
+    hitCovV.UnitMatrix();
+    hitCovV[0][0] = 0.;
+    hitCovV[0][1] = detectorResolutionT*detectorResolutionT;
+    hitCovV[1][0] = 0.;
+    hitCovV[1][1] = detectorResolutionL*detectorResolutionL;
+  
+    // add some planar hits to track with coordinates I just made up
+    TVectorD hitCoords(2);
+    
+    TMatrixDSym* hitCov = 0;
+    
+    const int n = p.tr.digits.size();
+  
+    for(unsigned int j = 0; j < n; j++)
+    { 
+      hitCoords[0] = p.tr.digits[j].x*mm2cm;
+      hitCoords[1] = p.tr.digits[j].y*mm2cm;
+      
+      if(p.tr.digits[j].hor)
+      {
+        hitCov = &hitCovH;
+      }
+      else
+      {
+        hitCov = &hitCovV;
+      }
+      
+      genfit::PlanarMeasurement* measurement = new genfit::PlanarMeasurement(hitCoords, *hitCov, detId, ++hitId, nullptr);
+      measurement->setPlane(genfit::SharedPlanePtr(new genfit::DetPlane(TVector3(0,0,p.tr.digits[j].z*mm2cm), TVector3(1,0,0), TVector3(0,1,0))), ++planeId);
+    
+      fitTrack.insertPoint(new genfit::TrackPoint(measurement, &fitTrack));
+    } 
+  
+    //check
+    fitTrack.checkConsistency();
+    
+    //fit
+    fitter->processTrack(&fitTrack);
+    
+    if(fitTrack.getPointWithFitterInfo(0) != 0)
+    {
+      p.charge_reco = l;
+      
+      p.pxreco = fitTrack.getFittedState().getMom().X()*GeV2MeV;
+      p.pyreco = fitTrack.getFittedState().getMom().Y()*GeV2MeV;
+      p.pzreco = fitTrack.getFittedState().getMom().Z()*GeV2MeV;
+      p.Ereco = TMath::Sqrt(p.pxreco*p.pxreco+p.pyreco*p.pyreco+p.pzreco*p.pzreco+p.mass*p.mass);
+      p.xreco = fitTrack.getFittedState().getPos().X()*cm2mm;
+      p.yreco = fitTrack.getFittedState().getPos().Y()*cm2mm;
+      p.zreco = fitTrack.getFittedState().getPos().Z()*cm2mm;
+      p.treco = p.tr.t0;
+      return;
+    }
+    else
+    {
+      p.charge_reco = l;
+      p.pxreco = px_guess;
+      p.pyreco = py_guess;
+      p.pzreco = pz_guess;
+      p.Ereco = TMath::Sqrt(p.pxreco*p.pxreco+p.pyreco*p.pyreco+p.pzreco*p.pzreco+p.mass*p.mass);
+      p.xreco = x_guess;
+      p.yreco = y_guess;
+      p.zreco = z_guess;
+      p.treco = p.tr.t0;
+      return;
+    }
   }
 }
 
@@ -798,13 +906,13 @@ void EvalNuEnergy(event& ev)
   }
 }
 
-void Analyze(const char* fIn)
+void Analyze(const char* fIn, const char* fgeo)
 {
   TFile f(fIn,"UPDATE");
   TTree* tReco = (TTree*) f.Get("tReco");
   TTree* tTrueMC = (TTree*) f.Get("EDepSimEvents");
   TTree* gRooTracker = (TTree*) f.Get("gRooTracker");
-  TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
+  //TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
   
   tReco->AddFriend(tTrueMC);
   tReco->AddFriend(gRooTracker);
@@ -827,6 +935,13 @@ void Analyze(const char* fIn)
   t->SetBranchAddress("StdHepPdg",part_pdg);
   
   std::map<int, particle> map_part;
+  
+  TGeoManager::Import(fgeo);
+  
+  const double Bx = 6.; // kGauss
+
+  genfit::MaterialEffects::getInstance()->init(new genfit::TGeoMaterialInterface());
+  genfit::FieldManager::getInstance()->init(new genfit::ConstField(Bx, 0., 0.)); // kGauss
   
   event evt;
 
@@ -916,15 +1031,15 @@ void Analyze(const char* fIn)
 
 void help_ana()
 {
-  std::cout << "Analyze <input file>" << std::endl;
+  std::cout << "Analyze <input file> <geometry file>" << std::endl;
 } 
 
 int main(int argc, char* argv[])
 {
-  if(argc != 2)
+  if(argc != 3)
     help_ana();
   else
-    Analyze(argv[1]);
+    Analyze(argv[1],argv[2]);
 }
 
 

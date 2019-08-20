@@ -7,8 +7,12 @@ ROOTINCDIR = $(shell root-config --incdir)
 
 EDEPSIM = /wd/sw/EDEPSIM/edep-sim.binary
 
-EDEPGLIBS = -L$(EDEPSIM)/lib/ -ledepsim -ledepsim_io
+EDEPGLIBS = -L$(EDEPSIM)/lib/ -ledepsim_io
 EDEPINCDIR = $(EDEPSIM)/include/EDepSim
+
+GENFIT=/wd/sw/GENFIT/GenFit.binary
+
+EIGEN3=/usr/include/eigen3
 
 all: Digitize Reconstruct Analyze
 
@@ -27,5 +31,5 @@ Reconstruct: libStruct.so
 	$(EDEPGLIBS) -Llib -lStruct src/reconstruction.cpp
 
 Analyze: libStruct.so
-	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude $(ROOTGLIBS) -lGeom -lEG \
+	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
 	$(EDEPGLIBS) -Llib -lStruct src/analysis.cpp

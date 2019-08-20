@@ -310,7 +310,7 @@ int main(int argc, char* argv[]) {
         for(unsigned int j = 0; j < n; j++)
         { 
           hitCoords[0] = evt->particles[k].tr.digits[j].x*mm2cm;
-          hitCoords[1] = evt->particles[k].tr.digits[j].y*mm2cm;;
+          hitCoords[1] = evt->particles[k].tr.digits[j].y*mm2cm;
           genfit::PlanarMeasurement* measurement = new genfit::PlanarMeasurement(hitCoords, hitCov, detId, ++hitId, nullptr);
           measurement->setPlane(genfit::SharedPlanePtr(new genfit::DetPlane(TVector3(0,0,evt->particles[k].tr.digits[j].z*mm2cm), TVector3(1,0,0), TVector3(0,1,0))), ++planeId);
           fitTrack.insertPoint(new genfit::TrackPoint(measurement, &fitTrack));

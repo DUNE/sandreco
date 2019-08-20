@@ -66,47 +66,45 @@ double angle(double x1, double y1, double z1,
     return TMath::ACos(prod/(mag1*mag2));
 }
 
-bool ishitok(TG4Event* ev, int trackid, TG4HitSegment hit,
+bool ishitok_trj(TG4Trajectory trj, TG4HitSegment hit,
              double postol = 5., double angtol = 0.3)
 {
     double x = 0.5*(hit.Start.X()+hit.Stop.X());
     double y = 0.5*(hit.Start.Y()+hit.Stop.Y());
     double z = 0.5*(hit.Start.Z()+hit.Stop.Z());
     
+    for(unsigned int kk = 0; kk < trj.Points.size()-1; kk++)
+    {
+        double dpos = mindist(trj.Points[kk].Position.X(),
+                               trj.Points[kk].Position.Y(),
+                               trj.Points[kk].Position.Z(),
+                               trj.Points[kk+1].Position.X(),
+                               trj.Points[kk+1].Position.Y(),
+                               trj.Points[kk+1].Position.Z(),
+                               x,y,z);
+        double dang = angle(trj.Points[kk+1].Position.X()-trj.Points[kk].Position.X(),
+                             trj.Points[kk+1].Position.Y()-trj.Points[kk].Position.Y(),
+                             trj.Points[kk+1].Position.Z()-trj.Points[kk].Position.Z(),
+                             hit.Stop.X()-hit.Start.X(),
+                             hit.Stop.Y()-hit.Start.Y(),
+                             hit.Stop.Z()-hit.Start.Z());
+        
+        if(dpos < postol && dang < angtol)
+          return true;
+    }
+    
+    return false;
+}
+
+bool ishitok_tid(TG4Event* ev, int trackid, TG4HitSegment hit,
+             double postol = 5., double angtol = 0.3)
+{    
     for(unsigned int jj = 0; jj < ev->Trajectories.size(); jj++)
     {
         //if(ev->Trajectories[jj].TrackId == hit.PrimaryId)
         if(ev->Trajectories[jj].TrackId == trackid)
         {
-            for(unsigned int kk = 0; kk < ev->Trajectories[jj].Points.size()-1; kk++)
-            {
-                double dpos = mindist(ev->Trajectories[jj].Points[kk].Position.X(),
-                                       ev->Trajectories[jj].Points[kk].Position.Y(),
-                                       ev->Trajectories[jj].Points[kk].Position.Z(),
-                                       ev->Trajectories[jj].Points[kk+1].Position.X(),
-                                       ev->Trajectories[jj].Points[kk+1].Position.Y(),
-                                       ev->Trajectories[jj].Points[kk+1].Position.Z(),
-                                       x,y,z);
-                double dang = angle(ev->Trajectories[jj].Points[kk+1].Position.X()-ev->Trajectories[jj].Points[kk].Position.X(),
-                                     ev->Trajectories[jj].Points[kk+1].Position.Y()-ev->Trajectories[jj].Points[kk].Position.Y(),
-                                     ev->Trajectories[jj].Points[kk+1].Position.Z()-ev->Trajectories[jj].Points[kk].Position.Z(),
-                                     hit.Stop.X()-hit.Start.X(),
-                                     hit.Stop.Y()-hit.Start.Y(),
-                                     hit.Stop.Z()-hit.Start.Z());
-                /*
-                std::cout << ev->Trajectories[jj].Points[kk].Position.X() << " " <<
-                             ev->Trajectories[jj].Points[kk].Position.Y() << " " <<
-                             ev->Trajectories[jj].Points[kk].Position.Z() << " " <<
-                             ev->Trajectories[jj].Points[kk+1].Position.X() << " " <<
-                             ev->Trajectories[jj].Points[kk+1].Position.Y() << " " <<
-                             ev->Trajectories[jj].Points[kk+1].Position.Z() << " " <<
-                             x << " " << y << " " << z << " " << dpos.back() << " " <<
-                             ev->Trajectories[jj].TrackId << " " << ev->Trajectories[jj].PDGCode << std::endl;
-                */
-                
-                if(dpos < postol && dang < angtol)
-                  return true;
-            }
+          return ishitok_trj(ev->Trajectories[jj], hit, postol, angtol);
         }
     }
     return false;
@@ -291,7 +289,7 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& v
         //if(hseg.PrimaryId == tr.tid)
         //{
           //if(ishitok(ev, hseg->PrimaryId, hseg))
-          if(ishitok(ev, tr.tid, hseg))
+          if(ishitok_trj(ev->Trajectories.at(j), hseg))
           {
             tr.digits.push_back(vec_digi->at(k));
             break;
@@ -300,9 +298,12 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& v
       }
     }
     
-    std::sort(tr.digits.begin(), tr.digits.end(), isDigBefore);
-    
-    vec_tr.push_back(tr);
+    if(tr.digits.size() > 0)
+    {
+      std::sort(tr.digits.begin(), tr.digits.end(), isDigBefore);
+      
+      vec_tr.push_back(tr);
+    }
   }
 }
 
