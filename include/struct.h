@@ -110,6 +110,8 @@ struct particle {
   double zreco;
   double treco;
   
+  bool kalman_ok;
+  
   bool has_track;
   double charge_reco;
   track tr;

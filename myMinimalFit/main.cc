@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
   // geometry should be in cm and g/cm^3 
   
   
-  TFile f("/home/dune-it/data/reco/numu_geoV12_100000.0.reco.root");
+  TFile f("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.root");
 
   TTree* tev = (TTree*) f.Get("tEvent");
   
@@ -153,7 +153,8 @@ int main(int argc, char* argv[]) {
   
   for(int i = istart; i < istop; i++)
   {
-    if(i%1000 == 0) std::cout << i << std::endl;
+    if(debug)
+      std::cout << "Event: " << i << std::endl;
   
     tev->GetEntry(i);      
     

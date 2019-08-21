@@ -88,10 +88,9 @@ void init(const char* ifile)
     
     t->SetAlias("pnu","sqrt(pxnu*pxnu+pynu*pynu+pznu*pznu)");
     t->SetAlias("r_kloe",TString::Format("sqrt((y - %f)*(y - %f)+(z - %f)*(z - %f))",p_mst[1],p_mst[1],p_mst[2],p_mst[2]));
-    t->SetAlias("ppara_reco","particles.pxreco");
-    t->SetAlias("ppara_true","particles.pxtrue");
-    t->SetAlias("pperp_reco","sqrt(particles.pyreco*particles.pyreco+particles.pzreco*particles.pzreco)");
-    t->SetAlias("pperp_true","sqrt(particles.pytrue*particles.pytrue+particles.pztrue*particles.pztrue)");
+    t->SetAlias("pt_reco","sqrt(particles.pyreco*particles.pyreco+particles.pzreco*particles.pzreco)");
+    t->SetAlias("pt_true","sqrt(particles.pytrue*particles.pytrue+particles.pztrue*particles.pztrue)");
+    t->SetAlias("pt_res","1-pt_true/pt_reco");
     t->SetAlias("dipangle_reco","TMath::ATan2(ppara_reco,pperp_reco)");
     t->SetAlias("dipangle_true","TMath::ATan2(ppara_true,pperp_true)");
     
@@ -99,7 +98,7 @@ void init(const char* ifile)
   }
 }
 
-void make_plots(const char* ofile) 
+void plot(const char* ofile) 
 {
   if(!initialized)
   {
@@ -230,87 +229,36 @@ void make_plots(const char* ofile)
   hpart.Draw("HIST TEXT");
   c.Print(pdffile.Data());  
   
+  TH1F* h;
+  TFitResultPtr r;
+  TGraphErrors gr;
+  
   // muon
-  TH1D hmu_pperp_res("hmu_pperp_res","#sigma(P_{perp}) [#mu] (Stt); p_{t}/p_{r}-1",100,-1,1);
-  t->Draw("pperp_true/pperp_reco-1>>hmu_pperp_res",isMu && isPrimary && isStt,"E0");
-  hmu_pperp_res.Fit("gaus","Q","",-0.05,0.1);
+  t->Draw("pt_true>>h(100,0,10000)",isMu && isGoodTrack,"E0");
+  c.Print(pdffile.Data()); 
+  t->Draw("pt_reco>>h(100,0,10000)",isMu && isGoodTrack,"E0");
   c.Print(pdffile.Data()); 
   
-  TH2D hmu_pperp_res_vs_pperp("hmu_pperp_res_vs_pperp","#sigma(P_{perp}) vs P_{perp} [#mu] (Stt); p_{t}; p_{t}/p_{r}-1",100,0,10000,100,-1,1);
-  t->Draw("pperp_true/pperp_reco-1:pperp_true>>hmu_pperp_res_vs_pperp",isMu && isPrimary && isStt,"COLZ");
+  t->Draw("pt_res>>h(100,-1,1)","pt_true<500" && isMu && isGoodTrack,"");
+  h = static_cast<TH1F*>(gDirectory->Get("h"));
+  r = h->Fit("gaus","QS","",-0.5,0.5);
+  if(r.Get() != 0)
+  {
+    gr.SetPoint(0,0.25,r->GetParams()[2]);
+    gr.SetPointError(0,0.25,r->GetErrors()[2]);
+  }
+  h->Draw("E0");
   c.Print(pdffile.Data()); 
-  
-  TH2D hmu_pperp_res_vs_ndigits("hmu_pperp_res_vs_ndigits","#sigma(P_{perp}) vs n_digits [#mu] (Stt); n_digits; p_{t}/p_{r}-1",500,0,500,100,-1,1);
-  t->Draw("pperp_true/pperp_reco-1:particles.tr.@digits.size()>>hmu_pperp_res_vs_ndigits",isMu && isPrimary && isStt,"COLZ");
-  c.Print(pdffile.Data()); 
-  
-  /*
-  TH1D hmu_dip_LAr("hmu_dip_LAr","dip angle  [#mu](LAr); #Delta#rho (rad)",50,-0.2,0.2);
-  t->Draw("TMath::ATan2(ppara_reco,pperp_reco)-TMath::ATan2(ppara_true,pperp_true)>>hmu_dip_LAr",isMu && isPrimary && isLAr,"E0");
-  hmu_dip_LAr.Fit("gaus","Q","",-0.02,0.02);
-  c.Print(pdffile.Data());
-  
-  TH1D hmu_pperp_Stt("hmu_pperp_Stt","P_{perp} [#mu] (STT); p_t/p_r-1",100,-1,1);
-  t->Draw("pperp_true/pperp_reco-1>>hmu_pperp_Stt",isMu && isPrimary && isStt,"E0");
-  hmu_pperp_Stt.Fit("gaus","Q","",-0.05,0.1);
-  c.Print(pdffile.Data()); 
-  
-  TH1D hmu_dip_Stt("hmu_dip_Stt","dip angle [#mu] (STT); #Delta#rho (rad)",50,-0.1,0.1);
-  t->Draw("TMath::ATan2(ppara_reco,pperp_reco)-TMath::ATan2(ppara_true,pperp_true)>>hmu_dip_Stt",isMu && isPrimary && isStt,"E0");
-  hmu_dip_Stt.Fit("gaus","Q","",-0.02,0.02);
-  c.Print(pdffile.Data());
-  
-  TH1D hmu_charge("hmu_charge","charge mis-indentification [#mu] (STT)",2,-1.5,1.5);
-  t->Draw("particles.charge*particles.charge_reco>>hmu_charge",isMu && isPrimary && isStt,"");
-  hmu_charge.GetXaxis()->CenterLabels();
-  hmu_charge.GetXaxis()->SetBinLabel(1,"WRONG");
-  hmu_charge.GetXaxis()->SetBinLabel(2,"RIGHT");
-  hmu_charge.Draw("HIST TEXT");
-  c.Print(pdffile.Data());  
-  
-  // pi
-  
-  TH1D hpi_pperp_Stt("hpi_pperp_Stt","P_{perp} [#pi] (Stt); p_t/p_r-1",100,-1,1);
-  t->Draw("pperp_true/pperp_reco-1>>hpi_pperp_Stt",isPi && isPrimary && isStt,"E0");
-  hpi_pperp_Stt.Fit("gaus","Q","",-0.05,0.1);
-  c.Print(pdffile.Data());  
-  
-  TH1D hpi_dip_Stt("hpi_dip_Stt","dip angle [#pi] (Stt); #Delta#rho (rad)",50,-0.2,0.2);
-  t->Draw("TMath::ATan2(ppara_reco,pperp_reco)-TMath::ATan2(ppara_true,pperp_true)>>hpi_dip_Stt",isPi && isPrimary && isStt,"E0");
-  hpi_dip_Stt.Fit("gaus","Q","",-0.01,0.01);
-  c.Print(pdffile.Data());
-  
-  TH1D hpi_charge("hpi_charge","charge mis-indentification [#pi] (STT)",2,-1.5,1.5);
-  t->Draw("particles.charge*particles.charge_reco>>hpi_charge",isPi && isPrimary && isStt,"");
-  hpi_charge.GetXaxis()->CenterLabels();
-  hpi_charge.GetXaxis()->SetBinLabel(1,"WRONG");
-  hpi_charge.GetXaxis()->SetBinLabel(2,"RIGHT");
-  hpi_charge.Draw("HIST TEXT");
-  c.Print(pdffile.Data());
-  
-  // p
-  
-  TH1D hp_pperp_Stt("hp_pperp_Stt","P_{perp} [p] (Stt); p_t/p_r-1",50,-0.8,0.8);
-  t->Draw("pperp_true/pperp_reco-1>>hp_pperp_Stt",isP && isPrimary && isStt,"E0");
-  hp_pperp_Stt.Fit("gaus","Q","",-0.2,0.2);
-  c.Print(pdffile.Data());  
-  
-  TH1D hp_dip_Stt("hp_dip_Stt","dip angle [p] (Stt); #Delta#rho (rad)",100,-0.4,0.4);
-  t->Draw("TMath::ATan2(ppara_reco,pperp_reco)-TMath::ATan2(ppara_true,pperp_true)>>hp_dip_Stt",isP && isPrimary && isStt,"E0");
-  hp_dip_Stt.Fit("gaus","Q","",-0.02,0.02);
-  c.Print(pdffile.Data());
-  
-  TH1D hp_charge("hp_charge","charge mis-indentification [p] (STT)",2,-1.5,1.5);
-  t->Draw("particles.charge*particles.charge_reco>>hp_charge",isP && isPrimary && isStt,"");
-  hp_charge.GetXaxis()->CenterLabels();
-  hp_charge.GetXaxis()->SetBinLabel(1,"WRONG");
-  hp_charge.GetXaxis()->SetBinLabel(2,"RIGHT");
-  hp_charge.Draw("HIST TEXT");
-  c.Print(pdffile.Data());  
-  
-  t->Draw("pperp_reco:pperp_true >> hp(100,0,3000,100,0,3000)",isP && isPrimary && isStt,"colz");
-  c.Print(pdffile.Data());
-  */
   
   c.Print(TString::Format("%s)",pdffile.Data()));
+}
+
+void make_plots()
+{
+  gSystem->Load("/wd/dune-it/enurec/analysis/kloe-simu/lib/libStruct.so");
+
+  init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.nokalman.root");
+  plot("nokalman.pdf");
+  init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.kalman.root");
+  plot("kalman.pdf");
 }

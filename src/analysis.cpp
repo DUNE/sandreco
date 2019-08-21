@@ -50,6 +50,7 @@ void reset(particle& p)
   p.ytrue = 0.;
   p.ztrue = 0.;
   p.ttrue = 0.;
+  p.kalman_ok = false;
   p.has_track = false;
   p.charge_reco = 0.;
   p.pxreco = 0.;
@@ -244,6 +245,8 @@ void RecoFromTrack(particle& p)
     
     l /= TMath::Abs(l);
     
+    p.charge_reco = -l;
+    
     const double mm2cm = 0.1;
     const double cm2mm = 1./mm2cm;
     const double GeV2MeV = 1000.;
@@ -283,15 +286,15 @@ void RecoFromTrack(particle& p)
     double detectorResolutionL(2.); // resolution of planar detectors (longitudinal) cm
     TMatrixDSym hitCovH(2);
     hitCovH.UnitMatrix();
-    hitCovH[0][0] = 0.;
-    hitCovH[0][1] = detectorResolutionL*detectorResolutionL;
+    hitCovH[0][0] = detectorResolutionL*detectorResolutionL;
+    hitCovH[0][1] = 0.;
     hitCovH[1][0] = 0.;
     hitCovH[1][1] = detectorResolutionT*detectorResolutionT;
     
     TMatrixDSym hitCovV(2);
     hitCovV.UnitMatrix();
-    hitCovV[0][0] = 0.;
-    hitCovV[0][1] = detectorResolutionT*detectorResolutionT;
+    hitCovV[0][0] = detectorResolutionT*detectorResolutionT;
+    hitCovV[0][1] = 0.;
     hitCovV[1][0] = 0.;
     hitCovV[1][1] = detectorResolutionL*detectorResolutionL;
   
@@ -320,18 +323,16 @@ void RecoFromTrack(particle& p)
       measurement->setPlane(genfit::SharedPlanePtr(new genfit::DetPlane(TVector3(0,0,p.tr.digits[j].z*mm2cm), TVector3(1,0,0), TVector3(0,1,0))), ++planeId);
     
       fitTrack.insertPoint(new genfit::TrackPoint(measurement, &fitTrack));
-    } 
-  
-    //check
-    fitTrack.checkConsistency();
+    }
     
-    //fit
-    fitter->processTrack(&fitTrack);
-    
-    if(fitTrack.getPointWithFitterInfo(0) != 0)
+    try
     {
-      p.charge_reco = l;
+      //check
+      fitTrack.checkConsistency();
       
+      //fit
+      fitter->processTrack(&fitTrack);
+         
       p.pxreco = fitTrack.getFittedState().getMom().X()*GeV2MeV;
       p.pyreco = fitTrack.getFittedState().getMom().Y()*GeV2MeV;
       p.pzreco = fitTrack.getFittedState().getMom().Z()*GeV2MeV;
@@ -340,11 +341,12 @@ void RecoFromTrack(particle& p)
       p.yreco = fitTrack.getFittedState().getPos().Y()*cm2mm;
       p.zreco = fitTrack.getFittedState().getPos().Z()*cm2mm;
       p.treco = p.tr.t0;
+      p.kalman_ok = true;
       return;
     }
-    else
+    catch(genfit::Exception& e)
     {
-      p.charge_reco = l;
+      std::cerr<<"Exception, next track"<<std::endl;
       p.pxreco = px_guess;
       p.pyreco = py_guess;
       p.pzreco = pz_guess;
