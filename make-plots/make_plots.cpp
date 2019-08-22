@@ -37,6 +37,38 @@ TCut isGoodTrack = "particles.tr.ret_cr==0&&particles.tr.ret_ln==0";
 double p_loc[] = {0, 0, 0};
 double p_mst[] = {0, 0, 0};
 
+TGraphErrors* DrawAndFill(TCanvas* c, TH2D* h2, TTree* t, const char* var, const char* vcut, TCut* sel, int nbins, double min, double max, double fmin, double fmax, const char* pdffile)
+{
+  TGraphErrors* gr = new TGraphErrors(h2->GetNbinsX());
+
+  for(int i = 0; i < h2->GetNbinsX(); i++)
+  {
+    double vmin = h2->GetXaxis()->GetBinLowEdge(i+1);
+    double v = h2->GetXaxis()->GetBinCenter(i+1);
+    double vmax = h2->GetXaxis()->GetBinUpEdge(i+1);
+    double dv = 0.5*h2->GetXaxis()->GetBinWidth(i+1);
+    
+    TString scan = TString::Format("%s>%f&&%s<=%f",vcut,vmin,vcut,vmax);
+    TString varexp = TString::Format("%s>>h(%d,%f,%f)",var,nbins,min,max);
+    
+    TH1F* h;
+    TFitResultPtr r;
+    
+    c->cd();
+    t->Draw(varexp.Data(), scan.Data() && (*sel), "E0");
+    h = static_cast<TH1F*>(gDirectory->Get("h"));
+    r = h->Fit("gaus","QS","",fmin,fmax);
+    if(r.Get() != 0)
+    {
+      gr->SetPoint(i,v,r->GetParams()[2]);
+      gr->SetPointError(i,dv,r->GetErrors()[2]);
+    }
+    h->Draw("E0");
+    c->Print(pdffile);
+  }
+  return gr;
+}
+
 void init(const char* ifile)
 {
 
@@ -90,9 +122,18 @@ void init(const char* ifile)
     t->SetAlias("r_kloe",TString::Format("sqrt((y - %f)*(y - %f)+(z - %f)*(z - %f))",p_mst[1],p_mst[1],p_mst[2],p_mst[2]));
     t->SetAlias("pt_reco","sqrt(particles.pyreco*particles.pyreco+particles.pzreco*particles.pzreco)");
     t->SetAlias("pt_true","sqrt(particles.pytrue*particles.pytrue+particles.pztrue*particles.pztrue)");
+    t->SetAlias("p_reco","sqrt(particles.pxreco*particles.pxreco+particles.pyreco*particles.pyreco+particles.pzreco*particles.pzreco)");
+    t->SetAlias("p_true","sqrt(particles.pxtrue*particles.pxtrue+particles.pytrue*particles.pytrue+particles.pztrue*particles.pztrue)");
+    t->SetAlias("b_reco","sqrt(1.-particles.mass*particles.mass/(particles.Ereco*particles.Ereco))");
+    t->SetAlias("b_true","sqrt(1.-particles.mass*particles.mass/(particles.Etrue*particles.Etrue))");
+    t->SetAlias("b_res","1.-b_reco/b_true");
     t->SetAlias("pt_res","1-pt_true/pt_reco");
-    t->SetAlias("dipangle_reco","TMath::ATan2(ppara_reco,pperp_reco)");
-    t->SetAlias("dipangle_true","TMath::ATan2(ppara_true,pperp_true)");
+    t->SetAlias("dip_reco","TMath::ATan2(particles.pxreco,sqrt(particles.pyreco*particles.pyreco+particles.pzreco*particles.pzreco))");
+    t->SetAlias("dip_true","TMath::ATan2(particles.pxtrue,sqrt(particles.pytrue*particles.pytrue+particles.pztrue*particles.pztrue))");
+    t->SetAlias("dip_res","dip_reco-dip_true");
+    t->SetAlias("Enu_res","1.-Enureco/Enu");
+    t->SetAlias("E_res","1.-particles.Ereco/particles.Etrue");
+    t->SetAlias("m_reco","sqrt(particles.Ereco*particles.Ereco-p_reco*p_reco)");
     
     initialized = true;
   }
@@ -227,29 +268,139 @@ void plot(const char* ofile)
       hpart.GetXaxis()->SetBinLabel(ibin,TString::Format("%d",it->first).Data());
   }
   hpart.Draw("HIST TEXT");
-  c.Print(pdffile.Data());  
+  c.Print(pdffile.Data());
   
   TH1F* h;
+  TH2D* h2;
   TFitResultPtr r;
-  TGraphErrors gr;
+  TGraphErrors* gr;
+  int nbins;
   
-  // muon
-  t->Draw("pt_true>>h(100,0,10000)",isMu && isGoodTrack,"E0");
-  c.Print(pdffile.Data()); 
-  t->Draw("pt_reco>>h(100,0,10000)",isMu && isGoodTrack,"E0");
-  c.Print(pdffile.Data()); 
+  // muon  
+  double ebin1[] = {0., 500., 1000., 2000., 3000., 4000., 5000., 10000.};
+  nbins = sizeof(ebin1)/sizeof(double)-1;
+  TCut c1 = isMu && isGoodTrack;
   
-  t->Draw("pt_res>>h(100,-1,1)","pt_true<500" && isMu && isGoodTrack,"");
+  h2 = new TH2D("",";P_{t} GeV; #sigma(1-P_{t}^{true}/P_{t}^{reco})",nbins,ebin1,1,0.02,0.1);
+  h2->GetYaxis()->SetTitleOffset(1.5);
+  h2->SetStats(false);
+  
+  gr = DrawAndFill(&c, h2, t, "pt_res", "pt_true", &c1, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  
+  c.cd();
+  h2->Draw();
+  gr->Draw("P SAME");
+  c.Print(pdffile.Data());
+  
+  t->Draw("dip_res>>h(50,-0.025,0.025)",c1,"");
   h = static_cast<TH1F*>(gDirectory->Get("h"));
-  r = h->Fit("gaus","QS","",-0.5,0.5);
-  if(r.Get() != 0)
-  {
-    gr.SetPoint(0,0.25,r->GetParams()[2]);
-    gr.SetPointError(0,0.25,r->GetErrors()[2]);
-  }
+  r = h->Fit("gaus","QS","",-0.0025,0.0025);
   h->Draw("E0");
-  c.Print(pdffile.Data()); 
+  c.Print(pdffile.Data());
   
+  // proton  
+  double ebin2[] = {0., 500., 1000., 1500., 2000., 2500., 3000.};
+  nbins = sizeof(ebin2)/sizeof(double)-1;
+  TCut c2 = isP && isGoodTrack;
+  
+  h2 = new TH2D("",";P_{t} GeV; #sigma(1-P_{t}^{true}/P_{t}^{reco})",nbins,ebin2,1,0.0,0.3);
+  h2->GetYaxis()->SetTitleOffset(1.5);
+  h2->SetStats(false);
+  
+  gr = DrawAndFill(&c, h2, t, "pt_res", "pt_true", &c2, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  
+  c.cd();
+  h2->Draw();
+  gr->Draw("P SAME");
+  c.Print(pdffile.Data());
+  
+  t->Draw("dip_res>>h(50,-0.025,0.025)",c2,"");
+  h = static_cast<TH1F*>(gDirectory->Get("h"));
+  r = h->Fit("gaus","QS","",-0.0025,0.0025);
+  h->Draw("E0");
+  c.Print(pdffile.Data());
+  
+  // pi  
+  double ebin3[] = {0., 500., 1000., 1500., 2000., 2500., 3000.};
+  nbins = sizeof(ebin3)/sizeof(double)-1;
+  TCut c3 = isPi && isGoodTrack;
+  
+  h2 = new TH2D("",";P_{t} GeV; #sigma(1-P_{t}^{true}/P_{t}^{reco})",nbins,ebin3,1,0.0,0.3);
+  h2->GetYaxis()->SetTitleOffset(1.5);
+  h2->SetStats(false);
+  
+  gr = DrawAndFill(&c, h2, t, "pt_res", "pt_true", &c3, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  
+  c.cd();
+  h2->Draw();
+  gr->Draw("P SAME");
+  c.Print(pdffile.Data());
+  
+  t->Draw("dip_res>>h(50,-0.025,0.025)",c2,"");
+  h = static_cast<TH1F*>(gDirectory->Get("h"));
+  r = h->Fit("gaus","QS","",-0.0025,0.0025);
+  h->Draw("E0");
+  c.Print(pdffile.Data());
+  
+  // n
+  double ebin4[] = {0., 0.2, 0.4, 0.6, 0.8, 1.};
+  nbins = sizeof(ebin4)/sizeof(double)-1;
+  TCut c4 = isN;
+  
+  t->Draw("b_reco:b_true>>h(100,0.,1.,100,0.,1.)",c4,"COLZ");
+  TH2F* hh = static_cast<TH2F*>(gDirectory->Get("h"));
+  hh->SetStats(false);
+  c.Print(pdffile.Data());
+  
+  h2 = new TH2D("",";#beta_{n} GeV; #sigma(1-#beta_{n}^{reco}/#beta_{n}^{true})",nbins,ebin4,1,0.0,0.3);
+  h2->GetYaxis()->SetTitleOffset(1.5);
+  h2->SetStats(false);
+  
+  gr = DrawAndFill(&c, h2, t, "b_res", "b_true", &c4, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  
+  c.cd();
+  h2->Draw();
+  gr->Draw("P SAME");
+  c.Print(pdffile.Data());
+  
+  // gamma
+  double ebin5[] = {0., 500., 1000., 2000., 5000.};
+  nbins = sizeof(ebin5)/sizeof(double)-1;
+  TCut c5 = isGamma;
+  
+  h2 = new TH2D("",";E_{#gamma} GeV; #sigma(1-E_{#gamma}^{reco}/E_{#gamma}^{true})",nbins,ebin5,1,0.0,0.3);
+  h2->GetYaxis()->SetTitleOffset(1.5);
+  h2->SetStats(false);
+  
+  gr = DrawAndFill(&c, h2, t, "E_res", "particles.Etrue", &c5, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  
+  c.cd();
+  h2->Draw();
+  gr->Draw("P SAME");
+  c.Print(pdffile.Data());
+  
+  // pi0
+  TCut c6 = isPi0;
+  t->Draw("m_reco>>h(100,0,500.)",c6,"E0");
+  h = static_cast<TH1F*>(gDirectory->Get("h"));
+  r = h->Fit("gaus","QS","",0,500.);
+  h->Draw("E0");
+  c.Print(pdffile.Data());
+  
+  // nu 
+  double ebin7[] = {0., 500., 1000., 2000., 3000., 4000., 5000.};
+  nbins = sizeof(ebin4)/sizeof(double)-1;
+  TCut c7 = isCC;
+  
+  h2 = new TH2D("",";E_{#nu} GeV; #sigma(1-E_{#nu}^{reco}/E_{#nu}^{true})",nbins,ebin7,1,0.0,0.3);
+  h2->GetYaxis()->SetTitleOffset(1.5);
+  h2->SetStats(false);
+  
+  gr = DrawAndFill(&c, h2, t, "Enu_res", "Enu", &c7, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  
+  c.cd();
+  h2->Draw();
+  gr->Draw("P SAME");  
   c.Print(TString::Format("%s)",pdffile.Data()));
 }
 

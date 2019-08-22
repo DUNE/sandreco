@@ -347,13 +347,13 @@ void RecoFromTrack(particle& p)
     catch(genfit::Exception& e)
     {
       std::cerr<<"Exception, next track"<<std::endl;
-      p.pxreco = px_guess;
-      p.pyreco = py_guess;
-      p.pzreco = pz_guess;
+      p.pxreco = px_guess*GeV2MeV;
+      p.pyreco = py_guess*GeV2MeV;
+      p.pzreco = pz_guess*GeV2MeV;
       p.Ereco = TMath::Sqrt(p.pxreco*p.pxreco+p.pyreco*p.pyreco+p.pzreco*p.pzreco+p.mass*p.mass);
-      p.xreco = x_guess;
-      p.yreco = y_guess;
-      p.zreco = z_guess;
+      p.xreco = x_guess*cm2mm;
+      p.yreco = y_guess*cm2mm;
+      p.zreco = z_guess*cm2mm;
       p.treco = p.tr.t0;
       return;
     }

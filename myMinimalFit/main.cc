@@ -82,15 +82,15 @@ int main(int argc, char* argv[]) {
   genfit::MaterialEffects::getInstance()->setDebugLvl(dbgLvl);
 
   // init event display
-  //genfit::EventDisplay* display = genfit::EventDisplay::getInstance();
+  genfit::EventDisplay* display = genfit::EventDisplay::getInstance();
   
   TDatabasePDG pdgdb;
   pdgdb.ReadPDGTable();
       
   TRandom3 rand(0);
   
-  const double xsigma = 0.02;
-  const double psigma = 0.05;
+  const double xsigma = 0.0;
+  const double psigma = 0.0;
   
   const int nev = tev->GetEntries();
   
@@ -118,10 +118,10 @@ int main(int argc, char* argv[]) {
   
   const double c = 299792458.;
   
-  const bool debug = false;
+  const bool debug = true;
   
   //TFile fout("numu_geoV12_100000.0.check.root","RECREATE");
-  TFile fout(argv[3],"RECREATE");
+  TFile fout(argv[1],"RECREATE");
   TTree tout("tCheck","tCheck");
   
   tout.Branch("px_old",&px_old,"px_old/D");
@@ -148,10 +148,7 @@ int main(int argc, char* argv[]) {
   tout.Branch("y0_true",&y0_true,"y0_true/D");
   tout.Branch("z0_true",&z0_true,"z0_true/D");
   
-  int istart = atoi(argv[1]);
-  int istop  = atoi(argv[2]); 
-  
-  for(int i = istart; i < istop; i++)
+  for(int i = 0; i < tev->GetEntries(); i++)
   {
     if(debug)
       std::cout << "Event: " << i << std::endl;
@@ -160,7 +157,7 @@ int main(int argc, char* argv[]) {
     
     for(int k = 0; k < evt->particles.size(); k++)
     {    
-      if(evt->particles[k].primary == 1 && evt->particles[k].pdg == 13 && evt->particles[k].has_track == true && evt->particles[k].tr.digits.size() > 0)
+      if(evt->particles[k].pdg == 11 && evt->particles[k].has_track == true && evt->particles[k].tr.ret_ln == 0 && evt->particles[k].tr.ret_cr == 0)
       {
         pdg = evt->particles[k].pdg;
     
@@ -223,6 +220,9 @@ int main(int argc, char* argv[]) {
         p = TMath::Sqrt(px*px+pt*pt);
       
         e = TMath::Sqrt(p*p + mass*mass);
+        
+        if(e < 2.)
+          continue;
       
         gamma = e/mass;
       
@@ -321,24 +321,24 @@ int main(int argc, char* argv[]) {
         fitTrack.checkConsistency();
       
         // do the fit
+        fitter->processTrack(&fitTrack);
+      
+        // print fit result
         try
         {
-          fitter->processTrack(&fitTrack);
+          p_reco = fitTrack.getFittedState().getMom().Mag();
+          px_reco = fitTrack.getFittedState().getMom().X();
+          py_reco = fitTrack.getFittedState().getMom().Y();
+          pz_reco = fitTrack.getFittedState().getMom().Z();
+          pt_reco = TMath::Sqrt(px_reco*px_reco+py_reco*py_reco+pz_reco*pz_reco);
+          x0_reco = fitTrack.getFittedState().getPos().X();
+          y0_reco = fitTrack.getFittedState().getPos().Y();
+          z0_reco = fitTrack.getFittedState().getPos().Z();
         }
-        catch(char* a)
+        catch(genfit::Exception& e)
         {
           continue;
         }
-      
-        // print fit result
-        p_reco = fitTrack.getFittedState().getMom().Mag();
-        px_reco = fitTrack.getFittedState().getMom().X();
-        py_reco = fitTrack.getFittedState().getMom().Y();
-        pz_reco = fitTrack.getFittedState().getMom().Z();
-        pt_reco = TMath::Sqrt(px_reco*px_reco+py_reco*py_reco+pz_reco*pz_reco);
-        x0_reco = fitTrack.getFittedState().getPos().X();
-        y0_reco = fitTrack.getFittedState().getPos().Y();
-        z0_reco = fitTrack.getFittedState().getPos().Z();
         
         x0_new = x0_reco;
         y0_new = y0_reco;
@@ -390,7 +390,7 @@ int main(int argc, char* argv[]) {
           std::cout << "*************************" << std::endl;
         }
       
-        //display->addEvent(&fitTrack);
+        display->addEvent(&fitTrack);
         
         tout.Fill();
       
@@ -404,7 +404,7 @@ int main(int argc, char* argv[]) {
   fout.Close();
 
   // open event display
-  //display->open();
+  display->open();
 
 }
 

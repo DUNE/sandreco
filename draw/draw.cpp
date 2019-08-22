@@ -16,7 +16,7 @@
 #include <iostream>
 #include <map>
 
-#include "/wd/dune-it/enurec/analysis/kloe-simu/loader/loader.C"
+#include "/wd/dune-it/enurec/analysis/kloe-simu/include/struct.h"
 
 #include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
 #include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
