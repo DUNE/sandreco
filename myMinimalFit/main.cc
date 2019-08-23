@@ -2,6 +2,7 @@
 #include <Exception.h>
 #include <FieldManager.h>
 #include <KalmanFitterRefTrack.h>
+#include <KalmanFitter.h>
 #include <StateOnPlane.h>
 #include <Track.h>
 #include <TrackPoint.h>
@@ -82,7 +83,7 @@ int main(int argc, char* argv[]) {
   genfit::MaterialEffects::getInstance()->setDebugLvl(dbgLvl);
 
   // init event display
-  genfit::EventDisplay* display = genfit::EventDisplay::getInstance();
+  //genfit::EventDisplay* display = genfit::EventDisplay::getInstance();
   
   TDatabasePDG pdgdb;
   pdgdb.ReadPDGTable();
@@ -118,7 +119,7 @@ int main(int argc, char* argv[]) {
   
   const double c = 299792458.;
   
-  const bool debug = true;
+  const bool debug = false;
   
   //TFile fout("numu_geoV12_100000.0.check.root","RECREATE");
   TFile fout(argv[1],"RECREATE");
@@ -220,9 +221,6 @@ int main(int argc, char* argv[]) {
         p = TMath::Sqrt(px*px+pt*pt);
       
         e = TMath::Sqrt(p*p + mass*mass);
-        
-        if(e < 2.)
-          continue;
       
         gamma = e/mass;
       
@@ -319,6 +317,11 @@ int main(int argc, char* argv[]) {
       
         //check
         fitTrack.checkConsistency();
+        
+        // prefit
+        genfit::KalmanFitter prefitter;
+        prefitter.setMultipleMeasurementHandling(genfit::weightedClosestToPrediction);
+        prefitter.processTrackWithRep(&fitTrack, fitTrack.getCardinalRep());
       
         // do the fit
         fitter->processTrack(&fitTrack);
@@ -390,7 +393,7 @@ int main(int argc, char* argv[]) {
           std::cout << "*************************" << std::endl;
         }
       
-        display->addEvent(&fitTrack);
+        //display->addEvent(&fitTrack);
         
         tout.Fill();
       
@@ -404,7 +407,7 @@ int main(int argc, char* argv[]) {
   fout.Close();
 
   // open event display
-  display->open();
+  //display->open();
 
 }
 
