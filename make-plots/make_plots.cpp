@@ -44,17 +44,22 @@ TGraphErrors* DrawAndFill(TCanvas* c, TH2D* h2, TTree* t, const char* var, const
   for(int i = 0; i < h2->GetNbinsX(); i++)
   {
     double vmin = h2->GetXaxis()->GetBinLowEdge(i+1);
-    double v = h2->GetXaxis()->GetBinCenter(i+1);
+    //double v = h2->GetXaxis()->GetBinCenter(i+1);
     double vmax = h2->GetXaxis()->GetBinUpEdge(i+1);
-    double dv = 0.5*h2->GetXaxis()->GetBinWidth(i+1);
+    //double dv = 0.5*h2->GetXaxis()->GetBinWidth(i+1);
     
     TString scan = TString::Format("%s>%f&&%s<=%f",vcut,vmin,vcut,vmax);
+    TString scnexp = TString::Format("%s>>h(%d,%f,%f)",vcut,nbins,vmin,vmax);
     TString varexp = TString::Format("%s>>h(%d,%f,%f)",var,nbins,min,max);
     
     TH1F* h;
     TFitResultPtr r;
     
     c->cd();
+    t->Draw(scnexp.Data(), scan.Data() && (*sel), "E0");
+    h = static_cast<TH1F*>(gDirectory->Get("h"));
+    double v = h->GetMean();
+    double dv = h->GetRMS();
     t->Draw(varexp.Data(), scan.Data() && (*sel), "E0");
     h = static_cast<TH1F*>(gDirectory->Get("h"));
     r = h->Fit("gaus","QS","",fmin,fmax);
@@ -279,13 +284,13 @@ void plot(const char* ofile)
   // muon  
   double ebin1[] = {0., 500., 1000., 2000., 3000., 4000., 5000., 10000.};
   nbins = sizeof(ebin1)/sizeof(double)-1;
-  TCut c1 = isMu && isGoodTrack;
+  TCut c1 = isMu && isGoodTrack && isPrimary;
   
   h2 = new TH2D("",";P_{t} GeV; #sigma(1-P_{t}^{true}/P_{t}^{reco})",nbins,ebin1,1,0.02,0.1);
   h2->GetYaxis()->SetTitleOffset(1.5);
   h2->SetStats(false);
   
-  gr = DrawAndFill(&c, h2, t, "pt_res", "pt_true", &c1, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  gr = DrawAndFill(&c, h2, t, "pt_res", "pt_true", &c1, 50, -1., 1., -0.1, 0.1, pdffile.Data());
   
   c.cd();
   h2->Draw();
@@ -301,13 +306,13 @@ void plot(const char* ofile)
   // proton  
   double ebin2[] = {0., 500., 1000., 1500., 2000., 2500., 3000.};
   nbins = sizeof(ebin2)/sizeof(double)-1;
-  TCut c2 = isP && isGoodTrack;
+  TCut c2 = isP && isGoodTrack && isPrimary;
   
   h2 = new TH2D("",";P_{t} GeV; #sigma(1-P_{t}^{true}/P_{t}^{reco})",nbins,ebin2,1,0.0,0.3);
   h2->GetYaxis()->SetTitleOffset(1.5);
   h2->SetStats(false);
   
-  gr = DrawAndFill(&c, h2, t, "pt_res", "pt_true", &c2, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  gr = DrawAndFill(&c, h2, t, "pt_res", "pt_true", &c2, 50, -1., 1., -0.2, 0.2, pdffile.Data());
   
   c.cd();
   h2->Draw();
@@ -323,13 +328,13 @@ void plot(const char* ofile)
   // pi  
   double ebin3[] = {0., 500., 1000., 1500., 2000., 2500., 3000.};
   nbins = sizeof(ebin3)/sizeof(double)-1;
-  TCut c3 = isPi && isGoodTrack;
+  TCut c3 = isPi && isGoodTrack && isPrimary;
   
   h2 = new TH2D("",";P_{t} GeV; #sigma(1-P_{t}^{true}/P_{t}^{reco})",nbins,ebin3,1,0.0,0.3);
   h2->GetYaxis()->SetTitleOffset(1.5);
   h2->SetStats(false);
   
-  gr = DrawAndFill(&c, h2, t, "pt_res", "pt_true", &c3, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  gr = DrawAndFill(&c, h2, t, "pt_res", "pt_true", &c3, 50, -1., 1., -0.2, 0.2, pdffile.Data());
   
   c.cd();
   h2->Draw();
@@ -345,7 +350,7 @@ void plot(const char* ofile)
   // n
   double ebin4[] = {0., 0.2, 0.4, 0.6, 0.8, 1.};
   nbins = sizeof(ebin4)/sizeof(double)-1;
-  TCut c4 = isN;
+  TCut c4 = isN && isPrimary;
   
   t->Draw("b_reco:b_true>>h(100,0.,1.,100,0.,1.)",c4,"COLZ");
   TH2F* hh = static_cast<TH2F*>(gDirectory->Get("h"));
@@ -356,7 +361,7 @@ void plot(const char* ofile)
   h2->GetYaxis()->SetTitleOffset(1.5);
   h2->SetStats(false);
   
-  gr = DrawAndFill(&c, h2, t, "b_res", "b_true", &c4, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  gr = DrawAndFill(&c, h2, t, "b_res", "b_true", &c4, 50, -1., 1., -0.2, 0.2, pdffile.Data());
   
   c.cd();
   h2->Draw();
@@ -366,13 +371,13 @@ void plot(const char* ofile)
   // gamma
   double ebin5[] = {0., 500., 1000., 2000., 5000.};
   nbins = sizeof(ebin5)/sizeof(double)-1;
-  TCut c5 = isGamma;
+  TCut c5 = isGamma && isPrimary;
   
   h2 = new TH2D("",";E_{#gamma} GeV; #sigma(1-E_{#gamma}^{reco}/E_{#gamma}^{true})",nbins,ebin5,1,0.0,0.3);
   h2->GetYaxis()->SetTitleOffset(1.5);
   h2->SetStats(false);
   
-  gr = DrawAndFill(&c, h2, t, "E_res", "particles.Etrue", &c5, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  gr = DrawAndFill(&c, h2, t, "E_res", "particles.Etrue", &c5, 50, -1., 1., -0.2, 0.2, pdffile.Data());
   
   c.cd();
   h2->Draw();
@@ -380,7 +385,21 @@ void plot(const char* ofile)
   c.Print(pdffile.Data());
   
   // pi0
-  TCut c6 = isPi0;
+  double ebin6[] = {0., 1000., 2000., 3500., 5000.};
+  nbins = sizeof(ebin6)/sizeof(double)-1;
+  TCut c6 = isPi0 && isPrimary;
+  
+  h2 = new TH2D("",";E_{#pi^{0}} GeV; #sigma(1-E_{#pi^{0}}^{reco}/E_{#pi^{0}}^{true})",nbins,ebin6,1,0.0,0.3);
+  h2->GetYaxis()->SetTitleOffset(1.5);
+  h2->SetStats(false);
+  
+  gr = DrawAndFill(&c, h2, t, "E_res", "particles.Etrue", &c6, 50, -1., 1., -0.2, 0.2, pdffile.Data());
+  
+  c.cd();
+  h2->Draw();
+  gr->Draw("P SAME");
+  c.Print(pdffile.Data());
+  
   t->Draw("m_reco>>h(100,0,500.)",c6,"E0");
   h = static_cast<TH1F*>(gDirectory->Get("h"));
   r = h->Fit("gaus","QS","",0,500.);
@@ -388,19 +407,20 @@ void plot(const char* ofile)
   c.Print(pdffile.Data());
   
   // nu 
-  double ebin7[] = {0., 500., 1000., 2000., 3000., 4000., 5000.};
-  nbins = sizeof(ebin4)/sizeof(double)-1;
+  double ebin7[] = {0., 1000., 2000., 3000., 4000., 5000., 10000.};
+  nbins = sizeof(ebin7)/sizeof(double)-1;
   TCut c7 = isCC;
   
-  h2 = new TH2D("",";E_{#nu} GeV; #sigma(1-E_{#nu}^{reco}/E_{#nu}^{true})",nbins,ebin7,1,0.0,0.3);
+  h2 = new TH2D("",";E_{#nu} GeV; #sigma(1-E_{#nu}^{reco}/E_{#nu}^{true})",nbins,ebin7,1,0.0,0.4);
   h2->GetYaxis()->SetTitleOffset(1.5);
   h2->SetStats(false);
   
-  gr = DrawAndFill(&c, h2, t, "Enu_res", "Enu", &c7, 50, -1., 1., -0.5, 0.5, pdffile.Data());
+  gr = DrawAndFill(&c, h2, t, "Enu_res", "Enu", &c7, 50, -1., 1., -0.15, 0.15, pdffile.Data());
   
   c.cd();
   h2->Draw();
   gr->Draw("P SAME");  
+  
   c.Print(TString::Format("%s)",pdffile.Data()));
 }
 
@@ -408,8 +428,10 @@ void make_plots()
 {
   gSystem->Load("/wd/dune-it/enurec/analysis/kloe-simu/lib/libStruct.so");
 
-  init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.nokalman.root");
-  plot("nokalman.pdf");
-  init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.kalman.root");
-  plot("kalman.pdf");
+  //init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.nokalman.root");
+  //plot("nokalman.pdf");
+  //init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.kalman.root");
+  //plot("kalman.pdf");
+  init("/home/dune-it/data/reco/numu_geoV12_100000.0.reco.root");
+  plot("res.pdf");
 }
