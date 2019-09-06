@@ -3,6 +3,7 @@
 #include <TDatabasePDG.h>
 #include <TParticlePDG.h>
 #include <TDirectoryFile.h>
+#include <TStopwatch.h>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
@@ -910,6 +911,8 @@ void EvalNuEnergy(event& ev)
 
 void Analyze(const char* fIn, const char* fgeo)
 {
+  TStopwatch sw;
+
   TFile f(fIn,"UPDATE");
   TTree* tReco = (TTree*) f.Get("tReco");
   TTree* tTrueMC = (TTree*) f.Get("EDepSimEvents");
@@ -1028,6 +1031,9 @@ void Analyze(const char* fIn, const char* fgeo)
   vec_cl->clear();
   delete vec_tr;
   delete vec_cl;
+
+  sw.Stop();
+  sw.Print();
 }
 
 void help_ana()

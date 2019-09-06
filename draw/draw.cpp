@@ -16,10 +16,11 @@
 #include <iostream>
 #include <map>
 
-#include "/wd/dune-it/enurec/analysis/kloe-simu/include/struct.h"
-
 #include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
 #include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
+
+#include "/wd/dune-it/enurec/analysis/kloe-simu/include/struct.h"
+#include "/wd/dune-it/enurec/analysis/kloe-simu/include/utils.h"
 
 namespace ns_draw {
   const bool debug = false;
@@ -66,6 +67,25 @@ namespace ns_draw {
 }
 
 using namespace ns_draw;
+
+const double m_to_mm = 1000.;
+
+void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e)
+{      
+  if(c.id < 25000) //Barrel
+  {
+    x = 0.5 * (c.tdc1 - c.tdc2)/ns_Digit::vlfb * m_to_mm + c.x;
+    y = c.y;
+  }
+  else
+  {
+    x = c.x;
+    y = -0.5 * (c.tdc1 - c.tdc2)/ns_Digit::vlfb * m_to_mm + c.y;
+  }
+  z = c.z;
+  t = 0.5 * (c.tdc1 + c.tdc2 - ns_Digit::vlfb * c.l / m_to_mm );
+  e = c.adc1 + c.adc2;
+}
 
 void init(const char* ifile)
 {
@@ -349,7 +369,7 @@ void init(const char* ifile)
   initialized = true;
 }
 
-void show(int index, bool showtrj = true, bool showfit = true, bool showdig = true)
+void show(int index, bool showtrj = true, bool showfit = true, bool showdig = true, bool showhit = false)
 {
   if(!initialized)
   {
@@ -552,27 +572,36 @@ void show(int index, bool showtrj = true, bool showfit = true, bool showdig = tr
       calocell[-id].adc = vec_cl->at(j).cells.at(i).adc2;
       calocell[-id].tdc = vec_cl->at(j).cells.at(i).tdc2;
 
+      double xo[4];
       double yo[4];
+      double xdummy, ydummy, zdummy, tdummy, edummy;
+
+      CellXYZTE(vec_cl->at(j).cells.at(i), xdummy, ydummy, zdummy, tdummy, edummy);
+      
+      xo[0] = zdummy - 20.;
+      xo[1] = zdummy - 20.;
+      xo[2] = zdummy + 20.;
+      xo[3] = zdummy + 20.;
 
       if(id < 25000)
       {
-        yo[0] = vec_cl->at(j).cells.at(i).x - 20.;
-        yo[1] = vec_cl->at(j).cells.at(i).x + 20.;
-        yo[2] = vec_cl->at(j).cells.at(i).x + 20.;
-        yo[3] = vec_cl->at(j).cells.at(i).x - 20.;
+        yo[0] = xdummy - 20.;
+        yo[1] = xdummy + 20.;
+        yo[2] = xdummy + 20.;
+        yo[3] = xdummy - 20.;
       }
       else
       {
-        yo[0] = vec_cl->at(j).cells.at(i).y - 20.;
-        yo[1] = vec_cl->at(j).cells.at(i).y + 20.;
-        yo[2] = vec_cl->at(j).cells.at(i).y + 20.;
-        yo[3] = vec_cl->at(j).cells.at(i).y - 20.;
+        yo[0] = ydummy - 20.;
+        yo[1] = ydummy + 20.;
+        yo[2] = ydummy + 20.;
+        yo[3] = ydummy - 20.;
       }
       
       if(showdig)
       {
         TGraph* gr  = new TGraph(4, calocell[id].Z, calocell[id].Y); 
-        TGraph* gro = new TGraph(4, calocell[id].Z, yo);
+        TGraph* gro = new TGraph(4, xo, yo);
         int color = (vec_cl->at(j).tid == 0) ? 632 : vec_cl->at(j).tid;
         gr->SetFillColor(color);
         gro->SetFillColor(color);
@@ -659,6 +688,23 @@ void show(int index, bool showtrj = true, bool showfit = true, bool showdig = tr
          vec_cl->at(i).x + vec_cl->at(i).sx * 0.5 * dt, 0.01, ">");
       cev->cd(2);
       arr2->Draw();
+    }
+  }
+
+  if(showhit)
+  {
+    for(map<string,vector<TG4HitSegment> >::iterator it = ev->SegmentDetectors.begin(); it != ev->SegmentDetectors.end(); it++)
+    {
+      for(unsigned int j = 0; j < it->second.size(); j++)
+      {
+        TLine* lxz = new TLine(it->second.at(j).Start.Z(),it->second.at(j).Start.X(),it->second.at(j).Stop.Z(),it->second.at(j).Stop.X());
+        TLine* lyz = new TLine(it->second.at(j).Start.Z(),it->second.at(j).Start.Y(),it->second.at(j).Stop.Z(),it->second.at(j).Stop.Y());
+
+        cev->cd(1);
+        lyz->Draw();
+        cev->cd(2);
+        lxz->Draw();
+      }
     }
   }
 }
@@ -918,7 +964,7 @@ void showPri(int index)
 
 
 
-void showTrk(int index, int trid, bool showtrj = true, bool showfit = true, bool showdig = true)
+void showTrk(int index, int trid, bool showtrj = true, bool showfit = true, bool showdig = true, bool showhit = false)
 {
   if(!initialized)
   {
@@ -1079,27 +1125,36 @@ void showTrk(int index, int trid, bool showtrj = true, bool showfit = true, bool
       calocell[-id].adc = vec_cl->at(j).cells.at(i).adc2;
       calocell[-id].tdc = vec_cl->at(j).cells.at(i).tdc2;
 
+      double xo[4];
       double yo[4];
+      double xdummy, ydummy, zdummy, tdummy, edummy;
+
+      CellXYZTE(vec_cl->at(j).cells.at(i), xdummy, ydummy, zdummy, tdummy, edummy);
+      
+      xo[0] = zdummy - 20.;
+      xo[1] = zdummy - 20.;
+      xo[2] = zdummy + 20.;
+      xo[3] = zdummy + 20.;
 
       if(id < 25000)
       {
-        yo[0] = vec_cl->at(j).cells.at(i).x - 20.;
-        yo[1] = vec_cl->at(j).cells.at(i).x + 20.;
-        yo[2] = vec_cl->at(j).cells.at(i).x + 20.;
-        yo[3] = vec_cl->at(j).cells.at(i).x - 20.;
+        yo[0] = xdummy - 20.;
+        yo[1] = xdummy + 20.;
+        yo[2] = xdummy + 20.;
+        yo[3] = xdummy - 20.;
       }
       else
       {
-        yo[0] = vec_cl->at(j).cells.at(i).y - 20.;
-        yo[1] = vec_cl->at(j).cells.at(i).y + 20.;
-        yo[2] = vec_cl->at(j).cells.at(i).y + 20.;
-        yo[3] = vec_cl->at(j).cells.at(i).y - 20.;
+        yo[0] = ydummy - 20.;
+        yo[1] = ydummy + 20.;
+        yo[2] = ydummy + 20.;
+        yo[3] = ydummy - 20.;
       }
       
       if(showdig)
       {
         TGraph* gr  = new TGraph(4, calocell[id].Z, calocell[id].Y); 
-        TGraph* gro = new TGraph(4, calocell[id].Z, yo);
+        TGraph* gro = new TGraph(4, xo, yo);
         int color = (vec_cl->at(j).tid == 0) ? 632 : vec_cl->at(j).tid;
         gr->SetFillColor(color);
         gro->SetFillColor(color);
@@ -1193,6 +1248,29 @@ void showTrk(int index, int trid, bool showtrj = true, bool showfit = true, bool
          vec_cl->at(i).x + vec_cl->at(i).sx * 0.5 * dt, 0.01, ">");
       ctr->cd(2);
       arr2->Draw();
+    }
+  }
+
+  if(showhit)
+  {
+    for(map<string,vector<TG4HitSegment> >::iterator it = ev->SegmentDetectors.begin(); it != ev->SegmentDetectors.end(); it++)
+    {
+      for(unsigned int j = 0; j < it->second.size(); j++)
+      {
+        if(it->second.at(j).Contrib.at(0) != trid)
+          continue;
+
+        TLine* lxz = new TLine(it->second.at(j).Start.Z(),it->second.at(j).Start.X(),it->second.at(j).Stop.Z(),it->second.at(j).Stop.X());
+        TLine* lyz = new TLine(it->second.at(j).Start.Z(),it->second.at(j).Start.Y(),it->second.at(j).Stop.Z(),it->second.at(j).Stop.Y());
+
+        lxz->SetLineColor(kRed);
+        lyz->SetLineColor(kRed);
+
+        ctr->cd(1);
+        lyz->Draw();
+        ctr->cd(2);
+        lxz->Draw();
+      }
     }
   }
 }

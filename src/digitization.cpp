@@ -13,6 +13,7 @@
 #include <TRandom3.h>
 #include <TStyle.h>
 #include <TSystem.h>
+#include <TStopwatch.h>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
@@ -28,6 +29,7 @@
 // Distance mm
 // Time ns
 
+int tobedeleted = 0;
 
 double mindist(double x0, double y0, double z0,
                 double x1, double y1, double z1,
@@ -57,33 +59,117 @@ double angle(double x1, double y1, double z1,
     return TMath::ACos(prod/(mag1*mag2));
 }
 
-bool isHitOK(const TG4HitSegment& hit, const TG4Trajectory& trj,
-             double postol = 5., double angtol = 0.3)
+bool isHitCaloOK(const TG4HitSegment& hit, const TG4Trajectory& trj,
+             double postol = 5.)
 {
     double tc = 0.5*(hit.Start.T()+hit.Stop.T());
 
-    unsigned int istep = 0;
+    unsigned int istep = 1;
 
     bool found = false;
     
-    while(++istep < trj.Points.size())
+    while(istep < trj.Points.size())
     {
       if(trj.Points[istep-1].GetPosition().T() < tc && trj.Points[istep].GetPosition().T() >= tc)
       {
         found = true;
         break;
       }
+      istep++;
     }
   
     if(found == false)
     {
-      //std::cout << "error: " << trj.PDGCode << " " << tc << " " << trj.Points[istep-1].GetPosition().T() << " " << trj.Points[istep].GetPosition().T() << " " << istep << " " << trj.Points.size() << std::endl;
+      /*
+      std::cout << "Error: [" << tobedeleted << "] Trajectory step not found through timing." << std::endl;
+      std::cout << "calo hit: " << hit.PrimaryId << " " << hit.Contrib.at(0) << " " << hit.Start.X() << " " << hit.Start.Y() << " " << hit.Start.Z() << " " << hit.Start.T() << " " << hit.Stop.X() << " " << hit.Stop.Y() << " " << hit.Stop.Z() << " " << hit.Stop.T() << std::endl;
+      for(int i = 0; i < hit.Contrib.size(); i++)
+      {
+        std::cout << "contrib: " << hit.Contrib.at(i) << std::endl;
+      }
+      std::cout << "particle: " << trj.TrackId << " " << trj.PDGCode << " " << trj.Points.size() << std::endl;
+      std::cout << "********" << std::endl;
+      for(int i = 0; i < trj.Points.size(); i++)
+      {
+        std::cout << i << " " << trj.Points[i].GetPosition().X() << " " << trj.Points[i].GetPosition().Y() << " " << trj.Points[i].GetPosition().Z() << " " << trj.Points[i].GetPosition().T() << std::endl;
+      }
+      */
+
       return false;
-    }/*
+    }
+    
+    double  dpos = mindist(0.5*(hit.Start.X()+hit.Stop.X()),
+                              0.5*(hit.Start.Y()+hit.Stop.Y()),
+                              0.5*(hit.Start.Z()+hit.Stop.Z()),
+                              trj.Points[istep-1].Position.X(),
+                              trj.Points[istep-1].Position.Y(),
+                              trj.Points[istep-1].Position.Z(),
+                              trj.Points[istep].Position.X(),
+                              trj.Points[istep].Position.Y(),
+                              trj.Points[istep].Position.Z());
+
+    if(dpos < postol)
+      return true;
     else
     {
-      std::cout << "ok   : " << trj.PDGCode << " " << tc << " " << trj.Points[istep-1].GetPosition().T() << " " << trj.Points[istep].GetPosition().T() << " " << istep << " " << trj.Points.size() << std::endl;
-    }*/
+      /*
+      std::cout << "Error: [" << tobedeleted << "] Trajectory step out of tolorence. dpos = " << dpos << "(postol = " << postol << ")" << std::endl;
+      std::cout << "calo hit: " << hit.PrimaryId << " " << hit.Contrib.at(0) << " " << hit.Start.X() << " " << hit.Start.Y() << " " << hit.Start.Z() << " " << hit.Start.T() << " " << hit.Stop.X() << " " << hit.Stop.Y() << " " << hit.Stop.Z() << " " << hit.Stop.T() << std::endl;
+      for(int i = 0; i < hit.Contrib.size(); i++)
+      {
+        std::cout << "contrib: " << hit.Contrib.at(i) << std::endl;
+      }
+      std::cout << "particle: " << trj.TrackId << " " << trj.PDGCode << " " << trj.Points.size() << std::endl;
+      std::cout << istep-1 << " " << trj.Points[istep-1].GetPosition().X() << " " << trj.Points[istep-1].GetPosition().Y() << " " << trj.Points[istep-1].GetPosition().Z() << " " << trj.Points[istep-1].GetPosition().T() << std::endl;
+      std::cout << istep << " " << trj.Points[istep].GetPosition().X() << " " << trj.Points[istep].GetPosition().Y() << " " << trj.Points[istep].GetPosition().Z() << " " << trj.Points[istep].GetPosition().T() << std::endl;
+      std::cout << "********" << std::endl;
+      for(int i = 0; i < trj.Points.size(); i++)
+      {
+        std::cout << i << " " << trj.Points[i].GetPosition().X() << " " << trj.Points[i].GetPosition().Y() << " " << trj.Points[i].GetPosition().Z() << " " << trj.Points[i].GetPosition().T() << std::endl;
+      }*/
+
+      return false;
+    }
+}
+
+bool isHitSttOK(const TG4HitSegment& hit, const TG4Trajectory& trj,
+             double postol = 5., double angtol = 0.3)
+{
+    double tc = 0.5*(hit.Start.T()+hit.Stop.T());
+
+    unsigned int istep = 1;
+
+    bool found = false;
+    
+    while(istep < trj.Points.size())
+    {
+      if(trj.Points[istep-1].GetPosition().T() < tc && trj.Points[istep].GetPosition().T() >= tc)
+      {
+        found = true;
+        break;
+      }
+      istep++;
+    }
+  
+    if(found == false)
+    {
+      /*
+      std::cout << "Error: [" << tobedeleted << "] Trajectory step not found through timing." << std::endl;
+      std::cout << "stt hit : " << hit.PrimaryId << " " << hit.Start.X() << " " << hit.Start.Y() << " " << hit.Start.Z() << " " << hit.Start.T() << " " << hit.Stop.X() << " " << hit.Stop.Y() << " " << hit.Stop.Z() << " " << hit.Stop.T() << std::endl;
+      for(int i = 0; i < hit.Contrib.size(); i++)
+      {
+        std::cout << "contrib: " << hit.Contrib.at(i) << std::endl;
+      }
+      std::cout << "particle: " << trj.TrackId << " " << trj.PDGCode << " " << trj.Points.size() << std::endl;
+      std::cout << "********" << std::endl;
+      for(int i = 0; i < trj.Points.size(); i++)
+      {
+        std::cout << i << " " << trj.Points[i].GetPosition().X() << " " << trj.Points[i].GetPosition().Y() << " " << trj.Points[i].GetPosition().Z() << " " << trj.Points[i].GetPosition().T() << std::endl;
+      }
+      */
+
+      return false;
+    }
     
     double dpos = mindist(0.5*(hit.Start.X()+hit.Stop.X()),
                             0.5*(hit.Start.Y()+hit.Stop.Y()),
@@ -105,7 +191,26 @@ bool isHitOK(const TG4HitSegment& hit, const TG4Trajectory& trj,
     if(dpos < postol && dang < angtol)
       return true;
     else
+    {
+      /*
+      std::cout << "Error: [" << tobedeleted << "] Trajectory step out of tolorence. dpos = " << dpos << "; dang = " << dang << " (postol = " << postol << " && angtol < " << angtol << ")" << std::endl;
+      std::cout << "stt hit : " << hit.PrimaryId << " " << hit.Start.X() << " " << hit.Start.Y() << " " << hit.Start.Z() << " " << hit.Start.T() << " " << hit.Stop.X() << " " << hit.Stop.Y() << " " << hit.Stop.Z() << " " << hit.Stop.T() << std::endl;
+      for(int i = 0; i < hit.Contrib.size(); i++)
+      {
+        std::cout << "contrib: " << hit.Contrib.at(i) << std::endl;
+      }
+      std::cout << "particle: " << trj.TrackId << " " << trj.PDGCode << " " << trj.Points.size() << std::endl;
+      std::cout << istep-1 << " " << trj.Points[istep-1].GetPosition().X() << " " << trj.Points[istep-1].GetPosition().Y() << " " << trj.Points[istep-1].GetPosition().Z() << " " << trj.Points[istep-1].GetPosition().T() << std::endl;
+      std::cout << istep << " " << trj.Points[istep].GetPosition().X() << " " << trj.Points[istep].GetPosition().Y() << " " << trj.Points[istep].GetPosition().Z() << " " << trj.Points[istep].GetPosition().T() << std::endl;
+      std::cout << "********" << std::endl;
+      for(int i = 0; i < trj.Points.size(); i++)
+      {
+        std::cout << i << " " << trj.Points[i].GetPosition().X() << " " << trj.Points[i].GetPosition().Y() << " " << trj.Points[i].GetPosition().Z() << " " << trj.Points[i].GetPosition().T() << std::endl;
+      }
+      */
+
       return false;
+    }
 }
 
 double Attenuation(double d, int planeID)
@@ -421,7 +526,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g, std::map<int, std::vector<double> 
       {
         for(unsigned int j = 0; j < it->second.size(); j++)
         {
-          if(isHitOK(it->second[j], ev->Trajectories[it->second[j].PrimaryId]) == false)
+          if(isHitCaloOK(it->second[j], ev->Trajectories[it->second[j].Contrib.at(0)]) == false)
              continue;
 
           if(ProcessHit(g, it->second[j], modID, planeID, cellID, d1, d2, t0, de) == true)
@@ -631,7 +736,7 @@ void Cluster(TG4Event* ev, TGeoManager* geo, std::map<std::string,std::vector<hi
   {
     const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(j);
 
-    if(isHitOK(hseg, ev->Trajectories[hseg.PrimaryId]) == false)
+    if(isHitSttOK(hseg, ev->Trajectories[hseg.Contrib.at(0)]) == false)
         continue;
     
     double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
@@ -651,11 +756,11 @@ void Cluster(TG4Event* ev, TGeoManager* geo, std::map<std::string,std::vector<hi
     h.z2 = hseg.Stop.Z();
     h.t2 = hseg.Stop.T();
     h.de = hseg.EnergyDeposit;
-    h.pid = hseg.PrimaryId;
+    h.pid = hseg.Contrib.at(0);
     h.index = j;
     
     std::string cluster_name(sttname);
-    cluster_name += "_" + std::to_string(hseg.PrimaryId);
+    cluster_name += "_" + std::to_string(hseg.Contrib.at(0));
     
     cluster_map[cluster_name].push_back(h);
   }
@@ -679,7 +784,7 @@ void Cluster2Digit(std::map<std::string,std::vector<hit> >& cluster_map, std::ve
     
     std::sort(it->second.begin(), it->second.end(), isHitBefore);
     
-    d.t = it->second.at(0).t1;
+    d.t = 0.5 * (it->second.front().t1 + it->second.back().t2);;
     d.x = 0.5 * (it->second.front().x1 + it->second.back().x2);
     d.y = 0.5 * (it->second.front().y1 + it->second.back().y2);
     d.z = 0.5 * (it->second.front().z1 + it->second.back().z2);
@@ -699,6 +804,8 @@ void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
 
 void Digitize(const char* finname, const char* foutname)
 {
+    TStopwatch sw;
+
 	  //TChain* t = new TChain("EDepSimEvents","EDepSimEvents");
 	  //t->Add(finname);
 	  //TFile f(t->GetListOfFiles()->At(0)->GetTitle());
@@ -730,6 +837,8 @@ void Digitize(const char* finname, const char* foutname)
     for(int i = 0; i < nev; i++)
     {
       t->GetEntry(i);
+
+      tobedeleted = i;
     
       std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i)/nev*100) << "%]" << std::flush;
       
@@ -751,6 +860,9 @@ void Digitize(const char* finname, const char* foutname)
     fout.Close();
     
     f.Close();
+
+    sw.Stop();
+    sw.Print();
 }
 
 void help_digit()

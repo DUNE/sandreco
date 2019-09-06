@@ -2,6 +2,7 @@
 #include <TFile.h>
 #include <TGeoManager.h>
 #include <TDirectoryFile.h>
+#include <TStopwatch.h>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
@@ -282,23 +283,20 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& v
     
     for(unsigned int k = 0; k < vec_digi->size(); k++)
     {
-      tr.digits.push_back(vec_digi->at(k));
-      /*
       for(unsigned int m = 0; m < vec_digi->at(k).hindex.size(); m++)
       {
         const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(vec_digi->at(k).hindex.at(m)); 
                
-        //if(hseg.PrimaryId == tr.tid)
-        //{
+        if(hseg.Contrib.at(0) == tr.tid)
+        {
           //if(ishitok(ev, hseg->PrimaryId, hseg))
-          if(ishitok_trj(ev->Trajectories.at(j), hseg))
-          {
+          //if(ishitok_trj(ev->Trajectories.at(j), hseg))
+          //{
             tr.digits.push_back(vec_digi->at(k));
             break;
-          }
-        //}
+          //}
+        }
       }
-      */
     }
     
     if(tr.digits.size() > 0)
@@ -744,6 +742,8 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell, std::vector<c
 
 void Reconstruct(const char* fIn)
 {
+  TStopwatch sw;
+
   TFile f(fIn,"UPDATE");
   TTree* tDigit = (TTree*) f.Get("tDigit");
   TTree* tTrueMC = (TTree*) f.Get("EDepSimEvents");
@@ -806,6 +806,9 @@ void Reconstruct(const char* fIn)
   f.cd();
   tout.Write("",TObject::kOverwrite);
   f.Close();
+
+  sw.Stop();
+  sw.Print();
 }
 
 void help_reco()
