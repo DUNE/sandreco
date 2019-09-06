@@ -282,6 +282,8 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& v
     
     for(unsigned int k = 0; k < vec_digi->size(); k++)
     {
+      tr.digits.push_back(vec_digi->at(k));
+      /*
       for(unsigned int m = 0; m < vec_digi->at(k).hindex.size(); m++)
       {
         const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(vec_digi->at(k).hindex.at(m)); 
@@ -296,6 +298,7 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& v
           }
         //}
       }
+      */
     }
     
     if(tr.digits.size() > 0)

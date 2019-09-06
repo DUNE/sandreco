@@ -28,6 +28,86 @@
 // Distance mm
 // Time ns
 
+
+double mindist(double x0, double y0, double z0,
+                double x1, double y1, double z1,
+                double x2, double y2, double z2)
+{
+  double k = ((x0-x1)*(x2-x1)+(y0-y1)*(y2-y1)+(z0-z1)*(z2-z1))/((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)+(z2-z1)*(z2-z1));
+  
+  if(k < 0.)
+    k = 0.;
+  else if(k > 1.)
+    k = 1.;
+  
+  double xv = x1 + k * (x2 - x1);
+  double yv = y1 + k * (y2 - y1);
+  double zv = z1 + k * (z2 - z1);
+  
+  return sqrt((x0 - xv)*(x0 - xv)+(y0 - yv)*(y0 - yv)+(z0 - zv)*(z0 - zv));
+}
+
+double angle(double x1, double y1, double z1,
+             double x2, double y2, double z2)
+{
+    double prod = x1*x2+y1*y2+z1*z2;
+    double mag1 = sqrt(x1*x1+y1*y1+z1*z1);
+    double mag2 = sqrt(x2*x2+y2*y2+z2*z2);
+
+    return TMath::ACos(prod/(mag1*mag2));
+}
+
+bool isHitOK(const TG4HitSegment& hit, const TG4Trajectory& trj,
+             double postol = 5., double angtol = 0.3)
+{
+    double tc = 0.5*(hit.Start.T()+hit.Stop.T());
+
+    unsigned int istep = 0;
+
+    bool found = false;
+    
+    while(++istep < trj.Points.size())
+    {
+      if(trj.Points[istep-1].GetPosition().T() < tc && trj.Points[istep].GetPosition().T() >= tc)
+      {
+        found = true;
+        break;
+      }
+    }
+  
+    if(found == false)
+    {
+      //std::cout << "error: " << trj.PDGCode << " " << tc << " " << trj.Points[istep-1].GetPosition().T() << " " << trj.Points[istep].GetPosition().T() << " " << istep << " " << trj.Points.size() << std::endl;
+      return false;
+    }/*
+    else
+    {
+      std::cout << "ok   : " << trj.PDGCode << " " << tc << " " << trj.Points[istep-1].GetPosition().T() << " " << trj.Points[istep].GetPosition().T() << " " << istep << " " << trj.Points.size() << std::endl;
+    }*/
+    
+    double dpos = mindist(0.5*(hit.Start.X()+hit.Stop.X()),
+                            0.5*(hit.Start.Y()+hit.Stop.Y()),
+                            0.5*(hit.Start.Z()+hit.Stop.Z()),
+                            trj.Points[istep-1].Position.X(),
+                            trj.Points[istep-1].Position.Y(),
+                            trj.Points[istep-1].Position.Z(),
+                            trj.Points[istep].Position.X(),
+                            trj.Points[istep].Position.Y(),
+                            trj.Points[istep].Position.Z());
+
+    double dang = angle(trj.Points[istep].Position.X()-trj.Points[istep-1].Position.X(),
+                          trj.Points[istep].Position.Y()-trj.Points[istep-1].Position.Y(),
+                          trj.Points[istep].Position.Z()-trj.Points[istep-1].Position.Z(),
+                          hit.Stop.X()-hit.Start.X(),
+                          hit.Stop.Y()-hit.Start.Y(),
+                          hit.Stop.Z()-hit.Start.Z());
+
+    if(dpos < postol && dang < angtol)
+      return true;
+    else
+      return false;
+}
+
 double Attenuation(double d, int planeID)
 {
 /*
@@ -340,7 +420,10 @@ void SimulatePE(TG4Event* ev, TGeoManager* g, std::map<int, std::vector<double> 
       if(it->first == "EMCalSci")
       {
         for(unsigned int j = 0; j < it->second.size(); j++)
-        {          
+        {
+          if(isHitOK(it->second[j], ev->Trajectories[it->second[j].PrimaryId]) == false)
+             continue;
+
           if(ProcessHit(g, it->second[j], modID, planeID, cellID, d1, d2, t0, de) == true)
           {
             double en1 = de * Attenuation(d1, planeID);
@@ -521,8 +604,7 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
     std::map<int, double> tdc;
     std::map<int, double> L;
     
-    vec_cell.clear();
-    
+    vec_cell.clear();    
     
     if(ns_Digit::debug)
     {
@@ -548,6 +630,9 @@ void Cluster(TG4Event* ev, TGeoManager* geo, std::map<std::string,std::vector<hi
   for(unsigned int j = 0; j < ev->SegmentDetectors["StrawTracker"].size(); j++)
   {
     const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(j);
+
+    if(isHitOK(hseg, ev->Trajectories[hseg.PrimaryId]) == false)
+        continue;
     
     double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
     double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());

@@ -432,6 +432,8 @@ void make_plots()
   //plot("nokalman.pdf");
   //init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.kalman.root");
   //plot("kalman.pdf");
-  init("/home/dune-it/data/reco/numu_geoV12_100000.0.reco.root");
-  plot("res.pdf");
+  //init("/home/dune-it/data/reco/numu_geoV12_100000.0.reco.root");
+  //plot("res.pdf");
+  init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.test.root");
+  plot("test.pdf");
 }
