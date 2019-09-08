@@ -369,7 +369,7 @@ void plot(const char* ofile)
   c.Print(pdffile.Data());
   
   // gamma
-  double ebin5[] = {0., 500., 1000., 2000., 5000.};
+  double ebin5[] = {0., 100., 200., 300., 400., 500., 1000., 2000., 5000.};
   nbins = sizeof(ebin5)/sizeof(double)-1;
   TCut c5 = isGamma && isPrimary;
   
@@ -432,8 +432,8 @@ void make_plots()
   //plot("nokalman.pdf");
   //init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.kalman.root");
   //plot("kalman.pdf");
-  //init("/home/dune-it/data/reco/numu_geoV12_100000.0.reco.root");
-  //plot("res.pdf");
-  init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.test.root");
-  plot("test.pdf");
+  init("/home/dune-it/data/reco/numu_geoV12_100000.0.reco.root");
+  plot("res.pdf");
+  //init("/home/dune-it/data/reco/numu_geoV12_1000.0.reco.test.root");
+  //plot("test.pdf");
 }
