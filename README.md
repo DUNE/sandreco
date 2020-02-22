@@ -42,3 +42,4 @@ Analysis
 Analyze <input file>
 ```
 
+The description of the data format can be found [here](https://baltig.infn.it/dune/kloe-simu/-/wikis/Data-Model)
