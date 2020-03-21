@@ -16,7 +16,7 @@
 #include <iostream>
 #include <map>
 
-#include "/wd/dune-it/enurec/analysis/kloe-simu/loader/loader.C"
+#include "../include/struct.h"
 
 #include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
 #include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
@@ -53,6 +53,7 @@ namespace ns_draw {
   TFile* f = 0;  
   TTree* t = 0;
   TG4Event* ev = new TG4Event;
+  event* evt = new event;
   TGeoManager* geo = 0;
   TCanvas* cev = 0;
   TCanvas* cpr = 0;
@@ -87,6 +88,7 @@ void init(const char* ifile)
   tDigit->SetBranchAddress("Stt",&vec_digi);
   tReco->SetBranchAddress("track",&vec_tr);
   tReco->SetBranchAddress("cluster",&vec_cl);
+  tEvent->SetBranchAddress("event",&evt);
 
   t = tEvent;
 
@@ -95,7 +97,7 @@ void init(const char* ifile)
   double dummyLoc[3];
   double dummyMas[3];
   
-  geo->cd("volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOETrackingRegion_volume_PV_0");
+  geo->cd("volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/volSTTFULL_PV_0");
   
   dummyLoc[0] = 0.;
   dummyLoc[1] = 0.;
@@ -106,7 +108,7 @@ void init(const char* ifile)
   double dx1[nLay];
   double dx2[nLay];
   
-  TGeoTrd2* mod = (TGeoTrd2*) geo->FindVolumeFast("KLOEBarrelECAL_0_volume_PV")->GetShape();
+  TGeoTrd2* mod = (TGeoTrd2*) geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
   
   double xmax = mod->GetDx1();
   double xmin = mod->GetDx2();
@@ -155,7 +157,7 @@ void init(const char* ifile)
     }
   }
   
-  const char* path_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
+  const char* path_template = "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
   
   double CellMasterY[nCellModule][4];
   double CellMasterZ[nCellModule][4];
@@ -240,7 +242,7 @@ void init(const char* ifile)
                             centerKLOE[0] + 2500);
   }
   
-  TGeoTube* ec = (TGeoTube*) geo->FindVolumeFast("KLOEEndcapECALL_volume_PV")->GetShape();
+  TGeoTube* ec = (TGeoTube*) geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
   
   double rmax = ec->GetRmax();
   double rmin = ec->GetRmin();
@@ -248,7 +250,7 @@ void init(const char* ifile)
   
   double dummyLoc_ec[4][3];
   
-  const char* path_endcapR_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEEndcapECALR_volume_PV_0";
+  const char* path_endcapR_template = "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
   
   geo->cd(path_endcapR_template);
   
@@ -297,7 +299,7 @@ void init(const char* ifile)
     }
   }
   
-  const char* path_endcapL_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEEndcapECALL_volume_PV_0";
+  const char* path_endcapL_template = "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
   geo->cd(path_endcapL_template);
   
   for(int j = 0; j < nLay_ec; j++)
@@ -465,11 +467,11 @@ void show(int index, bool showtrj = true, bool showfit = true, bool showdig = tr
       
       for(unsigned int j = 0; j < ev->Trajectories[i].Points.size(); j++)
       {
-        tr_zy->SetPoint(j, ev->Trajectories[i].Points[j].Position.Z(),ev->Trajectories[i].Points[j].Position.Y());
-        tr_zx->SetPoint(j, ev->Trajectories[i].Points[j].Position.Z(),ev->Trajectories[i].Points[j].Position.X());
+        tr_zy->SetPoint(j, ev->Trajectories[i].Points[j].GetPosition().Z(),ev->Trajectories[i].Points[j].GetPosition().Y());
+        tr_zx->SetPoint(j, ev->Trajectories[i].Points[j].GetPosition().Z(),ev->Trajectories[i].Points[j].GetPosition().X());
       }
       
-      switch(ev->Trajectories[i].PDGCode)
+      switch(ev->Trajectories[i].GetPDGCode())
       {
         // photons
         case 22:
@@ -636,19 +638,27 @@ void showPri(int index)
 
   if(cpr == 0 )
   {
-    cpr = new TCanvas("cpr",TString::Format("Event: %d",index).Data(), 1400, 500);
-    cpr->Divide(3,1);
+    cpr = new TCanvas("cpr",TString::Format("Event: %d",index).Data(), 1400, 1000);
+    cpr->Divide(3,2);
   }
   else
   {
     cpr->SetTitle(TString::Format("Event: %d",index).Data());
   }
   
-  cpr->cd(1)->DrawFrame(-1,-1,1,1,"XY (front)");
-  cpr->cd(2)->DrawFrame(-1,-1,1,1,"ZY (side)");
-  cpr->cd(3)->DrawFrame(-1,-1,1,1,"ZX (top)");
-  
   t->GetEntry(index);
+  
+  TLorentzVector vpos = ev->Primaries.at(0).GetPosition();
+  double xmax = -1E8;
+  double xmin = 1E8;
+  double ymax = -1E8;
+  double ymin = 1E8;
+  double zmax = -1E8;
+  double zmin = 1E8;
+  
+  cpr->cd(1)->DrawFrame(-1+vpos.X(),-1+vpos.Y(),1+vpos.X(),1+vpos.Y(),TString::Format("XY (front) [Event: %d]",index).Data());
+  cpr->cd(2)->DrawFrame(-1+vpos.Z(),-1+vpos.Y(),1+vpos.Z(),1+vpos.Y(),TString::Format("ZY (side) [Event: %d]",index).Data());
+  cpr->cd(3)->DrawFrame(-1+vpos.Z(),-1+vpos.X(),1+vpos.Z(),1+vpos.X(),TString::Format("ZX (top) [Event: %d]",index).Data());
   
   double maxpXY = 0;
   double maxpXZ = 0;
@@ -656,22 +666,23 @@ void showPri(int index)
   
   std::vector<TVector3> pmom;
     
-  std::cout << "=============================================================" << std::endl;
+  std::cout << "TRUE ===================================================================" << std::endl;
   
   std::cout << std::setw(10) << "PDG" << " |" <<
+    std::setw(10) << "ID" << " |" <<
     std::setw(10) << "PX" << " |" <<
     std::setw(10) << "PY" << " |" <<
     std::setw(10) << "PZ" << " |" <<
     std::setw(10) << "E"  << " |" << std::endl;
     
-  std::cout << "=============================================================" << std::endl;
+  std::cout << "========================================================================" << std::endl;
   
   for(unsigned int i = 0; i < ev->Primaries.at(0).Particles.size(); i++)
   {
     TVector3 mom;
-    mom.SetX(ev->Primaries.at(0).Particles.at(i).Momentum.X());
-    mom.SetY(ev->Primaries.at(0).Particles.at(i).Momentum.Y());
-    mom.SetZ(ev->Primaries.at(0).Particles.at(i).Momentum.Z());
+    mom.SetX(ev->Primaries.at(0).Particles.at(i).GetMomentum().X());
+    mom.SetY(ev->Primaries.at(0).Particles.at(i).GetMomentum().Y());
+    mom.SetZ(ev->Primaries.at(0).Particles.at(i).GetMomentum().Z());
     
     double pXY = TMath::Sqrt(mom.X()*mom.X()+mom.Y()*mom.Y());
     double pXZ = TMath::Sqrt(mom.X()*mom.X()+mom.Z()*mom.Z());
@@ -686,20 +697,96 @@ void showPri(int index)
       
     pmom.push_back(mom);
     
-    std::cout << std::setw(10) << ev->Primaries.at(0).Particles.at(i).PDGCode << " |" <<
-      std::setw(10) << ev->Primaries.at(0).Particles.at(i).Momentum.X() << " |" <<
-      std::setw(10) << ev->Primaries.at(0).Particles.at(i).Momentum.Y() << " |" <<
-      std::setw(10) << ev->Primaries.at(0).Particles.at(i).Momentum.Z() << " |" <<
-      std::setw(10) << ev->Primaries.at(0).Particles.at(i).Momentum.T() << " |" << std::endl;
+    std::cout << std::setw(10) << ev->Primaries.at(0).Particles.at(i).GetPDGCode() << " |" <<
+      std::setw(10) << ev->Primaries.at(0).Particles.at(i).GetTrackId() << " |" <<
+      std::setw(10) << ev->Primaries.at(0).Particles.at(i).GetMomentum().X() << " |" <<
+      std::setw(10) << ev->Primaries.at(0).Particles.at(i).GetMomentum().Y() << " |" <<
+      std::setw(10) << ev->Primaries.at(0).Particles.at(i).GetMomentum().Z() << " |" <<
+      std::setw(10) << ev->Primaries.at(0).Particles.at(i).GetMomentum().T() << " |" << std::endl;
   }
-  std::cout << "=============================================================" << std::endl;
+  std::cout << "========================================================================" << std::endl;
+  
+  double maxpX_reco = 0;
+  double maxpY_reco = 0;
+  double maxpZ_reco = 0;
+  
+  std::vector<TVector3> pmom_reco;
+  std::vector<TVector3> ppos_reco;
+  std::vector<int> ppdg_reco;
+    
+  std::cout << "RECO ===================================================================" << std::endl;
+  
+  std::cout << std::setw(10) << "PDG" << " |" <<
+    std::setw(10) << "ID" << " |" <<
+    std::setw(10) << "PX" << " |" <<
+    std::setw(10) << "PY" << " |" <<
+    std::setw(10) << "PZ" << " |" <<
+    std::setw(10) << "E"  << " |" << std::endl;
+    
+  std::cout << "========================================================================" << std::endl;
+  
+  for(unsigned int i = 0; i < evt->particles.size(); i++)
+  {
+    if(evt->particles.at(i).primary == 1 && 
+      evt->particles.at(i).tr.ret_ln == 0 && 
+      evt->particles.at(i).tr.ret_cr == 0 &&
+      !(evt->particles.at(i).pxreco == 0 && evt->particles.at(i).pyreco == 0 && evt->particles.at(i).pzreco == 0))
+    {
+      TVector3 mom;
+      mom.SetX(evt->particles.at(i).pxreco);
+      mom.SetY(evt->particles.at(i).pyreco);
+      mom.SetZ(evt->particles.at(i).pzreco);
+      
+      TVector3 pos;
+      pos.SetX(evt->particles.at(i).xreco);
+      pos.SetY(evt->particles.at(i).yreco);
+      pos.SetZ(evt->particles.at(i).zreco);
+      
+      if(mom.X() > abs(maxpX_reco)) maxpX_reco = mom.X();
+      if(mom.Y() > abs(maxpY_reco)) maxpY_reco = mom.Y();
+      if(mom.Z() > abs(maxpZ_reco)) maxpZ_reco = mom.Z();
+        
+      if(xmax < evt->particles.at(i).xreco) xmax = evt->particles.at(i).xreco;
+      if(xmin > evt->particles.at(i).xreco) xmin = evt->particles.at(i).xreco;
+      if(ymax < evt->particles.at(i).yreco) ymax = evt->particles.at(i).yreco;
+      if(ymin > evt->particles.at(i).yreco) ymin = evt->particles.at(i).yreco;
+      if(zmax < evt->particles.at(i).zreco) zmax = evt->particles.at(i).zreco;
+      if(zmin > evt->particles.at(i).zreco) zmin = evt->particles.at(i).zreco; 
+      
+    pmom_reco.push_back(mom);
+    ppos_reco.push_back(pos);
+    ppdg_reco.push_back(evt->particles.at(i).pdg);
+    
+    std::cout << std::setw(10) << evt->particles.at(i).pdg << " |" <<
+      std::setw(10) << evt->particles.at(i).tid << " |" <<
+      std::setw(10) << evt->particles.at(i).pxreco << " |" <<
+      std::setw(10) << evt->particles.at(i).pyreco << " |" <<
+      std::setw(10) << evt->particles.at(i).pzreco << " |" <<
+      std::setw(10) << evt->particles.at(i).Ereco << " |" << std::endl;
+      
+    }
+  }
+  std::cout << "========================================================================" << std::endl;
+  
+  double frac = 0.1;
+  double dx = std::max<double>(10.,xmax - xmin);
+  double dy = std::max<double>(10.,ymax - ymin);
+  double dz = std::max<double>(10.,zmax - zmin);
+  
+  double dmax = dx;
+  if(dy > dmax) dmax = dy;
+  if(dz > dmax) dmax = dz;
+  
+  cpr->cd(4)->DrawFrame(xmin-dx*frac,ymin-dy*frac,xmax+dx*frac,ymax+dy*frac,TString::Format("XY (front) [Event: %d]",index).Data());
+  cpr->cd(5)->DrawFrame(zmin-dz*frac,ymin-dy*frac,zmax+dz*frac,ymax+dy*frac,TString::Format("ZY (side) [Event: %d]",index).Data());
+  cpr->cd(6)->DrawFrame(zmin-dz*frac,xmin-dx*frac,zmax+dz*frac,xmax+dx*frac,TString::Format("ZX (top) [Event: %d]",index).Data());
   
   cpr->cd(1);
   for(unsigned int i = 0; i < pmom.size(); i++)
   {
-    TArrow* par = new TArrow(0.,0.,pmom.at(i).X()/maxpXY,pmom.at(i).Y()/maxpXY,0.01,"|>");
+    TArrow* par = new TArrow(vpos.X(),vpos.Y(),vpos.X()+pmom.at(i).X()/maxpXY,vpos.Y()+pmom.at(i).Y()/maxpXY,0.01,"|>");
     
-    switch(ev->Primaries.at(0).Particles.at(i).PDGCode)
+    switch(ev->Primaries.at(0).Particles.at(i).GetPDGCode())
     {
       // photons
       case 22:
@@ -758,9 +845,9 @@ void showPri(int index)
   cpr->cd(2);
   for(unsigned int i = 0; i < pmom.size(); i++)
   {
-    TArrow* par = new TArrow(0.,0.,pmom.at(i).Z()/maxpYZ,pmom.at(i).Y()/maxpYZ,0.01,"|>");
+    TArrow* par = new TArrow(vpos.Z(),vpos.Y(),vpos.Z()+pmom.at(i).Z()/maxpYZ,vpos.Y()+pmom.at(i).Y()/maxpYZ,0.01,"|>");
     
-    switch(ev->Primaries.at(0).Particles.at(i).PDGCode)
+    switch(ev->Primaries.at(0).Particles.at(i).GetPDGCode())
     {
       // photons
       case 22:
@@ -819,9 +906,9 @@ void showPri(int index)
   cpr->cd(3);
   for(unsigned int i = 0; i < pmom.size(); i++)
   {
-    TArrow* par = new TArrow(0.,0.,pmom.at(i).Z()/maxpXZ,pmom.at(i).X()/maxpXZ,0.01,"|>");
+    TArrow* par = new TArrow(vpos.Z(),vpos.X(),vpos.Z()+pmom.at(i).Z()/maxpXZ,vpos.X()+pmom.at(i).X()/maxpXZ,0.01,"|>");
     
-    switch(ev->Primaries.at(0).Particles.at(i).PDGCode)
+    switch(ev->Primaries.at(0).Particles.at(i).GetPDGCode())
     {
       // photons
       case 22:
@@ -876,4 +963,223 @@ void showPri(int index)
     par->SetLineWidth(2);
     par->Draw();
   }
+  
+  cpr->cd(4);
+  for(unsigned int i = 0; i < pmom_reco.size(); i++)
+  {
+    TArrow* par = new TArrow(ppos_reco.at(i).X(),
+                              ppos_reco.at(i).Y(),
+                              ppos_reco.at(i).X()+pmom_reco.at(i).X()/maxpX_reco*dx*frac,
+                              ppos_reco.at(i).Y()+pmom_reco.at(i).Y()/maxpY_reco*dy*frac,0.01,"|>");
+    
+    switch(ppdg_reco.at(i))
+    {
+      // photons
+      case 22:
+        par->SetLineStyle(7);
+      // e+/e-
+      case 11:
+      case -11:
+        par->SetLineColor(kRed);
+        par->SetFillColor(kRed);
+      break;
+      
+      // mu+/mu-
+      case 13:
+      case -13:
+        par->SetLineColor(kBlue);
+        par->SetFillColor(kBlue);
+      break;
+      
+      // proton
+      case 2212:
+        par->SetLineColor(kBlack);
+        par->SetFillColor(kBlack);
+      break;
+      
+      // neutron
+      case 2112:
+        par->SetLineStyle(7);
+        par->SetLineColor(kGray);
+        par->SetFillColor(kGray);
+      break;
+      
+      // pion0
+      case 111:
+        par->SetLineStyle(7);
+        par->SetLineColor(kMagenta);
+        par->SetFillColor(kMagenta);
+      break;
+      
+      // pion+/pion- 
+      case 211:
+      case -211:;
+        par->SetLineColor(kCyan);
+        par->SetFillColor(kCyan);
+      break;
+      
+      default:
+        par->SetLineColor(8);
+        par->SetFillColor(8);
+      break;        
+    }
+    
+    par->SetLineWidth(2);
+    par->Draw();
+  }
+  
+  cpr->cd(5);
+  for(unsigned int i = 0; i < pmom_reco.size(); i++)
+  {
+    TArrow* par = new TArrow(ppos_reco.at(i).Z(),
+                              ppos_reco.at(i).Y(),
+                              ppos_reco.at(i).Z()+pmom_reco.at(i).Z()/maxpZ_reco*dz*frac,
+                              ppos_reco.at(i).Y()+pmom_reco.at(i).Y()/maxpY_reco*dy*frac,0.01,"|>");
+    
+    switch(ppdg_reco.at(i))
+    {
+      // photons
+      case 22:
+        par->SetLineStyle(7);
+      // e+/e-
+      case 11:
+      case -11:
+        par->SetLineColor(kRed);
+        par->SetFillColor(kRed);
+      break;
+      
+      // mu+/mu-
+      case 13:
+      case -13:
+        par->SetLineColor(kBlue);
+        par->SetFillColor(kBlue);
+      break;
+      
+      // proton
+      case 2212:
+        par->SetLineColor(kBlack);
+        par->SetFillColor(kBlack);
+      break;
+      
+      // neutron
+      case 2112:
+        par->SetLineStyle(7);
+        par->SetLineColor(kGray);
+        par->SetFillColor(kGray);
+      break;
+      
+      // pion0
+      case 111:
+        par->SetLineStyle(7);
+        par->SetLineColor(kMagenta);
+        par->SetFillColor(kMagenta);
+      break;
+      
+      // pion+/pion- 
+      case 211:
+      case -211:;
+        par->SetLineColor(kCyan);
+        par->SetFillColor(kCyan);
+      break;
+      
+      default:
+        par->SetLineColor(8);
+        par->SetFillColor(8);
+      break;        
+    }
+    
+    par->SetLineWidth(2);
+    par->Draw();
+  }
+  
+  cpr->cd(6);
+  for(unsigned int i = 0; i < pmom_reco.size(); i++)
+  {
+    TArrow* par = new TArrow(ppos_reco.at(i).Z(),
+                              ppos_reco.at(i).X(),
+                              ppos_reco.at(i).Z()+pmom_reco.at(i).Z()/maxpZ_reco*dz*frac,
+                              ppos_reco.at(i).X()+pmom_reco.at(i).X()/maxpX_reco*dx*frac,0.01,"|>");
+    
+    switch(ppdg_reco.at(i))
+    {
+      // photons
+      case 22:
+        par->SetLineStyle(7);
+      // e+/e-
+      case 11:
+      case -11:
+        par->SetLineColor(kRed);
+        par->SetFillColor(kRed);
+      break;
+      
+      // mu+/mu-
+      case 13:
+      case -13:
+        par->SetLineColor(kBlue);
+        par->SetFillColor(kBlue);
+      break;
+      
+      // proton
+      case 2212:
+        par->SetLineColor(kBlack);
+        par->SetFillColor(kBlack);
+      break;
+      
+      // neutron
+      case 2112:
+        par->SetLineStyle(7);
+        par->SetLineColor(kGray);
+        par->SetFillColor(kGray);
+      break;
+      
+      // pion0
+      case 111:
+        par->SetLineStyle(7);
+        par->SetLineColor(kMagenta);
+        par->SetFillColor(kMagenta);
+      break;
+      
+      // pion+/pion- 
+      case 211:
+      case -211:;
+        par->SetLineColor(kCyan);
+        par->SetFillColor(kCyan);
+      break;
+      
+      default:
+        par->SetLineColor(8);
+        par->SetFillColor(8);
+      break;        
+    }
+    
+    par->SetLineWidth(2);
+    par->Draw();
+  }
+  
+}
+
+void DumpPri(int nev, int* ids)
+{
+  gROOT->SetBatch(true);
+  for(int i = 0; i < nev; i++)
+  {
+    showPri(ids[i]);
+    
+    if(i == 0) 
+      cpr->SaveAs("display.pdf(");
+    else if(i == nev-1) 
+      cpr->SaveAs("display.pdf)");
+    else 
+      cpr->SaveAs("display.pdf");
+  }  
+  gROOT->SetBatch(false);
+}
+
+void DumpPri(int nev = 100, int istart = 0)
+{
+  int* ids = new int[nev];
+  for(int i = 0; i < nev; i++)
+    ids[i] = istart + i;
+  
+  DumpPri(nev, ids);
 }
