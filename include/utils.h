@@ -27,16 +27,16 @@ namespace ns_Digit {
   static const int nLay = 5;
   static const int nCel = 12;
     
-  double dzlay[nLay+1] = {115, 115-22, 115-22-22, 115-22-22-22, 115-22-22-22-22, 115-22-22-22-22-27};
+  double dzlay[nLay] = {44*0.5, 44*0.5+44, 44*0.5+44+44, 44*0.5+44+44+44, 44*0.5+44+44+44+(54+44)*0.5};
   double czlay[nLay];
   double cxlay[nLay][nCel];
   
   double ec_r;
   double ec_dz;
   
-  const char* path_barrel_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEBarrelECAL_%d_volume_PV_0";
-  const char* path_endcapL_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEEndcapECALL_volume_PV_0";
-  const char* path_endcapR_template = "volWorld_PV/volDetEnclosure_PV_0/volKLOEFULLECALSENSITIVE_EXTTRK_NEWGAP_PV_0/KLOEEndcapECALR_volume_PV_0";
+  const char* path_barrel_template = "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
+  const char* path_endcapL_template = "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
+  const char* path_endcapR_template = "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
   
   const double tscin = 3.08;
   const double tscex = 0.588;

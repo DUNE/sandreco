@@ -276,6 +276,12 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& v
   //for(unsigned int j = 0; j < ev->Primaries[0].Particles.size(); j++)
   for(unsigned int j = 0; j < ev->Trajectories.size(); j++)
   {
+    // exclude not primaries particles
+    if(ev->Trajectories.at(j).ParentId != -1)
+    {
+      continue;
+    }
+  
     track tr;
     
     reset(tr);
@@ -286,7 +292,7 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& v
     {
       for(unsigned int m = 0; m < vec_digi->at(k).hindex.size(); m++)
       {
-        const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(vec_digi->at(k).hindex.at(m)); 
+        const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(vec_digi->at(k).hindex.at(m)); 
                
         //if(hseg.PrimaryId == tr.tid)
         //{

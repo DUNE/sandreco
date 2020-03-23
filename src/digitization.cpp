@@ -20,6 +20,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <iomanip>
 
 #include "struct.h"
 #include "utils.h"
@@ -153,24 +154,32 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
   if(node == 0) return false;
   
   TString str = node->GetName();
+  TString str2 = g->GetPath();
+  TObjArray* obj = str2.Tokenize("/");
+  
+  int size = obj->GetEntries();
+  if(size < 6) {return false;};
+  
+  str2=((TObjString*) obj->At(5))->GetString();
+  delete obj;
     
   if(ns_Digit::debug)
   {
     std::cout << "node name: " << str.Data() << std::endl;
   }
-  if(str.Contains("KLOEEndcapECALL_volume_PV_0") == true || str.Contains("KLOEEndcapECALR_volume_PV_0") == true)
-  {
-    return false;
-  }
-  else if(str.Contains("KLOEBarrelECAL") == true && str.Contains("lead_slab") == false)
+  
+  // barrel modules
+  if(str.Contains("volECAL") == true && str.Contains("Active") == true && str.Contains("end") == false)
   {
     TObjArray* obja = str.Tokenize("_");
+    TObjArray* obja2 = str2.Tokenize("_");
     
     int slabID;
-    modID  = ((TObjString*) obja->At(1))->GetString().Atoi();
-    slabID = ((TObjString*) obja->At(4))->GetString().Atoi();
+    modID  = ((TObjString*) obja2->At(3))->GetString().Atoi();
+    slabID = ((TObjString*) obja->At(1))->GetString().Atoi();
     
     delete obja;
+    delete obja2;
     
     // planeID==0 -> smallest slab
     // planeID==208 -> biggest slab
@@ -199,19 +208,22 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
     double dy1 = trd->GetDy1(); 
     double dy2 = trd->GetDy2(); 
       
+    // d1 distanza da estremo left (x<0)
+	  // d2 distanza da estremo right (x>0)
     d1 = dy1 + Plocal[1];
     d2 = dy1 - Plocal[1];
     
     // http://geant4-userdoc.web.cern.ch/geant4-userdoc/UsersGuides/ForApplicationDeveloper/html/Detector/Geometry/geomSolids.html
     // if z = -dz -> dx = 2*dx1
     // if z =  dz -> dx = 2*dx2
-    double dx = - (dx1 - dx2) / dz * Plocal[2];
-    dx =+ dx1 + dx2;
+	  // semilarghezza della slab di scintillatore alla quota Plocal[2]
+    double dx = 0.5 * (dx2 - dx1) / dz * Plocal[2] + dx1;
     
-    // Cell width at z
-    double cellw = dx / 12.;
+    // Cell width at z = Plocal[2]
+    double cellw = 2. * dx / 12.;
     
-    cellID = (Plocal[0] + dx*0.5) / cellw;
+	  // cellID = distanza dall'estremo diviso larghezza cella
+    cellID = (Plocal[0] + dx) / cellw;
     
     if(ns_Digit::debug)
     {
@@ -223,69 +235,28 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
     
     return true;
   }
-  else if(str.Contains("KLOEEndcapECALR") == true && str.Contains("lead_slab") == false)
+  // end cap modules
+  else if(str.Contains("endvolECAL") == true && str.Contains("Active") == true)
   {
     TObjArray* obja = str.Tokenize("_");
+    TObjArray* obja2 = str2.Tokenize("_");
     
     int slabID;
-    modID  = 30;
-    slabID = ((TObjString*) obja->At(4))->GetString().Atoi();
+    modID  = ((TObjString*) obja2->At(4))->GetString().Atoi();
+    slabID = ((TObjString*) obja->At(1))->GetString().Atoi();
+    
+  	// mod == 40 -> left
+  	// mod == 30 -> right
+  	if (modID==0) modID=40;
+  	else if (modID==1) modID=30;
     
     delete obja;
+	  delete obja2;
     
-    // planeID==0 -> smallest slab
-    // planeID==208 -> biggest slab
-    planeID = (208 - slabID)/40;
-    
-    if (planeID > 4) planeID = 4;
-    
-    double Pmaster[3];
-    double Plocal[3];
-    Pmaster[0] = x;
-    Pmaster[1] = y;
-    Pmaster[2] = z;
-    
-    g->GetCurrentNavigator()->MasterToLocal(Pmaster,Plocal);
-    
-    TGeoTube* tub = (TGeoTube*) node->GetVolume()->GetShape();
-    
-    if(ns_Digit::debug)
-    {
-      std::cout << "pointer: " << tub << std::endl;
-    }
-    
-    double rmin = tub->GetRmin();
-    double rmax = tub->GetRmax();
-    double dz  = tub->GetDz();
-    
-    d1 = rmax * TMath::Sin(TMath::ACos(Plocal[0]/rmax)) - Plocal[1];
-    d2 = rmax * TMath::Sin(TMath::ACos(Plocal[0]/rmax)) + Plocal[1];
-    
-    cellID = int((Plocal[0]/rmax + 1.) * 45);
-    
-    if(ns_Digit::debug)
-    {
-      std::cout << "hit: " << str.Data() << std::endl;
-      std::cout << "\t[x,y,z]                " << x << " " << y << " " << z << std::endl;
-      std::cout << "\t[modID,planeID,cellID] " << modID << " " << planeID << " " << cellID << std::endl;
-    }
-    
-    return true;
-  }
-  else if(str.Contains("KLOEEndcapECALL") == true && str.Contains("lead_slab") == false)
-  {
-    TObjArray* obja = str.Tokenize("_");
-    
-    int slabID;
-    modID  = 40;
-    slabID = ((TObjString*) obja->At(4))->GetString().Atoi();
-    
-    delete obja;
-    
-    // planeID==0 -> smallest slab
-    // planeID==208 -> biggest slab
+    // planeID==0 -> internal
+    // planeID==208 -> external
     planeID = slabID/40;
-    
+	
     if (planeID > 4) planeID = 4;
     
     double Pmaster[3];
@@ -307,6 +278,8 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
     double rmax = tub->GetRmax();
     double dz  = tub->GetDz();
     
+  	// d1 distanza da estremo up (y>0)
+	  // d2 distanza da estremo down (y<0)
     d1 = rmax * TMath::Sin(TMath::ACos(Plocal[0]/rmax)) - Plocal[1];
     d2 = rmax * TMath::Sin(TMath::ACos(Plocal[0]/rmax)) + Plocal[1];
     
@@ -362,8 +335,8 @@ void SimulatePE(TG4Event* ev, TGeoManager* g, std::map<int, std::vector<double> 
               std::cout << "\t" << pe1 << " " << pe2 << std::endl;
             }
             
-            //cell 1 -> x < 0 -> ID > 0
-            //cell 2 -> x > 0 -> ID < 0
+            //cellend 1 -> x < 0 -> ID > 0 -> left
+            //cellend 2 -> x > 0 -> ID < 0 -> right
             
             for(int i = 0; i < pe1; i++)
             {
@@ -454,27 +427,22 @@ void CollectSignal(TGeoManager* geo,
         c.y = dummyMas[1];
         c.z = dummyMas[2];
       }
-      else if(c.mod == 30) // right x < 0
-      {        
-        dummyLoc[0] = ns_Digit::ec_r/45. * (0.5 + c.cel) - ns_Digit::ec_r;
-        dummyLoc[1] = 0.;
-        dummyLoc[2] = -ns_Digit::czlay[c.lay];
-        
-        geo->cd(ns_Digit::path_endcapR_template);
-        
-        geo->LocalToMaster(dummyLoc, dummyMas);
-        
-        c.x = dummyMas[0];
-        c.y = dummyMas[1];
-        c.z = dummyMas[2];
-      }
-      else if(c.mod == 40) // left x > 0
+      else if(c.mod == 30 || c.mod == 40) 
+		  // right x > 0 : c.mod = 30 
+		  // left  x < 0 : c.mod = 40
       {        
         dummyLoc[0] = ns_Digit::ec_r/45. * (0.5 + c.cel) - ns_Digit::ec_r;
         dummyLoc[1] = 0.;
         dummyLoc[2] = ns_Digit::czlay[c.lay];
         
-        geo->cd(ns_Digit::path_endcapL_template);
+        if(c.mod == 30)
+        {
+        	geo->cd(ns_Digit::path_endcapR_template);
+        }
+        else if(c.mod == 40)
+        {
+        	geo->cd(ns_Digit::path_endcapL_template);
+        }
         
         geo->LocalToMaster(dummyLoc, dummyMas);
         
@@ -489,7 +457,7 @@ void CollectSignal(TGeoManager* geo,
 
 void init(TGeoManager* geo)
 {
-    TGeoTrd2* mod = (TGeoTrd2*) geo->FindVolumeFast("KLOEBarrelECAL_0_volume_PV")->GetShape();
+    TGeoTrd2* mod = (TGeoTrd2*) geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
     
     double xmax = mod->GetDx1();
     double xmin = mod->GetDx2();
@@ -507,7 +475,7 @@ void init(TGeoManager* geo)
       }
     } 
       
-    TGeoTube* ec = (TGeoTube*) geo->FindVolumeFast("KLOEEndcapECALL_volume_PV")->GetShape();
+    TGeoTube* ec = (TGeoTube*) geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
     
     ns_Digit::ec_r = ec->GetRmax();
     ns_Digit::ec_dz = ec->GetDz();
@@ -545,9 +513,9 @@ void Cluster(TG4Event* ev, TGeoManager* geo, std::map<std::string,std::vector<hi
 {
   cluster_map.clear();
     
-  for(unsigned int j = 0; j < ev->SegmentDetectors["StrawTracker"].size(); j++)
+  for(unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++)
   {
-    const TG4HitSegment& hseg = ev->SegmentDetectors["StrawTracker"].at(j);
+    const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
     
     double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
     double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
@@ -590,7 +558,7 @@ void Cluster2Digit(std::map<std::string,std::vector<hit> >& cluster_map, std::ve
       d.de += it->second[k].de;
     }
     
-    d.hor = (d.det.find("STTPlane1FULL") != std::string::npos) ? false : true;
+    d.hor = (d.det.find("hor") != std::string::npos) ? false : true;
     
     std::sort(it->second.begin(), it->second.end(), isHitBefore);
     

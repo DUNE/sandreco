@@ -649,12 +649,6 @@ void showPri(int index)
   t->GetEntry(index);
   
   TLorentzVector vpos = ev->Primaries.at(0).GetPosition();
-  double xmax = -1E8;
-  double xmin = 1E8;
-  double ymax = -1E8;
-  double ymin = 1E8;
-  double zmax = -1E8;
-  double zmin = 1E8;
   
   cpr->cd(1)->DrawFrame(-1+vpos.X(),-1+vpos.Y(),1+vpos.X(),1+vpos.Y(),TString::Format("XY (front) [Event: %d]",index).Data());
   cpr->cd(2)->DrawFrame(-1+vpos.Z(),-1+vpos.Y(),1+vpos.Z(),1+vpos.Y(),TString::Format("ZY (side) [Event: %d]",index).Data());
@@ -705,81 +699,6 @@ void showPri(int index)
       std::setw(10) << ev->Primaries.at(0).Particles.at(i).GetMomentum().T() << " |" << std::endl;
   }
   std::cout << "========================================================================" << std::endl;
-  
-  double maxpX_reco = 0;
-  double maxpY_reco = 0;
-  double maxpZ_reco = 0;
-  
-  std::vector<TVector3> pmom_reco;
-  std::vector<TVector3> ppos_reco;
-  std::vector<int> ppdg_reco;
-    
-  std::cout << "RECO ===================================================================" << std::endl;
-  
-  std::cout << std::setw(10) << "PDG" << " |" <<
-    std::setw(10) << "ID" << " |" <<
-    std::setw(10) << "PX" << " |" <<
-    std::setw(10) << "PY" << " |" <<
-    std::setw(10) << "PZ" << " |" <<
-    std::setw(10) << "E"  << " |" << std::endl;
-    
-  std::cout << "========================================================================" << std::endl;
-  
-  for(unsigned int i = 0; i < evt->particles.size(); i++)
-  {
-    if(evt->particles.at(i).primary == 1 && 
-      evt->particles.at(i).tr.ret_ln == 0 && 
-      evt->particles.at(i).tr.ret_cr == 0 &&
-      !(evt->particles.at(i).pxreco == 0 && evt->particles.at(i).pyreco == 0 && evt->particles.at(i).pzreco == 0))
-    {
-      TVector3 mom;
-      mom.SetX(evt->particles.at(i).pxreco);
-      mom.SetY(evt->particles.at(i).pyreco);
-      mom.SetZ(evt->particles.at(i).pzreco);
-      
-      TVector3 pos;
-      pos.SetX(evt->particles.at(i).xreco);
-      pos.SetY(evt->particles.at(i).yreco);
-      pos.SetZ(evt->particles.at(i).zreco);
-      
-      if(mom.X() > abs(maxpX_reco)) maxpX_reco = mom.X();
-      if(mom.Y() > abs(maxpY_reco)) maxpY_reco = mom.Y();
-      if(mom.Z() > abs(maxpZ_reco)) maxpZ_reco = mom.Z();
-        
-      if(xmax < evt->particles.at(i).xreco) xmax = evt->particles.at(i).xreco;
-      if(xmin > evt->particles.at(i).xreco) xmin = evt->particles.at(i).xreco;
-      if(ymax < evt->particles.at(i).yreco) ymax = evt->particles.at(i).yreco;
-      if(ymin > evt->particles.at(i).yreco) ymin = evt->particles.at(i).yreco;
-      if(zmax < evt->particles.at(i).zreco) zmax = evt->particles.at(i).zreco;
-      if(zmin > evt->particles.at(i).zreco) zmin = evt->particles.at(i).zreco; 
-      
-    pmom_reco.push_back(mom);
-    ppos_reco.push_back(pos);
-    ppdg_reco.push_back(evt->particles.at(i).pdg);
-    
-    std::cout << std::setw(10) << evt->particles.at(i).pdg << " |" <<
-      std::setw(10) << evt->particles.at(i).tid << " |" <<
-      std::setw(10) << evt->particles.at(i).pxreco << " |" <<
-      std::setw(10) << evt->particles.at(i).pyreco << " |" <<
-      std::setw(10) << evt->particles.at(i).pzreco << " |" <<
-      std::setw(10) << evt->particles.at(i).Ereco << " |" << std::endl;
-      
-    }
-  }
-  std::cout << "========================================================================" << std::endl;
-  
-  double frac = 0.1;
-  double dx = std::max<double>(10.,xmax - xmin);
-  double dy = std::max<double>(10.,ymax - ymin);
-  double dz = std::max<double>(10.,zmax - zmin);
-  
-  double dmax = dx;
-  if(dy > dmax) dmax = dy;
-  if(dz > dmax) dmax = dz;
-  
-  cpr->cd(4)->DrawFrame(xmin-dx*frac,ymin-dy*frac,xmax+dx*frac,ymax+dy*frac,TString::Format("XY (front) [Event: %d]",index).Data());
-  cpr->cd(5)->DrawFrame(zmin-dz*frac,ymin-dy*frac,zmax+dz*frac,ymax+dy*frac,TString::Format("ZY (side) [Event: %d]",index).Data());
-  cpr->cd(6)->DrawFrame(zmin-dz*frac,xmin-dx*frac,zmax+dz*frac,xmax+dx*frac,TString::Format("ZX (top) [Event: %d]",index).Data());
   
   cpr->cd(1);
   for(unsigned int i = 0; i < pmom.size(); i++)
@@ -964,196 +883,320 @@ void showPri(int index)
     par->Draw();
   }
   
-  cpr->cd(4);
-  for(unsigned int i = 0; i < pmom_reco.size(); i++)
+  int Nreco = 0;
+  
+  for(unsigned int i = 0; i < evt->particles.size(); i++)
   {
-    TArrow* par = new TArrow(ppos_reco.at(i).X(),
-                              ppos_reco.at(i).Y(),
-                              ppos_reco.at(i).X()+pmom_reco.at(i).X()/maxpX_reco*dx*frac,
-                              ppos_reco.at(i).Y()+pmom_reco.at(i).Y()/maxpY_reco*dy*frac,0.01,"|>");
-    
-    switch(ppdg_reco.at(i))
-    {
-      // photons
-      case 22:
-        par->SetLineStyle(7);
-      // e+/e-
-      case 11:
-      case -11:
-        par->SetLineColor(kRed);
-        par->SetFillColor(kRed);
-      break;
-      
-      // mu+/mu-
-      case 13:
-      case -13:
-        par->SetLineColor(kBlue);
-        par->SetFillColor(kBlue);
-      break;
-      
-      // proton
-      case 2212:
-        par->SetLineColor(kBlack);
-        par->SetFillColor(kBlack);
-      break;
-      
-      // neutron
-      case 2112:
-        par->SetLineStyle(7);
-        par->SetLineColor(kGray);
-        par->SetFillColor(kGray);
-      break;
-      
-      // pion0
-      case 111:
-        par->SetLineStyle(7);
-        par->SetLineColor(kMagenta);
-        par->SetFillColor(kMagenta);
-      break;
-      
-      // pion+/pion- 
-      case 211:
-      case -211:;
-        par->SetLineColor(kCyan);
-        par->SetFillColor(kCyan);
-      break;
-      
-      default:
-        par->SetLineColor(8);
-        par->SetFillColor(8);
-      break;        
-    }
-    
-    par->SetLineWidth(2);
-    par->Draw();
+      if(evt->particles.at(i).primary == 1 && 
+        evt->particles.at(i).tr.ret_ln == 0 && 
+        evt->particles.at(i).tr.ret_cr == 0 &&
+        !(evt->particles.at(i).pxreco == 0 && evt->particles.at(i).pyreco == 0 && evt->particles.at(i).pzreco == 0))
+      {
+        Nreco++;
+      }
   }
   
-  cpr->cd(5);
-  for(unsigned int i = 0; i < pmom_reco.size(); i++)
+  if(Nreco>0)
   {
-    TArrow* par = new TArrow(ppos_reco.at(i).Z(),
-                              ppos_reco.at(i).Y(),
-                              ppos_reco.at(i).Z()+pmom_reco.at(i).Z()/maxpZ_reco*dz*frac,
-                              ppos_reco.at(i).Y()+pmom_reco.at(i).Y()/maxpY_reco*dy*frac,0.01,"|>");
+    double maxpXY_reco = 0;
+    double maxpXZ_reco = 0;
+    double maxpYZ_reco = 0;
     
-    switch(ppdg_reco.at(i))
-    {
-      // photons
-      case 22:
-        par->SetLineStyle(7);
-      // e+/e-
-      case 11:
-      case -11:
-        par->SetLineColor(kRed);
-        par->SetFillColor(kRed);
-      break;
-      
-      // mu+/mu-
-      case 13:
-      case -13:
-        par->SetLineColor(kBlue);
-        par->SetFillColor(kBlue);
-      break;
-      
-      // proton
-      case 2212:
-        par->SetLineColor(kBlack);
-        par->SetFillColor(kBlack);
-      break;
-      
-      // neutron
-      case 2112:
-        par->SetLineStyle(7);
-        par->SetLineColor(kGray);
-        par->SetFillColor(kGray);
-      break;
-      
-      // pion0
-      case 111:
-        par->SetLineStyle(7);
-        par->SetLineColor(kMagenta);
-        par->SetFillColor(kMagenta);
-      break;
-      
-      // pion+/pion- 
-      case 211:
-      case -211:;
-        par->SetLineColor(kCyan);
-        par->SetFillColor(kCyan);
-      break;
-      
-      default:
-        par->SetLineColor(8);
-        par->SetFillColor(8);
-      break;        
-    }
+    double xmax = -1E8;
+    double xmin = 1E8;
+    double ymax = -1E8;
+    double ymin = 1E8;
+    double zmax = -1E8;
+    double zmin = 1E8;
     
-    par->SetLineWidth(2);
-    par->Draw();
-  }
+    std::vector<TVector3> pmom_reco;
+    std::vector<TVector3> ppos_reco;
+    std::vector<int> ppdg_reco;
   
-  cpr->cd(6);
-  for(unsigned int i = 0; i < pmom_reco.size(); i++)
-  {
-    TArrow* par = new TArrow(ppos_reco.at(i).Z(),
-                              ppos_reco.at(i).X(),
-                              ppos_reco.at(i).Z()+pmom_reco.at(i).Z()/maxpZ_reco*dz*frac,
-                              ppos_reco.at(i).X()+pmom_reco.at(i).X()/maxpX_reco*dx*frac,0.01,"|>");
+    std::cout << "RECO ===================================================================" << std::endl;
     
-    switch(ppdg_reco.at(i))
+    std::cout << std::setw(10) << "PDG" << " |" <<
+      std::setw(10) << "ID" << " |" <<
+      std::setw(10) << "PX" << " |" <<
+      std::setw(10) << "PY" << " |" <<
+      std::setw(10) << "PZ" << " |" <<
+      std::setw(10) << "E"  << " |" << std::endl;
+      
+    std::cout << "========================================================================" << std::endl;
+    
+    for(unsigned int i = 0; i < evt->particles.size(); i++)
     {
-      // photons
-      case 22:
-        par->SetLineStyle(7);
-      // e+/e-
-      case 11:
-      case -11:
-        par->SetLineColor(kRed);
-        par->SetFillColor(kRed);
-      break;
+      if(evt->particles.at(i).primary == 1 && 
+        evt->particles.at(i).tr.ret_ln == 0 && 
+        evt->particles.at(i).tr.ret_cr == 0 &&
+        !(evt->particles.at(i).pxreco == 0 && evt->particles.at(i).pyreco == 0 && evt->particles.at(i).pzreco == 0))
+      {
+        TVector3 mom;
+        mom.SetX(evt->particles.at(i).pxreco);
+        mom.SetY(evt->particles.at(i).pyreco);
+        mom.SetZ(evt->particles.at(i).pzreco);
+        
+        TVector3 pos;
+        pos.SetX(evt->particles.at(i).xreco);
+        pos.SetY(evt->particles.at(i).yreco);
+        pos.SetZ(evt->particles.at(i).zreco);
+    
+        double pXY = TMath::Sqrt(mom.X()*mom.X()+mom.Y()*mom.Y());
+        double pXZ = TMath::Sqrt(mom.X()*mom.X()+mom.Z()*mom.Z());
+        double pYZ = TMath::Sqrt(mom.Y()*mom.Y()+mom.Z()*mom.Z());
+        
+        if(pXY > maxpXY_reco)
+          maxpXY_reco = pXY;
+        if(pXZ > maxpXZ_reco)
+          maxpXZ_reco = pXZ;
+        if(pYZ > maxpYZ_reco)
+          maxpYZ_reco = pYZ;
+          
+        if(xmax < evt->particles.at(i).xreco) xmax = evt->particles.at(i).xreco;
+        if(xmin > evt->particles.at(i).xreco) xmin = evt->particles.at(i).xreco;
+        if(ymax < evt->particles.at(i).yreco) ymax = evt->particles.at(i).yreco;
+        if(ymin > evt->particles.at(i).yreco) ymin = evt->particles.at(i).yreco;
+        if(zmax < evt->particles.at(i).zreco) zmax = evt->particles.at(i).zreco;
+        if(zmin > evt->particles.at(i).zreco) zmin = evt->particles.at(i).zreco; 
+        
+        pmom_reco.push_back(mom);
+        ppos_reco.push_back(pos);
+        ppdg_reco.push_back(evt->particles.at(i).pdg);
+        
+        std::cout << std::setw(10) << evt->particles.at(i).pdg << " |" <<
+          std::setw(10) << evt->particles.at(i).tid << " |" <<
+          std::setw(10) << evt->particles.at(i).pxreco << " |" <<
+          std::setw(10) << evt->particles.at(i).pyreco << " |" <<
+          std::setw(10) << evt->particles.at(i).pzreco << " |" <<
+          std::setw(10) << evt->particles.at(i).Ereco << " |" << std::endl;
+        
+      }
+    }
+    std::cout << "========================================================================" << std::endl;
+  
+    double frac = 0.5;
+    double dx = std::max<double>(10.,xmax - xmin);
+    double dy = std::max<double>(10.,ymax - ymin);
+    double dz = std::max<double>(10.,zmax - zmin);
+    
+    double dXYmax = std::max<double>(dx,dy);
+    double dXZmax = std::max<double>(dx,dz);
+    double dYZmax = std::max<double>(dy,dz);
+    
+    double xc = 0.5*(xmax+xmin);
+    double yc = 0.5*(ymax+ymin);
+    double zc = 0.5*(zmax+zmin);
+    
+    cpr->cd(4)->DrawFrame(xc - (1.+frac) * dXYmax,
+                          yc - (1.+frac) * dXYmax,
+                          xc + (1.+frac) * dXYmax,
+                          yc + (1.+frac) * dXYmax,
+                          TString::Format("XY (front) [Event: %d]",index).Data());
+    
+    cpr->cd(5)->DrawFrame(zc - (1.+frac) * dYZmax,
+                          yc - (1.+frac) * dYZmax,
+                          zc + (1.+frac) * dYZmax,
+                          yc + (1.+frac) * dYZmax,
+                          TString::Format("ZY (side) [Event: %d]",index).Data());
+    
+    cpr->cd(6)->DrawFrame(zc - (1.+frac) * dXZmax,
+                          xc - (1.+frac) * dXZmax,
+                          zc + (1.+frac) * dXZmax,
+                          xc + (1.+frac) * dXZmax,
+                          TString::Format("ZX (top) [Event: %d]",index).Data());  
+    
+    cpr->cd(4);
+    for(unsigned int i = 0; i < pmom_reco.size(); i++)
+    {
+      TArrow* par = new TArrow(ppos_reco.at(i).X(),
+                                ppos_reco.at(i).Y(),
+                                ppos_reco.at(i).X()+pmom_reco.at(i).X()/maxpXY_reco*dXYmax*frac,
+                                ppos_reco.at(i).Y()+pmom_reco.at(i).Y()/maxpXY_reco*dXYmax*frac,0.01,"|>");
       
-      // mu+/mu-
-      case 13:
-      case -13:
-        par->SetLineColor(kBlue);
-        par->SetFillColor(kBlue);
-      break;
+      switch(ppdg_reco.at(i))
+      {
+        // photons
+        case 22:
+          par->SetLineStyle(7);
+        // e+/e-
+        case 11:
+        case -11:
+          par->SetLineColor(kRed);
+          par->SetFillColor(kRed);
+        break;
+        
+        // mu+/mu-
+        case 13:
+        case -13:
+          par->SetLineColor(kBlue);
+          par->SetFillColor(kBlue);
+        break;
+        
+        // proton
+        case 2212:
+          par->SetLineColor(kBlack);
+          par->SetFillColor(kBlack);
+        break;
+        
+        // neutron
+        case 2112:
+          par->SetLineStyle(7);
+          par->SetLineColor(kGray);
+          par->SetFillColor(kGray);
+        break;
+        
+        // pion0
+        case 111:
+          par->SetLineStyle(7);
+          par->SetLineColor(kMagenta);
+          par->SetFillColor(kMagenta);
+        break;
+        
+        // pion+/pion- 
+        case 211:
+        case -211:;
+          par->SetLineColor(kCyan);
+          par->SetFillColor(kCyan);
+        break;
+        
+        default:
+          par->SetLineColor(8);
+          par->SetFillColor(8);
+        break;        
+      }
       
-      // proton
-      case 2212:
-        par->SetLineColor(kBlack);
-        par->SetFillColor(kBlack);
-      break;
-      
-      // neutron
-      case 2112:
-        par->SetLineStyle(7);
-        par->SetLineColor(kGray);
-        par->SetFillColor(kGray);
-      break;
-      
-      // pion0
-      case 111:
-        par->SetLineStyle(7);
-        par->SetLineColor(kMagenta);
-        par->SetFillColor(kMagenta);
-      break;
-      
-      // pion+/pion- 
-      case 211:
-      case -211:;
-        par->SetLineColor(kCyan);
-        par->SetFillColor(kCyan);
-      break;
-      
-      default:
-        par->SetLineColor(8);
-        par->SetFillColor(8);
-      break;        
+      par->SetLineWidth(2);
+      par->Draw();
     }
     
-    par->SetLineWidth(2);
-    par->Draw();
+    cpr->cd(5);
+    for(unsigned int i = 0; i < pmom_reco.size(); i++)
+    {
+      TArrow* par = new TArrow(ppos_reco.at(i).Z(),
+                                ppos_reco.at(i).Y(),
+                                ppos_reco.at(i).Z()+pmom_reco.at(i).Z()/maxpYZ_reco*dYZmax*frac,
+                                ppos_reco.at(i).Y()+pmom_reco.at(i).Y()/maxpYZ_reco*dYZmax*frac,0.01,"|>");
+      
+      switch(ppdg_reco.at(i))
+      {
+        // photons
+        case 22:
+          par->SetLineStyle(7);
+        // e+/e-
+        case 11:
+        case -11:
+          par->SetLineColor(kRed);
+          par->SetFillColor(kRed);
+        break;
+        
+        // mu+/mu-
+        case 13:
+        case -13:
+          par->SetLineColor(kBlue);
+          par->SetFillColor(kBlue);
+        break;
+        
+        // proton
+        case 2212:
+          par->SetLineColor(kBlack);
+          par->SetFillColor(kBlack);
+        break;
+        
+        // neutron
+        case 2112:
+          par->SetLineStyle(7);
+          par->SetLineColor(kGray);
+          par->SetFillColor(kGray);
+        break;
+        
+        // pion0
+        case 111:
+          par->SetLineStyle(7);
+          par->SetLineColor(kMagenta);
+          par->SetFillColor(kMagenta);
+        break;
+        
+        // pion+/pion- 
+        case 211:
+        case -211:;
+          par->SetLineColor(kCyan);
+          par->SetFillColor(kCyan);
+        break;
+        
+        default:
+          par->SetLineColor(8);
+          par->SetFillColor(8);
+        break;        
+      }
+      
+      par->SetLineWidth(2);
+      par->Draw();
+    }
+    
+    cpr->cd(6);
+    for(unsigned int i = 0; i < pmom_reco.size(); i++)
+    {
+      TArrow* par = new TArrow(ppos_reco.at(i).Z(),
+                                ppos_reco.at(i).X(),
+                                ppos_reco.at(i).Z()+pmom_reco.at(i).Z()/maxpXZ_reco*dXZmax*frac,
+                                ppos_reco.at(i).X()+pmom_reco.at(i).X()/maxpXZ_reco*dXZmax*frac,0.01,"|>");
+      
+      switch(ppdg_reco.at(i))
+      {
+        // photons
+        case 22:
+          par->SetLineStyle(7);
+        // e+/e-
+        case 11:
+        case -11:
+          par->SetLineColor(kRed);
+          par->SetFillColor(kRed);
+        break;
+        
+        // mu+/mu-
+        case 13:
+        case -13:
+          par->SetLineColor(kBlue);
+          par->SetFillColor(kBlue);
+        break;
+        
+        // proton
+        case 2212:
+          par->SetLineColor(kBlack);
+          par->SetFillColor(kBlack);
+        break;
+        
+        // neutron
+        case 2112:
+          par->SetLineStyle(7);
+          par->SetLineColor(kGray);
+          par->SetFillColor(kGray);
+        break;
+        
+        // pion0
+        case 111:
+          par->SetLineStyle(7);
+          par->SetLineColor(kMagenta);
+          par->SetFillColor(kMagenta);
+        break;
+        
+        // pion+/pion- 
+        case 211:
+        case -211:;
+          par->SetLineColor(kCyan);
+          par->SetFillColor(kCyan);
+        break;
+        
+        default:
+          par->SetLineColor(8);
+          par->SetFillColor(8);
+        break;        
+      }
+      
+      par->SetLineWidth(2);
+      par->Draw();
+    }
+
   }
   
 }
