@@ -112,6 +112,33 @@ bool ishitok(TG4Event* ev, int trackid, TG4HitSegment hit,
     return false;
 }
 
+int EvalDirection(const std::vector<double>& z, const std::vector<double>& y, double& zc, double& yc)
+{
+  double cross_prod = 0.;
+  double vz;
+  double vy;
+  double rz;
+  double ry;
+  
+  for(unsigned int i = 0; i < z.size() - 1; i++)
+  {
+    rz = z[i] - zc;
+    ry = y[i] - yc;
+    
+    vz = z[i+1] - z[i];
+    vy = y[i+1] - y[i];
+    
+    cross_prod += ry * vz - rz * vy;
+  }
+  
+  // clockwise direction (as seen from positive x) is positive 
+  return cross_prod >= 0 ? 1 : -1;
+}
+
+void getVertCoord()
+{
+}
+
 int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y, double &xc, double &yc, double &r, double &errr, double &chi2)
 {
     xc = -999;
@@ -269,6 +296,18 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
     return 0;
 }
 
+void fillInfoCircFit(int n, const std::vector<double>& z, const std::vector<double>& y, track& tr)
+{
+    double errr;
+    
+    tr.ret_cr = fitCircle(n, z, y, tr.zc, tr.yc, tr.r, errr, tr.chi2_cr);
+    
+    if(tr.ret_cr != 0)
+      return;
+    
+    tr.h = EvalDirection(z, y, tr.zc, tr.yc);
+}
+
 void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& vec_tr)
 {
   vec_tr.clear();    
@@ -361,18 +400,11 @@ void TrackFit(std::vector<track>& vec_tr)
       continue;
     }
     
-    int ret1 = fitCircle(n_h, z_h, y_h, vec_tr[j].zc, vec_tr[j].yc, vec_tr[j].r, errr, chi2_cir);
+    fillInfoCircFit(n_h, z_h, y_h, vec_tr[j]);
     
-    vec_tr[j].ret_cr = ret1;
-    vec_tr[j].chi2_cr = chi2_cir;
     
     if(vec_tr[j].ret_cr != 0)
       continue;
-      
-    if( (z_h[1] - z_h[0]) * (vec_tr[j].yc - y_h[0]) > 0 )
-      vec_tr[j].h = -1;
-    else
-      vec_tr[j].h = 1;
     
     if(n_v <= 2)
     {
