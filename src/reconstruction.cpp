@@ -113,6 +113,89 @@ bool ishitok(TG4Event* ev, int trackid, TG4HitSegment hit,
     return false;
 }
 
+int EvalDirection(const std::vector<double>& z, const std::vector<double>& y, double& zc, double& yc)
+{
+  double cross_prod = 0.;
+  double vz;
+  double vy;
+  double rz;
+  double ry;
+  
+  for(unsigned int i = 0; i < z.size() - 1; i++)
+  {
+    rz = z[i] - zc;
+    ry = y[i] - yc;
+    
+    vz = z[i+1] - z[i];
+    vy = y[i+1] - y[i];
+    
+    cross_prod += ry * vz - rz * vy;
+  }
+  
+  // clockwise direction (as seen from positive x) is positive 
+  return cross_prod >= 0 ? 1 : -1;
+}
+
+void getVertCoord(const std::vector<double>& z_v, std::vector<double>& y_v, int sign, const track& tr)
+{
+  y_v.clear();
+  
+  int forward = z_v[1]-z_v[0] > 0 ? 1: -1;
+  
+  double dy_sq, dy;
+  
+  dy_sq = tr.r*tr.r - (z_v[0] - tr.zc)*(z_v[0] - tr.zc);
+  
+  if(dy_sq < 0.)
+    dy_sq = 0.;
+  
+  dy = TMath::Sqrt(dy_sq);
+  y_v.push_back(tr.yc + sign * dy);
+  
+  for(unsigned int i = 1; i < z_v.size(); i++)
+  {
+    if((z_v[i]-z_v[i-1]) * forward > 0.)
+    {
+      dy_sq = tr.r*tr.r - (z_v[0] - tr.zc)*(z_v[0] - tr.zc);
+  
+      if(dy_sq < 0.)
+        dy_sq = 0.;
+    
+      dy = TMath::Sqrt(dy_sq);
+      
+      y_v.push_back(tr.yc + sign * dy);
+    }
+    else
+    {
+      break;
+    }
+  }
+}
+
+void GetRho(const std::vector<double>& z_v, const std::vector<double>& y_v, std::vector<double>& rho, const track& tr, double cos, double sin)
+{
+  rho.clear();
+  
+  for(unsigned int k = 0; k < y_v.size(); k++)
+  {
+      rho.push_back(z_v[k] * cos + y_v[k] * sin);
+      //if(isnan(z_v[k] * cos + y_v[k] * sin))
+      //{
+      //  std::cout << z_v[k] << " " << cos << " " << y_v[k] << " " << sin << std::endl;
+      //}
+  }
+}
+
+void FillPositionInfo(track& tr, int signy, double cos, double sin)
+{
+  tr.z0 = tr.digits.front().z;
+  double dy2 = tr.r*tr.r - (tr.z0 - tr.zc)*(tr.z0 - tr.zc);
+  double dy = dy2 < 0. ? 0. : TMath::Sqrt(dy2);
+  tr.y0 = tr.yc + signy * dy;
+  tr.x0 = tr.a + tr.b * (tr.z0 * cos + tr.y0 * sin);
+  tr.t0 = tr.digits.front().t;
+}
+
 int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y, double &xc, double &yc, double &r, double &errr, double &chi2)
 {
     xc = -999;
@@ -270,6 +353,18 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
     return 0;
 }
 
+void fillInfoCircFit(int n, const std::vector<double>& z, const std::vector<double>& y, track& tr)
+{
+    double errr;
+    
+    tr.ret_cr = fitCircle(n, z, y, tr.zc, tr.yc, tr.r, errr, tr.chi2_cr);
+    
+    if(tr.ret_cr != 0)
+      return;
+    
+    tr.h = EvalDirection(z, y, tr.zc, tr.yc);
+}
+
 void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi, std::vector<track>& vec_tr)
 {
   vec_tr.clear();    
@@ -362,18 +457,11 @@ void TrackFit(std::vector<track>& vec_tr)
       continue;
     }
     
-    int ret1 = fitCircle(n_h, z_h, y_h, vec_tr[j].zc, vec_tr[j].yc, vec_tr[j].r, errr, chi2_cir);
+    fillInfoCircFit(n_h, z_h, y_h, vec_tr[j]);
     
-    vec_tr[j].ret_cr = ret1;
-    vec_tr[j].chi2_cr = chi2_cir;
     
     if(vec_tr[j].ret_cr != 0)
       continue;
-      
-    if( (z_h[1] - z_h[0]) * (vec_tr[j].yc - y_h[0]) > 0 )
-      vec_tr[j].h = -1;
-    else
-      vec_tr[j].h = 1;
     
     if(n_v <= 2)
     {
@@ -381,6 +469,22 @@ void TrackFit(std::vector<track>& vec_tr)
       continue;
     }
     
+    int quadrant;
+    
+    if(z_h[0] - vec_tr[j].zc >= 0)
+      quadrant = 1;
+    else
+      quadrant = 2;
+      
+    if(y_h[0] - vec_tr[j].yc < 0)
+      quadrant *= -1;
+    
+    
+    int signy = quadrant > 0 ? 1 : -1;
+    
+    getVertCoord(z_v, y_v, signy, vec_tr[j]);
+    
+    /*
     n_v = 2;
     
     while((n_v < int(z_v.size())) && (z_v[n_v-1]-z_v[n_v-2])*(z_v[1]-z_v[0]) > 0.)
@@ -406,9 +510,9 @@ void TrackFit(std::vector<track>& vec_tr)
       {
         break;
       }
-    }
+    }*/
     
-    if(n_v_fit <= 2)
+    if(y_v.size() <= 2)
     {
       vec_tr[j].ret_ln = -3;
       continue;
@@ -417,6 +521,9 @@ void TrackFit(std::vector<track>& vec_tr)
     double cos =  vec_tr[j].h * (y_v[0] - vec_tr[j].yc)/vec_tr[j].r;
     double sin = -vec_tr[j].h * (z_v[0] - vec_tr[j].zc)/vec_tr[j].r;
     
+    GetRho(z_v, y_v, rho, vec_tr[j], cos, sin);
+    
+    /*    
     for(int k = 0; k < n_v_fit; k++)
     {
         rho.push_back(z_v[k] * cos + y_v[k] * sin);
@@ -425,18 +532,18 @@ void TrackFit(std::vector<track>& vec_tr)
         //  std::cout << z_v[k] << " " << cos << " " << y_v[k] << " " << sin << std::endl;
         //}
     }
+    */
     
-    x_v.resize(n_v_fit);
-    
-    int ret2 = fitLinear(n_v_fit, rho, x_v, vec_tr[j].a, vec_tr[j].b, cov, chi2_lin);
-    
-    vec_tr[j].ret_ln = ret2;
-    vec_tr[j].chi2_ln = chi2_lin;
+    vec_tr[j].ret_ln = fitLinear(y_v.size(), rho, x_v, vec_tr[j].a, vec_tr[j].b, cov, vec_tr[j].chi2_ln);
     
     if(vec_tr[j].ret_ln != 0)
       continue;
     
     //std::cout << vec_tr[j].tid << " " << vec_tr[j].a << " " << vec_tr[j].b << std::endl;
+    
+    FillPositionInfo(vec_tr[j], signy, cos, sin);
+    
+    /*
     
     double z0 = vec_tr[j].digits.front().z;
     double dz2 = vec_tr[j].r*vec_tr[j].r - (z0 - vec_tr[j].zc)*(z0 - vec_tr[j].zc);
@@ -449,6 +556,7 @@ void TrackFit(std::vector<track>& vec_tr)
     vec_tr[j].y0 = y0;
     vec_tr[j].x0 = x0;
     vec_tr[j].t0 = t0;
+    */
     
     //if(isnan(vec_tr[j].x0))
     //{
