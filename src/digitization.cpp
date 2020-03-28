@@ -585,16 +585,31 @@ void Digitize(const char* finname, const char* foutname)
 	  //TChain* t = new TChain("EDepSimEvents","EDepSimEvents");
 	  //t->Add(finname);
 	  //TFile f(t->GetListOfFiles()->At(0)->GetTitle());
-    TFile f(finname,"READ");
-    TTree* t = (TTree*) f.Get("EDepSimEvents");
-    TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry"); 
-    TTree* gRooTracker = (TTree*) f.Get("DetSimPassThru/gRooTracker");
-    TTree* InputKinem = (TTree*) f.Get("DetSimPassThru/InputKinem");
-    TTree* InputFiles = (TTree*) f.Get("DetSimPassThru/InputFiles");
+   TFile f(finname,"READ");
+   
+   //if the filename has FLUKA in the name it is produced by fluka
+   bool flukatype=false;;
+   //TString (finname.c_str();
+   if(TString(finname).Contains("FLUKA") == true) flukatype=true; 
+
+   TTree* t = (TTree*) f.Get("EDepSimEvents");
+  
+   TGeoManager* geo = 0; 
+   TTree* gRooTracker = 0; 
+   TTree* InputKinem = 0; 
+   TTree* InputFiles = 0; 	
+ 
+   if(flukatype==false){
+   //initialize geometry for edepsim file
+     geo = (TGeoManager*) f.Get("EDepSimGeometry"); 
+     gRooTracker = (TTree*) f.Get("DetSimPassThru/gRooTracker");
+     InputKinem = (TTree*) f.Get("DetSimPassThru/InputKinem");
+     InputFiles = (TTree*) f.Get("DetSimPassThru/InputFiles");
+   
+     init(geo);
+   } 
     
-    init(geo);
-    
-    TG4Event* ev = new TG4Event;
+   TG4Event* ev = new TG4Event;
     t->SetBranchAddress("Event",&ev);
   
     std::vector<digit> digit_vec;    
@@ -616,8 +631,8 @@ void Digitize(const char* finname, const char* foutname)
     
       std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i)/nev*100) << "%]" << std::flush;
       
-      DigitizeCal(ev, geo, vec_cell);
-      DigitizeStt(ev, geo, digit_vec);
+     // DigitizeCal(ev, geo, vec_cell);
+     // DigitizeStt(ev, geo, digit_vec);
          
       tout.Fill();
     }
@@ -626,11 +641,11 @@ void Digitize(const char* finname, const char* foutname)
     
     fout.cd();
     tout.Write();
-    geo->Write();
+    if(flukatype==false)   geo->Write();
     t->CloneTree()->Write();
-    gRooTracker->CloneTree()->Write();
-    InputKinem->CloneTree()->Write();
-    InputFiles->CloneTree()->Write();
+     if(flukatype==false)  gRooTracker->CloneTree()->Write();
+     if(flukatype==false)  InputKinem->CloneTree()->Write();
+     if(flukatype==false)  InputFiles->CloneTree()->Write();
     fout.Close();
     
     f.Close();
