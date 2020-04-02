@@ -24,6 +24,7 @@
 
 #include "struct.h"
 #include "utils.h"
+#include "transf.h"
 
 // Energy MeV
 // Distance mm
@@ -168,7 +169,7 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID, int& plane
     std::cout << "node name: " << str.Data() << std::endl;
   }
   
-  // barrel modules
+  // barrel modules in active medium
   if(str.Contains("volECAL") == true && str.Contains("Active") == true && str.Contains("end") == false)
   {
     TObjArray* obja = str.Tokenize("_");
@@ -314,7 +315,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g, std::map<int, std::vector<double> 
       {
         for(unsigned int j = 0; j < it->second.size(); j++)
         {          
-          if(ProcessHit(g, it->second[j], modID, planeID, cellID, d1, d2, t0, de) == true)
+          if(ProcessHit(g, it->second[j], modID, planeID, cellID, d1, d2, t0, de) == true)  //The geometry is need for distinghish between endcap and barrel
           {
             double en1 = de * Attenuation(d1, planeID);
             double en2 = de * Attenuation(d2, planeID);
@@ -409,21 +410,25 @@ void CollectSignal(TGeoManager* geo,
       c.mod = c.id / 1000;
       c.lay = (c.id - c.mod * 1000) / 100;
       c.cel = c.id - c.mod * 1000 - c.lay *100;
-      
       double dummyLoc[3];
       double dummyMas[3];
       
       if(c.mod < 24)
       {        
-        dummyLoc[0] = ns_Digit::cxlay[c.lay][c.cel];
+       if(c.cel==12) c.cel=11; //std::cout<<"Error 12 "<<c.id<<" "<<c.mod<<" "<<c.lay<<" "<<c.cel<<std::endl; 
+        
+       dummyLoc[0] = ns_Digit::cxlay[c.lay][c.cel];
         dummyLoc[1] = 0.;
         dummyLoc[2] = ns_Digit::czlay[c.lay];
+        if(c.cel==12) {std::cout<<"ERROR 12 dummyLoc"<<dummyLoc[0]<<" "<<dummyLoc[2]<<std::endl;}
         
+	//std::cout<<"dummyLoc "<<dummyLoc[0]<<" "<<dummyLoc[2]<<std::endl; 
         geo->cd(TString::Format(ns_Digit::path_barrel_template,c.mod).Data());
         
-        geo->LocalToMaster(dummyLoc, dummyMas);
+        geo->LocalToMaster(dummyLoc, dummyMas);  //transform the coordinates     
+       	//std::cout<<"dummyMas "<<dummyMas[0]<<" "<<dummyMas[1]<<" "<<dummyMas[2]<<std::endl; 
         
-        c.x = dummyMas[0];
+        c.x = dummyMas[0];  //coordinate del modulo trasformate
         c.y = dummyMas[1];
         c.z = dummyMas[2];
       }
@@ -455,30 +460,44 @@ void CollectSignal(TGeoManager* geo,
     }
 }
 
-void init(TGeoManager* geo)
+void init(TGeoManager* geo)  //initialize the calorimeter dimensions
 {
-    TGeoTrd2* mod = (TGeoTrd2*) geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
-    
-    double xmax = mod->GetDx1();
-    double xmin = mod->GetDx2();
-    double dz = mod->GetDz();
+    TGeoTrd2* mod = (TGeoTrd2*) geo->FindVolumeFast("ECAL_lv_PV")->GetShape();  //read from geometry the useful dimensions
+   
+    //dimensions of a barrel KLOE module 
+    double xmax = mod->GetDx1(); // half length in X at lower Z surface (-dz)   =262.55
+    double xmin = mod->GetDx2(); // half length in X at higher Z surface (+dz)  =292.85
+    double dz = mod->GetDz();    // half length in Z                            =115
     
     for(int i = 0; i < ns_Digit::nLay; i++)
     {
-      ns_Digit::czlay[i] = (ns_Digit::dzlay[i] + ns_Digit::dzlay[i+1]) - ns_Digit::dzlay[0];
+     //OLD  ns_Digit::czlay[i] = (ns_Digit::dzlay[i] + ns_Digit::dzlay[i+1]) - ns_Digit::dzlay[0];
+      ns_Digit::czlay[i]=dz-ns_Digit::dzlay[i]; 
+     
+      //OLD double dx = xmax - (xmax - xmin)/dz * (0.5 * (ns_Digit::dzlay[i] + ns_Digit::dzlay[i+1]));  //FIXME non funziona dzlay per l'ultimo strato
+     double dx;
+	if(i<4){
+      dx = xmin - (xmin - xmax)/(2*dz) * (0.5 *44+ (ns_Digit::dzlay[i]));  
+      }else{
+        dx = xmin - (xmin - xmax)/(2*dz) * (0.5 *54+ (ns_Digit::dzlay[i]));  
       
-      double dx = xmax - (xmax - xmin)/dz * (0.5 * (ns_Digit::dzlay[i] + ns_Digit::dzlay[i+1]));
+       }
       
-      for(int j = 0; j < ns_Digit::nCel; j++)
+
+	 for(int j = 0; j < ns_Digit::nCel; j++)
       {
-        ns_Digit::cxlay[i][j] = 2*dx/ns_Digit::nCel * (j - ns_Digit::nCel/2. + 0.5);
-      }
-    } 
-      
+	 ns_Digit::cxlay[i][j] = 2*dx/ns_Digit::nCel * (j - ns_Digit::nCel/2. + 0.5);
+     if(j==11) std::cout<<"lay "<<i<<"cx czlay "<<ns_Digit::cxlay[i][j]<<" "<<ns_Digit::czlay[i]<<std::endl;
+
+	}
+    }
+ 
+ 
+//dimensions of endcaps     
     TGeoTube* ec = (TGeoTube*) geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
     
-    ns_Digit::ec_r = ec->GetRmax();
-    ns_Digit::ec_dz = ec->GetDz();
+    ns_Digit::ec_r = ec->GetRmax();  //Maximum radius    =2000
+    ns_Digit::ec_dz = ec->GetDz();   //half of thickness =115
 }
 
 void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
@@ -630,11 +649,35 @@ void Digitize(const char* finname, const char* foutname)
       t->GetEntry(i);
     
       std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i)/nev*100) << "%]" << std::flush;
+     
+   if(flukatype==false){ 
+     DigitizeCal(ev, geo, vec_cell);
+     DigitizeStt(ev, geo, digit_vec);
+         }else{
+	std::cout<<"Non ancora implementato in fluka"<<std::endl;
+	return;
+	}
+
+      //std::cout<<"Prima del salvataggio "<<std::endl;
+  
+     for (auto i = vec_cell.begin(); i != vec_cell.end(); ++i){
+
+        cell cel=*i;
+	TLorentzVector prova(cel.x,cel.y,cel.z,0);
+	TLorentzVector v=GlobalToLocalCoordinates(prova);
+        //(*i).x=v.X()/10;
+        //(*i).y=v.Y()/10;
+        //(*i).z=v.Z()/10;
       
-     // DigitizeCal(ev, geo, vec_cell);
-     // DigitizeStt(ev, geo, digit_vec);
-         
-      tout.Fill();
+	float R=sqrt(v.Y()*v.Y()+v.Z()*v.Z());
+	if(R>2230) {std::cout<<"ERROR "<<std::endl; 
+	        std::cout<<"vec "<<cel.x<<" "<<cel.y<<" "<<cel.z<<std::endl;
+         std::cout<<"local coord "<<v.X()<<" "<<v.Y()<<" "<<v.Z()<<std::endl;
+ 	std::cout<<"mod lay cell "<<cel.mod<<" "<<cel.lay<<" "<<cel.cel<<std::endl;
+       		
+			}
+}
+	tout.Fill();
     }
     std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
     std::cout << std::endl;
