@@ -177,14 +177,17 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
     TObjArray* obja2 = str2.Tokenize("_");
 
     int slabID;
+    //top module => modID == 0
+    //increasing modID counterclockwise as seen from positive x 
+    //(i.e. z(modID==1) < z(modID==0) & z(modID==0) < z(modID==23)) 
     modID = ((TObjString*)obja2->At(3))->GetString().Atoi();
     slabID = ((TObjString*)obja->At(1))->GetString().Atoi();
 
     delete obja;
     delete obja2;
 
-    // planeID==0 -> smallest slab
-    // planeID==208 -> biggest slab
+    // planeID==0 -> smallest slab -> internal
+    // planeID==208 -> biggest slab -> external 
     planeID = slabID / 40;
 
     if (planeID > 4) planeID = 4;
@@ -218,13 +221,18 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
     // if z = -dz -> dx = 2*dx1
     // if z =  dz -> dx = 2*dx2
     // semilarghezza della slab di scintillatore alla quota Plocal[2]
-    double dx = 0.5 * (dx2 - dx1) / dz * Plocal[2] + dx1;
+    double dx = 0.5 * Plocal[2]/dz * (dx2 - dx1) + 0.5 * (dx2 + dx1);
 
     // Cell width at z = Plocal[2]
     double cellw = 2. * dx / 12.;
 
     // cellID = distanza dall'estremo diviso larghezza cella
     cellID = (Plocal[0] + dx) / cellw;
+    
+    if(cellID > 11)
+    {
+      std::cout << Plocal[0] << " " << dx << " " << cellw << std::endl;
+    }
 
     if (ns_Digit::debug) {
       std::cout << "hit: " << str.Data() << std::endl;
@@ -454,21 +462,39 @@ void init(TGeoManager* geo)
 {
   TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
 
-  double xmax = mod->GetDx1();
-  double xmin = mod->GetDx2();
+  // https://root.cern.ch/root/htmldoc/guides/users-guide/Geometry.html#shapes
+  // GetDx1() half length in x at -Dz
+  // GetDx2() half length in x at +Dz
+  // Dx1 < Dx2 => -Dz corresponds to minor width => internal side 
+  double xmin = mod->GetDx1();
+  double xmax = mod->GetDx2();
   double dz = mod->GetDz();
+  
+  double m = 0.5*(xmax - xmin)/dz;
+  double q = 0.5*(xmax + xmin);
+  
+  // z edge of the cells
+  double zlevel[ns_Digit::nLay+1];
+  zlevel[0] = -dz;
+  
+  for(int i = 0; i < ns_Digit::nLay; i++)
+  {
+    zlevel[i+1] = zlevel[i] + ns_Digit::dzlay[i];
+  }
 
+  // z position of the center of the cells
   for (int i = 0; i < ns_Digit::nLay; i++) {
-    ns_Digit::czlay[i] =
-        (ns_Digit::dzlay[i] + ns_Digit::dzlay[i + 1]) - ns_Digit::dzlay[0];
+    ns_Digit::czlay[i] = 0.5* (zlevel[i]+zlevel[i+1]);
 
-    double dx =
-        xmax - (xmax - xmin) / dz *
-                   (0.5 * (ns_Digit::dzlay[i] + ns_Digit::dzlay[i + 1]));
-
+    // total module width at the z position of the center of the cell 
+    double xwidth = 2*(m*ns_Digit::czlay[i]+q);
+    
+    // cell width at the z position of the center of the cell 
+    double dx = xwidth/ns_Digit::nCel;
+    
+    // x position of the center of the cells
     for (int j = 0; j < ns_Digit::nCel; j++) {
-      ns_Digit::cxlay[i][j] =
-          2 * dx / ns_Digit::nCel * (j - ns_Digit::nCel / 2. + 0.5);
+      ns_Digit::cxlay[i][j] = dx * (j+0.5) - xwidth*0.5;
     }
   }
 

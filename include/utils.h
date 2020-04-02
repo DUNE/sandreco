@@ -28,10 +28,8 @@ static const int nMod = 24;
 static const int nLay = 5;
 static const int nCel = 12;
 
-double dzlay[nLay] = {
-    44 * 0.5,                                 44 * 0.5 + 44,
-    44 * 0.5 + 44 + 44,                       44 * 0.5 + 44 + 44 + 44,
-    44 * 0.5 + 44 + 44 + 44 + (54 + 44) * 0.5};
+// thickness of the layers in mm
+double dzlay[nLay] = {44., 44., 44., 44., 54.};
 double czlay[nLay];
 double cxlay[nLay][nCel];
 
