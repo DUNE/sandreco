@@ -23,7 +23,7 @@
 
 namespace ns_draw
 {
-const bool debug = false;
+const bool debug = true;
 
 static const int nMod = 24;
 static const int nLay = 5;
@@ -107,32 +107,41 @@ void init(const char* ifile)
   dummyLoc[2] = 0.;
   geo->LocalToMaster(dummyLoc, centerKLOE);
 
-  double dzlay[nLay + 1] = {
-      115,                     115 - 22,
-      115 - 22 - 22,           115 - 22 - 22 - 22,
-      115 - 22 - 22 - 22 - 22, 115 - 22 - 22 - 22 - 22 - 27};
+  double dzlay[nLay] = {44., 44., 44., 44., 54.};
   double dx1[nLay];
   double dx2[nLay];
 
   TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
 
-  double xmax = mod->GetDx1();
-  double xmin = mod->GetDx2();
+  double xmin = mod->GetDx1();
+  double xmax = mod->GetDx2();
   double dz = mod->GetDz();
 
   if (debug) {
     std::cout << dz << " " << xmax << " " << xmin << std::endl;
   }
+  
+  double m = 0.5*(xmax - xmin)/dz;
+  double q = 0.5*(xmax + xmin);
+  
+  // z edge of the cells
+  double zlevel[nLay+1];
+  zlevel[0] = -dz;
+  
+  for(int i = 0; i < nLay; i++)
+  {
+    zlevel[i+1] = zlevel[i] + dzlay[i];
+  }
 
-  for (int i = 0; i < nLay; i++) {
-    dx1[i] = xmax - (xmax - xmin) / dz * dzlay[i];
-    dx2[i] = xmax - (xmax - xmin) / dz * dzlay[i + 1];
+  for (int i = 0; i < nLay; i++) {  
+    dx1[i] = 2*(m*zlevel[i]+q);
+    dx2[i] = 2*(m*zlevel[i+1]+q);
   }
 
   if (debug) {
     for (int i = 0; i < nLay; i++) {
-      std::cout << dx1[i] << " " << dx2[i] << " " << dzlay[i] << " "
-                << dzlay[i + 1] << std::endl;
+      std::cout << dx1[i] << " " << dx2[i] << " " << zlevel[i] << " "
+                << zlevel[i + 1] << std::endl;
     }
   }
 
@@ -140,15 +149,15 @@ void init(const char* ifile)
     for (int j = 0; j < nCel; j++) {
       // from bottom-left to top-right
 
-      CellLocalX[i * nCel + j][0] = -dx1[i] + 2 * dx1[i] / 12. * j;
-      CellLocalX[i * nCel + j][1] = -dx1[i] + 2 * dx1[i] / 12. * (j + 1);
-      CellLocalX[i * nCel + j][2] = -dx2[i] + 2 * dx2[i] / 12. * (j + 1);
-      CellLocalX[i * nCel + j][3] = -dx2[i] + 2 * dx2[i] / 12. * j;
+      CellLocalX[i * nCel + j][0] = dx1[i]*(j/12. - 0.5);
+      CellLocalX[i * nCel + j][1] = dx1[i]*((j+1)/12. - 0.5);
+      CellLocalX[i * nCel + j][2] = dx2[i]*((j+1)/12. - 0.5);
+      CellLocalX[i * nCel + j][3] = dx2[i]*(j/12. - 0.5);
 
-      CellLocalZ[i * nCel + j][0] = -dz + 2 * dzlay[i];
-      CellLocalZ[i * nCel + j][1] = -dz + 2 * dzlay[i];
-      CellLocalZ[i * nCel + j][2] = -dz + 2 * dzlay[i + 1];
-      CellLocalZ[i * nCel + j][3] = -dz + 2 * dzlay[i + 1];
+      CellLocalZ[i * nCel + j][0] = zlevel[i];
+      CellLocalZ[i * nCel + j][1] = zlevel[i];
+      CellLocalZ[i * nCel + j][2] = zlevel[i+1];
+      CellLocalZ[i * nCel + j][3] = zlevel[i+1];
 
       if (debug)
         std::cout << CellLocalZ[i * nCel + j][0] << " "
@@ -256,19 +265,19 @@ void init(const char* ifile)
 
       dummyLoc_ec[0][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[0][1] = 0.;
-      dummyLoc_ec[0][2] = dz - 2 * dzlay[j];
+      dummyLoc_ec[0][2] = zlevel[j];
 
       dummyLoc_ec[1][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[1][1] = 0.;
-      dummyLoc_ec[1][2] = dz - 2 * dzlay[j + 1];
+      dummyLoc_ec[1][2] = zlevel[j+1];
 
       dummyLoc_ec[2][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[2][1] = 0.;
-      dummyLoc_ec[2][2] = dz - 2 * dzlay[j + 1];
+      dummyLoc_ec[2][2] = zlevel[j+1];
 
       dummyLoc_ec[3][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[3][1] = 0.;
-      dummyLoc_ec[3][2] = dz - 2 * dzlay[j];
+      dummyLoc_ec[3][2] = zlevel[j];
 
       for (int m = 0; m < 4; m++) {
         geo->LocalToMaster(dummyLoc_ec[m], dummyMas);
@@ -304,19 +313,19 @@ void init(const char* ifile)
 
       dummyLoc_ec[0][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[0][1] = 0.;
-      dummyLoc_ec[0][2] = -dz + 2 * dzlay[j];
+      dummyLoc_ec[0][2] = zlevel[j];
 
       dummyLoc_ec[1][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[1][1] = 0.;
-      dummyLoc_ec[1][2] = -dz + 2 * dzlay[j + 1];
+      dummyLoc_ec[1][2] = zlevel[j+1];
 
       dummyLoc_ec[2][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[2][1] = 0.;
-      dummyLoc_ec[2][2] = -dz + 2 * dzlay[j + 1];
+      dummyLoc_ec[2][2] = zlevel[j+1];
 
       dummyLoc_ec[3][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[3][1] = 0.;
-      dummyLoc_ec[3][2] = -dz + 2 * dzlay[j];
+      dummyLoc_ec[3][2] = zlevel[j];
 
       for (int m = 0; m < 4; m++) {
         geo->LocalToMaster(dummyLoc_ec[m], dummyMas);
