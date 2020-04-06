@@ -120,22 +120,21 @@ void init(const char* ifile)
   if (debug) {
     std::cout << dz << " " << xmax << " " << xmin << std::endl;
   }
-  
-  double m = 0.5*(xmax - xmin)/dz;
-  double q = 0.5*(xmax + xmin);
-  
+
+  double m = 0.5 * (xmax - xmin) / dz;
+  double q = 0.5 * (xmax + xmin);
+
   // z edge of the cells
-  double zlevel[nLay+1];
+  double zlevel[nLay + 1];
   zlevel[0] = -dz;
-  
-  for(int i = 0; i < nLay; i++)
-  {
-    zlevel[i+1] = zlevel[i] + dzlay[i];
+
+  for (int i = 0; i < nLay; i++) {
+    zlevel[i + 1] = zlevel[i] + dzlay[i];
   }
 
-  for (int i = 0; i < nLay; i++) {  
-    dx1[i] = 2*(m*zlevel[i]+q);
-    dx2[i] = 2*(m*zlevel[i+1]+q);
+  for (int i = 0; i < nLay; i++) {
+    dx1[i] = 2 * (m * zlevel[i] + q);
+    dx2[i] = 2 * (m * zlevel[i + 1] + q);
   }
 
   if (debug) {
@@ -149,15 +148,15 @@ void init(const char* ifile)
     for (int j = 0; j < nCel; j++) {
       // from bottom-left to top-right
 
-      CellLocalX[i * nCel + j][0] = dx1[i]*(j/12. - 0.5);
-      CellLocalX[i * nCel + j][1] = dx1[i]*((j+1)/12. - 0.5);
-      CellLocalX[i * nCel + j][2] = dx2[i]*((j+1)/12. - 0.5);
-      CellLocalX[i * nCel + j][3] = dx2[i]*(j/12. - 0.5);
+      CellLocalX[i * nCel + j][0] = dx1[i] * (j / 12. - 0.5);
+      CellLocalX[i * nCel + j][1] = dx1[i] * ((j + 1) / 12. - 0.5);
+      CellLocalX[i * nCel + j][2] = dx2[i] * ((j + 1) / 12. - 0.5);
+      CellLocalX[i * nCel + j][3] = dx2[i] * (j / 12. - 0.5);
 
       CellLocalZ[i * nCel + j][0] = zlevel[i];
       CellLocalZ[i * nCel + j][1] = zlevel[i];
-      CellLocalZ[i * nCel + j][2] = zlevel[i+1];
-      CellLocalZ[i * nCel + j][3] = zlevel[i+1];
+      CellLocalZ[i * nCel + j][2] = zlevel[i + 1];
+      CellLocalZ[i * nCel + j][3] = zlevel[i + 1];
 
       if (debug)
         std::cout << CellLocalZ[i * nCel + j][0] << " "
@@ -269,11 +268,11 @@ void init(const char* ifile)
 
       dummyLoc_ec[1][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[1][1] = 0.;
-      dummyLoc_ec[1][2] = zlevel[j+1];
+      dummyLoc_ec[1][2] = zlevel[j + 1];
 
       dummyLoc_ec[2][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[2][1] = 0.;
-      dummyLoc_ec[2][2] = zlevel[j+1];
+      dummyLoc_ec[2][2] = zlevel[j + 1];
 
       dummyLoc_ec[3][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[3][1] = 0.;
@@ -317,11 +316,11 @@ void init(const char* ifile)
 
       dummyLoc_ec[1][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[1][1] = 0.;
-      dummyLoc_ec[1][2] = zlevel[j+1];
+      dummyLoc_ec[1][2] = zlevel[j + 1];
 
       dummyLoc_ec[2][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[2][1] = 0.;
-      dummyLoc_ec[2][2] = zlevel[j+1];
+      dummyLoc_ec[2][2] = zlevel[j + 1];
 
       dummyLoc_ec[3][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[3][1] = 0.;
