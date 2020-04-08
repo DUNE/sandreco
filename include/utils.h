@@ -24,9 +24,20 @@ namespace ns_Digit
 {
 const bool debug = false;
 
+bool flukatype=false;
+
 static const int nMod = 24;
 static const int nLay = 5;
 static const int nCel = 12;
+
+//ecal dimension for fluka
+static const double xmin_f=262.55;
+static const double xmax_f=292.85;
+static const double dz_f=115.0;
+
+static const double ec_rf=2000.0;
+static const double ec_dzf=115.0;
+
 
 // thickness of the layers in mm
 double dzlay[nLay] = {44., 44., 44., 44., 54.};
