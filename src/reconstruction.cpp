@@ -132,6 +132,24 @@ int EvalDirection(const std::vector<double>& z, const std::vector<double>& y,
   return cross_prod >= 0 ? 1 : -1;
 }
 
+int getSignY(const std::vector<double>& z_h, std::vector<double>& y_h,
+             const track& tr)
+{
+  int forward = z_h[1] - z_h[0] > 0 ? 1 : -1;
+
+  double dy = (y_h[0] - tr.yc) * abs(y_h[0] - tr.yc) / tr.r;
+
+  for (unsigned int i = 1; i < z_h.size(); i++) {
+    if ((z_h[i] - z_h[i - 1]) * forward > 0.) {
+      dy += (y_h[i] - tr.yc) * abs(y_h[i] - tr.yc) / tr.r;
+    } else {
+      break;
+    }
+  }
+
+  return dy > 0. ? +1 : -1;
+}
+
 void getVertCoord(const std::vector<double>& z_v, std::vector<double>& y_v,
                   int sign, const track& tr)
 {
@@ -476,6 +494,8 @@ void TrackFit(std::vector<track>& vec_tr)
     if (y_h[0] - vec_tr[j].yc < 0) quadrant *= -1;
 
     int signy = quadrant > 0 ? 1 : -1;
+
+    // int signy = getSignY(z_h, y_h, vec_tr[j]);
 
     getVertCoord(z_v, y_v, signy, vec_tr[j]);
 
