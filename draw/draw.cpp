@@ -23,7 +23,7 @@
 
 namespace ns_draw
 {
-const bool debug = true;
+const bool debug = false;
 
 static const int nMod = 24;
 static const int nLay = 5;

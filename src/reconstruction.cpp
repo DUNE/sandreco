@@ -180,12 +180,25 @@ void GetRho(const std::vector<double>& z_v, const std::vector<double>& y_v,
 
 void FillPositionInfo(track& tr, int signy, double cos, double sin)
 {
-  tr.z0 = tr.digits.front().z;
-  double dy2 = tr.r * tr.r - (tr.z0 - tr.zc) * (tr.z0 - tr.zc);
-  double dy = dy2 < 0. ? 0. : TMath::Sqrt(dy2);
-  tr.y0 = tr.yc + signy * dy;
-  tr.x0 = tr.a + tr.b * (tr.z0 * cos + tr.y0 * sin);
-  tr.t0 = tr.digits.front().t;
+  digit d = tr.digits.front();
+  tr.z0 = d.z;
+  tr.t0 = d.t;
+  if (d.hor == true) {
+    tr.y0 = d.y;
+    tr.x0 = tr.a + tr.b * (tr.z0 * cos + tr.y0 * sin);
+  } else {
+    tr.x0 = d.x;
+    double dy2 = tr.r * tr.r - (tr.z0 - tr.zc) * (tr.z0 - tr.zc);
+    double dy = dy2 < 0. ? 0. : TMath::Sqrt(dy2);
+    tr.y0 = tr.yc + signy * dy;
+  }
+  /*
+  std::cout << iii << " " << tr.tid << " " << d.hor << " "
+    << d.x << " " << d.y << " " << d.z << " "
+    << tr.a << " " << tr.b << " "
+    << tr.r << " " << tr.zc << " " << tr.yc << " "
+    << tr.x0 << " " << tr.y0 << " " << tr.z0 << " "
+    << signy << " " << cos << " " << sin << std::endl;*/
 }
 
 int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y,
