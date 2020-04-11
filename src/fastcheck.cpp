@@ -37,6 +37,7 @@ int main(int argc, char* argv[])
   
   TCanvas c;
   TGraph *g;
+  TH1D* h1;
   TH2D* h2;
   int n;
 
@@ -139,7 +140,7 @@ int main(int argc, char* argv[])
   
   if(tReco)
   {
-    n = tReco->Draw("track.ret_ln:track.ret_cr", "", "colz"); 
+    tReco->Draw("track.ret_ln:track.ret_cr", "", "colz"); 
     h2 = (TH2D*) gROOT->FindObject("htemp");
     h2->SetStats(false);
     h2->SetTitle(";ret_cr;ret_ln");
@@ -186,13 +187,59 @@ int main(int argc, char* argv[])
     print(c, fout, tReco, "cluster.sx", "track.ret_ln==0&&track.ret_cr==0", "", "; sx");
     print(c, fout, tReco, "cluster.sy", "track.ret_ln==0&&track.ret_cr==0", "", "; sy");
     print(c, fout, tReco, "cluster.sz", "track.ret_ln==0&&track.ret_cr==0", "", "; sz");
-    print(c, fout, tReco, "TMath::Log10(cluster.varx)", "track.ret_ln==0&&track.ret_cr==0", "", "; log_{10}(varx)");
-    print(c, fout, tReco, "TMath::Log10(cluster.vary)", "track.ret_ln==0&&track.ret_cr==0", "", "; log_{10}(vary)");
+    print(c, fout, tReco, "cluster.varx", "track.ret_ln==0&&track.ret_cr==0", "", "; varx");
+    print(c, fout, tReco, "cluster.vary", "track.ret_ln==0&&track.ret_cr==0", "", "; vary");
     print(c, fout, tReco, "cluster.varz", "track.ret_ln==0&&track.ret_cr==0", "", "; varz");
   }
   
   if(tEvent)
-  {
+  { 
+    n = tEvent->Draw("y:x", "", "goff"); 
+    g = new TGraph(n,tEvent->GetV2(),tEvent->GetV1()); 
+    g->SetTitle("; x (mm); y (mm)");
+    g->Draw("ap");
+    c.SaveAs(fout.Data());
+    
+    n = tEvent->Draw("y:z", "", "goff"); 
+    g = new TGraph(n,tEvent->GetV2(),tEvent->GetV1()); 
+    g->SetTitle("; z (mm); y (mm)");
+    g->Draw("ap");
+    c.SaveAs(fout.Data());
+    
+    print(c, fout, tEvent, "t", "", "", "; t (ns)");
+    print(c, fout, tEvent, "Enu", "", "", "neutrino; E (MeV)");
+    print(c, fout, tEvent, "pxnu", "", "", "neutrino; px (MeV)");
+    print(c, fout, tEvent, "pynu", "", "", "neutrino; py (MeV)");
+    print(c, fout, tEvent, "pznu", "", "", "neutrino; pz (MeV)");
+    print(c, fout, tEvent, "Enureco>0", "", "", "; reconstructed");
+    print(c, fout, tEvent, "Enureco", "Enureco>0.", "", "neutrino; Ereco (MeV)");
+    print(c, fout, tEvent, "pxnureco", "Enureco>0.", "", "neutrino; pxreco (MeV)");
+    print(c, fout, tEvent, "pynureco", "Enureco>0.", "", "neutrino; pyreco (MeV)");
+    print(c, fout, tEvent, "pznureco", "Enureco>0.", "", "neutrino; pzreco (MeV)");
+    print(c, fout, tEvent, "particles.primary", "", "", "; primary");
+    
+    tEvent->Draw("Enureco:Enu>>h2(100,0,10000,100,0,10000)", "Enureco>0.", "colz"); 
+    h2 = (TH2D*) gROOT->FindObject("h2");
+    h2->SetStats(false);
+    h2->SetTitle("; E (MeV); Ereco (MeV)");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+    
+    c.SetLogy(true);    
+    tEvent->Draw("particles.pdg>>h1(8000,-4000,4000)", "", ""); 
+    h1 = (TH1D*) gROOT->FindObject("h1");
+    h1->SetStats(false);
+    h1->SetTitle("; pdg");
+    h1->Draw();
+    c.SaveAs(fout.Data());
+    
+    tEvent->Draw("particles.pdg>>h1(8000,-4000,4000)", "particles.primary==1", ""); 
+    h1 = (TH1D*) gROOT->FindObject("h1");
+    h1->SetStats(false);
+    h1->SetTitle("; pdg");
+    h1->Draw();
+    c.SaveAs(fout.Data());
+    c.SetLogy(false);
   }
   
   c.Clear();
