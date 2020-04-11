@@ -33,3 +33,7 @@ Reconstruct: libStruct.so
 Analyze: libStruct.so
 	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
 	$(EDEPGLIBS) -Llib -lStruct src/analysis.cpp
+
+FastCheck: libStruct.so
+	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
+	$(EDEPGLIBS) -Llib -lStruct src/fastcheck.cpp
