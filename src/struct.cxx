@@ -1202,7 +1202,7 @@ namespace {
     static const char* includePaths[] = {
 "/wd/sw/ROOT/root-6.16.00/root-6.16.00.binary/include",
 "/wd/sw/ROOT/root-6.16.00/root-6.16.00.binary/include",
-"/wd/dune-it/enurec/analysis/kloe-simu/include/",
+"/wd/dune-it/ext_bkg/kloe-simu/include/",
 0
     };
     static const char* fwdDeclCode = R"DICTFWDDCLS(
