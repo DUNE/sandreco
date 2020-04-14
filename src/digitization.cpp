@@ -156,7 +156,8 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
 
     
     
-    // Federico, 10/04/2020
+    // hitAngle, cellAngle, modAngle
+
     double modDeltaAngle = 2.0 * TMath::Pi() / 24;             // 24 modules in a ring
     double cellDeltaAngle = 2.0 * TMath::Pi() / (24*12);       // 24 modules * 12 cells/module = number of cells in a ring
 
@@ -168,9 +169,19 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         if (z==0) hitAngle = 0;
     }
     
-    double cellAngle = ( (int) ( (hitAngle + TMath::Sign((float)1.0, (float)hitAngle) * cellDeltaAngle) / cellDeltaAngle) ) * cellDeltaAngle;
+    double cellAngle = ( (int) ( (hitAngle + TMath::Sign((float)6.0, (float)hitAngle) * cellDeltaAngle) / cellDeltaAngle) ) * cellDeltaAngle;
     
-    double modAngle = ( (int) ( (hitAngle + TMath::Sign((float)1.0, (float)hitAngle) * modDeltaAngle) / modDeltaAngle) ) * modDeltaAngle;
+    double modAngle = ( (int) ( (hitAngle + TMath::Sign((float)6.0, (float)hitAngle) * modDeltaAngle) / cellDeltaAngle) ) * cellDeltaAngle;
+
+    
+
+    // modID
+
+    double toleranceAngle = 0.001;
+    // if (modAngle>0-toleranceAngle && modAngle<TMath::Pi()/2-toleranceAngle)  modID = modAngle / modDeltaAngle + 18;
+    // if (modAngle>TMath::Pi()/2+toleranceAngle && modAngle<TMath::Pi()+toleranceAngle) 
+    modID = (int) ((modAngle / modDeltaAngle) + 18) % 24;
+
 
 
 
