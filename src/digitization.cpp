@@ -156,31 +156,50 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
 
     
     
-    // hitAngle, cellAngle, modAngle
 
+    // hitAngle, cellAngle, modAngle
+    
     double modDeltaAngle = 2.0 * TMath::Pi() / 24;             // 24 modules in a ring
     double cellDeltaAngle = 2.0 * TMath::Pi() / (24*12);       // 24 modules * 12 cells/module = number of cells in a ring
 
     double hitAngle;
-    if (y!=0) hitAngle = 2 * atan( y / ( z + sqrt( y*y + z*z)));
-    else if (y==0) {
-        if (z<0) hitAngle = TMath::Pi();
-        if (z>0) hitAngle = 0;
-        if (z==0) hitAngle = 0;
+    
+    // This is the angle w.r.t. the y-axis. In Ideal2RealCal I used the angle w.r.t. the z-axis!
+    if (z!=0) hitAngle = 2 * atan( -z / ( y + sqrt( y*y + z*z)));
+    else if (z==0) {
+        if (y<0) hitAngle = TMath::Pi();
+        if (y>0) hitAngle = 0;
+        if (y==0) hitAngle = 0;
     }
-    
+
     double cellAngle = ( (int) ( (hitAngle + TMath::Sign((float)6.0, (float)hitAngle) * cellDeltaAngle) / cellDeltaAngle) ) * cellDeltaAngle;
-    
     double modAngle = ( (int) ( (hitAngle + TMath::Sign((float)6.0, (float)hitAngle) * modDeltaAngle) / cellDeltaAngle) ) * cellDeltaAngle;
 
-    
+
+
 
     // modID
 
     double toleranceAngle = 0.001;
-    // if (modAngle>0-toleranceAngle && modAngle<TMath::Pi()/2-toleranceAngle)  modID = modAngle / modDeltaAngle + 18;
-    // if (modAngle>TMath::Pi()/2+toleranceAngle && modAngle<TMath::Pi()+toleranceAngle) 
-    modID = (int) ((modAngle / modDeltaAngle) + 18) % 24;
+    modID = (int) ((modAngle / modDeltaAngle) + 0) % 24;   // hitAngle is defined w.r.t. the y-axis, so I start counting the modules from 0.
+
+
+
+
+    // planeID
+
+    double rotated_z = z * cos(-modAngle) - y * sin(-modAngle);
+    double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
+
+    planeID = (rotated_y - 200) / 4.4;
+    if (planeID > 4) planeID = 4;
+
+
+
+
+    // cellID
+
+
 
 
 
