@@ -53,17 +53,17 @@ int main(int argc, char* argv[])
   TTree* tReco = (TTree*) fin.Get("tReco");
   TTree* tEvent = (TTree*) fin.Get("tEvent");
   
-  if(tDigit)
-  {
-    TCut barrel_module = "cell.mod < 24";
-    TCut endcap_module = "cell.mod > 24";
-    TCup up_barrel_module = "cell.mod==0";
-    TCup left_endcap_module = "cell.mod==30";
-    TCut trackRecoOK = "track.ret_ln==0&&track.ret_cr==0";
-    TCut EnuRecoOK = "Enureco>0.";
-    TCut PrimaryPart = "particles.primary==1";
-    TCut PartTrackRecoOK = "particles.tr.ret_ln==0&&particles.tr.ret_cr==0";
+  TCut barrel_module = "cell.mod < 24";
+  TCut endcap_module = "cell.mod > 24";
+  TCut up_barrel_module = "cell.mod==0";
+  TCut left_endcap_module = "cell.mod==30";
+  TCut trackRecoOK = "track.ret_ln==0&&track.ret_cr==0";
+  TCut EnuRecoOK = "Enureco>0.";
+  TCut PrimaryPart = "particles.primary==1";
+  TCut PartTrackRecoOK = "particles.tr.ret_ln==0&&particles.tr.ret_cr==0";
   
+  if(tDigit)
+  {  
     print(c, fout, tDigit, "cell.mod", "", "", "; module id", -1);
     print(c, fout, tDigit, "cell.lay", "", "", "; layer id");
     print(c, fout, tDigit, "cell.cel", barrel_module, "", "barrel modules; cell id");
