@@ -1,11 +1,12 @@
-// File struct.h 
-#include <vector> 
+// File struct.h
+#include <vector>
 #include <map>
 
 #ifndef STRUCT_H
 #define STRUCT_H
 
-struct cell {
+struct cell
+{
   int id;
   double z;
   double y;
@@ -24,7 +25,8 @@ struct cell {
   std::vector<int> hindex2;
 };
 
-struct cluster {
+struct cluster
+{
   int tid;
   double x;
   double y;
@@ -40,7 +42,8 @@ struct cluster {
   std::vector<cell> cells;
 };
 
-struct hit {
+struct hit
+{
   std::string det;
   double x1;
   double y1;
@@ -55,7 +58,8 @@ struct hit {
   int index;
 };
 
-struct digit {
+struct digit
+{
   std::string det;
   double x;
   double y;
@@ -66,7 +70,8 @@ struct digit {
   std::vector<int> hindex;
 };
 
-struct track {
+struct track
+{
   int tid;
   double yc;
   double zc;
@@ -85,7 +90,8 @@ struct track {
   std::vector<digit> digits;
 };
 
-struct particle {
+struct particle
+{
   int primary;
   int pdg;
   int tid;
@@ -100,7 +106,7 @@ struct particle {
   double ytrue;
   double ztrue;
   double ttrue;
-  
+
   double pxreco;
   double pyreco;
   double pzreco;
@@ -109,21 +115,20 @@ struct particle {
   double yreco;
   double zreco;
   double treco;
-  
   bool kalman_ok;
-  
   bool has_track;
   double charge_reco;
   track tr;
-  
+
   bool has_cluster;
   cluster cl;
-  
+
   bool has_daughter;
   std::vector<particle> daughters;
 };
 
-struct event {
+struct event
+{
   double x;
   double y;
   double z;
@@ -139,7 +144,8 @@ struct event {
   std::vector<particle> particles;
 };
 
-struct gcell {
+struct gcell
+{
   int id;
   double Z[4];
   double Y[4];
@@ -147,21 +153,21 @@ struct gcell {
   double tdc;
 };
 
-#ifdef __MAKECINT__ 
-#pragma link C++ class std::map<int,std::vector<double> >+; 
-#pragma link C++ class std::map<int,std::vector<int> >+;
-#pragma link C++ class std::map<int,double>+;
-#pragma link C++ class std::vector<cell>+; 
-#pragma link C++ class std::map<std::string,std::vector<hit> >+; 
-#pragma link C++ class std::vector<digit>+; 
-#pragma link C++ class std::vector<track>+;
-#pragma link C++ class std::vector<cluster>+;
-#pragma link C++ class std::vector<particle>+;
-#pragma link C++ class digit+;
-#pragma link C++ class cell+;
-#pragma link C++ class cluster+;
-#pragma link C++ class track+;
-#pragma link C++ class particle+;
-#pragma link C++ class event+;
+#ifdef __MAKECINT__
+#pragma link C++ class std::map < int, std::vector < double >> +;
+#pragma link C++ class std::map < int, std::vector < int >> +;
+#pragma link C++ class std::map < int, double > +;
+#pragma link C++ class std::vector < cell > +;
+#pragma link C++ class std::map < std::string, std::vector < hit >> +;
+#pragma link C++ class std::vector < digit > +;
+#pragma link C++ class std::vector < track > +;
+#pragma link C++ class std::vector < cluster > +;
+#pragma link C++ class std::vector < particle > +;
+#pragma link C++ class digit + ;
+#pragma link C++ class cell + ;
+#pragma link C++ class cluster + ;
+#pragma link C++ class track + ;
+#pragma link C++ class particle + ;
+#pragma link C++ class event + ;
 #endif
 #endif

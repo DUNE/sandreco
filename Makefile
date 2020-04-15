@@ -5,7 +5,7 @@ LDFLAGS = $(shell root-config --ldflags)
 ROOTGLIBS = $(shell root-config --glibs)
 ROOTINCDIR = $(shell root-config --incdir)
 
-EDEPSIM = /wd/sw/EDEPSIM/edep-sim.binary
+EDEPSIM = ${EDEPSIMDIR}
 
 EDEPGLIBS = -L$(EDEPSIM)/lib/ -ledepsim_io
 EDEPINCDIR = $(EDEPSIM)/include/EDepSim
