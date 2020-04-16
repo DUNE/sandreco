@@ -30,6 +30,10 @@
 // Distance mm
 // Time ns
 
+
+
+
+
 double Attenuation(double d, int planeID)
 {
     /*
@@ -79,6 +83,10 @@ double Attenuation(double d, int planeID)
     return p1 * TMath::Exp(-d / alt1) + (1. - p1) * TMath::Exp(-d / alt2);
 }
 
+
+
+
+
 double E2PE(double E)
 {
     // Average number of photoelectrons = 25*Ea(MeV)
@@ -89,6 +97,10 @@ double E2PE(double E)
 
     return e2p2 * E;
 }
+
+
+
+
 
 double petime(double t0, double d)
 {
@@ -129,6 +141,10 @@ double petime(double t0, double d)
     return time;
 }
 
+
+
+
+
 bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         int& planeID, int& cellID, double& d1, double& d2, double& t,
         double& de)
@@ -151,63 +167,81 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
     t = 0.5 * (hit.Start.T() + hit.Stop.T());
     de = hit.EnergyDeposit;
     
-    //da usare IdealToRealCal per riempire queste variabili....dobbiamo aggiungere modID, planeID, cellID
-    //da copiare da ProcessHitEdepSim
-
-    
-    
+    // Global to local coordinates
+    //
+    TLorentzVector globalPos(x, y, z, 0);
+    TLorentzVector localPos = GlobalToLocalCoordinates(globalPos);
+    x = localPos.X();
+    y = localPos.Y();
+    z = localPos.Z();
+    double r = sqrt(y*y + z*z);
+    std::cout << "x: " << x << "\ty: " << y << "\tz: " << z << "\tr: " << r;
 
     // hitAngle, cellAngle, modAngle
-    
+    // 
     double modDeltaAngle = 2.0 * TMath::Pi() / 24;             // 24 modules in a ring
     double cellDeltaAngle = 2.0 * TMath::Pi() / (24*12);       // 24 modules * 12 cells/module = number of cells in a ring
-
     double hitAngle;
-    
     // This is the angle w.r.t. the y-axis. In Ideal2RealCal I used the angle w.r.t. the z-axis!
-    if (z!=0) hitAngle = 2 * atan( -z / ( y + sqrt( y*y + z*z)));
+    if (z!=0) {
+        if (z<0) hitAngle = 2 * atan( -z / ( y + sqrt( y*y + z*z)));                                  
+        if (z>0) hitAngle = 2 * atan( -z / ( y + sqrt( y*y + z*z))) + 2 * TMath::Pi();
+    }
     else if (z==0) {
         if (y<0) hitAngle = TMath::Pi();
         if (y>0) hitAngle = 0;
         if (y==0) hitAngle = 0;
     }
+    double cellAngle = int(hitAngle / cellDeltaAngle) * cellDeltaAngle + cellDeltaAngle/2;
+    double modAngle = int((hitAngle + 0.5 * modDeltaAngle) / modDeltaAngle) * modDeltaAngle;
 
-    double cellAngle = ( (int) ( (hitAngle + TMath::Sign((float)6.0, (float)hitAngle) * cellDeltaAngle) / cellDeltaAngle) ) * cellDeltaAngle;
-    double modAngle = ( (int) ( (hitAngle + TMath::Sign((float)6.0, (float)hitAngle) * modDeltaAngle) / cellDeltaAngle) ) * cellDeltaAngle;
-
-
-
-
-    // modID
-
-    double toleranceAngle = 0.001;
-    modID = (int) ((modAngle / modDeltaAngle) + 0) % 24;   // hitAngle is defined w.r.t. the y-axis, so I start counting the modules from 0.
-
-
-
-
-    // planeID
-
+    // Coordinates rotation and volume finding
+    //
+    TString str = "";
     double rotated_z = z * cos(-modAngle) - y * sin(-modAngle);
     double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
+    // TODO: check if x is actually in cm, otherwise replace 100 with 1000
+    if ( (rotated_y > ns_Digit::ec_rf) && (rotated_y < ns_Digit::ec_rf + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2 * 100) )   str = "volECAL";        // ECAL barrel
+    else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) > ns_Draw::kloe_int_dx) && (abs(x) < ns_Draw::kloe_int_dx + 2 * ns_Digit::ec_dzf) )      str = "endvolECAL";     // ECAL endcaps
+    else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) < ns_Draw::kloe_int_dx) )                                                                str = "tracker";
+    else                                                                                                                                        str = "outside";        // outside
+    std::cout << "\tVol: " << str;
 
-    planeID = (rotated_y - 200) / 4.4;
-    if (planeID > 4) planeID = 4;
-
-
-
-
-    // cellID
-
-
-
-
-
+    // modID, planeID, cellID, d1, d2
+    //
+    if (str=="volECAL") {
+        // modID
+        modID = int((hitAngle + 0.5 * modDeltaAngle) / modDeltaAngle) % 24;
+        // planeID
+        planeID = int((rotated_y - ns_Digit::ec_rf) / 44);
+        if (planeID > 4) planeID = 4;
+        // cellID
+        cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) % 12;
+        // d1 distance from left end (x<0)
+        d1 = 215 + x;   // TODO: put 215 cm as a parameter instead of a number. Ensure it is cm and not mm...
+        // d2 distance from right end (x>0)
+        d2 = 215 - x;   // TODO: put 215 cm as a parameter instead of a number. Ensure it is cm and not mm...
+    } else if (str=="endvolECAL") {
+        // modID
+        if (x<0)        modID = 40;
+        else if (x>0)   modID = 30;
+        // planeID
+        planeID = int((abs(x) - ns_Draw::kloe_int_dx) / 4.4);       // TODO: check if x is actually in cm, otherwise replace 4.4 with 44
+        if (planeID > 4) planeID = 4;
+        // cellID
+        cellID = int(z / 44);
+        // d1 distance from top (y>0)
+        d1 =  sqrt(ns_Digit::ec_rf * ns_Digit::ec_rf - z * z) - y;
+        // d2 distance from bottom (y<0)
+        d2 =  sqrt(ns_Digit::ec_rf * ns_Digit::ec_rf - z * z) + y;
+    } else if (str=="tracker" || str=="outside") {
+        std::cout << std::endl;
+        return false; 
+    }
+    std::cout << "\tmod " << modID << "\tplane: " << planeID << "\tcell: " << cellID << "\td1: " << d1 << "\td2: " << d2 << std::endl;
 
     return true;
 }
-
-
 
 
 
@@ -389,6 +423,9 @@ bool ProcessHitEdepSim(TGeoManager* g, const TG4HitSegment& hit, int& modID,
 }
 
 
+
+
+
 void SimulatePEFluka(TG4Event* ev, 
         std::map<int, std::vector<double> >& time_pe,
         std::map<int, std::vector<int> >& id_hit,
@@ -407,7 +444,6 @@ void SimulatePEFluka(TG4Event* ev,
         if (it->first == "EMCalSci") {
             for (unsigned int j = 0; j < it->second.size(); j++) {
                 if (ProcessHitFluka(it->second[j], modID, planeID, cellID, d1, d2, t0, de) == true )  {
-                    //FIXME....DA CAMBIARE/VERIFICARE PER FLUKA
                     double en1 = de * Attenuation(d1, planeID);
                     double en2 = de * Attenuation(d2, planeID);
 
@@ -445,6 +481,7 @@ void SimulatePEFluka(TG4Event* ev,
         }
     }
 }
+
 
 
 
@@ -505,6 +542,10 @@ void SimulatePEEdepSim(TG4Event* ev, TGeoManager* g,
     }
 }
 
+
+
+
+
 void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
         std::map<int, double>& adc, std::map<int, double>& tdc)
 {
@@ -526,6 +567,10 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
         tdc[it->first] = it->second[index];
     }
 }
+
+
+
+
 
 void CollectSignal(TGeoManager* geo,
         std::map<int, std::vector<double> >& time_pe,
@@ -606,6 +651,10 @@ void CollectSignal(TGeoManager* geo,
         vec_cell.push_back(c);
     }
 }
+
+
+
+
 
 void init(TGeoManager* geo)  //initialize the calorimeter dimensions
 {
@@ -690,6 +739,8 @@ void init(TGeoManager* geo)  //initialize the calorimeter dimensions
 
 
 
+
+
 void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
 {
     std::map<int, std::vector<double> > time_pe;
@@ -713,8 +764,12 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
     if (ns_Digit::debug) {
         std::cout << "CollectSignal" << std::endl;
     }
-    CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell); //provare a lasciarla unica??
+    CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell); //TODO: provare a lasciarla unica??
 }
+
+
+
+
 
 void Cluster(TG4Event* ev, TGeoManager* geo,
         std::map<std::string, std::vector<hit> >& cluster_map)
@@ -751,6 +806,10 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     }
 }
 
+
+
+
+
 void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
         std::vector<digit>& digit_vec)
 {
@@ -778,6 +837,10 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
     }
 }
 
+
+
+
+
 void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
 {
     std::map<std::string, std::vector<hit> > cluster_map;
@@ -786,6 +849,10 @@ void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
     Cluster(ev, geo, cluster_map);
     Cluster2Digit(cluster_map, digit_vec);
 }
+
+
+
+
 
 void Digitize(const char* finname, const char* foutname)
 {
@@ -841,18 +908,18 @@ void Digitize(const char* finname, const char* foutname)
         // FOR CHANGING COORDIN FIXME
         for (auto i = vec_cell.begin(); i != vec_cell.end(); ++i){
 
-            cell cel=*i;
+            cell cel = *i;
             TLorentzVector prova(cel.x,cel.y,cel.z,0);
-            TLorentzVector v=GlobalToLocalCoordinates(prova);
+            TLorentzVector v = GlobalToLocalCoordinates(prova);
             //(*i).x=v.X()/10;
             //(*i).y=v.Y()/10;
             //(*i).z=v.Z()/10;
 
-            float R=sqrt(v.Y()*v.Y()+v.Z()*v.Z());
-            if(R>2230) {std::cout<<"ERROR "<<std::endl; 
-                std::cout<<"vec "<<cel.x<<" "<<cel.y<<" "<<cel.z<<std::endl;
-                std::cout<<"local coord "<<v.X()<<" "<<v.Y()<<" "<<v.Z()<<std::endl;
-                std::cout<<"mod lay cell "<<cel.mod<<" "<<cel.lay<<" "<<cel.cel<<std::endl;
+            float R=sqrt(v.Y()*v.Y() + v.Z()*v.Z());
+            if(R>2230) {std::cout << "ERROR " << std::endl; 
+                std::cout << "vec " << cel.x << " " << cel.y << " " << cel.z << std::endl;
+                std::cout << "local coord " << v.X() << " " << v.Y() << " " << v.Z() <<std::endl;
+                std::cout << "mod lay cell " << cel.mod << " " << cel.lay << " " << cel.cel << std::endl;
 
             }
         }
@@ -882,6 +949,7 @@ void Digitize(const char* finname, const char* foutname)
         */
         tout.Fill();
 }
+
 std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
 std::cout << std::endl;
 
@@ -897,11 +965,19 @@ fout.Close();
 f.Close();
 }
 
+
+
+
+
 void help_digit()
 {
     std::cout << "Digitize <input file> <output file>" << std::endl;
     std::cout << "input file name could contain wild card" << std::endl;
 }
+
+
+
+
 
 int main(int argc, char* argv[])
 {
