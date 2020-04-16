@@ -14,7 +14,7 @@ GENFIT=/wd/sw/GENFIT/GenFit.binary
 
 EIGEN3=/usr/include/eigen3
 
-all: Digitize Reconstruct Analyze
+all: Digitize Reconstruct Analyze FastCheck
 
 struct.cxx: include/struct.h include/Linkdef.h
 	cd include && rootcint -f ../src/$@ -c $(CFLAGS) -p $(HEADERS) Linkdef.h && cd ..
@@ -33,3 +33,7 @@ Reconstruct: libStruct.so
 Analyze: libStruct.so
 	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
 	$(EDEPGLIBS) -Llib -lStruct src/analysis.cpp
+
+FastCheck: libStruct.so
+	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
+	$(EDEPGLIBS) -Llib -lStruct src/fastcheck.cpp
