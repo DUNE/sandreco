@@ -57,6 +57,7 @@ int main(int argc, char* argv[])
   TCut endcap_module = "cell.mod > 24";
   TCut up_barrel_module = "cell.mod==0";
   TCut left_endcap_module = "cell.mod==30";
+  TCut cellOK = "cell.adc1>0&&cell.adc2>0";
   TCut trackRecoOK = "track.ret_ln==0&&track.ret_cr==0";
   TCut EnuRecoOK = "Enureco>0.";
   TCut PrimaryPart = "particles.primary==1";
@@ -124,8 +125,41 @@ int main(int argc, char* argv[])
     c.SetLogy(true);
     print(c, fout, tDigit, "TMath::Log10(cell.adc1)", "", "", "cells; log_{10}(adc1)");
     print(c, fout, tDigit, "TMath::Log10(cell.adc2)", "", "", "cells; log_{10}(adc2)");
-    print(c, fout, tDigit, "TMath::Log10(cell.tdc1)", "", "", "cells; log_{10}(tdc1/ns)");
-    print(c, fout, tDigit, "TMath::Log10(cell.tdc2)", "", "", "cells; log_{10}(tdc2/ns)");
+    c.SetLogy(false);
+    
+    c.SetLogz(true);
+    tDigit->Draw("adc2:adc1>>htemp(200,0,2000,200,0,2000)", "", "colz"); 
+    h2 = (TH2D*) gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cells; adc1; adc2");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+    c.SetLogz(false);
+    
+    tDigit->Draw("(adc2>0):(adc1>0)>>htemp(2,-0.5,1.5,2,-0.5,1.5)", "", "colztext"); 
+    h2 = (TH2D*) gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cells; adc1>0; adc2>0");
+    h2->Draw("colztext");
+    c.SaveAs(fout.Data());
+    
+    c.SetLogy(true);
+    print(c, fout, tDigit, "TMath::Log10(cell.tdc1)", cellOK, "", "OK cells; log_{10}(tdc1/ns)");
+    print(c, fout, tDigit, "TMath::Log10(cell.tdc2)", cellOK, "", "OK cells; log_{10}(tdc2/ns)");
+    print(c, fout, tDigit, "cell.tdc1-cell.tdc2", cellOK, "", "OK cells; tdc1 - tdc2 (ns)");
+    print(c, fout, tDigit, "cell.tdc1+cell.tdc2", cellOK, "", "OK cells; tdc1 + tdc2 (ns)");
+    c.SetLogy(false);
+    
+    c.SetLogz(true);
+    tDigit->Draw("tdc2:tdc1>>htemp(200,0,1E4,200,0,1E4)", cellOK, "colz"); 
+    h2 = (TH2D*) gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cells; tdc1 (ns); tdc2 (ns)");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+    c.SetLogz(false);
+    
+    c.SetLogy(true);
     print(c, fout, tDigit, "TMath::Log10(cell.pe_time1)", "", "", "cells; log_{10}(p.e. time1/ns)");
     print(c, fout, tDigit, "TMath::Log10(cell.pe_time2)", "", "", "cells; log_{10}(p.e. time2/ns)");
     c.SetLogy(false);
@@ -194,7 +228,7 @@ int main(int argc, char* argv[])
     print(c, fout, tReco, "TMath::Log10(track.chi2_cr)", trackRecoOK, "", "tracks; log_{10}(#chi^{2}_{cr})");
     print(c, fout, tReco, "TMath::Log10(track.chi2_ln)", trackRecoOK, "", "tracks; log_{10}(#chi^{2}_{ln})");
     
-    tReco->Draw("(TMath::Log10(track.chi2_ln)):(TMath::Log10(track.chi2_cr))", trackRecoOK, "colz"); 
+    tReco->Draw("TMath::Log10(track.chi2_ln):TMath::Log10(track.chi2_cr)", trackRecoOK, "colz"); 
     h2 = (TH2D*) gROOT->FindObject("htemp");
     h2->SetStats(false);
     h2->SetTitle("tracks; log_{10}(#chi^{2}_{cr}); log_{10}(#chi^{2}_{ln})");
@@ -248,11 +282,15 @@ int main(int argc, char* argv[])
     print(c, fout, tEvent, "pxnu", "", "", "neutrino; px (MeV)");
     print(c, fout, tEvent, "pynu", "", "", "neutrino; py (MeV)");
     print(c, fout, tEvent, "pznu", "", "", "neutrino; pz (MeV)");
-    print(c, fout, tEvent, "Enureco>0", "", "", "; reconstructed");
-    print(c, fout, tEvent, "Enureco", EnuRecoOK, "", "neutrino; Ereco (MeV)");
-    print(c, fout, tEvent, "pxnureco", EnuRecoOK, "", "neutrino; pxreco (MeV)");
-    print(c, fout, tEvent, "pynureco", EnuRecoOK, "", "neutrino; pyreco (MeV)");
-    print(c, fout, tEvent, "pznureco", EnuRecoOK, "", "neutrino; pzreco (MeV)");
+    print(c, fout, tEvent, "Enureco>0>>htemp(2,-0.5,1.5)", "", "", "; reconstructed");
+    
+    c.SetLogy(true);
+    print(c, fout, tEvent, "Enureco>>htemp(100,0,20000)", EnuRecoOK, "", "neutrino; Ereco (MeV)");
+    print(c, fout, tEvent, "pxnureco>>htemp(100,-5000,5000)", EnuRecoOK, "", "neutrino; pxreco (MeV)");
+    print(c, fout, tEvent, "pynureco>>htemp(100,-10000,5000)", EnuRecoOK, "", "neutrino; pyreco (MeV)");
+    print(c, fout, tEvent, "pznureco>>htemp(100,-5000,20000)", EnuRecoOK, "", "neutrino; pzreco (MeV)");
+    c.SetLogy(false);
+    
     print(c, fout, tEvent, "particles.primary>>htemp(2,-0.5,1.5)", "", "", "particles; primary");
     
     tEvent->Draw("Enureco:Enu>>h2(100,0,10000,100,0,10000)", EnuRecoOK, "colz"); 
