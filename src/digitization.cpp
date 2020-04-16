@@ -201,19 +201,20 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
     double rotated_z = z * cos(-modAngle) - y * sin(-modAngle);
     double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
     // TODO: check if x is actually in cm, otherwise replace 100 with 1000
-    if ( (rotated_y > ns_Digit::ec_rf) && (rotated_y < ns_Digit::ec_rf + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2 * 100) )   str = "volECAL";        // ECAL barrel
-    else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) > ns_Draw::kloe_int_dx) && (abs(x) < ns_Draw::kloe_int_dx + 2 * ns_Digit::ec_dzf) )      str = "endvolECAL";     // ECAL endcaps
-    else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) < ns_Draw::kloe_int_dx) )                                                                str = "tracker";
+    if ( (rotated_y > ns_Draw::kloe_int_R) && (rotated_y < ns_Draw::kloe_int_R + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2 * 100) )   str = "volECAL";        // ECAL barrel
+    else if ( (rotated_y < ns_Draw::kloe_int_R) && (abs(x) > ns_Draw::kloe_int_dx) && (abs(x) < ns_Draw::kloe_int_dx + 2 * ns_Digit::ec_dzf) )      str = "endvolECAL";     // ECAL endcaps
+    else if ( (rotated_y < ns_Draw::kloe_int_R) && (abs(x) < ns_Draw::kloe_int_dx) )                                                                str = "tracker";
     else                                                                                                                                        str = "outside";        // outside
     std::cout << "\tVol: " << str;
 
     // modID, planeID, cellID, d1, d2
     //
+    double cellD = 0;
     if (str=="volECAL") {
         // modID
         modID = int((hitAngle + 0.5 * modDeltaAngle) / modDeltaAngle) % 24;
         // planeID
-        planeID = int((rotated_y - ns_Digit::ec_rf) / 44);
+        planeID = int((rotated_y - ns_Draw::kloe_int_R) / 44);
         if (planeID > 4) planeID = 4;
         // cellID
         cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) % 12;
@@ -221,19 +222,31 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         d1 = 215 + x;   // TODO: put 215 cm as a parameter instead of a number. Ensure it is cm and not mm...
         // d2 distance from right end (x>0)
         d2 = 215 - x;   // TODO: put 215 cm as a parameter instead of a number. Ensure it is cm and not mm...
+        // cellCoord
+        cellD = ns_Draw::kloe_int_R + ns_Digit::dzlay[planeID] / 2;
+        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += ns_Digit::dzlay[planeindex];
+        ns_Digit::cellCoordBarrel[modID][planeID][cellID][0] = 0;
+        ns_Digit::cellCoordBarrel[modID][planeID][cellID][1] = - cellD * sin(-modAngle) + cellD * tan(cellAngle - modAngle) * cos(-modAngle);
+        ns_Digit::cellCoordBarrel[modID][planeID][cellID][2] = + cellD * cos(-modAngle) + cellD * tan(cellAngle - modAngle) * sin(-modAngle);
     } else if (str=="endvolECAL") {
         // modID
         if (x<0)        modID = 40;
         else if (x>0)   modID = 30;
         // planeID
-        planeID = int((abs(x) - ns_Draw::kloe_int_dx) / 4.4);       // TODO: check if x is actually in cm, otherwise replace 4.4 with 44
+        planeID = int((abs(x) - ns_Draw::kloe_int_dx) / 0.044);         // TODO: check if x is actually in cm
         if (planeID > 4) planeID = 4;
         // cellID
-        cellID = int(z / 44);
+        cellID = int((z + ns_Digit::ec_rf) / 44);                        
         // d1 distance from top (y>0)
         d1 =  sqrt(ns_Digit::ec_rf * ns_Digit::ec_rf - z * z) - y;
         // d2 distance from bottom (y<0)
         d2 =  sqrt(ns_Digit::ec_rf * ns_Digit::ec_rf - z * z) + y;
+        // cellCoord
+        cellD = ns_Draw::kloe_int_dx + ns_Digit::dzlay[planeID] / 2;
+        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += ns_Digit::dzlay[planeindex];
+        ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][0] = cellD; 
+        ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][1] = 0; 
+        ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][2] = 44 / 2 + cellID * 44;
     } else if (str=="tracker" || str=="outside") {
         std::cout << std::endl;
         return false; 
@@ -583,9 +596,7 @@ void CollectSignal(TGeoManager* geo,
             it != time_pe.end(); ++it) {
         if (it->first < 0) continue;
 
-        //le info della posizione viene ottenuta dalla ncella e dall'id..dobbiamo fare anche noi così..oppure ci portiamo dietro le info della posizione?...
-
-        cell c;                       //riempie le celle mettendoci gli hit salvati   dobbiamo riempire tutte le variabili
+        cell c;                       
         c.id = it->first;
         c.adc1 = adc[it->first];
         c.tdc1 = tdc[it->first];
@@ -608,7 +619,6 @@ void CollectSignal(TGeoManager* geo,
         double dummyMas[3];
 
         if(ns_Digit::flukatype==false){
-            //questo a noi non serve le coord del modulo le sappiamo....ma dobbiamo farlo anche per gli endcap
 
             if (c.mod < 24) {
                 dummyLoc[0] = ns_Digit::cxlay[c.lay][c.cel];  //coordinate nel local del modulo in base al numero del modulo e al numero della cella  
@@ -641,16 +651,16 @@ void CollectSignal(TGeoManager* geo,
                 c.y = dummyMas[1];
                 c.z = dummyMas[2];
             }
-        }else {
-            // FLUKA
-            // 
+
+        } else if (ns_Digit::flukatype==true) {
+
             if (c.mod < 24)                                                 // Barrel
             {
 
                 // Local coordinates calculation
-                dummyLoc[0] = ns_Digit::cxlay[c.lay][c.cel];  
-                dummyLoc[1] = 0.;
-                dummyLoc[2] = ns_Digit::czlay[c.lay];
+                dummyLoc[0] = ns_Digit::cellCoordBarrel[c.mod][c.lay][c.cel][0];  
+                dummyLoc[1] = ns_Digit::cellCoordBarrel[c.mod][c.lay][c.cel][1];
+                dummyLoc[2] = ns_Digit::cellCoordBarrel[c.mod][c.lay][c.cel][2];
 
                 // Transformation to global coordinates
                 dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
@@ -663,12 +673,15 @@ void CollectSignal(TGeoManager* geo,
                 c.z = dummyMas[2];
 
             } else if (c.mod == 30 || c.mod == 40)                          // Endcaps
-            {                                                               // right x > 0 : c.mod = 30
+            {   
+
+                // right x > 0 : c.mod = 30
                 // left  x < 0 : c.mod = 40
+
                 // Local coordinates calculation
-                dummyLoc[0] = ns_Digit::ec_r / 45. * (0.5 + c.cel) - ns_Digit::ec_r;
-                dummyLoc[1] = 0.;
-                dummyLoc[2] = ns_Digit::czlay[c.lay];
+                dummyLoc[0] = ns_Digit::cellCoordEndcap[int(c.mod/10)][c.lay][c.cel][0];
+                dummyLoc[1] = ns_Digit::cellCoordEndcap[int(c.mod/10)][c.lay][c.cel][1];
+                dummyLoc[2] = ns_Digit::cellCoordEndcap[int(c.mod/10)][c.lay][c.cel][2];
 
                 // Transformation to global coordinates
                 dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
@@ -679,7 +692,6 @@ void CollectSignal(TGeoManager* geo,
                 c.x = dummyMas[0];
                 c.y = dummyMas[1];
                 c.z = dummyMas[2];
-
             }
 
         }

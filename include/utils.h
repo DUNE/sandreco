@@ -38,6 +38,9 @@ static const double dz_f=115.0;
 static const double ec_rf=2000.0;
 static const double ec_dzf=115.0;
 
+// coordinates of the cells for FLUKA
+double cellCoordBarrel[nMod][nLay][nCel][3];
+double cellCoordEndcap[5][nLay][90][3];
 
 // thickness of the layers in mm
 double dzlay[nLay] = {44., 44., 44., 44., 54.};
