@@ -604,10 +604,10 @@ void CollectSignal(TGeoManager* geo,
         c.lay = (c.id - c.mod * 1000) / 100;
         c.cel = c.id - c.mod * 1000 - c.lay * 100;
 
+        double dummyLoc[3];
+        double dummyMas[3];
 
         if(ns_Digit::flukatype==false){
-            double dummyLoc[3];
-            double dummyMas[3];
             //questo a noi non serve le coord del modulo le sappiamo....ma dobbiamo farlo anche per gli endcap
 
             if (c.mod < 24) {
@@ -642,10 +642,45 @@ void CollectSignal(TGeoManager* geo,
                 c.z = dummyMas[2];
             }
         }else {
-            //da usare IdealToRealCal per ottenere le coordinate della cella e poi trasformare nel GlobalSistem
-            c.x=10000;
-            c.y=10000;
-            c.z=10000;
+            // FLUKA
+            // 
+            if (c.mod < 24)                                                 // Barrel
+            {
+
+                // Local coordinates calculation
+                dummyLoc[0] = ns_Digit::cxlay[c.lay][c.cel];  
+                dummyLoc[1] = 0.;
+                dummyLoc[2] = ns_Digit::czlay[c.lay];
+
+                // Transformation to global coordinates
+                dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
+                dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
+                dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
+
+                // Global coordinates are assigned to the cell position
+                c.x = dummyMas[0];
+                c.y = dummyMas[1];
+                c.z = dummyMas[2];
+
+            } else if (c.mod == 30 || c.mod == 40)                          // Endcaps
+            {                                                               // right x > 0 : c.mod = 30
+                // left  x < 0 : c.mod = 40
+                // Local coordinates calculation
+                dummyLoc[0] = ns_Digit::ec_r / 45. * (0.5 + c.cel) - ns_Digit::ec_r;
+                dummyLoc[1] = 0.;
+                dummyLoc[2] = ns_Digit::czlay[c.lay];
+
+                // Transformation to global coordinates
+                dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
+                dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
+                dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
+
+                // Global coordinates are assigned to the cell position
+                c.x = dummyMas[0];
+                c.y = dummyMas[1];
+                c.z = dummyMas[2];
+
+            }
 
         }
         vec_cell.push_back(c);
