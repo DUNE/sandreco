@@ -390,66 +390,78 @@ void CollectSignal(TGeoManager* geo,
                    std::map<int, std::vector<int> >& id_hit,
                    std::vector<cell>& vec_cell)
 {
+  std::map<int, cell> map_cell;
+  cell* c;
+
   for (std::map<int, std::vector<double> >::iterator it = time_pe.begin();
        it != time_pe.end(); ++it) {
-    if (it->first < 0) continue;
+    int id = abs(it->first);
 
-    cell c;
-    c.id = it->first;
-    c.adc1 = adc[it->first];
-    c.tdc1 = tdc[it->first];
-    c.adc2 = adc[-1 * it->first];
-    c.tdc2 = tdc[-1 * it->first];
-    c.pe_time1 = time_pe[it->first];
-    c.pe_time2 = time_pe[-1 * it->first];
-    c.hindex1 = id_hit[it->first];
-    c.hindex2 = id_hit[-1 * it->first];
-    c.l = L[it->first];
-    c.x = 0;
-    c.y = 0;
-    c.z = 0;
+    c = &(map_cell[id]);
 
-    c.mod = c.id / 1000;
-    c.lay = (c.id - c.mod * 1000) / 100;
-    c.cel = c.id - c.mod * 1000 - c.lay * 100;
+    c->id = id;
+    c->l = L[c->id];
+
+    if (it->first >= 0) {
+      c->adc1 = adc[it->first];
+      c->tdc1 = tdc[it->first];
+      c->pe_time1 = time_pe[it->first];
+      c->hindex1 = id_hit[it->first];
+    } else {
+      c->adc2 = adc[it->first];
+      c->tdc2 = tdc[it->first];
+      c->pe_time2 = time_pe[it->first];
+      c->hindex2 = id_hit[it->first];
+    }
+
+    c->x = 0;
+    c->y = 0;
+    c->z = 0;
+
+    c->mod = c->id / 1000;
+    c->lay = (c->id - c->mod * 1000) / 100;
+    c->cel = c->id - c->mod * 1000 - c->lay * 100;
 
     double dummyLoc[3];
     double dummyMas[3];
 
-    if (c.mod < 24) {
-      dummyLoc[0] = ns_Digit::cxlay[c.lay][c.cel];
+    if (c->mod < 24) {
+      dummyLoc[0] = ns_Digit::cxlay[c->lay][c->cel];
       dummyLoc[1] = 0.;
-      dummyLoc[2] = ns_Digit::czlay[c.lay];
+      dummyLoc[2] = ns_Digit::czlay[c->lay];
 
-      geo->cd(TString::Format(ns_Digit::path_barrel_template, c.mod).Data());
+      geo->cd(TString::Format(ns_Digit::path_barrel_template, c->mod).Data());
 
       geo->LocalToMaster(dummyLoc, dummyMas);
 
-      c.x = dummyMas[0];
-      c.y = dummyMas[1];
-      c.z = dummyMas[2];
-    } else if (c.mod == 30 || c.mod == 40)
-        // right x > 0 : c.mod = 30
-        // left  x < 0 : c.mod = 40
+      c->x = dummyMas[0];
+      c->y = dummyMas[1];
+      c->z = dummyMas[2];
+    } else if (c->mod == 30 || c->mod == 40)
+        // right x > 0 : c->mod = 30
+        // left  x < 0 : c->mod = 40
     {
-      dummyLoc[0] = ns_Digit::ec_r / 45. * (0.5 + c.cel) - ns_Digit::ec_r;
+      dummyLoc[0] = ns_Digit::ec_r / 45. * (0.5 + c->cel) - ns_Digit::ec_r;
       dummyLoc[1] = 0.;
-      dummyLoc[2] = ns_Digit::czlay[c.lay];
+      dummyLoc[2] = ns_Digit::czlay[c->lay];
 
-      if (c.mod == 30) {
+      if (c->mod == 30) {
         geo->cd(ns_Digit::path_endcapR_template);
-      } else if (c.mod == 40) {
+      } else if (c->mod == 40) {
         geo->cd(ns_Digit::path_endcapL_template);
       }
 
       geo->LocalToMaster(dummyLoc, dummyMas);
 
-      c.x = dummyMas[0];
-      c.y = dummyMas[1];
-      c.z = dummyMas[2];
+      c->x = dummyMas[0];
+      c->y = dummyMas[1];
+      c->z = dummyMas[2];
     }
+  }
 
-    vec_cell.push_back(c);
+  for (std::map<int, cell>::iterator it = map_cell.begin();
+       it != map_cell.end(); ++it) {
+    vec_cell.push_back(it->second);
   }
 }
 
