@@ -175,7 +175,7 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
     y = localPos.Y();
     z = localPos.Z();
     double r = sqrt(y*y + z*z);
-    std::cout << "x: " << x << "\ty: " << y << "\tz: " << z << "\tr: " << r;
+    if (ns_Digit::debug) std::cout << "x: " << x << "\ty: " << y << "\tz: " << z << "\tr: " << r;
 
     // hitAngle, cellAngle, modAngle
     // 
@@ -200,12 +200,12 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
     TString str = "";
     double rotated_z = z * cos(-modAngle) - y * sin(-modAngle);
     double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
-    // TODO: check if x is actually in cm, otherwise replace 100 with 1000
-    if ( (rotated_y > ns_Draw::kloe_int_R) && (rotated_y < ns_Draw::kloe_int_R + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2 * 100) )   str = "volECAL";        // ECAL barrel
+    // TODO: check units
+    if ( (rotated_y > ns_Draw::kloe_int_R) && (rotated_y < ns_Draw::kloe_int_R + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2 * 1000) )   str = "volECAL";        // ECAL barrel
     else if ( (rotated_y < ns_Draw::kloe_int_R) && (abs(x) > ns_Draw::kloe_int_dx) && (abs(x) < ns_Draw::kloe_int_dx + 2 * ns_Digit::ec_dzf) )      str = "endvolECAL";     // ECAL endcaps
     else if ( (rotated_y < ns_Draw::kloe_int_R) && (abs(x) < ns_Draw::kloe_int_dx) )                                                                str = "tracker";
     else                                                                                                                                        str = "outside";        // outside
-    std::cout << "\tVol: " << str;
+    if (ns_Digit::debug) std::cout << "\tVol: " << str;
 
     // modID, planeID, cellID, d1, d2
     //
@@ -217,23 +217,23 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         planeID = int((rotated_y - ns_Draw::kloe_int_R) / 44);
         if (planeID > 4) planeID = 4;
         // cellID
-        cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) % 12;
+        cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) % 12;   // TODO: check ordering of cells (clockwise or anticlockwise?)
         // d1 distance from left end (x<0)
-        d1 = 215 + x;   // TODO: put 215 cm as a parameter instead of a number. Ensure it is cm and not mm...
+        d1 = 2150 + x;   // TODO: check units
         // d2 distance from right end (x>0)
-        d2 = 215 - x;   // TODO: put 215 cm as a parameter instead of a number. Ensure it is cm and not mm...
+        d2 = 2150 - x;   // TODO: check units
         // cellCoord
         cellD = ns_Draw::kloe_int_R + ns_Digit::dzlay[planeID] / 2;
         for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += ns_Digit::dzlay[planeindex];
         ns_Digit::cellCoordBarrel[modID][planeID][cellID][0] = 0;
-        ns_Digit::cellCoordBarrel[modID][planeID][cellID][1] = - cellD * sin(-modAngle) + cellD * tan(cellAngle - modAngle) * cos(-modAngle);
-        ns_Digit::cellCoordBarrel[modID][planeID][cellID][2] = + cellD * cos(-modAngle) + cellD * tan(cellAngle - modAngle) * sin(-modAngle);
+        ns_Digit::cellCoordBarrel[modID][planeID][cellID][2] = + cellD * sin(-modAngle) - cellD * tan(cellAngle - modAngle) * cos(-modAngle); // TODO: fix tan argument
+        ns_Digit::cellCoordBarrel[modID][planeID][cellID][1] = + cellD * cos(-modAngle) + cellD * tan(cellAngle - modAngle) * sin(-modAngle);
     } else if (str=="endvolECAL") {
         // modID
         if (x<0)        modID = 40;
         else if (x>0)   modID = 30;
         // planeID
-        planeID = int((abs(x) - ns_Draw::kloe_int_dx) / 0.044);         // TODO: check if x is actually in cm
+        planeID = int((abs(x) - ns_Draw::kloe_int_dx) / 44);         // TODO: check units
         if (planeID > 4) planeID = 4;
         // cellID
         cellID = int((z + ns_Digit::ec_rf) / 44);                        
@@ -242,16 +242,16 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         // d2 distance from bottom (y<0)
         d2 =  sqrt(ns_Digit::ec_rf * ns_Digit::ec_rf - z * z) + y;
         // cellCoord
-        cellD = ns_Draw::kloe_int_dx + ns_Digit::dzlay[planeID] / 2;
-        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += ns_Digit::dzlay[planeindex];
+        cellD = TMath::Sign(1.0, x) * (ns_Draw::kloe_int_dx + ns_Digit::dzlay[planeID] / 2);
+        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += TMath::Sign(1.0, x) * ns_Digit::dzlay[planeindex];
         ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][0] = cellD; 
         ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][1] = 0; 
-        ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][2] = 44 / 2 + cellID * 44;
+        ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][2] = 44 / 2 + cellID * 44 - ns_Digit::ec_rf;
     } else if (str=="tracker" || str=="outside") {
-        std::cout << std::endl;
+        if (ns_Digit::debug) std::cout << std::endl;
         return false; 
     }
-    std::cout << "\tmod " << modID << "\tplane: " << planeID << "\tcell: " << cellID << "\td1: " << d1 << "\td2: " << d2 << std::endl;
+    if (ns_Digit::debug) std::cout << "\tmod " << modID << "\tplane: " << planeID << "\tcell: " << cellID << "\td1: " << d1 << "\td2: " << d2 << std::endl;
 
     return true;
 }
