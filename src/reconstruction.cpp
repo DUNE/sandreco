@@ -722,9 +722,9 @@ void Merge(std::vector<cluster>& vec_cl)
       zv[vec_cl.at(i).cells.at(k).lay] += e * z;
       tv[vec_cl.at(i).cells.at(k).lay] += e * t;
 
-      x2_cl_mean += x * x;
-      y2_cl_mean += y * y;
-      z2_cl_mean += z * z;
+      x2_cl_mean += x * x * e;
+      y2_cl_mean += y * y * e;
+      z2_cl_mean += z * z * e;
     }
 
     vec_cl.at(i).x /= vec_cl.at(i).e;
@@ -732,9 +732,9 @@ void Merge(std::vector<cluster>& vec_cl)
     vec_cl.at(i).z /= vec_cl.at(i).e;
     vec_cl.at(i).t /= vec_cl.at(i).e;
 
-    x2_cl_mean /= vec_cl.at(i).cells.size();
-    y2_cl_mean /= vec_cl.at(i).cells.size();
-    z2_cl_mean /= vec_cl.at(i).cells.size();
+    x2_cl_mean /= vec_cl.at(i).e;
+    y2_cl_mean /= vec_cl.at(i).e;
+    z2_cl_mean /= vec_cl.at(i).e;
 
     vec_cl.at(i).varx = x2_cl_mean - vec_cl.at(i).x * vec_cl.at(i).x;
     vec_cl.at(i).vary = y2_cl_mean - vec_cl.at(i).y * vec_cl.at(i).y;
@@ -812,6 +812,8 @@ bool value_comparer(std::map<int, int>::value_type& i1,
 void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell,
                         std::vector<cluster>& vec_cl)
 {
+  const double cell_max_dt = 30.;  // ns -> dt > 30. ns is unphysical
+
   std::vector<int> pid(vec_cell->size());
   std::map<int, int> hit_pid;
 
@@ -847,7 +849,11 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell,
 
     for (unsigned int j = 0; j < pid.size(); j++) {
       if (pid[j] == unique_pid[i]) {
-        if (vec_cell->at(j).adc1 == 0 || vec_cell->at(j).adc2 == 0) continue;
+        // good cell should have signal on both side and a tdc different less
+        // than 30 ns (5.85 ns/m * 4 m)
+        if (vec_cell->at(j).adc1 == 0 || vec_cell->at(j).adc2 == 0 ||
+            abs(vec_cell->at(j).tdc1 - vec_cell->at(j).tdc2) > cell_max_dt)
+          continue;
 
         cl.cells.push_back(vec_cell->at(j));
       }

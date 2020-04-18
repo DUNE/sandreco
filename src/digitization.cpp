@@ -372,14 +372,53 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
              TDC_cell = TPHE(IND_SEL)
   */
 
-  const double pe2ADC = 1.0;
+  // https://www-sciencedirect-com.ezproxy.cern.ch/science/article/pii/S0168900297013491
+
+  // photoelectron/counts = 0.25
+  const double pe2ADC = 1 / .25;
+  // ADC integration time = 400 ns
+  const double int_time = 400.;
+
+  // https://www.sciencedirect.com/science/article/pii/S0168900201015029
+  // threshold 3-4 p.e.
+  const double threshold = 4;
+
+  // costant fraction 15%
+  const double costant_fraction = 0.15;
+
+  double int_start;
+  int pe_count;
+  int start_index;
 
   for (std::map<int, std::vector<double> >::iterator it = time_pe.begin();
        it != time_pe.end(); ++it) {
-    adc[it->first] = pe2ADC * it->second.size();
+    // order by arrival time
     std::sort(it->second.begin(), it->second.end());
-    int index = 0.15 * it->second.size();
-    tdc[it->first] = it->second[index];
+
+    int_start = it->second.front();
+    pe_count = 0;
+    start_index = 0;
+
+    for (std::vector<double>::iterator pe_time = it->second.begin();
+         pe_time != it->second.end(); ++pe_time) {
+      // integrate for int_time
+      if (*pe_time - int_start <= int_time) {
+        pe_count++;
+      }
+      // below threshold -> reset
+      else if (pe_count < threshold) {
+        pe_count = 1;
+        int_start = *pe_time;
+        start_index = pe_time - it->second.begin();
+      }
+      // above threshold -> stop integration and acquire
+      else if (pe_count >= threshold) {
+        adc[it->first] = pe2ADC * pe_count;
+        int index = int(costant_fraction * pe_count) + start_index;
+        tdc[it->first] = it->second[index];
+        break;
+      }
+    }
   }
 }
 
@@ -393,8 +432,8 @@ void CollectSignal(TGeoManager* geo,
   std::map<int, cell> map_cell;
   cell* c;
 
-  for (std::map<int, std::vector<double> >::iterator it = time_pe.begin();
-       it != time_pe.end(); ++it) {
+  for (std::map<int, double>::iterator it = adc.begin(); it != adc.end();
+       ++it) {
     int id = abs(it->first);
 
     c = &(map_cell[id]);

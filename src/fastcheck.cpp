@@ -136,15 +136,6 @@ int main(int argc, char* argv[])
           "cells; log_{10}(adc2)");
     c.SetLogy(false);
 
-    c.SetLogz(true);
-    tDigit->Draw("adc2:adc1>>htemp(200,0,2000,200,0,2000)", "", "colz");
-    h2 = (TH2D*)gROOT->FindObject("htemp");
-    h2->SetStats(false);
-    h2->SetTitle("cells; adc1; adc2");
-    h2->Draw("colz");
-    c.SaveAs(fout.Data());
-    c.SetLogz(false);
-
     tDigit->Draw("(adc2>0):(adc1>0)>>htemp(2,-0.5,1.5,2,-0.5,1.5)", "",
                  "colztext");
     h2 = (TH2D*)gROOT->FindObject("htemp");
@@ -154,18 +145,27 @@ int main(int argc, char* argv[])
     c.SaveAs(fout.Data());
 
     c.SetLogy(true);
-    print(c, fout, tDigit, "TMath::Log10(cell.tdc1)", cellOK, "",
+    print(c, fout, tDigit, "TMath::Log10(cell.tdc1)", "cell.adc1>0", "",
           "OK cells; log_{10}(tdc1/ns)");
-    print(c, fout, tDigit, "TMath::Log10(cell.tdc2)", cellOK, "",
+    print(c, fout, tDigit, "TMath::Log10(cell.tdc2)", "cell.adc2>0", "",
           "OK cells; log_{10}(tdc2/ns)");
-    print(c, fout, tDigit, "cell.tdc1-cell.tdc2", cellOK, "",
+    print(c, fout, tDigit, "cell.tdc1-cell.tdc2", "", "",
           "OK cells; tdc1 - tdc2 (ns)");
-    print(c, fout, tDigit, "cell.tdc1+cell.tdc2", cellOK, "",
+    print(c, fout, tDigit, "cell.tdc1+cell.tdc2", "", "",
           "OK cells; tdc1 + tdc2 (ns)");
     c.SetLogy(false);
 
     c.SetLogz(true);
-    tDigit->Draw("tdc2:tdc1>>htemp(200,0,1E4,200,0,1E4)", cellOK, "colz");
+    tDigit->Draw("adc2:adc1>>htemp(100,0,5000,100,0,5000)", cellOK, "colz");
+    h2 = (TH2D*)gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cells; adc1; adc2");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+    c.SetLogz(false);
+
+    c.SetLogz(true);
+    tDigit->Draw("tdc2:tdc1>>htemp(100,0,100,100,0,100)", cellOK, "colz");
     h2 = (TH2D*)gROOT->FindObject("htemp");
     h2->SetStats(false);
     h2->SetTitle("cells; tdc1 (ns); tdc2 (ns)");
@@ -275,11 +275,66 @@ int main(int argc, char* argv[])
     print(c, fout, tReco, "cluster.sx", "", "", "clusters; sx");
     print(c, fout, tReco, "cluster.sy", "", "", "clusters; sy");
     print(c, fout, tReco, "cluster.sz", "", "", "clusters; sz");
+
+    tReco->Draw("cluster.sy:cluster.sx", "", "colz");
+    h2 = (TH2D*)gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cluster;clusters; sy;clusters; sx");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+
+    tReco->Draw("cluster.sy:cluster.sz", "", "colz");
+    h2 = (TH2D*)gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cluster;clusters; sy;clusters; sz");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+
+    tReco->Draw("cluster.sx:cluster.sz", "", "colz");
+    h2 = (TH2D*)gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cluster;clusters; sx;clusters; sz");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+
     c.SetLogy(true);
-    print(c, fout, tReco, "cluster.varx", "", "", "clusters; varx");
-    print(c, fout, tReco, "cluster.vary", "", "", "clusters; vary");
-    print(c, fout, tReco, "cluster.varz", "", "", "clusters; varz");
+    print(c, fout, tReco, "TMath::Log10(cluster.varx)", "cluster.varx>0", "",
+          "clusters; log_{10}(varx)");
+    print(c, fout, tReco, "TMath::Log10(cluster.vary)", "cluster.vary>0", "",
+          "clusters; log_{10}(vary)");
+    print(c, fout, tReco, "TMath::Log10(cluster.varz)", "cluster.varz>0", "",
+          "clusters; log_{10}(varz)");
     c.SetLogy(false);
+
+    tReco->Draw(
+        "TMath::Log10(cluster.vary):TMath::Log10(cluster.varx)>>htemp(100,-20,"
+        "10,100,-20,10)",
+        "", "colz");
+    h2 = (TH2D*)gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cluster;log_{10}(vary);log_{10}(varx)");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+
+    tReco->Draw(
+        "TMath::Log10(cluster.vary):TMath::Log10(cluster.varz)>>htemp(100,-20,"
+        "10,100,-20,10)",
+        "", "colz");
+    h2 = (TH2D*)gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cluster;log_{10}(vary);log_{10}(varz)");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+
+    tReco->Draw(
+        "TMath::Log10(cluster.varx):TMath::Log10(cluster.varz)>>htemp(100,-20,"
+        "10,100,-20,10)",
+        "", "colz");
+    h2 = (TH2D*)gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cluster;log_{10}(varx);log_{10}(varz)");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
   }
 
   std::cout << " done" << std::endl;
