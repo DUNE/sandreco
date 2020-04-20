@@ -15,7 +15,7 @@
 #include <iomanip>
 
 const double k = 0.299792458;
-const double B = -0.6;
+const double B = 0.6;
 const double m_to_mm = 1000.;
 const double GeV_to_MeV = 1000.;
 const double c = k * 1E3;  // mm/ns
@@ -222,9 +222,9 @@ void RecoFromTrack(particle& p)
 
     double mom_yz = k * p.tr.r * B;
     double ang_yz = TMath::ATan2(r0z, -r0y);
-    double ang_x = TMath::ATan(1. / p.tr.b) - 0.5 * TMath::Pi();
+    double ang_x = 0.5 * TMath::Pi() - TMath::ATan(1. / p.tr.b);
 
-    p.charge_reco = p.tr.h;
+    p.charge_reco = -p.tr.h;
     p.pxreco = mom_yz * TMath::Tan(ang_x);
     p.pyreco = p.charge_reco * mom_yz * TMath::Sin(ang_yz);
     p.pzreco = p.charge_reco * mom_yz * TMath::Cos(ang_yz);

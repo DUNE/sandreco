@@ -159,11 +159,11 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   TObjArray* obj = str2.Tokenize("/");
 
   int size = obj->GetEntries();
-  if (size < 6) {
+  if (size < 7) {
     return false;
   };
 
-  str2 = ((TObjString*)obj->At(5))->GetString();
+  str2 = ((TObjString*)obj->At(6))->GetString();
   delete obj;
 
   if (ns_Digit::debug) {

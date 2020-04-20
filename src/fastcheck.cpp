@@ -174,6 +174,10 @@ int main(int argc, char* argv[])
     c.SetLogz(false);
 
     c.SetLogy(true);
+    print(c, fout, tDigit, "TMath::Log10(cell.@pe_time1.size())", "", "",
+          "cells; log_{10}(#p.e.)");
+    print(c, fout, tDigit, "TMath::Log10(cell.@pe_time2.size())", "", "",
+          "cells; log_{10}(#p.e.)");
     print(c, fout, tDigit, "TMath::Log10(cell.pe_time1)", "", "",
           "cells; log_{10}(p.e. time1/ns)");
     print(c, fout, tDigit, "TMath::Log10(cell.pe_time2)", "", "",
@@ -279,21 +283,21 @@ int main(int argc, char* argv[])
     tReco->Draw("cluster.sy:cluster.sx", "", "colz");
     h2 = (TH2D*)gROOT->FindObject("htemp");
     h2->SetStats(false);
-    h2->SetTitle("cluster;clusters; sy;clusters; sx");
+    h2->SetTitle("cluster; sx; sy");
     h2->Draw("colz");
     c.SaveAs(fout.Data());
 
     tReco->Draw("cluster.sy:cluster.sz", "", "colz");
     h2 = (TH2D*)gROOT->FindObject("htemp");
     h2->SetStats(false);
-    h2->SetTitle("cluster;clusters; sy;clusters; sz");
+    h2->SetTitle("cluster; sz; sy");
     h2->Draw("colz");
     c.SaveAs(fout.Data());
 
     tReco->Draw("cluster.sx:cluster.sz", "", "colz");
     h2 = (TH2D*)gROOT->FindObject("htemp");
     h2->SetStats(false);
-    h2->SetTitle("cluster;clusters; sx;clusters; sz");
+    h2->SetTitle("cluster; sz; sx");
     h2->Draw("colz");
     c.SaveAs(fout.Data());
 

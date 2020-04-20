@@ -99,8 +99,8 @@ void init(const char* ifile)
   double dummyMas[3];
 
   geo->cd(
-      "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "volSTTFULL_PV_0");
+      "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+      "MagIntVol_volume_PV_0/volSTTFULL_PV_0");
 
   dummyLoc[0] = 0.;
   dummyLoc[1] = 0.;
@@ -171,8 +171,8 @@ void init(const char* ifile)
   }
 
   const char* path_template =
-      "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
+      "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+      "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
 
   double CellMasterY[nCellModule][4];
   double CellMasterZ[nCellModule][4];
@@ -251,8 +251,8 @@ void init(const char* ifile)
   double dummyLoc_ec[4][3];
 
   const char* path_endcapR_template =
-      "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+      "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+      "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 
   geo->cd(path_endcapR_template);
 
@@ -300,8 +300,8 @@ void init(const char* ifile)
   }
 
   const char* path_endcapL_template =
-      "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
+      "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+      "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
   geo->cd(path_endcapL_template);
 
   for (int j = 0; j < nLay_ec; j++) {
