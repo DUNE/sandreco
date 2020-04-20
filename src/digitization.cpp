@@ -699,9 +699,9 @@ void Digitize(const char* finname, const char* foutname)
   tout.Write();
   geo->Write();
   t->CloneTree()->Write();
-  if(gRooTracker)gRooTracker->CloneTree()->Write();
-  if(InputKinem)InputKinem->CloneTree()->Write();
-  if(InputFiles)InputFiles->CloneTree()->Write();
+  if (gRooTracker) gRooTracker->CloneTree()->Write();
+  if (InputKinem) InputKinem->CloneTree()->Write();
+  if (InputFiles) InputFiles->CloneTree()->Write();
   fout.Close();
 
   f.Close();
