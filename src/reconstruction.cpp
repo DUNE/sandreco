@@ -660,24 +660,90 @@ void Filter(std::vector<cluster>& vec_cl)
   }
 }
 
+double AttenuationFactor(double d, int planeID)
+{
+  /*
+       dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
+         d    distance from photocatode - 2 cells/cell; d1 and d2
+        atl1  50. cm
+        atl2  430 cm planes 1-2    innermost plane is 1
+              380 cm plane 3
+              330 cm planes 4-5
+         p1   0.35
+  */
+  const double p1 = 0.35;
+  const double alt1 = 500.;
+  double alt2 = 0.0;
+
+  switch (planeID) {
+    case 0:
+    case 1:
+      alt2 = 4300.0;
+      break;
+
+    case 2:
+      alt2 = 3800.0;
+      break;
+
+    case 3:
+    case 4:
+      alt2 = 3300.0;
+      break;
+
+    default:
+      // std::cout << "planeID out if range" << std::endl;
+      alt2 = -999.0;
+      break;
+  }
+
+  if (ns_Digit::debug) {
+    std::cout << "planeID = " << planeID << std::endl;
+    std::cout << "\tp1   = " << p1 << std::endl;
+    std::cout << "\talt1 = " << alt1 << std::endl;
+    std::cout << "\talt2 = " << alt2 << std::endl;
+    std::cout << "\tatt  = "
+              << p1* TMath::Exp(-d / alt1) + (1. - p1) * TMath::Exp(-d / alt2)
+              << std::endl;
+  }
+
+  return p1 * TMath::Exp(-d / alt1) + (1. - p1) * TMath::Exp(-d / alt2);
+}
+
 double TfromTDC(double t1, double t2, double L)
 {
   return 0.5 * (t1 + t2 - ns_Digit::vlfb * L / m_to_mm);
+}
+
+double XfromTDC(double t1, double t2)
+{
+  return 0.5 * (t1 - t2) / ns_Digit::vlfb * m_to_mm;
+}
+
+double EfromADC(double adc1, double adc2, double d1, double d2, int planeID)
+{
+  const double adc2MeV = 1. / 10.29;
+
+  double f1 = AttenuationFactor(d1, planeID);
+  double f2 = AttenuationFactor(d2, planeID);
+
+  return 0.5 * (adc1 / f1 + adc2 / f2) * adc2MeV;
 }
 
 void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e)
 {
   if (c.id < 25000)  // Barrel
   {
-    x = 0.5 * (c.tdc1 - c.tdc2) / ns_Digit::vlfb * m_to_mm + c.x;
+    x = c.x + XfromTDC(c.tdc1, c.tdc2);
     y = c.y;
   } else {
     x = c.x;
-    y = -0.5 * (c.tdc1 - c.tdc2) / ns_Digit::vlfb * m_to_mm + c.y;
+    y = c.y - XfromTDC(c.tdc1, c.tdc2);
   }
+  double d1 = 0.5 * c.l + XfromTDC(c.tdc1, c.tdc2);
+  double d2 = 0.5 * c.l - XfromTDC(c.tdc1, c.tdc2);
   z = c.z;
-  t = 0.5 * (c.tdc1 + c.tdc2 - ns_Digit::vlfb * c.l / m_to_mm);
-  e = c.adc1 + c.adc2;
+  t = TfromTDC(c.tdc1, c.tdc2, c.l);
+  e = EfromADC(c.adc1, c.adc2, d1, d2, c.lay);
 }
 
 void Merge(std::vector<cluster>& vec_cl)
