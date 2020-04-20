@@ -202,8 +202,8 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
     double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
     // TODO: check units
     if ( (rotated_y > ns_Draw::kloe_int_R) && (rotated_y < ns_Draw::kloe_int_R + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2 * 1000) )   str = "volECAL";        // ECAL barrel
-    else if ( (rotated_y < ns_Draw::kloe_int_R) && (abs(x) > ns_Draw::kloe_int_dx) && (abs(x) < ns_Draw::kloe_int_dx + 2 * ns_Digit::ec_dzf) )      str = "endvolECAL";     // ECAL endcaps
-    else if ( (rotated_y < ns_Draw::kloe_int_R) && (abs(x) < ns_Draw::kloe_int_dx) )                                                                str = "tracker";
+    else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) > ns_Draw::kloe_int_dx) && (abs(x) < ns_Draw::kloe_int_dx + 2 * ns_Digit::ec_dzf) )      str = "endvolECAL";     // ECAL endcaps
+    else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) < ns_Draw::kloe_int_dx) )                                                                str = "tracker";
     else                                                                                                                                        str = "outside";        // outside
     if (ns_Digit::debug) std::cout << "\tVol: " << str;
 
@@ -223,8 +223,8 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         // d2 distance from right end (x>0)
         d2 = 2150 - x;   // TODO: check units
         // cellCoord
-        cellD = ns_Draw::kloe_int_R + ns_Digit::dzlay[planeID] / 2;
-        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += ns_Digit::dzlay[planeindex];
+        cellD = ns_Draw::kloe_int_R + ns_Digit::dzlay[0] / 2;
+        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += ns_Digit::dzlay[planeindex-1] / 2 + ns_Digit::dzlay[planeindex] / 2;
         ns_Digit::cellCoordBarrel[modID][planeID][cellID][0] = 0;
         ns_Digit::cellCoordBarrel[modID][planeID][cellID][2] = + cellD * sin(-modAngle) - cellD * tan(cellAngle - modAngle) * cos(-modAngle); // TODO: fix tan argument
         ns_Digit::cellCoordBarrel[modID][planeID][cellID][1] = + cellD * cos(-modAngle) + cellD * tan(cellAngle - modAngle) * sin(-modAngle);
@@ -242,8 +242,8 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         // d2 distance from bottom (y<0)
         d2 =  sqrt(ns_Digit::ec_rf * ns_Digit::ec_rf - z * z) + y;
         // cellCoord
-        cellD = TMath::Sign(1.0, x) * (ns_Draw::kloe_int_dx + ns_Digit::dzlay[planeID] / 2);
-        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += TMath::Sign(1.0, x) * ns_Digit::dzlay[planeindex];
+        cellD = TMath::Sign(1.0, x) * (ns_Draw::kloe_int_dx + ns_Digit::dzlay[0] / 2);
+        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += TMath::Sign(1.0, x) * (ns_Digit::dzlay[planeindex-1] / 2 + ns_Digit::dzlay[planeindex] / 2);
         ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][0] = cellD; 
         ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][1] = 0; 
         ns_Digit::cellCoordEndcap[int(modID/10)][planeID][cellID][2] = 44 / 2 + cellID * 44 - ns_Digit::ec_rf;

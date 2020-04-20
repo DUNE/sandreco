@@ -35,7 +35,7 @@ static const double xmin_f=262.55;
 static const double xmax_f=292.85;
 static const double dz_f=115.0;
 
-static const double ec_rf=2000.0;
+static const double ec_rf=1980.0;
 static const double ec_dzf=115.0;
 
 // coordinates of the cells for FLUKA
