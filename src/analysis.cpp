@@ -19,8 +19,8 @@ const double B = 0.6;
 const double m_to_mm = 1000.;
 const double GeV_to_MeV = 1000.;
 const double c = k * 1E3;  // mm/ns
-const double emk = 2.76455e-01;
-const double hadk = 3.15234e-01;
+const double emk = 0.56;
+const double hadk = 1.04;
 
 TDatabasePDG db;
 
