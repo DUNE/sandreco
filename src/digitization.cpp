@@ -398,6 +398,7 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
     int_start = it->second.front();
     pe_count = 0;
     start_index = 0;
+    int index = 0;
 
     for (std::vector<double>::iterator pe_time = it->second.begin();
          pe_time != it->second.end(); ++pe_time) {
@@ -412,12 +413,15 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
         start_index = pe_time - it->second.begin();
       }
       // above threshold -> stop integration and acquire
-      else if (pe_count >= threshold) {
-        adc[it->first] = pe2ADC * pe_count;
-        int index = int(costant_fraction * pe_count) + start_index;
-        tdc[it->first] = it->second[index];
+      else {
         break;
       }
+    }
+
+    if (pe_count >= threshold) {
+      adc[it->first] = pe2ADC * pe_count;
+      index = int(costant_fraction * pe_count) + start_index;
+      tdc[it->first] = it->second[index];
     }
   }
 }
