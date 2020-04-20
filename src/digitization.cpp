@@ -200,10 +200,9 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
     TString str = "";
     double rotated_z = z * cos(-modAngle) - y * sin(-modAngle);
     double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
-    // TODO: check units
-    if ( (rotated_y > ns_Draw::kloe_int_R) && (rotated_y < ns_Draw::kloe_int_R + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2 * 1000) )   str = "volECAL";        // ECAL barrel
+    if ( (rotated_y > ns_Draw::kloe_int_R) && (rotated_y < ns_Draw::kloe_int_R + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2) ) str = "volECAL";        // ECAL barrel
     else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) > ns_Draw::kloe_int_dx) && (abs(x) < ns_Draw::kloe_int_dx + 2 * ns_Digit::ec_dzf) )      str = "endvolECAL";     // ECAL endcaps
-    else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) < ns_Draw::kloe_int_dx) )                                                                str = "tracker";
+    else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) < ns_Draw::kloe_int_dx) )                                                                str = "tracker";        // tracker
     else                                                                                                                                        str = "outside";        // outside
     if (ns_Digit::debug) std::cout << "\tVol: " << str;
 
@@ -218,22 +217,22 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         if (planeID > 4) planeID = 4;
         // cellID
         cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) % 12;   // TODO: check ordering of cells (clockwise or anticlockwise?)
-        // d1 distance from left end (x<0)
-        d1 = 2150 + x;   // TODO: check units
-        // d2 distance from right end (x>0)
-        d2 = 2150 - x;   // TODO: check units
+        // d1 distance from right end (x>0)
+        d1 = ns_Digit::lCalBarrel / 2 - x;
+        // d2 distance from left end (x<0)
+        d2 = ns_Digit::lCalBarrel / 2 + x;
         // cellCoord
         cellD = ns_Draw::kloe_int_R + ns_Digit::dzlay[0] / 2;
         for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += ns_Digit::dzlay[planeindex-1] / 2 + ns_Digit::dzlay[planeindex] / 2;
         ns_Digit::cellCoordBarrel[modID][planeID][cellID][0] = 0;
-        ns_Digit::cellCoordBarrel[modID][planeID][cellID][2] = + cellD * sin(-modAngle) - cellD * tan(cellAngle - modAngle) * cos(-modAngle); // TODO: fix tan argument
+        ns_Digit::cellCoordBarrel[modID][planeID][cellID][2] = + cellD * sin(-modAngle) - cellD * tan(cellAngle - modAngle) * cos(-modAngle);
         ns_Digit::cellCoordBarrel[modID][planeID][cellID][1] = + cellD * cos(-modAngle) + cellD * tan(cellAngle - modAngle) * sin(-modAngle);
     } else if (str=="endvolECAL") {
         // modID
         if (x<0)        modID = 40;
         else if (x>0)   modID = 30;
         // planeID
-        planeID = int((abs(x) - ns_Draw::kloe_int_dx) / 44);         // TODO: check units
+        planeID = int((abs(x) - ns_Draw::kloe_int_dx) / 44);         // TODO: check width and units
         if (planeID > 4) planeID = 4;
         // cellID
         cellID = int((z + ns_Digit::ec_rf) / 44);                        
@@ -449,7 +448,7 @@ void SimulatePEFluka(TG4Event* ev,
 
     TRandom3 r(0);
 
-    //The geometry is needed for distinghish between endcap and barrel
+    //The geometry is needed to distinghish between endcap and barrel
 
     for (std::map<std::string, std::vector<TG4HitSegment> >::iterator it =
             ev->SegmentDetectors.begin();
@@ -474,9 +473,6 @@ void SimulatePEFluka(TG4Event* ev,
                         std::cout << "\t" << ave_pe1 << " " << ave_pe2 << std::endl;
                         std::cout << "\t" << pe1 << " " << pe2 << std::endl;
                     }
-
-                    // cellend 1 -> x < 0 -> ID > 0 -> left
-                    // cellend 2 -> x > 0 -> ID < 0 -> right
 
                     for (int i = 0; i < pe1; i++) {
                         time_pe[id].push_back(petime(t0, d1));

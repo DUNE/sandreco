@@ -64,7 +64,7 @@ const double tscin = 3.08;
 const double tscex = 0.588;
 const double vlfb = 5.85;
 
-const double lCalBarrel = 4.3;  // meter
+static const double lCalBarrel = 4300;
 }
 
 namespace ns_Draw
