@@ -81,7 +81,9 @@ double Attenuation(double d, int planeID)
 double E2PE(double E)
 {
   // Average number of photoelectrons = 25*Ea(MeV)
-  const double e2p2 = 25.;
+  // corrected to 18.5 to have mean number of pe of 40
+  // for mip crossing in the middle of barrel module
+  const double e2p2 = 18.5;
 
   if (ns_Digit::debug)
     std::cout << "E = " << E << " -> p.e. = " << e2p2* E << std::endl;
@@ -697,9 +699,9 @@ void Digitize(const char* finname, const char* foutname)
   tout.Write();
   geo->Write();
   t->CloneTree()->Write();
-  gRooTracker->CloneTree()->Write();
-  InputKinem->CloneTree()->Write();
-  InputFiles->CloneTree()->Write();
+  if(gRooTracker)gRooTracker->CloneTree()->Write();
+  if(InputKinem)InputKinem->CloneTree()->Write();
+  if(InputFiles)InputFiles->CloneTree()->Write();
   fout.Close();
 
   f.Close();
