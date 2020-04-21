@@ -29,64 +29,51 @@
 // Distance mm
 // Time ns
 
+using namespace kloe_simu;
+
+TRandom3 r(0);
+
 double Attenuation(double d, int planeID)
 {
-  /*
-       dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
-         d    distance from photocatode - 2 cells/cell; d1 and d2
-        atl1  50. cm
-        atl2  430 cm planes 1-2    innermost plane is 1
-              380 cm plane 3
-              330 cm planes 4-5
-         p1   0.35
-  */
-  const double p1 = 0.35;
-  const double alt1 = 500.;
-  double alt2 = 0.0;
+  double atl2 = 0.0;
 
   switch (planeID) {
     case 0:
     case 1:
-      alt2 = 4300.0;
+      atl2 = atl2_01;
       break;
 
     case 2:
-      alt2 = 3800.0;
+      atl2 = atl2_2;
       break;
 
     case 3:
     case 4:
-      alt2 = 3300.0;
+      atl2 = atl2_34;
       break;
 
     default:
       // std::cout << "planeID out if range" << std::endl;
-      alt2 = -999.0;
+      atl2 = -999.0;
       break;
   }
 
-  if (ns_Digit::debug) {
+  if (debug) {
     std::cout << "planeID = " << planeID << std::endl;
     std::cout << "\tp1   = " << p1 << std::endl;
-    std::cout << "\talt1 = " << alt1 << std::endl;
-    std::cout << "\talt2 = " << alt2 << std::endl;
+    std::cout << "\tatl1 = " << atl1 << std::endl;
+    std::cout << "\tatl2 = " << atl2 << std::endl;
     std::cout << "\tatt  = "
-              << p1* TMath::Exp(-d / alt1) + (1. - p1) * TMath::Exp(-d / alt2)
+              << p1* TMath::Exp(-d / atl1) + (1. - p1) * TMath::Exp(-d / atl2)
               << std::endl;
   }
 
-  return p1 * TMath::Exp(-d / alt1) + (1. - p1) * TMath::Exp(-d / alt2);
+  return p1 * TMath::Exp(-d / atl1) + (1. - p1) * TMath::Exp(-d / atl2);
 }
 
 double E2PE(double E)
 {
-  // Average number of photoelectrons = 25*Ea(MeV)
-  // corrected to 18.5 to have mean number of pe of 40
-  // for mip crossing in the middle of barrel module
-  const double e2p2 = 18.5;
-
-  if (ns_Digit::debug)
-    std::cout << "E = " << E << " -> p.e. = " << e2p2* E << std::endl;
+  if (debug) std::cout << "E = " << E << " -> p.e. = " << e2p2* E << std::endl;
 
   return e2p2 * E;
 }
@@ -111,20 +98,15 @@ C                      + 1ns  uncertainty
       TSCEX  0.588
   */
 
-  TRandom3 r(0);
+  double tdec = tscin * TMath::Power(1. / r.Uniform() - 1., tscex);
 
-  double mm_to_m = 1E-3;
+  double time = t0 + tdec + vlfb * d * mm_to_m + r.Gaus();
 
-  double tdec =
-      ns_Digit::tscin * TMath::Power(1. / r.Uniform() - 1., ns_Digit::tscex);
-
-  double time = t0 + tdec + ns_Digit::vlfb * d * mm_to_m + r.Gaus();
-
-  if (ns_Digit::debug) {
+  if (debug) {
     std::cout << "time : " << time << std::endl;
     std::cout << "t0   : " << t0 << std::endl;
     std::cout << "scint: " << tdec << std::endl;
-    std::cout << "prop : " << ns_Digit::vlfb* d* mm_to_m << std::endl;
+    std::cout << "prop : " << vlfb* d* mm_to_m << std::endl;
   }
 
   return time;
@@ -134,7 +116,7 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
                 int& planeID, int& cellID, double& d1, double& d2, double& t,
                 double& de)
 {
-  if (ns_Digit::debug) {
+  if (debug) {
     std::cout << "ProcessHit" << std::endl;
   }
 
@@ -143,7 +125,6 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   cellID = -999;
   d1 = -999;
   d2 = -999;
-  t = -999;
 
   double x = 0.5 * (hit.Start.X() + hit.Stop.X());
   double y = 0.5 * (hit.Start.Y() + hit.Stop.Y());
@@ -158,80 +139,21 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
 
   TString str = node->GetName();
   TString str2 = g->GetPath();
-  TObjArray* obj = str2.Tokenize("/");
 
-  int size = obj->GetEntries();
-  if (size < 7) {
-    return false;
-  };
-
-  str2 = ((TObjString*)obj->At(6))->GetString();
-  delete obj;
-
-  if (ns_Digit::debug) {
+  if (debug) {
     std::cout << "node name: " << str.Data() << std::endl;
   }
 
+  if (CheckAndProcessPath(str2) == false) return false;
+
   // barrel modules
-  if (str.Contains("volECAL") == true && str.Contains("Active") == true &&
-      str.Contains("end") == false) {
-    TObjArray* obja = str.Tokenize("_");
-    TObjArray* obja2 = str2.Tokenize("_");
+  if (isBarrel(str)) {
 
-    int slabID;
-    // top module => modID == 0
-    // increasing modID counterclockwise as seen from positive x
-    //(i.e. z(modID==1) < z(modID==0) & z(modID==0) < z(modID==23))
-    modID = ((TObjString*)obja2->At(3))->GetString().Atoi();
-    slabID = ((TObjString*)obja->At(1))->GetString().Atoi();
+    BarrelModuleAndLayer(str, str2, modID, planeID);
 
-    delete obja;
-    delete obja2;
+    BarrelCell(x, y, z, g, node, cellID, d1, d2);
 
-    // planeID==0 -> smallest slab -> internal
-    // planeID==208 -> biggest slab -> external
-    planeID = slabID / 40;
-
-    if (planeID > 4) planeID = 4;
-
-    double Pmaster[3];
-    double Plocal[3];
-    Pmaster[0] = x;
-    Pmaster[1] = y;
-    Pmaster[2] = z;
-
-    g->GetCurrentNavigator()->MasterToLocal(Pmaster, Plocal);
-
-    TGeoTrd2* trd = (TGeoTrd2*)node->GetVolume()->GetShape();
-
-    if (ns_Digit::debug) {
-      std::cout << "pointer: " << trd << std::endl;
-    }
-
-    double dx1 = trd->GetDx1();
-    double dx2 = trd->GetDx2();
-    double dz = trd->GetDz();
-    double dy1 = trd->GetDy1();
-    double dy2 = trd->GetDy2();
-
-    // d1 distanza da estremo left (x<0)
-    // d2 distanza da estremo right (x>0)
-    d1 = dy1 + Plocal[1];
-    d2 = dy1 - Plocal[1];
-
-    // http://geant4-userdoc.web.cern.ch/geant4-userdoc/UsersGuides/ForApplicationDeveloper/html/Detector/Geometry/geomSolids.html
-    // if z = -dz -> dx = 2*dx1
-    // if z =  dz -> dx = 2*dx2
-    // semilarghezza della slab di scintillatore alla quota Plocal[2]
-    double dx = 0.5 * Plocal[2] / dz * (dx2 - dx1) + 0.5 * (dx2 + dx1);
-
-    // Cell width at z = Plocal[2]
-    double cellw = 2. * dx / 12.;
-
-    // cellID = distanza dall'estremo diviso larghezza cella
-    cellID = (Plocal[0] + dx) / cellw;
-
-    if (ns_Digit::debug) {
+    if (debug) {
       std::cout << "hit: " << str.Data() << std::endl;
       std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
                 << std::endl;
@@ -244,57 +166,13 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
     return true;
   }
   // end cap modules
-  else if (str.Contains("endvolECAL") == true &&
-           str.Contains("Active") == true) {
-    TObjArray* obja = str.Tokenize("_");
-    TObjArray* obja2 = str2.Tokenize("_");
+  else if (isEndCap(str)) {
 
-    int slabID;
-    modID = ((TObjString*)obja2->At(4))->GetString().Atoi();
-    slabID = ((TObjString*)obja->At(1))->GetString().Atoi();
+    EndCapModuleAndLayer(str, str2, modID, planeID);
 
-    // mod == 40 -> left
-    // mod == 30 -> right
-    if (modID == 0)
-      modID = 40;
-    else if (modID == 1)
-      modID = 30;
+    EndCapCell(x, y, z, g, node, cellID, d1, d2);
 
-    delete obja;
-    delete obja2;
-
-    // planeID==0 -> internal
-    // planeID==208 -> external
-    planeID = slabID / 40;
-
-    if (planeID > 4) planeID = 4;
-
-    double Pmaster[3];
-    double Plocal[3];
-    Pmaster[0] = x;
-    Pmaster[1] = y;
-    Pmaster[2] = z;
-
-    g->GetCurrentNavigator()->MasterToLocal(Pmaster, Plocal);
-
-    TGeoTube* tub = (TGeoTube*)node->GetVolume()->GetShape();
-
-    if (ns_Digit::debug) {
-      std::cout << "pointer: " << tub << std::endl;
-    }
-
-    double rmin = tub->GetRmin();
-    double rmax = tub->GetRmax();
-    double dz = tub->GetDz();
-
-    // d1 distanza da estremo up (y>0)
-    // d2 distanza da estremo down (y<0)
-    d1 = rmax * TMath::Sin(TMath::ACos(Plocal[0] / rmax)) - Plocal[1];
-    d2 = rmax * TMath::Sin(TMath::ACos(Plocal[0] / rmax)) + Plocal[1];
-
-    cellID = int((Plocal[0] / rmax + 1.) * 45);
-
-    if (ns_Digit::debug) {
+    if (debug) {
       std::cout << "hit: " << str.Data() << std::endl;
       std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
                 << std::endl;
@@ -316,8 +194,6 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
   int modID, planeID, cellID, id;
   double d1, d2, t0, de;
 
-  TRandom3 r(0);
-
   for (std::map<std::string, std::vector<TG4HitSegment> >::iterator it =
            ev->SegmentDetectors.begin();
        it != ev->SegmentDetectors.end(); ++it) {
@@ -334,9 +210,9 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
           int pe1 = r.Poisson(ave_pe1);
           int pe2 = r.Poisson(ave_pe2);
 
-          id = cellID + 100 * planeID + 1000 * modID;
+          id = EncodeID(modID, planeID, cellID);
 
-          if (ns_Digit::debug) {
+          if (debug) {
             std::cout << "cell ID: " << id << std::endl;
             std::cout << "\t" << de << " " << en1 << " " << en2 << std::endl;
             std::cout << "\t" << ave_pe1 << " " << ave_pe2 << std::endl;
@@ -376,18 +252,6 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
 
   // https://www-sciencedirect-com.ezproxy.cern.ch/science/article/pii/S0168900297013491
 
-  // photoelectron/counts = 0.25
-  const double pe2ADC = 1 / .25;
-  // ADC integration time = 400 ns
-  const double int_time = 400.;
-
-  // https://www.sciencedirect.com/science/article/pii/S0168900201015029
-  // threshold 3-4 p.e.
-  const double threshold = 4;
-
-  // costant fraction 15%
-  const double costant_fraction = 0.15;
-
   double int_start;
   int pe_count;
   int start_index;
@@ -409,7 +273,7 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
         pe_count++;
       }
       // below threshold -> reset
-      else if (pe_count < threshold) {
+      else if (pe_count < pe_threshold) {
         pe_count = 1;
         int_start = *pe_time;
         start_index = pe_time - it->second.begin();
@@ -420,7 +284,7 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
       }
     }
 
-    if (pe_count >= threshold) {
+    if (pe_count >= pe_threshold) {
       adc[it->first] = pe2ADC * pe_count;
       index = int(costant_fraction * pe_count) + start_index;
       tdc[it->first] = it->second[index];
@@ -445,6 +309,7 @@ void CollectSignal(TGeoManager* geo,
     c = &(map_cell[id]);
 
     c->id = id;
+    DecodeID(c->id, c->mod, c->lay, c->cel);
     c->l = L[c->id];
 
     if (it->first >= 0) {
@@ -458,101 +323,13 @@ void CollectSignal(TGeoManager* geo,
       c->pe_time2 = time_pe[it->first];
       c->hindex2 = id_hit[it->first];
     }
-
-    c->x = 0;
-    c->y = 0;
-    c->z = 0;
-
-    c->mod = c->id / 1000;
-    c->lay = (c->id - c->mod * 1000) / 100;
-    c->cel = c->id - c->mod * 1000 - c->lay * 100;
-
-    double dummyLoc[3];
-    double dummyMas[3];
-
-    if (c->mod < 24) {
-      dummyLoc[0] = ns_Digit::cxlay[c->lay][c->cel];
-      dummyLoc[1] = 0.;
-      dummyLoc[2] = ns_Digit::czlay[c->lay];
-
-      geo->cd(TString::Format(ns_Digit::path_barrel_template, c->mod).Data());
-
-      geo->LocalToMaster(dummyLoc, dummyMas);
-
-      c->x = dummyMas[0];
-      c->y = dummyMas[1];
-      c->z = dummyMas[2];
-    } else if (c->mod == 30 || c->mod == 40)
-        // right x > 0 : c->mod = 30
-        // left  x < 0 : c->mod = 40
-    {
-      dummyLoc[0] = ns_Digit::ec_r / 45. * (0.5 + c->cel) - ns_Digit::ec_r;
-      dummyLoc[1] = 0.;
-      dummyLoc[2] = ns_Digit::czlay[c->lay];
-
-      if (c->mod == 30) {
-        geo->cd(ns_Digit::path_endcapR_template);
-      } else if (c->mod == 40) {
-        geo->cd(ns_Digit::path_endcapL_template);
-      }
-
-      geo->LocalToMaster(dummyLoc, dummyMas);
-
-      c->x = dummyMas[0];
-      c->y = dummyMas[1];
-      c->z = dummyMas[2];
-    }
+    CellPosition(geo, c->mod, c->lay, c->cel, c->x, c->y, c->z);
   }
 
   for (std::map<int, cell>::iterator it = map_cell.begin();
        it != map_cell.end(); ++it) {
     vec_cell.push_back(it->second);
   }
-}
-
-void init(TGeoManager* geo)
-{
-  TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
-
-  // https://root.cern.ch/root/htmldoc/guides/users-guide/Geometry.html#shapes
-  // GetDx1() half length in x at -Dz
-  // GetDx2() half length in x at +Dz
-  // Dx1 < Dx2 => -Dz corresponds to minor width => internal side
-  double xmin = mod->GetDx1();
-  double xmax = mod->GetDx2();
-  double dz = mod->GetDz();
-
-  double m = 0.5 * (xmax - xmin) / dz;
-  double q = 0.5 * (xmax + xmin);
-
-  // z edge of the cells
-  double zlevel[ns_Digit::nLay + 1];
-  zlevel[0] = -dz;
-
-  for (int i = 0; i < ns_Digit::nLay; i++) {
-    zlevel[i + 1] = zlevel[i] + ns_Digit::dzlay[i];
-  }
-
-  // z position of the center of the cells
-  for (int i = 0; i < ns_Digit::nLay; i++) {
-    ns_Digit::czlay[i] = 0.5 * (zlevel[i] + zlevel[i + 1]);
-
-    // total module width at the z position of the center of the cell
-    double xwidth = 2 * (m * ns_Digit::czlay[i] + q);
-
-    // cell width at the z position of the center of the cell
-    double dx = xwidth / ns_Digit::nCel;
-
-    // x position of the center of the cells
-    for (int j = 0; j < ns_Digit::nCel; j++) {
-      ns_Digit::cxlay[i][j] = dx * (j + 0.5) - xwidth * 0.5;
-    }
-  }
-
-  TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
-
-  ns_Digit::ec_r = ec->GetRmax();
-  ns_Digit::ec_dz = ec->GetDz();
 }
 
 void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
@@ -565,15 +342,15 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
 
   vec_cell.clear();
 
-  if (ns_Digit::debug) {
+  if (debug) {
     std::cout << "SimulatePE" << std::endl;
   }
   SimulatePE(ev, geo, time_pe, id_hit, L);
-  if (ns_Digit::debug) {
+  if (debug) {
     std::cout << "TimeAndSignal" << std::endl;
   }
   TimeAndSignal(time_pe, adc, tdc);
-  if (ns_Digit::debug) {
+  if (debug) {
     std::cout << "CollectSignal" << std::endl;
   }
   CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell);
@@ -617,12 +394,6 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
 void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
                    std::vector<digit>& digit_vec)
 {
-  TRandom3 rand(0);
-  
-  const double res_x = 0.2; // 0.2 mm
-  const double res_t = 0.; // 1 ns
-  const double e_threshold = 0.2E-3; // 0.2E-3 MeV 
-
   for (std::map<std::string, std::vector<hit> >::iterator it =
            cluster_map.begin();
        it != cluster_map.end(); ++it) {
@@ -634,18 +405,21 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
       d.hindex.push_back(it->second[k].index);
       d.de += it->second[k].de;
     }
-    
-    if(d.de < e_threshold)
-      continue;
+
+    if (d.de < e_threshold) continue;
 
     d.hor = (d.det.find("hor") != std::string::npos) ? false : true;
 
     std::sort(it->second.begin(), it->second.end(), isHitBefore);
 
-    d.t = 0.5 * (it->second.front().t1 + it->second.back().t2) + rand.Gaus(0.,res_t);
-    d.x = 0.5 * (it->second.front().x1 + it->second.back().x2) + rand.Gaus(0.,res_x);
-    d.y = 0.5 * (it->second.front().y1 + it->second.back().y2) + rand.Gaus(0.,res_x);
-    d.z = 0.5 * (it->second.front().z1 + it->second.back().z2) + rand.Gaus(0.,res_x);
+    d.t = 0.5 * (it->second.front().t1 + it->second.back().t2) +
+          r.Gaus(0., res_t);
+    d.x = 0.5 * (it->second.front().x1 + it->second.back().x2) +
+          r.Gaus(0., res_x);
+    d.y = 0.5 * (it->second.front().y1 + it->second.back().y2) +
+          r.Gaus(0., res_x);
+    d.z = 0.5 * (it->second.front().z1 + it->second.back().z2) +
+          r.Gaus(0., res_x);
 
     digit_vec.push_back(d);
   }

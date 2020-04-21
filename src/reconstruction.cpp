@@ -13,7 +13,7 @@
 #include "utils.h"
 #include <iomanip>
 
-const double m_to_mm = 1000.;
+using namespace kloe_simu;
 
 void reset(track& tr)
 {
@@ -32,34 +32,6 @@ void reset(track& tr)
   tr.chi2_ln = 0.;
   tr.ret_cr = -1;
   tr.chi2_cr = 0.;
-}
-
-double mindist(double s1x, double s1y, double s1z, double s2x, double s2y,
-               double s2z, double px, double py, double pz)
-{
-  double segmod = (s1x - s2x) * (s1x - s2x) + (s1y - s2y) * (s1y - s2y) +
-                  (s1z - s2z) * (s1z - s2z);
-
-  double prod = (px - s1x) * (s2x - s1x) + (py - s1y) * (s2y - s1y) +
-                (pz - s1z) * (s2z - s1z);
-
-  double t = std::min(std::max(prod / segmod, 0.), 1.);
-
-  double s3x = s1x + (s2x - s1x) * t;
-  double s3y = s1y + (s2y - s1y) * t;
-  double s3z = s1z + (s2z - s1z) * t;
-
-  return sqrt((px - s3x) * (px - s3x) + (py - s3y) * (py - s3y) +
-              (pz - s3z) * (pz - s3z));
-}
-
-double angle(double x1, double y1, double z1, double x2, double y2, double z2)
-{
-  double prod = x1 * x2 + y1 * y2 + z1 * z2;
-  double mag1 = sqrt(x1 * x1 + y1 * y1 + z1 * z1);
-  double mag2 = sqrt(x2 * x2 + y2 * y2 + z2 * z2);
-
-  return TMath::ACos(prod / (mag1 * mag2));
 }
 
 bool ishitok(TG4Event* ev, int trackid, TG4HitSegment hit, double postol = 5.,
@@ -660,92 +632,6 @@ void Filter(std::vector<cluster>& vec_cl)
   }
 }
 
-double AttenuationFactor(double d, int planeID)
-{
-  /*
-       dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
-         d    distance from photocatode - 2 cells/cell; d1 and d2
-        atl1  50. cm
-        atl2  430 cm planes 1-2    innermost plane is 1
-              380 cm plane 3
-              330 cm planes 4-5
-         p1   0.35
-  */
-  const double p1 = 0.35;
-  const double alt1 = 500.;
-  double alt2 = 0.0;
-
-  switch (planeID) {
-    case 0:
-    case 1:
-      alt2 = 4300.0;
-      break;
-
-    case 2:
-      alt2 = 3800.0;
-      break;
-
-    case 3:
-    case 4:
-      alt2 = 3300.0;
-      break;
-
-    default:
-      // std::cout << "planeID out if range" << std::endl;
-      alt2 = -999.0;
-      break;
-  }
-
-  if (ns_Digit::debug) {
-    std::cout << "planeID = " << planeID << std::endl;
-    std::cout << "\tp1   = " << p1 << std::endl;
-    std::cout << "\talt1 = " << alt1 << std::endl;
-    std::cout << "\talt2 = " << alt2 << std::endl;
-    std::cout << "\tatt  = "
-              << p1* TMath::Exp(-d / alt1) + (1. - p1) * TMath::Exp(-d / alt2)
-              << std::endl;
-  }
-
-  return p1 * TMath::Exp(-d / alt1) + (1. - p1) * TMath::Exp(-d / alt2);
-}
-
-double TfromTDC(double t1, double t2, double L)
-{
-  return 0.5 * (t1 + t2 - ns_Digit::vlfb * L / m_to_mm);
-}
-
-double XfromTDC(double t1, double t2)
-{
-  return 0.5 * (t1 - t2) / ns_Digit::vlfb * m_to_mm;
-}
-
-double EfromADC(double adc1, double adc2, double d1, double d2, int planeID)
-{
-  const double adc2MeV = 1. / 10.29;
-
-  double f1 = AttenuationFactor(d1, planeID);
-  double f2 = AttenuationFactor(d2, planeID);
-
-  return 0.5 * (adc1 / f1 + adc2 / f2) * adc2MeV;
-}
-
-void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e)
-{
-  if (c.id < 25000)  // Barrel
-  {
-    x = c.x + XfromTDC(c.tdc1, c.tdc2);
-    y = c.y;
-  } else {
-    x = c.x;
-    y = c.y - XfromTDC(c.tdc1, c.tdc2);
-  }
-  double d1 = 0.5 * c.l + XfromTDC(c.tdc1, c.tdc2);
-  double d2 = 0.5 * c.l - XfromTDC(c.tdc1, c.tdc2);
-  z = c.z;
-  t = TfromTDC(c.tdc1, c.tdc2, c.l);
-  e = EfromADC(c.adc1, c.adc2, d1, d2, c.lay);
-}
-
 void Merge(std::vector<cluster>& vec_cl)
 {
   for (unsigned int i = 0; i < vec_cl.size(); i++) {
@@ -770,9 +656,9 @@ void Merge(std::vector<cluster>& vec_cl)
       CellXYZTE(vec_cl.at(i).cells.at(k), x, y, z, t, e);
 
       // time reference at center of first layer
-      // t -= ( (ns_Digit::dzlay[0] + ns_Digit::dzlay[1]) -
-      //       (ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay] +
-      // ns_Digit::dzlay[vec_cl.at(i).cells.at(k).lay + 1]) )
+      // t -= ( (dzlay[0] + dzlay[1]) -
+      //       (dzlay[vec_cl.at(i).cells.at(k).lay] +
+      // dzlay[vec_cl.at(i).cells.at(k).lay + 1]) )
       //       * 3.335640951981520495756E-3;
 
       vec_cl.at(i).e += e;
