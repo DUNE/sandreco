@@ -617,6 +617,12 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
 void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
                    std::vector<digit>& digit_vec)
 {
+  TRandom3 rand(0);
+  
+  const double res_x = 0.2; // 0.2 mm
+  const double res_t = 0.; // 1 ns
+  const double e_threshold = 0.2E-3; // 0.2E-3 MeV 
+
   for (std::map<std::string, std::vector<hit> >::iterator it =
            cluster_map.begin();
        it != cluster_map.end(); ++it) {
@@ -628,15 +634,18 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
       d.hindex.push_back(it->second[k].index);
       d.de += it->second[k].de;
     }
+    
+    if(d.de < e_threshold)
+      continue;
 
     d.hor = (d.det.find("hor") != std::string::npos) ? false : true;
 
     std::sort(it->second.begin(), it->second.end(), isHitBefore);
 
-    d.t = it->second.at(0).t1;
-    d.x = 0.5 * (it->second.front().x1 + it->second.back().x2);
-    d.y = 0.5 * (it->second.front().y1 + it->second.back().y2);
-    d.z = 0.5 * (it->second.front().z1 + it->second.back().z2);
+    d.t = 0.5 * (it->second.front().t1 + it->second.back().t2) + rand.Gaus(0.,res_t);
+    d.x = 0.5 * (it->second.front().x1 + it->second.back().x2) + rand.Gaus(0.,res_x);
+    d.y = 0.5 * (it->second.front().y1 + it->second.back().y2) + rand.Gaus(0.,res_x);
+    d.z = 0.5 * (it->second.front().z1 + it->second.back().z2) + rand.Gaus(0.,res_x);
 
     digit_vec.push_back(d);
   }
