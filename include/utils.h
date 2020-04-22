@@ -10,6 +10,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+//#define BING
+
 bool isHitBefore(hit h1, hit h2)
 {
   return h1.t1 < h2.t1;
@@ -22,6 +24,7 @@ bool isDigBefore(digit d1, digit d2)
 
 namespace ns_Digit
 {
+
 const bool debug = false;
 
 static const int nMod = 24;
@@ -36,15 +39,31 @@ double cxlay[nLay][nCel];
 double ec_r;
 double ec_dz;
 
-const char* path_barrel_template =
+
+#ifdef BING
+const char* path_barrel_template=
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/ECAL_and_STT_PV_0/"
+    "kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
+const char* path_endcapL_template=
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/ECAL_and_STT_PV_0/"
+    "kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
+const char* path_endcapR_template= 
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/ECAL_and_STT_PV_0/"
+    "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+#else
+
+/////////////////////////////////////////////
+const char* path_barrel_template=
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
-const char* path_endcapL_template =
+const char* path_endcapL_template=
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
-const char* path_endcapR_template =
+const char* path_endcapR_template= 
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+#endif
+
 
 const double tscin = 3.08;
 const double tscex = 0.588;

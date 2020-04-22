@@ -153,12 +153,26 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   TGeoNode* node = g->FindNode(x, y, z);
 
   if (node == 0) return false;
-
+ 
   TString str = node->GetName();
   TString str2 = g->GetPath();
   TObjArray* obj = str2.Tokenize("/");
+ 
+
+//  std::cout << "str: " << str.Data() << std::endl;
+//    std::cout << "str2: " << str2.Data() << std::endl;
 
   int size = obj->GetEntries();
+  
+#ifdef BING
+  if (size < 7) {
+    return false;
+  };
+
+  str2 = ((TObjString*)obj->At(6))->GetString();
+  delete obj;
+
+#else
   if (size < 6) {
     return false;
   };
@@ -166,9 +180,12 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   str2 = ((TObjString*)obj->At(5))->GetString();
   delete obj;
 
+
+#endif
   if (ns_Digit::debug) {
     std::cout << "node name: " << str.Data() << std::endl;
   }
+ 
 
   // barrel modules
   if (str.Contains("volECAL") == true && str.Contains("Active") == true &&
@@ -182,6 +199,7 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
     //(i.e. z(modID==1) < z(modID==0) & z(modID==0) < z(modID==23))
     modID = ((TObjString*)obja2->At(3))->GetString().Atoi();
     slabID = ((TObjString*)obja->At(1))->GetString().Atoi();
+
 
     delete obja;
     delete obja2;
@@ -197,10 +215,12 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
     Pmaster[0] = x;
     Pmaster[1] = y;
     Pmaster[2] = z;
-
+  
+ 
     g->GetCurrentNavigator()->MasterToLocal(Pmaster, Plocal);
 
     TGeoTrd2* trd = (TGeoTrd2*)node->GetVolume()->GetShape();
+	
 
     if (ns_Digit::debug) {
       std::cout << "pointer: " << trd << std::endl;
@@ -225,6 +245,7 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
 
     // Cell width at z = Plocal[2]
     double cellw = 2. * dx / 12.;
+ 
 
     // cellID = distanza dall'estremo diviso larghezza cella
     cellID = (Plocal[0] + dx) / cellw;
@@ -319,7 +340,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
   for (std::map<std::string, std::vector<TG4HitSegment> >::iterator it =
            ev->SegmentDetectors.begin();
        it != ev->SegmentDetectors.end(); ++it) {
-    if (it->first == "EMCalSci") {
+    if (it->first == "ECAL"){ //EMCalSci"){ //ECAL") {
       for (unsigned int j = 0; j < it->second.size(); j++) {
         if (ProcessHit(g, it->second[j], modID, planeID, cellID, d1, d2, t0,
                        de) == true) {
@@ -416,6 +437,7 @@ void CollectSignal(TGeoManager* geo,
     double dummyLoc[3];
     double dummyMas[3];
 
+
     if (c.mod < 24) {
       dummyLoc[0] = ns_Digit::cxlay[c.lay][c.cel];
       dummyLoc[1] = 0.;
@@ -465,12 +487,14 @@ void init(TGeoManager* geo)
   double xmax = mod->GetDx2();
   double dz = mod->GetDz();
 
+  std::cout<<"xmin xmax dz "<<xmin<<" "<<xmax<<" "<<dz<<std::endl;
+
   double m = 0.5 * (xmax - xmin) / dz;
   double q = 0.5 * (xmax + xmin);
 
   // z edge of the cells
   double zlevel[ns_Digit::nLay + 1];
-  zlevel[0] = -dz;
+  zlevel[0] =-dz; //era -dz
 
   for (int i = 0; i < ns_Digit::nLay; i++) {
     zlevel[i + 1] = zlevel[i] + ns_Digit::dzlay[i];
@@ -489,7 +513,7 @@ void init(TGeoManager* geo)
     // x position of the center of the cells
     for (int j = 0; j < ns_Digit::nCel; j++) {
       ns_Digit::cxlay[i][j] = dx * (j + 0.5) - xwidth * 0.5;
-    }
+	}
   }
 
   TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
@@ -619,10 +643,11 @@ void Digitize(const char* finname, const char* foutname)
   tout.Branch("cell", "std::vector<cell>", &vec_cell);
   tout.Branch("Stt", "std::vector<digit>", &digit_vec);
 
-  const int nev = t->GetEntries();
-
+//  const int nev = t->GetEntries();
+  int nev=2000;
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
+
 
   for (int i = 0; i < nev; i++) {
     t->GetEntry(i);
