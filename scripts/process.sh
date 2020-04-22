@@ -16,10 +16,17 @@ do
 done
 
 ifile=${1}
+gfile=${2}
 
 if [ "${ifile}" == "" ]
 then
-	echo -e "\e[5m\e[91mERROR\e[0m: source ${BASH_SOURCE[0]} <input file>"
+	echo -e "\e[5m\e[91mERROR\e[0m: source ${BASH_SOURCE[0]} <input file> <geometry file>"
+	return 1
+fi
+
+if [ "${gfile}" == "" ]
+then
+	echo -e "\e[5m\e[91mERROR\e[0m: source ${BASH_SOURCE[0]} <input file> <geometry file>"
 	return 1
 fi
 
@@ -57,4 +64,4 @@ Reconstruct "${rfile}"
 echo "===============================" &&
 echo "Analysis                      =" && 
 echo "===============================" && 
-Analyze "${rfile}"
+Analyze "${rfile} ${gfile}"

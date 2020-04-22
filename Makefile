@@ -7,10 +7,14 @@ ROOTINCDIR = $(shell root-config --incdir)
 
 EDEPSIM = ${EDEPSIMDIR}
 
-EDEPGLIBS = -L$(EDEPSIM)/lib/ -ledepsim -ledepsim_io
+EDEPGLIBS = -L$(EDEPSIM)/lib/ -ledepsim_io
 EDEPINCDIR = $(EDEPSIM)/include/EDepSim
 
-all: Digitize Reconstruct Analyze
+GENFIT=/wd/sw/GENFIT/GenFit.binary
+
+EIGEN3=/usr/include/eigen3
+
+all: Digitize Reconstruct Analyze FastCheck
 
 struct.cxx: include/struct.h include/Linkdef.h
 	cd include && rootcint -f ../src/$@ -c $(CFLAGS) -p $(HEADERS) Linkdef.h && cd ..
@@ -27,5 +31,9 @@ Reconstruct: libStruct.so
 	$(EDEPGLIBS) -Llib -lStruct src/reconstruction.cpp
 
 Analyze: libStruct.so
-	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude $(ROOTGLIBS) -lGeom -lEG \
+	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
 	$(EDEPGLIBS) -Llib -lStruct src/analysis.cpp
+
+FastCheck: libStruct.so
+	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
+	$(EDEPGLIBS) -Llib -lStruct src/fastcheck.cpp
