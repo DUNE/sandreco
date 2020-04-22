@@ -136,6 +136,15 @@ int main(int argc, char* argv[])
           "cells; log_{10}(adc2)");
     c.SetLogy(false);
 
+    c.SetLogz(true);
+    tDigit->Draw("adc2:adc1>>htemp(200,0,2000,200,0,2000)", "", "colz");
+    h2 = (TH2D*)gROOT->FindObject("htemp");
+    h2->SetStats(false);
+    h2->SetTitle("cells; adc1; adc2");
+    h2->Draw("colz");
+    c.SaveAs(fout.Data());
+    c.SetLogz(false);
+
     tDigit->Draw("(adc2>0):(adc1>0)>>htemp(2,-0.5,1.5,2,-0.5,1.5)", "",
                  "colztext");
     h2 = (TH2D*)gROOT->FindObject("htemp");
