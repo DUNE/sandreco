@@ -280,7 +280,7 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
   b = -999;
   chi2 = -999;
 
-  if (x.size() != y.size()) return 1;
+  // if (x.size() != y.size()) return 1;
 
   cov[0][0] = -999;
   ;

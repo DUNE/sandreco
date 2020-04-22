@@ -149,10 +149,10 @@ int main(int argc, char* argv[])
           "OK cells; log_{10}(tdc1/ns)");
     print(c, fout, tDigit, "TMath::Log10(cell.tdc2)", "cell.adc2>0", "",
           "OK cells; log_{10}(tdc2/ns)");
-    print(c, fout, tDigit, "cell.tdc1-cell.tdc2", "", "",
-          "OK cells; tdc1 - tdc2 (ns)");
-    print(c, fout, tDigit, "cell.tdc1+cell.tdc2", "", "",
-          "OK cells; tdc1 + tdc2 (ns)");
+    print(c, fout, tDigit, "TMath::Log10(cell.tdc1-cell.tdc2)", "", "",
+          "OK cells; log_{10}(tdc1-tdc2/ns)");
+    print(c, fout, tDigit, "TMath::Log10(cell.tdc1+cell.tdc2)", "", "",
+          "OK cells; log_{10}(tdc1+tdc2/ns)");
     c.SetLogy(false);
 
     c.SetLogz(true);
@@ -246,7 +246,8 @@ int main(int argc, char* argv[])
     g->Draw("ap");
     c.SaveAs(fout.Data());
 
-    print(c, fout, tReco, "track.t0", trackRecoOK, "", "tracks; t (ns)");
+    print(c, fout, tReco, "TMath::Log10(track.t0)", trackRecoOK, "",
+          "tracks; log_{10}(t/ns)");
     print(c, fout, tReco, "TMath::Log10(track.chi2_cr)", trackRecoOK, "",
           "tracks; log_{10}(#chi^{2}_{cr})");
     print(c, fout, tReco, "TMath::Log10(track.chi2_ln)", trackRecoOK, "",
