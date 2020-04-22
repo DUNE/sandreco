@@ -86,14 +86,14 @@ const double res_t = 0.;        // 1 ns
 const double e_threshold = 0.;  // 0.2E-3 MeV
 
 // ADC to MeV
-const double adc2MeV = 1. / 10.29;
+const double adc2MeV = 1. / 10.;
 
 const double k = 0.299792458;
 const double B = 0.6;
 const double GeV_to_MeV = 1000.;
 const double c = k * 1E3;  // mm/ns
-const double emk = 0.56;
-const double hadk = 1.04;
+const double emk = 1.;
+const double hadk = 1.;
 }
 
 namespace ns_Draw
