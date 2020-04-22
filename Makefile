@@ -22,17 +22,20 @@ struct.cxx: include/struct.h include/Linkdef.h
 libStruct.so: struct.cxx
 	g++ -shared -fPIC -o lib/$@ -Iinclude `root-config --ldflags` $(CFLAGS) src/$^ && cp src/struct_rdict.pcm lib/struct_rdict.pcm
 
-Digitize: libStruct.so
-	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude $(ROOTGLIBS) -lGeom \
-	$(EDEPGLIBS) -Llib -lStruct src/digitization.cpp
+libUtils.so: src/utils.cpp include/utils.h
+	g++ -shared -fPIC -o lib/$@ -Iinclude -I$(EDEPINCDIR) -Iinclude $(ROOTGLIBS) `root-config --ldflags` $(CFLAGS) $<
 
-Reconstruct: libStruct.so
+Digitize: libStruct.so libUtils.so
 	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude $(ROOTGLIBS) -lGeom \
-	$(EDEPGLIBS) -Llib -lStruct src/reconstruction.cpp
+	$(EDEPGLIBS) -Llib -lStruct -lUtils src/digitization.cpp
 
-Analyze: libStruct.so
+Reconstruct: libStruct.so libUtils.so
+	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude $(ROOTGLIBS) -lGeom \
+	$(EDEPGLIBS) -Llib -lStruct -lUtils src/reconstruction.cpp
+
+Analyze: libStruct.so libUtils.so
 	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
-	$(EDEPGLIBS) -Llib -lStruct src/analysis.cpp
+	$(EDEPGLIBS) -Llib -lStruct -lUtils src/analysis.cpp
 
 FastCheck: libStruct.so
 	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \

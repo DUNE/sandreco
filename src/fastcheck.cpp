@@ -149,10 +149,10 @@ int main(int argc, char* argv[])
           "OK cells; log_{10}(tdc1/ns)");
     print(c, fout, tDigit, "TMath::Log10(cell.tdc2)", "cell.adc2>0", "",
           "OK cells; log_{10}(tdc2/ns)");
-    print(c, fout, tDigit, "TMath::Log10(cell.tdc1-cell.tdc2)", "", "",
-          "OK cells; log_{10}(tdc1-tdc2/ns)");
+    print(c, fout, tDigit, "TMath::Log10(abs(cell.tdc1-cell.tdc2))", "", "",
+          "OK cells; log_{10}(|tdc1-tdc2|/ns)");
     print(c, fout, tDigit, "TMath::Log10(cell.tdc1+cell.tdc2)", "", "",
-          "OK cells; log_{10}(tdc1+tdc2/ns)");
+          "OK cells; log_{10}((tdc1+tdc2)/ns)");
     c.SetLogy(false);
 
     c.SetLogz(true);
