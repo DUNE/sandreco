@@ -621,6 +621,7 @@ void CollectSignal(TGeoManager* geo,
         if(ns_Digit::flukatype==false){
 
             if (c.mod < 24) {
+           
                 dummyLoc[0] = ns_Digit::cxlay[c.lay][c.cel];  //coordinate nel local del modulo in base al numero del modulo e al numero della cella  
                 dummyLoc[1] = 0.;
                 dummyLoc[2] = ns_Digit::czlay[c.lay];
@@ -631,6 +632,8 @@ void CollectSignal(TGeoManager* geo,
                 c.x = dummyMas[0];   //coordinate della cella nel Global
                 c.y = dummyMas[1];
                 c.z = dummyMas[2];
+
+
             } else if (c.mod == 30 || c.mod == 40)
                 // right x > 0 : c.mod = 30
                 // left  x < 0 : c.mod = 40
@@ -907,12 +910,13 @@ void Digitize(const char* finname, const char* foutname)
     //t->Add(finname);
     //TFile f(t->GetListOfFiles()->At(0)->GetTitle());
     TFile f(finname,"READ");
-
+    //ns_Digit::flukatype=true;
     //TString (finname.c_str();
-    if(TString(finname).Contains("FLUKA") == true) {
+    if(TString(finname).Contains("fluka2edep") == true) {
         ns_Digit::flukatype=true; //dobbiamo leggere GeneratorName ..cambiare quando fatto
-        std::cout<<"This is a FLUKA SIMULATION"<<std::endl; 
     }
+    if(ns_Digit::flukatype==true)  std::cout<<"This is a FLUKA SIMULATION"<<std::endl; 
+    
     TTree* t = (TTree*) f.Get("EDepSimEvents");
 
     TGeoManager* geo = 0; 
@@ -951,7 +955,7 @@ void Digitize(const char* finname, const char* foutname)
         t->GetEntry(i);
 
         std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i)/nev*100) << "%]" << std::flush;
-
+/*
         // FOR CHANGING COORDIN FIXME
         for (auto i = vec_cell.begin(); i != vec_cell.end(); ++i){
 
@@ -971,14 +975,16 @@ void Digitize(const char* finname, const char* foutname)
             }
         }
         /////////////////////////
-
-
+*/
+	
         DigitizeCal(ev, geo, vec_cell);
         if(ns_Digit::flukatype==false) DigitizeStt(ev, geo, digit_vec);
         //}else{
         //	std::cout<<"Non ancora implementato in fluka"<<std::endl;
         //	return;
         //}
+
+	//std::cout<<"Vec cell size "<<vec_cell.size()<<std::endl;
 
         //std::cout<<"Prima del salvataggio "<<std::endl;
         //USEFULE FUNCTION FOR CHANGING COORDINATE TO SAND CENTER
