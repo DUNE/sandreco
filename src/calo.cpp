@@ -314,7 +314,7 @@ void calo()
           "E0");
   h = (TH1D*)gROOT->FindObject("h");
 
-  RooRealVar de("de", "de", 0.0, 20);
+  RooRealVar de("de", "de", 0, 20);
   RooFormulaVar npe_mean("npe_mean", "18.5*0.415*@0", RooArgList(de));
   RooRealVar npe("npe", "npe", 0, 200);
 
@@ -327,22 +327,24 @@ void calo()
 
   RooPoisson poisson("poisson", "poisson", npe, npe_mean);
   
-  //RooProdPdf prod("prod","landau x poisson",RooArgSet(landau,poisson));
+  RooProdPdf prod("prod","landau x poisson",RooArgSet(landau,poisson));
+  
+  auto pippo = prod.createIntegral(RooArgSet(de));
 
   //RooFFTConvPdf lxp("lxp", "landau (X) poisson", de, landau, poisson);
 
   //prod.fitTo(histo);
-  
+  /*
   RooPlot* frame1 = de.frame();
   landau.plotOn(frame1, RooFit::LineColor(kGreen));
   frame1->Draw();
-  c.SaveAs("calo.pdf");
+  c.SaveAs("calo.pdf");*/
   
   RooPlot* frame = npe.frame();
 
-  histo.plotOn(frame);
-  prod.plotOn(frame);
-  poisson.plotOn(frame, RooFit::LineColor(kOrange));
+  //histo.plotOn(frame);
+  pippo->plotOn(frame);
+  //poisson.plotOn(frame, RooFit::LineColor(kOrange));
 
   frame->Draw();
   c.SaveAs("calo.pdf)");
