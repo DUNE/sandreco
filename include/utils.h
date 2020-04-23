@@ -35,7 +35,7 @@ static const double xmin_f=262.55;
 static const double xmax_f=292.85;
 static const double dz_f=115.0;
 
-static const double ec_rf=2000.0;
+static const double ec_rf=1980.0;
 static const double ec_dzf=115.0;
 
 // coordinates of the cells for FLUKA
@@ -64,7 +64,7 @@ const double tscin = 3.08;
 const double tscex = 0.588;
 const double vlfb = 5.85;
 
-const double lCalBarrel = 4.3;  // meter
+static const double lCalBarrel = 4300;
 }
 
 namespace ns_Draw
