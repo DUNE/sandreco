@@ -74,9 +74,9 @@ const double pe_threshold = 4;
 const double costant_fraction = 0.15;
 
 // stt resolution and threshold
-const double res_x = 0.;        // 0.2 mm
+const double res_x = 0.2;        // 0.2 mm
 const double res_t = 0.;        // 1 ns
-const double e_threshold = 0.;  // 0.2E-3 MeV
+const double e_threshold = 0.25E-3;  // 0.25E-3 MeV
 
 // ADC to MeV
 const double adc2MeV = 1. / 10.;

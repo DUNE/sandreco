@@ -273,41 +273,78 @@ void calo()
   grp.Draw("ap");
 
   c.SaveAs("calo.pdf");
+  
+  TRandom3 rand(0);
+  double v_dE = 0.;
+  double v_npe = 0.;
+  
+  double mean_dE = 5.;
+  double sigma_dE = 0.5;
+  double k = 18.5 * 0.415;
+  
+  TH1D hdE("hdE","hdE; dE (MeV)",100,0,20);
+  TH1D hnpe("hnpe","hnpe; #p.e.",100,0,200);
+  hnpe.SetLineColor(kRed);
+  hnpe.SetMarkerColor(kRed);
+  
+  hdE.SetStats(kFALSE);
+  hnpe.SetStats(kFALSE);
+  
+  for(int i = 0; i < 100000; i++)
+  {
+    v_dE = rand.Landau(mean_dE,sigma_dE);
+    v_npe = rand.Poisson(v_dE*k);
+    
+    hdE.Fill(v_dE);
+    hnpe.Fill(v_npe);
+  }
+
+  t->Draw("cell.@pe_time1.size()>>h(100,0,200)", "cell.mod==18&&cell.cel==5",
+          "E0");
+  h = (TH1D*)gROOT->FindObject("h");
+  h->Scale(hnpe.Integral()/h->Integral());
+  
+  hdE.Draw("E0");
+  c.SaveAs("calo.pdf");
+  h->Draw("E0");
+  hnpe.Draw("E0same");
+  c.SaveAs("calo.pdf");
 
   t->Draw("cell.@pe_time1.size()>>h(200,0,200)", "cell.mod==18&&cell.cel==5",
           "E0");
   h = (TH1D*)gROOT->FindObject("h");
 
+  RooRealVar de("de", "de", 0, 20);
+  RooFormulaVar npe_mean("npe_mean", "18.5*0.415*@0", RooArgList(de));
   RooRealVar npe("npe", "npe", 0, 200);
 
   RooDataHist histo("histo", "histo", npe, h);
 
-  RooRealVar lmean("lmean", "landau mean", 18, -20, 20);
-  RooRealVar lsigma("lsigma", "landau sigma", 3, 0, 500);
+  RooRealVar de_mean("de_mean", "de mean", 5, 0, 20);
+  RooRealVar de_sigma("de_sigma", "de sigma", 0.5, 0, 20);
 
-  RooLandau landau("landau", "landau", npe, lmean, lsigma);
+  RooLandau landau("landau", "landau", de, de_mean, de_sigma);
 
-  RooRealVar gmean("gmean", "gauss mean", 18.5, 0, 100);
-  RooRealVar gsigma("gsigma", "gauss sigma", 4, 0, 500);
+  RooPoisson poisson("poisson", "poisson", npe, npe_mean);
+  
+  RooProdPdf prod("prod","landau x poisson",RooArgSet(landau,poisson));
+  
+  auto pippo = prod.createIntegral(RooArgSet(de));
 
-  RooRealVar pmean("pmean", "poisson mean", 18.5, 0, 100);
+  //RooFFTConvPdf lxp("lxp", "landau (X) poisson", de, landau, poisson);
 
-  RooPoisson poisson("poisson", "poisson", npe, pmean);
-  RooGaussian gauss("gauss", "gauss", npe, gmean, gsigma);
-
-  RooFFTConvPdf lxp("lxp", "landau (X) poisson", npe, landau, poisson);
-  RooFFTConvPdf lxg("lxg", "landau (X) gauss", npe, landau, gauss);
-
+  //prod.fitTo(histo);
+  /*
+  RooPlot* frame1 = de.frame();
+  landau.plotOn(frame1, RooFit::LineColor(kGreen));
+  frame1->Draw();
+  c.SaveAs("calo.pdf");*/
+  
   RooPlot* frame = npe.frame();
 
-  // lxg.fitTo(histo);
-  lxp.fitTo(histo);
-
-  histo.plotOn(frame);
-  lxp.plotOn(frame);
-  poisson.plotOn(frame, RooFit::LineColor(kOrange));
-  landau.plotOn(frame, RooFit::LineColor(kGreen));
-  // lxg.plotOn(frame,RooFit::LineColor(kRed));
+  //histo.plotOn(frame);
+  pippo->plotOn(frame);
+  //poisson.plotOn(frame, RooFit::LineColor(kOrange));
 
   frame->Draw();
   c.SaveAs("calo.pdf)");
