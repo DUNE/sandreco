@@ -487,8 +487,6 @@ void init(TGeoManager* geo)
   double xmax = mod->GetDx2();
   double dz = mod->GetDz();
 
-  std::cout<<"xmin xmax dz "<<xmin<<" "<<xmax<<" "<<dz<<std::endl;
-
   double m = 0.5 * (xmax - xmin) / dz;
   double q = 0.5 * (xmax + xmin);
 
@@ -643,8 +641,8 @@ void Digitize(const char* finname, const char* foutname)
   tout.Branch("cell", "std::vector<cell>", &vec_cell);
   tout.Branch("Stt", "std::vector<digit>", &digit_vec);
 
-//  const int nev = t->GetEntries();
-  int nev=2000;
+  const int nev = t->GetEntries();
+  
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
 

@@ -10,7 +10,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-//#define BING
+#define BING
 
 bool isHitBefore(hit h1, hit h2)
 {
