@@ -6,6 +6,7 @@ void calo()
   TFile f("../files/reco/mu_10GeV_1k.reco.root");
   TTree* t = (TTree*)f.Get("tDigit");
   TCanvas c;
+  TH1D* h;
 
   TFile fe250("../files/reco/e_250MeV_1k.reco.root");
   TFile fe500("../files/reco/e_500MeV_1k.reco.root");
@@ -37,38 +38,171 @@ void calo()
   TTree* tpi500 = (TTree*)fpi500.Get("tDigit");
   TTree* tpi1000 = (TTree*)fpi1000.Get("tDigit");
 
+  RooRealVar de("de", "de", 5, 0, 20);
+  RooFormulaVar npe_mean("npe_mean", "18.5*0.415*@0", RooArgList(de));
+  RooRealVar npe("npe", "npe", 0, 200);
+
   t->Draw("cell.@pe_time1.size()>>h(200,0,200)", "cell.mod==18&&cell.cel==5",
           "E0");
-  TH1D* h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("number of pe (pmt1) for 10 GeV mu;#p.e.");
+  h = (TH1D*)gROOT->FindObject("h");
 
-  h->Fit("gaus", "Q", "", 30, 50);
-  h->Draw();
-
-  c.SaveAs("calo.pdf(");
+  RooDataHist histo_pmt1("histo_pmt1", "pmt1", npe, h);
 
   t->Draw("cell.@pe_time2.size()>>h(200,0,200)", "cell.mod==18&&cell.cel==5",
           "E0");
   h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("number of pe (pmt2) for 10 GeV mu;#p.e.");
 
-  h->Fit("gaus", "Q", "", 30, 50);
-  h->Draw();
+  RooDataHist histo_pmt2("histo_pmt2", "pmt2", npe, h);
 
+  RooRealVar de_mean("de_mean", "de mean", 5, 0, 20);
+  RooRealVar de_sigma("de_sigma", "de sigma", 0.5, 0, 20);
+
+  RooLandau landau("landau", "landau", de, de_mean, de_sigma);
+
+  RooPoisson poisson("poisson", "poisson", npe, npe_mean);
+  
+  RooProdPdf prod("prod","landau x poisson",RooArgSet(landau,poisson));
+  
+  auto marg = prod.createProjection(RooArgSet(de));
+
+  RooFitResult* r1 = marg->fitTo(histo_pmt1,RooFit::Save());
+  
+  RooPlot* frame1 = npe.frame();
+
+  histo_pmt1.plotOn(frame1);
+  marg->plotOn(frame1);
+  Double_t vchi2 = frame1->chiSquare(2);
+  std::cout << "chi2: " << vchi2 << std::endl;
+
+  frame1->Draw();
+  c.SaveAs("calo.pdf(");
+  
+  r1->Print();
+
+  RooFitResult* r2 = marg->fitTo(histo_pmt2,RooFit::Save());
+  
+  RooPlot* frame2 = npe.frame();
+
+  histo_pmt2.plotOn(frame2);
+  marg->plotOn(frame2);
+  vchi2 = frame2->chiSquare(2);
+  std::cout << "chi2: " << vchi2 << std::endl;
+
+  frame2->Draw();
   c.SaveAs("calo.pdf");
+  
+  r2->Print();
+  
+  RooRealVar time("time", "cell time", 9, 5, 15);
+  RooRealVar tmean("tmean", "cell time mean", 5, 15);
+  RooRealVar tsigma("tsigma", "cell time sigma", 0, 15);
 
   t->Draw(
       "0.5*(cell.tdc1+cell.tdc2-cell.l*5.85/"
-      "1000.)-(cell.lay==4)*((3.5*0.044+0.054*0.5)*2.99E8*1E-9)-(cell.lay<4)*("
-      "cell.lay*0.044*2.99E8*1E-9)>>h(100,7.5,11)",
-      "cell.mod==18&&cell.cel==5", "E0");
+      "1000.)>>h(100,7.5,11)",
+      "cell.mod==18&&cell.cel==5&&cell.lay==0", "E0");
   h = (TH1D*)gROOT->FindObject("h");
   h->SetTitle("corrected cell time;t (ns)");
+  RooDataHist histo_tlay0("histo_tlay0", "tlay0", time, h);
 
-  h->Fit("gaus", "Q", "", 7, 12);
-  h->Draw();
+  t->Draw(
+      "0.5*(cell.tdc1+cell.tdc2-cell.l*5.85/"
+      "1000.)>>h(100,7.5,11)",
+      "cell.mod==18&&cell.cel==5&&cell.lay==1", "E0");
+  h = (TH1D*)gROOT->FindObject("h");
+  h->SetTitle("corrected cell time;t (ns)");
+  RooDataHist histo_tlay1("histo_tlay1", "tlay1", time, h);
 
+  t->Draw(
+      "0.5*(cell.tdc1+cell.tdc2-cell.l*5.85/"
+      "1000.)>>h(100,7.5,11)",
+      "cell.mod==18&&cell.cel==5&&cell.lay==2", "E0");
+  h = (TH1D*)gROOT->FindObject("h");
+  h->SetTitle("corrected cell time;t (ns)");
+  RooDataHist histo_tlay2("histo_tlay2", "tlay2", time, h);
+
+  t->Draw(
+      "0.5*(cell.tdc1+cell.tdc2-cell.l*5.85/"
+      "1000.)>>h(100,7.5,11)",
+      "cell.mod==18&&cell.cel==5&&cell.lay==3", "E0");
+  h = (TH1D*)gROOT->FindObject("h");
+  h->SetTitle("corrected cell time;t (ns)");
+  RooDataHist histo_tlay3("histo_tlay3", "tlay3", time, h);
+
+  t->Draw(
+      "0.5*(cell.tdc1+cell.tdc2-cell.l*5.85/"
+      "1000.)>>h(100,7.5,11)",
+      "cell.mod==18&&cell.cel==5&&cell.lay==4", "E0");
+  h = (TH1D*)gROOT->FindObject("h");
+  h->SetTitle("corrected cell time;t (ns)");
+  RooDataHist histo_tlay4("histo_tlay4", "tlay4", time, h);
+  
+  RooGaussian gauss("gauss","gauss", time, tmean, tsigma);
+  
+  RooFitResult* rt0 = gauss.fitTo(histo_tlay0,RooFit::Save());
+  
+  RooPlot* frame_time0 = time.frame();
+  histo_tlay0.plotOn(frame_time0);
+  gauss.plotOn(frame_time0);
+  vchi2 = frame_time0->chiSquare(2);
+  std::cout << "chi2: " << vchi2 << std::endl;
+  
+  frame_time0->Draw();
   c.SaveAs("calo.pdf");
+  
+  rt0->Print();
+  
+  RooFitResult* rt1 = gauss.fitTo(histo_tlay1,RooFit::Save());
+  
+  RooPlot* frame_time1 = time.frame();
+  histo_tlay1.plotOn(frame_time1);
+  gauss.plotOn(frame_time1);
+  vchi2 = frame_time1->chiSquare(2);
+  std::cout << "chi2: " << vchi2 << std::endl;
+  
+  frame_time1->Draw();
+  c.SaveAs("calo.pdf");
+  
+  rt1->Print();
+  
+  RooFitResult* rt2 = gauss.fitTo(histo_tlay2,RooFit::Save());
+  
+  RooPlot* frame_time2 = time.frame();
+  histo_tlay2.plotOn(frame_time2);
+  gauss.plotOn(frame_time2);
+  vchi2 = frame_time2->chiSquare(2);
+  std::cout << "chi2: " << vchi2 << std::endl;
+  
+  frame_time2->Draw();
+  c.SaveAs("calo.pdf");
+  
+  rt2->Print();
+  
+  RooFitResult* rt3 = gauss.fitTo(histo_tlay3,RooFit::Save());
+  
+  RooPlot* frame_time3 = time.frame();
+  histo_tlay3.plotOn(frame_time3);
+  gauss.plotOn(frame_time3);
+  vchi2 = frame_time3->chiSquare(2);
+  std::cout << "chi2: " << vchi2 << std::endl;
+  
+  frame_time3->Draw();
+  c.SaveAs("calo.pdf");
+  
+  rt3->Print();
+  
+  RooFitResult* rt4 = gauss.fitTo(histo_tlay4,RooFit::Save());
+  
+  RooPlot* frame_time4 = time.frame();
+  histo_tlay4.plotOn(frame_time4);
+  gauss.plotOn(frame_time4);
+  vchi2 = frame_time4->chiSquare(2);
+  std::cout << "chi2: " << vchi2 << std::endl;
+  
+  frame_time4->Draw();
+  c.SaveAs("calo.pdf");
+  
+  rt4->Print();
 
   te250->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,1000,5000)", "cell.mod==18",
               "E0");
@@ -272,91 +406,5 @@ void calo()
   grp.Fit("pol1", "QS");
   grp.Draw("ap");
 
-  c.SaveAs("calo.pdf");
-  
-  TRandom3 rand(0);
-  double v_dE = 0.;
-  double v_npe = 0.;
-  
-  double mean_dE = 5.;
-  double sigma_dE = 0.5;
-  double k = 18.5 * 0.415;
-  
-  TH1D hdE("hdE","hdE; dE (MeV)",100,0,20);
-  TH1D hnpe("hnpe","hnpe; #p.e.",100,0,200);
-  hnpe.SetLineColor(kRed);
-  hnpe.SetMarkerColor(kRed);
-  
-  hdE.SetStats(kFALSE);
-  hnpe.SetStats(kFALSE);
-  
-  for(int i = 0; i < 100000; i++)
-  {
-    v_dE = rand.Landau(mean_dE,sigma_dE);
-    v_npe = rand.Poisson(v_dE*k);
-    
-    hdE.Fill(v_dE);
-    hnpe.Fill(v_npe);
-  }
-
-  t->Draw("cell.@pe_time1.size()>>h(100,0,200)", "cell.mod==18&&cell.cel==5",
-          "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->Scale(hnpe.Integral()/h->Integral());
-  
-  hdE.Draw("E0");
-  c.SaveAs("calo.pdf");
-  h->Draw("E0");
-  hnpe.Draw("E0same");
-  c.SaveAs("calo.pdf");
-
-  t->Draw("cell.@pe_time1.size()>>h(200,0,200)", "cell.mod==18&&cell.cel==5",
-          "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-
-  RooRealVar de("de", "de", 0, 20);
-  RooFormulaVar npe_mean("npe_mean", "18.5*0.415*@0", RooArgList(de));
-  RooRealVar npe("npe", "npe", 0, 200);
-
-  RooDataHist histo("histo", "histo", npe, h);
-
-  RooRealVar de_mean("de_mean", "de mean", 5, 0, 20);
-  RooRealVar de_sigma("de_sigma", "de sigma", 0.5, 0, 20);
-
-  RooLandau landau("landau", "landau", de, de_mean, de_sigma);
-
-  RooPoisson poisson("poisson", "poisson", npe, npe_mean);
-  
-  RooProdPdf prod("prod","landau x poisson",RooArgSet(landau,poisson));
-  
-  auto pippo = prod.createIntegral(RooArgSet(de));
-
-  //RooFFTConvPdf lxp("lxp", "landau (X) poisson", de, landau, poisson);
-
-  //prod.fitTo(histo);
-  /*
-  RooPlot* frame1 = de.frame();
-  landau.plotOn(frame1, RooFit::LineColor(kGreen));
-  frame1->Draw();
-  c.SaveAs("calo.pdf");*/
-  
-  RooPlot* frame = npe.frame();
-
-  //histo.plotOn(frame);
-  pippo->plotOn(frame);
-  //poisson.plotOn(frame, RooFit::LineColor(kOrange));
-
-  frame->Draw();
   c.SaveAs("calo.pdf)");
-  /*
-  std::vector<cell>* vc = new std::vector<cell>;
-
-  t->SetBranchAddress("cell",&vc);
-
-  double npe[5];
-
-  for(unsigned int i = 0; i < t->GetEntries(); i++)
-  {
-    t->GetEntry(i);
-  }*/
 }
