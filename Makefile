@@ -34,13 +34,13 @@ Reconstruct: libStruct.so libUtils.so
 	$(EDEPGLIBS) -Llib -lStruct -lUtils src/reconstruction.cpp
 
 Analyze: libStruct.so libUtils.so
-	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
+	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} $(ROOTGLIBS) -lGeom -lEG \
 	$(EDEPGLIBS) -Llib -lStruct -lUtils src/analysis.cpp
 
 FastCheck: libStruct.so
-	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
+	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} $(ROOTGLIBS) -lGeom -lEG \
 	$(EDEPGLIBS) -Llib -lStruct src/fastcheck.cpp
 
 Display: libStruct.so
-	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} -L${GENFIT}/lib64 -lgenfit2 $(ROOTGLIBS) -lGeom -lEG \
+	g++ -o bin/$@ $(CFLAGS) $(LDFLAGS) -I$(EDEPINCDIR) -Iinclude -I${GENFIT}/include -I${EIGEN3} $(ROOTGLIBS) -lGeom -lEG \
 	$(EDEPGLIBS) -Llib -lStruct src/display.cpp

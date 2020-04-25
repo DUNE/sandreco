@@ -21,8 +21,8 @@
 
 #include "../include/struct.h"
 
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
+#include "TG4Event.h"
+#include "TG4HitSegment.h"
 
 namespace display
 {
