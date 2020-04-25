@@ -47,6 +47,22 @@ double cxlay[nLay][nCel];
 double ec_r;
 double ec_dz;
 
+////////////////////////////////////////////////////////////////////////
+// geometry v0
+const char* path_barrel_template =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
+const char* path_endcapL_template =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
+const char* path_endcapR_template =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+//////////////////////////////////////////////////////////////////////////
+
+/*
+////////////////////////////////////////////////////////////////////////
+// geometry v1
 const char* path_barrel_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
@@ -56,6 +72,8 @@ const char* path_endcapL_template =
 const char* path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+//////////////////////////////////////////////////////////////////////////
+*/
 
 const double tscin = 3.08;
 const double tscex = 0.588;
@@ -67,8 +85,8 @@ const double pe2ADC = 1 / .25;
 const double int_time = 400.;
 
 // https://www.sciencedirect.com/science/article/pii/S0168900201015029
-// threshold 3-4 p.e.
-const double pe_threshold = 4;
+// threshold 3-4 p.e. at 2 m distance
+const double pe_threshold = 2.5;
 
 // costant fraction 15%
 const double costant_fraction = 0.15;
