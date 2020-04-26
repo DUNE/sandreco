@@ -1,4 +1,283 @@
+#include <TGeoManager.h>
+#include <TGeoBBox.h>
+#include <TFile.h>
+#include <TTree.h>
+#include <TH1D.h>
+#include <TParameter.h>
+
+#include <iostream>
+#include <vector>
+#include <map>
+
 #include "/wd/dune-it/ext_bkg/kloe-simu/src/display.cpp"
+
+void erase_element(int val, std::vector<int>& vec)
+{
+  std::vector<int>::iterator ite = std::find(vec.begin(),vec.end(),val);
+  if(ite == vec.end())
+  {
+    std::cout << "problem: " << val << " not found in vec (size: " << vec.size() << ")" << std::endl;
+    for(std::vector<int>::iterator it = vec.begin(); it != vec.end(); ++it)
+    {
+      std::cout << distance(vec.begin(), it) << " " << *it << std::endl;
+    }
+    exit(1);
+  } 
+  else
+  {
+    vec.erase(ite);
+  }
+}
+
+void processMtrVct(std::vector<int>& regMtrX, std::vector<int>& reg0trX, std::map<int,int>& regionsX, TH1D& hmultX, const int minreg)
+{
+    while(regMtrX.size() != 0)
+    {
+      std::map<int,int>::iterator this_el = regionsX.find(regMtrX.front());
+      std::map<int,int>::iterator next_el = std::next(this_el);
+      std::map<int,int>::iterator prev_el = std::prev(this_el);
+      std::map<int,int>::iterator next2_el = std::next(this_el,2);
+      std::map<int,int>::iterator prev2_el = std::prev(this_el,2);
+      bool mantain = false;
+      
+      if(next_el != regionsX.end() && this_el != regionsX.begin())
+      {
+        if(this_el->second < minreg && hmultX.GetBinContent(prev_el->first) == 1 && hmultX.GetBinContent(next_el->first) == 1)
+        {
+          for(int k = 0; k < this_el->second; k++)
+          {
+            hmultX.SetBinContent(this_el->first+k,1);
+          }
+          prev_el->second += this_el->second + next_el->second;
+          regionsX.erase(this_el);
+          regionsX.erase(next_el);
+          regMtrX.erase(regMtrX.begin());        
+          
+          continue;
+        }
+      }
+      
+      if(next_el != regionsX.end())
+      {        
+        if(next_el->second < minreg)
+        {
+          mantain = true;
+          
+          if(next2_el != regionsX.end())
+          {
+            if(hmultX.GetBinContent(next2_el->first) == 2)
+            {
+              if(hmultX.GetBinContent(next_el->first) == 0)
+                erase_element(next_el->first, reg0trX);
+              for(int k = 0; k < next_el->second; k++)
+              {
+                hmultX.SetBinContent(next_el->first+k,2);
+              }
+              this_el->second += next_el->second + next2_el->second;
+              erase_element(next2_el->first, regMtrX);
+              regionsX.erase(next_el);
+              regionsX.erase(next2_el);
+            }
+            else
+            {
+              if(hmultX.GetBinContent(next_el->first) == 0)
+                erase_element(next_el->first, reg0trX);
+              for(int k = 0; k < next_el->second; k++)
+              {
+                hmultX.SetBinContent(next_el->first+k,2);
+              }
+              this_el->second += next_el->second;
+              regionsX.erase(next_el);
+            }
+          }
+          else
+          {
+            if(hmultX.GetBinContent(next_el->first) == 0)
+              erase_element(next_el->first, reg0trX);
+            for(int k = 0; k < next_el->second; k++)
+            {
+              hmultX.SetBinContent(next_el->first+k,2);
+            }
+            this_el->second += next_el->second;
+            regionsX.erase(next_el);
+          }
+        }
+      }
+      
+      if(this_el != regionsX.begin())
+      {
+        if(prev_el->second < minreg)
+        {
+          mantain = true;
+          
+          if(prev_el != regionsX.begin())
+          {
+            if(hmultX.GetBinContent(prev2_el->first) == 2)
+            {
+              if(hmultX.GetBinContent(prev_el->first) == 0)
+                erase_element(prev_el->first, reg0trX);
+              for(int k = 0; k < prev_el->second; k++)
+              {
+                hmultX.SetBinContent(prev_el->first+k,2);
+              }
+              prev2_el->second += this_el->second + prev_el->second;
+              regionsX.erase(prev_el);
+              regionsX.erase(this_el);
+              regMtrX.front() = prev2_el->first;
+              
+            }
+            else
+            {
+              if(hmultX.GetBinContent(prev_el->first) == 0)
+                erase_element(prev_el->first, reg0trX);
+              for(int k = 0; k < prev_el->second; k++)
+              {
+                hmultX.SetBinContent(prev_el->first+k,2);
+              }
+              prev_el->second += this_el->second;
+              regionsX.erase(this_el);
+              regMtrX.front() = prev_el->first;
+            }
+          }
+          else
+          {
+            if(hmultX.GetBinContent(prev_el->first) == 0)
+              erase_element(prev_el->first, reg0trX);
+            for(int k = 0; k < prev_el->second; k++)
+            {
+              hmultX.SetBinContent(prev_el->first+k,2);
+            }
+            prev_el->second += this_el->second;
+            regionsX.erase(this_el);
+            regMtrX.front() = prev_el->first;
+          }
+        }
+      }
+      if(mantain == false)
+      {
+        regMtrX.erase(regMtrX.begin());
+      }
+    }
+}
+
+void process0trVct(std::vector<int>& reg0trX, std::map<int,int>& regionsX, TH1D& hmultX, const int minreg)
+{
+    while(reg0trX.size() != 0)
+    {
+      std::map<int,int>::iterator this_el = regionsX.find(reg0trX.front());
+      std::map<int,int>::iterator next_el = std::next(this_el);
+      std::map<int,int>::iterator prev_el = std::prev(this_el);
+      std::map<int,int>::iterator next2_el = std::next(this_el,2);
+      std::map<int,int>::iterator prev2_el = std::prev(this_el,2);
+      bool mantain = false;
+      
+      
+      if(next_el != regionsX.end() && this_el != regionsX.begin())
+      {
+        if(this_el->second < minreg && hmultX.GetBinContent(prev_el->first) == 1 && hmultX.GetBinContent(next_el->first) == 1)
+        {
+          for(int k = 0; k < this_el->second; k++)
+          {
+            hmultX.SetBinContent(this_el->first+k,1);
+          }
+          prev_el->second += this_el->second + next_el->second;
+          regionsX.erase(this_el);
+          regionsX.erase(next_el); 
+          reg0trX.erase(reg0trX.begin());
+          continue;
+        }
+      }
+      
+      if(next_el != regionsX.end())
+      {        
+        if(next_el->second < minreg)
+        {
+          mantain = true;
+          
+          if(next2_el != regionsX.end())
+          {
+            if(hmultX.GetBinContent(next2_el->first) == 0)
+            {
+              for(int k = 0; k < next_el->second; k++)
+              {
+                hmultX.SetBinContent(next_el->first+k,0);
+              }
+              this_el->second += next_el->second + next2_el->second;
+              erase_element(next2_el->first, reg0trX);
+              regionsX.erase(next_el);
+              regionsX.erase(next2_el);
+              
+            }
+            else
+            {
+              for(int k = 0; k < next_el->second; k++)
+              {
+                hmultX.SetBinContent(next_el->first+k,hmultX.GetBinContent(next2_el->first));
+              }
+              next_el->second += next2_el->second;
+              regionsX.erase(next2_el);   
+            }
+          }
+          else
+          {
+            for(int k = 0; k < next_el->second; k++)
+            {
+              hmultX.SetBinContent(next_el->first+k,0);
+            }
+            this_el->second += next_el->second;
+            regionsX.erase(next_el);
+          }
+        }
+      }
+      
+      if(this_el != regionsX.begin())
+      {        
+        if(prev_el->second < minreg)
+        {
+          mantain = true;
+          
+          if(prev_el != regionsX.begin())
+          {
+            if(hmultX.GetBinContent(prev2_el->first) == 0)
+            {
+              for(int k = 0; k < prev_el->second; k++)
+              {
+                hmultX.SetBinContent(prev_el->first+k,0);
+              }
+              prev2_el->second += prev_el->second + this_el->second;
+              regionsX.erase(prev_el);
+              regionsX.erase(this_el);  
+              reg0trX.front() = prev2_el->first;            
+            }
+            else
+            {
+              for(int k = 0; k < prev_el->second; k++)
+              {
+                hmultX.SetBinContent(prev_el->first+k,hmultX.GetBinContent(prev2_el->first));
+              }
+              prev2_el->second += prev_el->second;
+              regionsX.erase(prev_el);
+              reg0trX.front() = prev_el->first;
+            }
+          }
+          else
+          {
+            for(int k = 0; k < prev_el->second; k++)
+            {
+              hmultX.SetBinContent(prev_el->first+k,0);
+            }
+            prev_el->second += this_el->second;
+            regionsX.erase(this_el);
+            reg0trX.front() = prev_el->first;
+          }
+        }
+      }
+      if(mantain == false)
+      {
+        reg0trX.erase(reg0trX.begin());
+      }
+    }
+}
 
 void findvtx()
 {
@@ -159,7 +438,7 @@ void findvtx()
   c.Divide(1,2);
   
   int first = 0;
-  int last = 50;/*tDigit->GetEntries()*/
+  int last = 100;/*tDigit->GetEntries();
   
   for(int i = first; i < last+1; i++)
   {
@@ -168,8 +447,8 @@ void findvtx()
     
     TString reaction = ev->Primaries.at(0).GetReaction();
     
-    if(reaction.Contains("CC") == false)
-      continue;
+    //if(reaction.Contains("CC") == false)
+    //  continue;
     
     xv.SetVal(ev->Primaries.at(0).GetPosition().X());
     yv.SetVal(ev->Primaries.at(0).GetPosition().Y());
@@ -203,7 +482,7 @@ void findvtx()
     h1trY.SetTitle(TString::Format("event: %d",i).Data());
     hmtrY.SetTitle(TString::Format("event: %d",i).Data());
     
-    for(int j = 0; j < digits->size(); j++)
+    for(unsigned int j = 0; j < digits->size(); j++)
     {
       if(digits->at(j).hor == 1)
       {
@@ -219,7 +498,7 @@ void findvtx()
       }
     }
     
-    for(int j = 0; j < binning.size()-1; j++)
+    for(unsigned int j = 0; j < binning.size()-1; j++)
     {
       mean = -1;
       rms = -1;
@@ -259,12 +538,16 @@ void findvtx()
     // find wide regions 
     std::map<int,int> regionsX;
     std::map<int,int> regionsY;
+    std::vector<int> regMtrX;
+    std::vector<int> regMtrY;
+    std::vector<int> reg0trX;
+    std::vector<int> reg0trY;
     int last_vx = -1;
     int last_vy = -1;
     int last_bx = -1;
     int last_by = -1;
     
-    for(int j = 0; j < binning.size()-1; j++)
+    for(unsigned int j = 0; j < binning.size()-1; j++)
     {
       if(hmultX.GetBinContent(j+1) == last_vx)
       {
@@ -289,8 +572,63 @@ void findvtx()
       }
     }
     
+    for (std::map<int,int>::iterator it=regionsX.begin(); it!=regionsX.end(); ++it)
+    {
+      if(hmultX.GetBinContent(it->first) == 2)
+      {
+        std::vector<int>::iterator ite;
+        for (ite=regMtrX.begin(); ite!=regMtrX.end(); ++ite)
+        {
+          if(regionsX[*ite] < it->second)
+            break;
+        }
+        regMtrX.insert(ite,it->first);
+      }
+      if(hmultX.GetBinContent(it->first) == 0)
+      {
+        std::vector<int>::iterator ite;
+        for (ite=reg0trX.begin(); ite!=reg0trX.end(); ++ite)
+        {
+          if(regionsX[*ite] < it->second)
+            break;
+        }
+        reg0trX.insert(ite,it->first);
+      }
+    }  
+    
+    for (std::map<int,int>::iterator it=regionsY.begin(); it!=regionsY.end(); ++it)
+    {
+      if(hmultY.GetBinContent(it->first) == 2)
+      {
+        std::vector<int>::iterator ite;
+        for (ite=regMtrY.begin(); ite!=regMtrY.end(); ++ite)
+        {
+          if(regionsY[*ite] < it->second)
+            break;
+        }
+        regMtrY.insert(ite,it->first);
+      }
+      if(hmultY.GetBinContent(it->first) == 0)
+      {
+        std::vector<int>::iterator ite;
+        for (ite=reg0trY.begin(); ite!=reg0trY.end(); ++ite)
+        {
+          if(regionsY[*ite] < it->second)
+            break;
+        }
+        reg0trY.insert(ite,it->first);
+      }
+    }
+    
     const int minreg = 3;
     
+    processMtrVct(regMtrX, reg0trX, regionsX, hmultX, minreg);
+    process0trVct(reg0trX, regionsX, hmultX, minreg);
+    
+    processMtrVct(regMtrY, reg0trY, regionsY, hmultY, minreg);
+    process0trVct(reg0trY, regionsY, hmultY, minreg);
+    
+    /*
     for (std::map<int,int>::iterator it=regionsX.begin(); it!=regionsX.end(); ++it)
     {
       if(it->second < minreg)
@@ -313,7 +651,7 @@ void findvtx()
           regionsY.erase(it, std::next(it));
         }
       }
-    }
+    }*/
     
     for (std::map<int,int>::iterator it=regionsX.begin(); it!=regionsX.end(); ++it)
     {
