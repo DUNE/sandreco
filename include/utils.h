@@ -72,6 +72,19 @@ const double vlfb = 5.85;
 const double lCalBarrel = 4.3;  // meter
 }
 
+
+namespace ns_Fast_Reco
+{
+const bool debug = false;
+int iFillPar=0;
+}
+
+
+
+
+
+
+
 namespace ns_Draw
 {
 const bool debug = false;
