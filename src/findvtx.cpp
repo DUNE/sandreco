@@ -121,6 +121,7 @@ void processMtrVct(std::vector<int>& regMtrX, std::vector<int>& reg0trX, std::ma
                 hmultX.SetBinContent(prev_el->first+k,2);
               }
               prev2_el->second += this_el->second + prev_el->second;
+              erase_element(prev2_el->first, regMtrX);
               regionsX.erase(prev_el);
               regionsX.erase(this_el);
               regMtrX.front() = prev2_el->first;
@@ -169,8 +170,7 @@ void process0trVct(std::vector<int>& reg0trX, std::map<int,int>& regionsX, TH1D&
       std::map<int,int>::iterator prev_el = std::prev(this_el);
       std::map<int,int>::iterator next2_el = std::next(this_el,2);
       std::map<int,int>::iterator prev2_el = std::prev(this_el,2);
-      bool mantain = false;
-      
+      bool mantain = false;      
       
       if(next_el != regionsX.end() && this_el != regionsX.begin())
       {
@@ -245,9 +245,10 @@ void process0trVct(std::vector<int>& reg0trX, std::map<int,int>& regionsX, TH1D&
                 hmultX.SetBinContent(prev_el->first+k,0);
               }
               prev2_el->second += prev_el->second + this_el->second;
+              erase_element(prev2_el->first, reg0trX);
               regionsX.erase(prev_el);
               regionsX.erase(this_el);  
-              reg0trX.front() = prev2_el->first;            
+              reg0trX.front() = prev2_el->first;        
             }
             else
             {
@@ -255,8 +256,8 @@ void process0trVct(std::vector<int>& reg0trX, std::map<int,int>& regionsX, TH1D&
               {
                 hmultX.SetBinContent(prev_el->first+k,hmultX.GetBinContent(prev2_el->first));
               }
-              prev2_el->second += prev_el->second;
-              regionsX.erase(prev_el);
+              prev_el->second += this_el->second;
+              regionsX.erase(this_el);
               reg0trX.front() = prev_el->first;
             }
           }
@@ -282,7 +283,10 @@ void process0trVct(std::vector<int>& reg0trX, std::map<int,int>& regionsX, TH1D&
 void findvtx()
 {
   gROOT->SetBatch();
-  TCanvas c;
+
+  bool display = true;
+  bool save2root = true && display;
+  bool save2pdf = true && display;
 
 // root [0] TGeoManager::Import("../geo/nd_hall_kloe_empty.gdml")
 // (TGeoManager *) 0x3037200
@@ -363,7 +367,22 @@ void findvtx()
   tMC->SetBranchAddress("Event",&ev);
   
   TFile fout("vtx.root","RECREATE");
+  TTree tv("tv","tv");
+  
+  double xvtx_true, yvtx_true, zvtx_true;
+  int nint;
+  double x_int[256];
+  double y_int[256];
+  double z_int[256];
     
+  tv.Branch("xvtx",&xvtx_true,"xvtx/D");
+  tv.Branch("yvtx",&yvtx_true,"yvtx/D");
+  tv.Branch("zvtx",&zvtx_true,"zvtx/D");
+  tv.Branch("nint",&nint,"nint/I"); 
+  tv.Branch("x_int",x_int,"x_int[nint]/D"); 
+  tv.Branch("y_int",y_int,"y_int[nint]/D"); 
+  tv.Branch("z_int",z_int,"z_int[nint]/D"); 
+  
   TH1D hrmsX("hrmsX","rmsX;Z (mm); rmsX (mm)",binning.size()-1,binning.data());
   TH1D hrmsY("hrmsY","rmsY;Z (mm); rmsY (mm)",binning.size()-1,binning.data());
   hrmsY.SetLineColor(kRed);
@@ -435,13 +454,23 @@ void findvtx()
   
   init("../files/reco/numu_internal_10k.0.reco.root");
   
-  c.Divide(1,2);
-  
   int first = 0;
-  int last = 100;/*tDigit->GetEntries();
+  int last = 10;/*tDigit->GetEntries();*/
+    
+  vector<double> zvX;
+  vector<double> zvY; 
+  vector<double> zvtx;
+  
+  vector<TH1D> vharctg; 
+  vector<TGraph>  vguv;
+  vector<TH2D> vhHT; 
+  
+  TCanvas c;
+  c.SaveAs("rms.pdf(");
   
   for(int i = first; i < last+1; i++)
   {
+    
     tDigit->GetEntry(i);
     tMC->GetEntry(i);
     
@@ -454,7 +483,14 @@ void findvtx()
     yv.SetVal(ev->Primaries.at(0).GetPosition().Y());
     zv.SetVal(ev->Primaries.at(0).GetPosition().Z());
     
-    TDirectoryFile fd(TString::Format("ev_%d",i).Data(),TString::Format("ev_%d",i).Data(),"",&fout);
+    xvtx_true = xv.GetVal();
+    yvtx_true = yv.GetVal();
+    zvtx_true = zv.GetVal();
+    
+    TDirectoryFile* fd;
+    
+    if(save2root)
+      fd = new TDirectoryFile(TString::Format("ev_%d",i).Data(),TString::Format("ev_%d",i).Data(),"",&fout);
     
     hrmsX.Reset("ICESM");
     hrmsY.Reset("ICESM");
@@ -482,6 +518,7 @@ void findvtx()
     h1trY.SetTitle(TString::Format("event: %d",i).Data());
     hmtrY.SetTitle(TString::Format("event: %d",i).Data());
     
+    // eveluate rms, mean and multiplicity in Y and X as a function of the STT module
     for(unsigned int j = 0; j < digits->size(); j++)
     {
       if(digits->at(j).hor == 1)
@@ -534,8 +571,9 @@ void findvtx()
       hmultY.SetBinContent(j+1,n);
     }
     
-    // filter
-    // find wide regions 
+    
+    
+    // find regions of: 0 tracks, 1 track, multi tracks
     std::map<int,int> regionsX;
     std::map<int,int> regionsY;
     std::vector<int> regMtrX;
@@ -572,6 +610,7 @@ void findvtx()
       }
     }
     
+    // order regions by width
     for (std::map<int,int>::iterator it=regionsX.begin(); it!=regionsX.end(); ++it)
     {
       if(hmultX.GetBinContent(it->first) == 2)
@@ -620,7 +659,13 @@ void findvtx()
       }
     }
     
-    const int minreg = 3;
+    // merge regions less than threshold [in number of modules] (threshold to be optimized) 
+    // to the adiacent ones starting from wider multi track regions
+    // after multi tracks regions => wider 0 tracks regions
+    // if regions of multi tracks and 0 tracks less than 
+    // threshold are in the middle of 1 track region, the former
+    // is merged to the latter
+    const int minreg = 1;
     
     processMtrVct(regMtrX, reg0trX, regionsX, hmultX, minreg);
     process0trVct(reg0trX, regionsX, hmultX, minreg);
@@ -628,128 +673,315 @@ void findvtx()
     processMtrVct(regMtrY, reg0trY, regionsY, hmultY, minreg);
     process0trVct(reg0trY, regionsY, hmultY, minreg);
     
-    /*
-    for (std::map<int,int>::iterator it=regionsX.begin(); it!=regionsX.end(); ++it)
+    // find surface between:
+    // - 0 tracks => 1 tracks : mono prong vertex
+    // - 0 tracks => multi tracks: multi prong vertex
+    // - 1 track => multi tracks: re-interaction or vertex with back-scattering
+    zvX.clear();
+    zvY.clear();
+    
+    for(std::map<int,int>::iterator it = regionsX.begin(); std::next(it) != regionsX.end(); ++it)
     {
-      if(it->second < minreg)
+      if(hmultX.GetBinContent(it->first) == 0 && hmultX.GetBinContent(std::next(it)->first) != 0)
       {
-        if(hmultX.GetBinContent(std::prev(it)->first) == hmultX.GetBinContent(std::next(it)->first))
+        zvX.push_back(hmultX.GetXaxis()->GetBinLowEdge(std::next(it)->first));
+      }
+      else if(hmultX.GetBinContent(it->first) == 1 && hmultX.GetBinContent(std::next(it)->first) == 2)
+      {
+        zvX.push_back(hmultX.GetXaxis()->GetBinLowEdge(std::next(it)->first));
+      }
+    }
+    
+    for(std::map<int,int>::iterator it = regionsY.begin(); std::next(it) != regionsY.end(); ++it)
+    {
+      if(hmultY.GetBinContent(it->first) == 0 && hmultY.GetBinContent(std::next(it)->first) != 0)
+      {
+        zvY.push_back(hmultY.GetXaxis()->GetBinLowEdge(std::next(it)->first));
+      }
+      else if(hmultY.GetBinContent(it->first) == 1 && hmultY.GetBinContent(std::next(it)->first) == 2)
+      {
+        zvY.push_back(hmultY.GetXaxis()->GetBinLowEdge(std::next(it)->first));
+      }
+    }
+    
+    // merge vertex between X and Y plan
+    // if they are in between 200 mm => to be optimized
+    std::map<double,int> vv;
+    for(unsigned int j = 0; j < zvX.size(); j++)
+    {
+      vv[zvX[j]] = 1;
+    }
+    for(unsigned int j = 0; j < zvY.size(); j++)
+    {
+      vv[zvY[j]] = -1;
+    }
+    
+    zvtx.clear();
+    const double max_dist = 0.; //mm
+    while(vv.size() != 0)
+    {
+      std::map<double,int>::iterator it = vv.begin();
+      std::map<double,int>::iterator itt = it;
+      bool found = false;
+      while(++itt != vv.end())
+      {
+        if(abs(itt->first-it->first) < max_dist)
         {
-          std::prev(it)->second += it->second + std::next(it)->second;
-          regionsX.erase(it, std::next(it));
+          if(it->second != itt->second)
+          {
+            if(std::next(itt) != vv.end())
+            {
+              if(abs(itt->first-it->first) < abs(itt->first-std::next(it)->first) || itt->second == std::next(itt)->second)
+              {
+                found = true;
+              }
+            }
+            else
+            {
+              found = true;
+            }
+            break;
+          }
         }
       }
-    }
-    
-    for (std::map<int,int>::iterator it=regionsY.begin(); it!=regionsY.end(); ++it)
-    {
-      if(it->second < minreg)
+      if(found)
       {
-        if(hmultY.GetBinContent(std::prev(it)->first) == hmultY.GetBinContent(std::next(it)->first))
-        {
-          std::prev(it)->second += it->second + std::next(it)->second;
-          regionsY.erase(it, std::next(it));
-        }
-      }
-    }*/
-    
-    for (std::map<int,int>::iterator it=regionsX.begin(); it!=regionsX.end(); ++it)
-    {
-      for(int k = 0; k < it->second; k++)
-      {
-        h0trX.SetBinContent(it->first + k, hmultX.GetBinContent(it->first) == 0 ? 1 : 0);
-        h1trX.SetBinContent(it->first + k, hmultX.GetBinContent(it->first) == 1 ? 1 : 0);
-        hmtrX.SetBinContent(it->first + k, hmultX.GetBinContent(it->first) == 2 ? 1 : 0);
-      }
-    }
-    
-    for (std::map<int,int>::iterator it=regionsY.begin(); it!=regionsY.end(); ++it)
-    {
-      for(int k = 0; k < it->second; k++)
-      {
-        h0trY.SetBinContent(it->first + k, hmultY.GetBinContent(it->first) == 0 ? 1 : 0);
-        h1trY.SetBinContent(it->first + k, hmultY.GetBinContent(it->first) == 1 ? 1 : 0);
-        hmtrY.SetBinContent(it->first + k, hmultY.GetBinContent(it->first) == 2 ? 1 : 0);
-      }
-    }
-    
-    
-    TLine lv1;
-    lv1.SetLineStyle(2);
-    lv1.SetLineColor(kBlack);
-    lv1.SetLineWidth(2);
-    lv1.SetX1(zv.GetVal());
-    lv1.SetX2(zv.GetVal());
-    
-    TLine lv2;
-    lv2.SetLineStyle(2);
-    lv2.SetLineColor(kBlack);
-    lv2.SetLineWidth(2);
-    lv2.SetX1(zv.GetVal());
-    lv2.SetX2(zv.GetVal());
-    
-    c.cd(1);
-    h0trX.Scale(hrmsX.GetMaximum() == 0 ? 1 : hrmsX.GetMaximum());
-    h1trX.Scale(hrmsX.GetMaximum() == 0 ? 1 : hrmsX.GetMaximum());
-    hmtrX.Scale(hrmsX.GetMaximum() == 0 ? 1 : hrmsX.GetMaximum());
-    h0trX.Draw("B");
-    h1trX.Draw("BSAME");
-    hmtrX.Draw("BSAME");
-    hrmsX.Draw("HISTSAME");
-    lv1.SetY1(hrmsX.GetMinimum() == -1 ? 0 : hrmsX.GetMinimum());
-    lv1.SetY2(hrmsX.GetMaximum() == 0 ? 1 : hrmsX.GetMaximum());
-    lv1.Draw();
-    
-    c.cd(2);
-    h0trY.Scale(hrmsY.GetMaximum() == 0 ? 1 : hrmsY.GetMaximum());
-    h1trY.Scale(hrmsY.GetMaximum() == 0 ? 1 : hrmsY.GetMaximum());
-    hmtrY.Scale(hrmsY.GetMaximum() == 0 ? 1 : hrmsY.GetMaximum());
-    h0trY.Draw("B");
-    h1trY.Draw("BSAME");
-    hmtrY.Draw("BSAME");
-    hrmsY.Draw("HISTSAME");
-    lv2.SetY1(hrmsY.GetMinimum() == -1 ? 0 : hrmsY.GetMinimum());
-    lv2.SetY2(hrmsY.GetMaximum() == 0 ? 1 : hrmsY.GetMaximum());
-    lv2.Draw();
-    
-    if(i == first)
-    {
-      c.SaveAs("rms.pdf(");
-    }
-    else
-    {
-      c.SaveAs("rms.pdf");
-    }
-    
-    fd.Add(&hmeanX);
-    fd.Add(&hnX);
-    fd.Add(&hrmsX);
-    
-    fd.Add(&hmeanY);
-    fd.Add(&hnY);
-    fd.Add(&hrmsY);
-    
-    fd.Add(&xv);
-    fd.Add(&yv);
-    fd.Add(&zv);
-    
-    fout.cd();
-    fd.Write();
-    
-    show(i,true,false,true);
-    
-    TCanvas* cev = (TCanvas*) gROOT->FindObject("cev");
-    
-    if(cev)
-    {
-      if(i == last)
-      {
-        cev->SaveAs("rms.pdf)");
+        zvtx.push_back(0.5*(itt->first+it->first));
+        vv.erase(itt);
+        vv.erase(it);
       }
       else
       {
-        cev->SaveAs("rms.pdf");
+        zvtx.push_back(it->first);
+        vv.erase(it);
       }
     }
+    
+    double u, v, d;
+    double zc, yc;
+    double zz, yy;
+    
+    vguv.clear();
+    vharctg.clear();
+    vhHT.clear();
+    
+    nint = zvtx.size();
+    for(unsigned int k = 0; k < zvtx.size(); k++)
+    {
+      x_int[k] = hmeanX.GetBinContent(hmeanX.FindBin(zvtx[k]));
+      y_int[k] = hmeanY.GetBinContent(hmeanY.FindBin(zvtx[k]));
+      z_int[k] = zvtx[k];
+      
+      if(x_int[k] == -1. || y_int[k] == -1.)
+      {
+        /*
+        std::cout << "event: " << i << " ; z_int[k]   = " << z_int[k] << std::endl;
+        std::cout << "warning....: x_int[k]   = " << x_int[k] << " ; y_int[k]   = " << y_int[k] << std::endl;
+        std::cout << "next   ....: x_int[k+1] = " << hmeanX.GetBinContent(hmeanX.FindBin(zvtx[k])+1) << " ; y_int[k+1] = " << hmeanY.GetBinContent(hmeanY.FindBin(zvtx[k])+1) << std::endl;
+        */
+        continue;
+      }
+      
+      TH2D hHT(TString::Format("hHT_%d",k).Data(),TString::Format("zv: %.1f - reco: %.1f; zc (mm); yc (mm)",zv.GetVal(),z_int[k]).Data(),100,-2000,2000,100,-2000,2000);
+      
+      TH1D harctg(TString::Format("harctg_%d",k).Data(),TString::Format("zv: %.1f - reco: %.1f; #phi (rad)",zv.GetVal(),z_int[k]).Data(), 200, -TMath::Pi(), TMath::Pi());
+      
+      std::vector<double> vu;
+      std::vector<double> vv;
+      
+      for(unsigned int j = 0; j < digits->size(); j++)
+      {
+        if(digits->at(j).hor == 1)
+        {
+          
+          u = (digits->at(j).z - z_int[k]);
+          v = (y_int[k] - digits->at(j).y);
+          d = (u*u + v*v);
+          
+          u /=d;
+          v /=d;
+          
+          vu.push_back(u);
+          vv.push_back(v);
+          
+          double y = digits->at(j).y - y_int[k];
+          double z = digits->at(j).z - z_int[k];
+          double R = z*z + y*y; 
+          
+          for(int kk = 0; kk < hHT.GetNbinsX(); kk++)
+          {
+            zz = hHT.GetXaxis()->GetBinCenter(kk+1);
+            yy = (-z*zz + 0.5*R)/y;
+            hHT.Fill(zz, yy);
+          }
+          
+          harctg.Fill(TMath::ATan2(v,u));
+        }
+      } 
+      TGraph guv(vu.size(), vu.data(),vv.data());
+      guv.SetName(TString::Format("huv_%d",k).Data());
+      guv.SetTitle(TString::Format("zv: %.1f - reco: %.1f; u; v",zv.GetVal(),z_int[k]).Data()); 
+      
+      vguv.push_back(std::move(guv));
+      vharctg.push_back(std::move(harctg));
+      vhHT.push_back(std::move(hHT));
+    }
+    
+    if(display)
+    {
+      
+      for (std::map<int,int>::iterator it=regionsX.begin(); it!=regionsX.end(); ++it)
+      {
+        for(int k = 0; k < it->second; k++)
+        {
+          h0trX.SetBinContent(it->first + k, hmultX.GetBinContent(it->first) == 0 ? 1 : 0);
+          h1trX.SetBinContent(it->first + k, hmultX.GetBinContent(it->first) == 1 ? 1 : 0);
+          hmtrX.SetBinContent(it->first + k, hmultX.GetBinContent(it->first) == 2 ? 1 : 0);
+        }
+      }
+      
+      for (std::map<int,int>::iterator it=regionsY.begin(); it!=regionsY.end(); ++it)
+      {
+        for(int k = 0; k < it->second; k++)
+        {
+          h0trY.SetBinContent(it->first + k, hmultY.GetBinContent(it->first) == 0 ? 1 : 0);
+          h1trY.SetBinContent(it->first + k, hmultY.GetBinContent(it->first) == 1 ? 1 : 0);
+          hmtrY.SetBinContent(it->first + k, hmultY.GetBinContent(it->first) == 2 ? 1 : 0);
+        }
+      }
+      
+      // display of the event
+      show(i,true,false,true);
+      
+      TCanvas* cev = (TCanvas*) gROOT->FindObject("cev");
+      
+      // histograms with regions
+      TLine lv1;
+      lv1.SetLineStyle(2);
+      lv1.SetLineColor(kBlack);
+      lv1.SetLineWidth(2);
+      lv1.SetX1(zv.GetVal());
+      lv1.SetX2(zv.GetVal());
+      
+      TLine lv2;
+      lv2.SetLineStyle(2);
+      lv2.SetLineColor(kBlack);
+      lv2.SetLineWidth(2);
+      lv2.SetX1(zv.GetVal());
+      lv2.SetX2(zv.GetVal());
+      
+      TLine* lvx;
+      TLine* lvy;
+      
+      c.Clear();
+      c.Divide(1,2);
+      
+      c.cd(1);
+      h0trX.Scale(hrmsX.GetMaximum() == 0 ? 1 : hrmsX.GetMaximum());
+      h1trX.Scale(hrmsX.GetMaximum() == 0 ? 1 : hrmsX.GetMaximum());
+      hmtrX.Scale(hrmsX.GetMaximum() == 0 ? 1 : hrmsX.GetMaximum());
+      h0trX.Draw("B");
+      h1trX.Draw("BSAME");
+      hmtrX.Draw("BSAME");
+      hrmsX.Draw("HISTSAME");
+      lv1.SetY1(hrmsX.GetMinimum() == -1 ? 0 : hrmsX.GetMinimum());
+      lv1.SetY2(hrmsX.GetMaximum() == 0 ? 1 : hrmsX.GetMaximum());
+      lv1.Draw();
+      
+      c.cd(1);
+      for(unsigned int j = 0; j < zvtx.size(); j++)
+      {
+        lvx = new TLine;
+        lvx->SetLineColor(kViolet);
+        lvx->SetLineWidth(2);
+        lvx->SetLineStyle(8);
+        lvx->SetX1(zvtx[j]);
+        lvx->SetX2(zvtx[j]);
+        lvx->SetY1(hrmsX.GetMinimum() == -1 ? 0 : hrmsX.GetMinimum());
+        lvx->SetY2(hrmsX.GetMaximum() == 0 ? 1 : hrmsX.GetMaximum());
+        lvx->Draw();
+      }
+      
+      c.cd(2);
+      h0trY.Scale(hrmsY.GetMaximum() == 0 ? 1 : hrmsY.GetMaximum());
+      h1trY.Scale(hrmsY.GetMaximum() == 0 ? 1 : hrmsY.GetMaximum());
+      hmtrY.Scale(hrmsY.GetMaximum() == 0 ? 1 : hrmsY.GetMaximum());
+      h0trY.Draw("B");
+      h1trY.Draw("BSAME");
+      hmtrY.Draw("BSAME");
+      hrmsY.Draw("HISTSAME");
+      lv2.SetY1(hrmsY.GetMinimum() == -1 ? 0 : hrmsY.GetMinimum());
+      lv2.SetY2(hrmsY.GetMaximum() == 0 ? 1 : hrmsY.GetMaximum());
+      lv2.Draw();
+      
+      c.cd(2);
+      for(unsigned int j = 0; j < zvtx.size(); j++)
+      {
+        lvy = new TLine;
+        lvy->SetLineColor(kViolet);
+        lvy->SetLineWidth(2);
+        lvy->SetLineStyle(8);
+        lvy->SetX1(zvtx[j]);
+        lvy->SetX2(zvtx[j]);
+        lvy->SetY1(hrmsY.GetMinimum() == -1 ? 0 : hrmsY.GetMinimum());
+        lvy->SetY2(hrmsY.GetMaximum() == 0 ? 1 : hrmsY.GetMaximum());
+        lvy->Draw();
+      }
+      
+      // save to pdf
+      if(save2pdf)
+      {
+        if(cev)
+        {
+          cev->SaveAs("rms.pdf");
+        }
+        
+        c.SaveAs("rms.pdf");
+      
+        c.Clear();
+        c.cd();
+        
+        for(unsigned int k = 0; k < vharctg.size(); k++)
+        {
+          vharctg[k].Draw();
+          c.SaveAs("rms.pdf");
+          vguv[k].Draw("ap*");
+          c.SaveAs("rms.pdf");
+          vhHT[k].Draw("colz");
+          c.SaveAs("rms.pdf");
+        }
+      }
+    }
+    
+    if(save2root)
+    {
+      fd->Add(&hmeanX);
+      fd->Add(&hnX);
+      fd->Add(&hrmsX);
+      
+      fd->Add(&hmeanY);
+      fd->Add(&hnY);
+      fd->Add(&hrmsY);
+      
+      fd->Add(&xv);
+      fd->Add(&yv);
+      fd->Add(&zv);
+      
+      for(unsigned int k = 0; k < vharctg.size(); k++)
+      {
+        fd->Add(&vharctg[k]);
+        fd->Add(&vguv[k]);
+        fd->Add(&vhHT[k]);
+      }
+      
+      fout.cd();
+      fd->Write();
+    }
+    
+    tv.Fill();
   }
+  c.SaveAs("rms.pdf)");
+  fout.cd();
+  tv.Write();
+  fout.Close();
 }
