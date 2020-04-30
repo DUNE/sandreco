@@ -2,6 +2,8 @@ void calo()
 {
   gStyle->SetOptFit(1111);
   gROOT->SetBatch();
+  
+  RooMsgService::instance().setSilentMode(true);
 
   TFile f("../files/reco/mu_10GeV_1k.reco.root");
   TTree* t = (TTree*)f.Get("tDigit");
@@ -71,9 +73,10 @@ void calo()
   
   auto marg = prod.createProjection(RooArgSet(de));
 
-  RooFitResult* r1 = marg->fitTo(histo_pmt1,RooFit::Save());
+  RooFitResult* r1 = marg->fitTo(histo_pmt1,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame1 = npe.frame();
+  frame1->SetTitle("#p.e./cell for 10 GeV passing muon; number of p.e.");
 
   histo_pmt1.plotOn(frame1);
   marg->plotOn(frame1);
@@ -85,9 +88,10 @@ void calo()
   
   r1->Print();
 
-  RooFitResult* r2 = marg->fitTo(histo_pmt2,RooFit::Save());
+  RooFitResult* r2 = marg->fitTo(histo_pmt2,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame2 = npe.frame();
+  frame2->SetTitle("#p.e./cell for 10 GeV passing muon; number of p.e.");
 
   histo_pmt2.plotOn(frame2);
   marg->plotOn(frame2);
@@ -145,9 +149,10 @@ void calo()
   
   RooGaussian gauss("gauss","gauss", time, tmean, tsigma);
   
-  RooFitResult* rt0 = gauss.fitTo(histo_tlay0,RooFit::Save());
+  RooFitResult* rt0 = gauss.fitTo(histo_tlay0,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame_time0 = time.frame();
+  frame_time0->SetTitle("cell (layer: 0) reco time for 10 GeV passing muon; t_{reco} (ns)");
   histo_tlay0.plotOn(frame_time0);
   gauss.plotOn(frame_time0);
   vchi2 = frame_time0->chiSquare(2);
@@ -156,9 +161,10 @@ void calo()
   frame_time0->Draw();
   c.SaveAs("calo.pdf");
   
-  RooFitResult* rt1 = gauss.fitTo(histo_tlay1,RooFit::Save());
+  RooFitResult* rt1 = gauss.fitTo(histo_tlay1,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame_time1 = time.frame();
+  frame_time1->SetTitle("cell (layer: 1) reco time for 10 GeV passing muon; t_{reco} (ns)");
   histo_tlay1.plotOn(frame_time1);
   gauss.plotOn(frame_time1);
   vchi2 = frame_time1->chiSquare(2);
@@ -167,9 +173,10 @@ void calo()
   frame_time1->Draw();
   c.SaveAs("calo.pdf");
   
-  RooFitResult* rt2 = gauss.fitTo(histo_tlay2,RooFit::Save());
+  RooFitResult* rt2 = gauss.fitTo(histo_tlay2,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame_time2 = time.frame();
+  frame_time2->SetTitle("cell (layer: 2) reco time for 10 GeV passing muon; t_{reco} (ns)");
   histo_tlay2.plotOn(frame_time2);
   gauss.plotOn(frame_time2);
   vchi2 = frame_time2->chiSquare(2);
@@ -178,9 +185,10 @@ void calo()
   frame_time2->Draw();
   c.SaveAs("calo.pdf");
   
-  RooFitResult* rt3 = gauss.fitTo(histo_tlay3,RooFit::Save());
+  RooFitResult* rt3 = gauss.fitTo(histo_tlay3,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame_time3 = time.frame();
+  frame_time3->SetTitle("cell (layer: 3) reco time for 10 GeV passing muon; t_{reco} (ns)");
   histo_tlay3.plotOn(frame_time3);
   gauss.plotOn(frame_time3);
   vchi2 = frame_time3->chiSquare(2);
@@ -189,9 +197,10 @@ void calo()
   frame_time3->Draw();
   c.SaveAs("calo.pdf");
   
-  RooFitResult* rt4 = gauss.fitTo(histo_tlay4,RooFit::Save());
+  RooFitResult* rt4 = gauss.fitTo(histo_tlay4,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame_time4 = time.frame();
+  frame_time4->SetTitle("cell (layer: 4) reco time for 10 GeV passing muon; t_{reco} (ns)");
   histo_tlay4.plotOn(frame_time4);
   gauss.plotOn(frame_time4);
   vchi2 = frame_time4->chiSquare(2);
@@ -231,7 +240,7 @@ void calo()
   
   RooDataHist histo_tall("histo_tall", "tall", time, h);
   
-  RooFitResult* rtall = gauss.fitTo(histo_tall,RooFit::Save());
+  RooFitResult* rtall = gauss.fitTo(histo_tall,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame_timeall = time.frame();
   histo_tall.plotOn(frame_timeall);
@@ -259,17 +268,45 @@ void calo()
     tm = 1+2.022/0.299792458+2*5.85+3.08*TMath::Power((1./rand.Uniform()-1.),0.588) + rand.Gaus();
     hSciPDF.Fill(tm);
   }
+  */
   
-  t->Draw("cell.pe_time1>>h(100,10,50)","cell.id==18005","E0");
+  RooRealVar partAndProgTime("partAndProgTime","particle and light propagation time", 18, 15, 30);
+  RooRealVar peTime("peTime","pe time", 22, 10, 200);
+  
+  //RooRealVar scintTime("scintTime","scintillation time",3,0.,100.);
+  RooGenericPdf scintillation("scintillation","scintillation","1./(0.588*3.08)*pow(@0/3.08,1./0.588-1)/pow(1+pow(@0/3.08,1/0.588),2)",RooArgList(peTime));
+  
+  //RooRealVar spreadTime("spreadTime","spreadTime",0.,-10.,10.);
+  RooRealVar spread_m("spread_m","spread_m",0.,-10.,10.);
+  RooRealVar spread_s("spread_s","spread_s",1.,0.,10);
+  RooGaussian spread("spread","spread",peTime,partAndProgTime,spread_s);
+  
+  //RooFormulaVar peTime("peTime","@0+@1+@2",RooArgList(partTime,scintTime,spreadTime));
+  RooFFTConvPdf pdf_peTime("pdf_peTime","scintillation (X) spread",peTime,scintillation,spread) ;   
+  
+  t->Draw("cell.pe_time1>>h(100,0,50)","cell.id==18005","E0");
   h = (TH1D*)gROOT->FindObject("h");
   h->SetTitle(";p.e. time (ns)");
   
-  h->Scale(hSciPDF.Integral()/h->Integral());
+  RooDataHist histo_petime("histo_petime", "petime", peTime, h);
   
-  h->Draw("HIST");
-  hSciPDF.Draw("SAMEE0");
+  RooFitResult* rtpe = pdf_peTime.fitTo(histo_petime,RooFit::Save(),RooFit::PrintEvalErrors(-1));
+  
+  RooPlot* frame_petime = peTime.frame();
+  frame_petime->SetTitle("p.e. arrival time for 10 GeV passing muon; t_{arrival} (ns)");
+  histo_petime.plotOn(frame_petime);
+  pdf_peTime.plotOn(frame_petime);
+  //scintillation.plotOn(frame_petime);
+  //spread.plotOn(frame_petime);
+  
+  vchi2 = frame_petime->chiSquare(2);
+  std::cout << "chi2: " << vchi2 << std::endl;
+  
+  frame_petime->Draw();
+  
   c.SaveAs("calo.pdf");
-  
+  rtpe->Print();
+  /*
   TH2D hCaloHitsL0("hCaloHitsL0","; z (mm); t (ns)",100,25800,26200,100,7,9);
   TH2D hCaloHitsL1("hCaloHitsL1","; z (mm); t (ns)",100,25800,26200,100,7,9);
   TH2D hCaloHitsL2("hCaloHitsL2","; z (mm); t (ns)",100,25800,26200,100,7,9);
@@ -343,10 +380,10 @@ void calo()
   c.SaveAs("calo.pdf");*/
   
   TGraphErrors gr(5);
-  gr.SetTitle("; E (GeV); adc");
+  gr.SetTitle("; electron energy (GeV); #Sigma(adc)");
   
-  TGraph grres(5);
-  grres.SetTitle("; E (GeV); #sigma_{E}/E");
+  TGraphErrors grres(5);
+  grres.SetTitle("; electron energy (GeV); #sigma_{#Sigma(adc)}/#Sigma(adc)");
   grres.SetMarkerStyle(34);
   
   RooRealVar adc_m("adc_m", "adc_m", 3000, 0, 60000);
@@ -361,9 +398,10 @@ void calo()
   RooGaussian gaussE250("gaussE250","gaussE250", adc250, adc_m, adc_s);
   RooDataHist histo250_dE("histo250_dE", "dEall", adc250, h);
   
-  RooFitResult* r250dEall = gaussE250.fitTo(histo250_dE,RooFit::Save());
+  RooFitResult* r250dEall = gaussE250.fitTo(histo250_dE,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame250_dE = adc250.frame();
+  frame250_dE->SetTitle("sum of adc for 250 MeV electron; #Sigma(adc)");
   histo250_dE.plotOn(frame250_dE);
   gaussE250.plotOn(frame250_dE);
   vchi2 = frame250_dE->chiSquare(2);
@@ -372,6 +410,7 @@ void calo()
   gr.SetPoint(0, 0.25, adc_m.getVal());
   gr.SetPointError(0, 0., adc_s.getVal());
   grres.SetPoint(0, 0.25, adc_s.getVal()/adc_m.getVal());
+  grres.SetPointError(0, 0., adc_s.getVal()/adc_m.getVal()*sqrt(pow(adc_s.getError()/adc_s.getVal(),2)+pow(adc_m.getError()/adc_m.getVal(),2)));
   
   frame250_dE->Draw();
   c.SaveAs("calo.pdf");
@@ -385,7 +424,7 @@ void calo()
   RooGaussian gaussE500("gaussE500","gaussE500", adc500, adc_m, adc_s);
   RooDataHist histo500_dE("histo500_dE", "dEall", adc500, h);
   
-  RooFitResult* r500dEall = gaussE500.fitTo(histo500_dE,RooFit::Save());
+  RooFitResult* r500dEall = gaussE500.fitTo(histo500_dE,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame500_dE = adc500.frame();
   histo500_dE.plotOn(frame500_dE);
@@ -396,6 +435,7 @@ void calo()
   gr.SetPoint(1, 0.5, adc_m.getVal());
   gr.SetPointError(1, 0., adc_s.getVal());
   grres.SetPoint(1, 0.5, adc_s.getVal()/adc_m.getVal());
+  grres.SetPointError(1, 0., adc_s.getVal()/adc_m.getVal()*sqrt(pow(adc_s.getError()/adc_s.getVal(),2)+pow(adc_m.getError()/adc_m.getVal(),2)));
   
   frame500_dE->Draw();
   c.SaveAs("calo.pdf");
@@ -409,7 +449,7 @@ void calo()
   RooGaussian gaussE750("gaussE750","gaussE750", adc750, adc_m, adc_s);
   RooDataHist histo750_dE("histo750_dE", "dEall", adc750, h);
   
-  RooFitResult* r750dEall = gaussE750.fitTo(histo750_dE,RooFit::Save());
+  RooFitResult* r750dEall = gaussE750.fitTo(histo750_dE,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame750_dE = adc750.frame();
   histo750_dE.plotOn(frame750_dE);
@@ -420,6 +460,7 @@ void calo()
   gr.SetPoint(2, 0.75, adc_m.getVal());
   gr.SetPointError(2, 0., adc_s.getVal());
   grres.SetPoint(2, 0.75, adc_s.getVal()/adc_m.getVal());
+  grres.SetPointError(2, 0., adc_s.getVal()/adc_m.getVal()*sqrt(pow(adc_s.getError()/adc_s.getVal(),2)+pow(adc_m.getError()/adc_m.getVal(),2)));
   
   frame750_dE->Draw();
   c.SaveAs("calo.pdf");
@@ -433,9 +474,10 @@ void calo()
   RooGaussian gaussE1000("gaussE1000","gaussE1000", adc1000, adc_m, adc_s);
   RooDataHist histo1000_dE("histo1000_dE", "dEall", adc1000, h);
   
-  RooFitResult* r1000dEall = gaussE1000.fitTo(histo1000_dE,RooFit::Save());
+  RooFitResult* r1000dEall = gaussE1000.fitTo(histo1000_dE,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame1000_dE = adc1000.frame();
+  frame1000_dE->SetTitle("sum of adc for 1 GeV electron; #Sigma(adc)");
   histo1000_dE.plotOn(frame1000_dE);
   gaussE1000.plotOn(frame1000_dE);
   vchi2 = frame1000_dE->chiSquare(2);
@@ -444,6 +486,7 @@ void calo()
   gr.SetPoint(3, 1., adc_m.getVal());
   gr.SetPointError(3, 0., adc_s.getVal());
   grres.SetPoint(3, 1., adc_s.getVal()/adc_m.getVal());
+  grres.SetPointError(3, 0., adc_s.getVal()/adc_m.getVal()*sqrt(pow(adc_s.getError()/adc_s.getVal(),2)+pow(adc_m.getError()/adc_m.getVal(),2)));
   
   frame1000_dE->Draw();
   c.SaveAs("calo.pdf");
@@ -457,7 +500,7 @@ void calo()
   RooGaussian gaussE2000("gaussE2000","gaussE2000", adc2000, adc_m, adc_s);
   RooDataHist histo2000_dE("histo2000_dE", "dEall", adc2000, h);
   
-  RooFitResult* r2000dEall = gaussE2000.fitTo(histo2000_dE,RooFit::Save());
+  RooFitResult* r2000dEall = gaussE2000.fitTo(histo2000_dE,RooFit::Save(),RooFit::PrintEvalErrors(-1));
   
   RooPlot* frame2000_dE = adc2000.frame();
   histo2000_dE.plotOn(frame2000_dE);
@@ -468,186 +511,35 @@ void calo()
   gr.SetPoint(4, 2., adc_m.getVal());
   gr.SetPointError(4, 0., adc_s.getVal());
   grres.SetPoint(4, 2., adc_s.getVal()/adc_m.getVal());
+  grres.SetPointError(4, 0., adc_s.getVal()/adc_m.getVal()*sqrt(pow(adc_s.getError()/adc_s.getVal(),2)+pow(adc_m.getError()/adc_m.getVal(),2)));
   
   frame2000_dE->Draw();
   c.SaveAs("calo.pdf");
-  /*
-  te5000->Draw("Sum$(cell.adc1+cell.adc2)>>h5000(50,20000,80000)", "Sum$((cell.lay==4)*(cell.mod==18)*(cell.adc1+cell.adc2))<500&&cell.mod==18",
-              "E0");
-  h = (TH1D*)gROOT->FindObject("h5000");
-  h->SetTitle("sum ADC of 5000 MeV e-;adc");
-  
-  RooRealVar adc5000("adc5000", "adc5000", 3000, 0, 70000);
-  RooGaussian gaussE5000("gaussE5000","gaussE5000", adc5000, adc_m, adc_s);
-  RooDataHist histo5000_dE("histo5000_dE", "dEall", adc5000, h);
-  
-  RooFitResult* r5000dEall = gaussE5000.fitTo(histo5000_dE,RooFit::Save());
-  
-  RooPlot* frame5000_dE = adc5000.frame();
-  histo5000_dE.plotOn(frame5000_dE);
-  gaussE5000.plotOn(frame5000_dE);
-  vchi2 = frame5000_dE->chiSquare(2);
-  std::cout << "chi2: " << vchi2 << std::endl;
-  
-  //gr.SetPoint(5, 5., adc_m.getVal());
-  //gr.SetPointError(5, 0., adc_s.getVal());
-  //grres.SetPoint(5, 5., adc_s.getVal()/adc_m.getVal());
-  
-  frame5000_dE->Draw();
-  c.SaveAs("calo.pdf");*/
   
   r250dEall->Print();
   r500dEall->Print();
   r750dEall->Print();
   r1000dEall->Print();
   r2000dEall->Print();
-  //r5000dEall->Print();
-  
-  
-  /*
-
-  te500->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,3000,8000)", "cell.mod==18",
-              "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 500 MeV e-;adc");
-
-  TFitResultPtr r500 = h->Fit("gaus", "QS");
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  te750->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,5000,11000)", "cell.mod==18",
-              "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 750 MeV e-;adc");
-
-  TFitResultPtr r750 = h->Fit("gaus", "QS");
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  te1000->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,7000,14000)", "cell.mod==18",
-               "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 1 GeV e-;adc");
-
-  TFitResultPtr r1000 = h->Fit("gaus", "QS");
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  te2000->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,15000,25000)", "cell.mod==18",
-               "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 2 GeV e-;adc");
-
-  TFitResultPtr r2000 = h->Fit("gaus", "QS");
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  te5000->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,20000,60000)", "cell.mod==18",
-               "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 5 GeV e-;adc");
-
-  TFitResultPtr r5000 = h->Fit("gaus", "QS");
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  tg250->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,1000,5000)", "cell.mod==18",
-              "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 250 MeV gamma;adc");
-
-  TFitResultPtr rg250 = h->Fit("gaus", "QS");
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  tg500->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,3000,8000)", "cell.mod==18",
-              "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 500 MeV gamma;adc");
-
-  TFitResultPtr rg500 = h->Fit("gaus", "QS");
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  tg1000->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,7000,14000)", "cell.mod==18",
-               "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 1 GeV gamma;adc");
-
-  TFitResultPtr rg1000 = h->Fit("gaus", "QS");
-  h->Draw();
-
-  c.SaveAs("calo.pdf");*/
-/*
-  TGraphErrors gr(6);
-  gr.SetTitle("; E (MeV); adc");
-  gr.SetPoint(0, 250, r250.Get()->GetParams()[1]);
-  gr.SetPoint(1, 500, r500.Get()->GetParams()[1]);
-  gr.SetPoint(2, 750, r750.Get()->GetParams()[1]);
-  gr.SetPoint(3, 1000, r1000.Get()->GetParams()[1]);
-  gr.SetPoint(4, 2000, r2000.Get()->GetParams()[1]);
-  gr.SetPoint(5, 5000, r5000.Get()->GetParams()[1]);
-
-  gr.SetPointError(0, 0., r250.Get()->GetParams()[2]);
-  gr.SetPointError(1, 0., r500.Get()->GetParams()[2]);
-  gr.SetPointError(2, 0., r750.Get()->GetParams()[2]);
-  gr.SetPointError(3, 0., r1000.Get()->GetParams()[2]);
-  gr.SetPointError(4, 0., r2000.Get()->GetParams()[2]);
-  gr.SetPointError(5, 0., r5000.Get()->GetParams()[2]);*/
-/*
-  TGraphErrors grg(3);
-  grg.SetMarkerColor(kRed);
-  grg.SetLineColor(kRed);
-  grg.SetPoint(0, 250, rg250.Get()->GetParams()[1]);
-  grg.SetPoint(1, 500, rg500.Get()->GetParams()[1]);
-  grg.SetPoint(2, 1000, rg1000.Get()->GetParams()[1]);
-
-  grg.SetPointError(0, 0., rg250.Get()->GetParams()[2]);
-  grg.SetPointError(1, 0., rg500.Get()->GetParams()[2]);
-  grg.SetPointError(2, 0., rg1000.Get()->GetParams()[2]);*/
 
   gr.Fit("pol1", "QS");
   gr.Draw("ap");
-  //grg.Draw("psame");
+  
+  c.Update();
+  TPaveStats *st = (TPaveStats*)gr.FindObject("stats");
+  st->SetX1NDC(0.2); //new x start position
+  st->SetY1NDC(0.85); //new x end position
+  st->SetX2NDC(0.4); //new x start position
+  st->SetY2NDC(0.7); //new x end position
+  gr.Draw("ap");
 
   c.SaveAs("calo.pdf");
-/*
-  TGraph gr1(6);
-  gr1.SetTitle("; E (GeV); #sigma_{E}/E");
-  gr1.SetPoint(0, 0.25,
-               r250.Get()->GetParams()[2] / r250.Get()->GetParams()[1]);
-  gr1.SetPoint(1, 0.5, r500.Get()->GetParams()[2] / r500.Get()->GetParams()[1]);
-  gr1.SetPoint(2, 0.75,
-               r750.Get()->GetParams()[2] / r750.Get()->GetParams()[1]);
-  gr1.SetPoint(3, 1.,
-               r1000.Get()->GetParams()[2] / r1000.Get()->GetParams()[1]);
-  gr1.SetPoint(4, 2.,
-               r2000.Get()->GetParams()[2] / r2000.Get()->GetParams()[1]);
-  gr1.SetPoint(5, 5.,
-               r5000.Get()->GetParams()[2] / r5000.Get()->GetParams()[1]);
-  gr1.SetMarkerStyle(34);
-*/
-  /*
-  TGraph gr1g(3);
-  gr1g.SetPoint(0, 0.25,
-                rg250.Get()->GetParams()[2] / rg250.Get()->GetParams()[1]);
-  gr1g.SetPoint(1, 0.5,
-                rg500.Get()->GetParams()[2] / rg500.Get()->GetParams()[1]);
-  gr1g.SetPoint(3, 1.0,
-                rg1000.Get()->GetParams()[2] / rg1000.Get()->GetParams()[1]);
-  gr1g.SetMarkerStyle(34);
-  gr1g.SetMarkerColor(kRed);*/
 
+  //TF1 fres("fres", "[0]+[1]/sqrt(x)+[2]/x",0,6);
   TF1 fres("fres", "[0]+[1]/sqrt(x)",0,6);
   fres.SetParameter(0, 0.0);
   fres.SetParameter(1, 0.057);
+  //fres.SetParameter(2, 0.0);
 
   TF1 frestrue("frestrue", "[0]+[1]/sqrt(x)",0,6);
   frestrue.SetParameter(0, 0.0);
@@ -657,54 +549,15 @@ void calo()
 
   grres.Fit("fres", "QS");
   grres.Draw("ap");
-  //gr1g.Draw("psame");
-  fres.Draw("same");
+  
+  c.Update();
+  st = (TPaveStats*)grres.FindObject("stats");
+  st->SetX1NDC(0.85); //new x start position
+  st->SetY1NDC(0.85); //new x end position
+  st->SetX2NDC(0.7); //new x start position
+  st->SetY2NDC(0.7); //new x end position
+  grres.Draw("ap");
   frestrue.Draw("same");
 
-  c.SaveAs("calo.pdf)");/*
-
-  tpi250->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,0,15000)", "cell.mod==18",
-               "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 250 MeV pion;adc");
-
-  TFitResultPtr rpi250 = h->Fit("gaus", "QS", "", 3000, 10000);
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  tpi500->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,0,20000)", "cell.mod==18",
-               "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 500 MeV pion;adc");
-
-  TFitResultPtr rpi500 = h->Fit("gaus", "QS", "", 4000, 30000);
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  tpi1000->Draw("Sum$(cell.adc1+cell.adc2)>>h(50,0,30000)", "cell.mod==18",
-                "E0");
-  h = (TH1D*)gROOT->FindObject("h");
-  h->SetTitle("sum ADC of 1 GeV pion;adc");
-
-  TFitResultPtr rpi1000 = h->Fit("gaus", "QS", "", 5000, 30000);
-  h->Draw();
-
-  c.SaveAs("calo.pdf");
-
-  TGraphErrors grp(3);
-  grp.SetTitle("; E (MeV); adc");
-  grp.SetPoint(0, 250, rpi250.Get()->GetParams()[1]);
-  grp.SetPoint(1, 500, rpi500.Get()->GetParams()[1]);
-  grp.SetPoint(2, 1000, rpi1000.Get()->GetParams()[1]);
-
-  grp.SetPointError(0, 0., rpi250.Get()->GetParams()[2]);
-  grp.SetPointError(1, 0., rpi500.Get()->GetParams()[2]);
-  grp.SetPointError(3, 0., rpi1000.Get()->GetParams()[2]);
-
-  grp.Fit("pol1", "QS");
-  grp.Draw("ap");
-
-  c.SaveAs("calo.pdf)");*/
+  c.SaveAs("calo.pdf)");
 }
