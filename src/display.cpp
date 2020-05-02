@@ -20,6 +20,7 @@
 #include <map>
 
 #include "../include/struct.h"
+#include "../include/utils.h"
 
 #include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
 #include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
@@ -62,11 +63,30 @@ TGeoManager* geo = 0;
 TCanvas* cev = 0;
 TCanvas* cpr = 0;
 
-std::vector<cell>* vec_cell;
-std::vector<digit>* vec_digi;
-std::vector<track>* vec_tr;
-std::vector<cluster>* vec_cl;
+std::vector<cell>* vec_cell = new std::vector<cell>;
+std::vector<digit>* vec_digi = new std::vector<digit>;
+std::vector<track>* vec_tr = new std::vector<track>;
+std::vector<cluster>* vec_cl = new std::vector<cluster>;
 std::map<int, gcell> calocell;
+
+const char* path_intreg =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/volSTTFULL_PV_0";
+
+const char* path_barrel_template =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
+
+const char* path_endcapR_template =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+
+const char* path_endcapL_template =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
+
+const char* barrel_mod_vol_name = "ECAL_lv_PV";
+const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
 }
 
 using namespace display;
@@ -82,28 +102,30 @@ void init(const char* ifile)
   TTree* tEdep = reinterpret_cast<TTree*>(f->Get("EDepSimEvents"));
   TTree* tGenie = reinterpret_cast<TTree*>(f->Get("gRooTracker"));
 
-  tEvent->AddFriend(tReco);
-  tEvent->AddFriend(tDigit);
-  tEvent->AddFriend(tEdep);
-  tEvent->AddFriend(tGenie);
+  if (!tEdep) return;
+
+  if (tReco) tEdep->AddFriend(tReco);
+  if (tDigit) tEdep->AddFriend(tDigit);
+  if (tEvent) tEdep->AddFriend(tEvent);
+  if (tGenie) tEdep->AddFriend(tGenie);
 
   tEdep->SetBranchAddress("Event", &ev);
-  tDigit->SetBranchAddress("cell", &vec_cell);
-  tDigit->SetBranchAddress("Stt", &vec_digi);
-  tReco->SetBranchAddress("track", &vec_tr);
-  tReco->SetBranchAddress("cluster", &vec_cl);
-  tEvent->SetBranchAddress("event", &evt);
+  if (tDigit) tDigit->SetBranchAddress("cell", &vec_cell);
+  if (tDigit) tDigit->SetBranchAddress("Stt", &vec_digi);
+  if (tReco) tReco->SetBranchAddress("track", &vec_tr);
+  if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);
+  if (tEvent) tEvent->SetBranchAddress("event", &evt);
 
-  t = tEvent;
+  t = tEdep;
 
   geo = reinterpret_cast<TGeoManager*>(f->Get("EDepSimGeometry"));
+
+  if (!geo) return;
 
   double dummyLoc[3];
   double dummyMas[3];
 
-  geo->cd(
-      "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "MagIntVol_volume_PV_0/volSTTFULL_PV_0");
+  geo->cd(path_intreg);
 
   dummyLoc[0] = 0.;
   dummyLoc[1] = 0.;
@@ -114,7 +136,8 @@ void init(const char* ifile)
   double dx1[nLay];
   double dx2[nLay];
 
-  TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
+  TGeoTrd2* mod =
+      (TGeoTrd2*)geo->FindVolumeFast(barrel_mod_vol_name)->GetShape();
 
   double xmin = mod->GetDx1();
   double xmax = mod->GetDx2();
@@ -173,10 +196,6 @@ void init(const char* ifile)
     }
   }
 
-  const char* path_template =
-      "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
-
   double CellMasterY[nCellModule][4];
   double CellMasterZ[nCellModule][4];
 
@@ -187,12 +206,12 @@ void init(const char* ifile)
   }
 
   for (int i = 0; i < nMod; i++) {
-    geo->cd(TString::Format(path_template, i).Data());
+    geo->cd(TString::Format(path_barrel_template, i).Data());
 
     if (debug)
       std::cout << "node: " << i << " " << geo->GetCurrentNode() << " "
                 << geo->GetCurrentNode()->GetName() << " "
-                << TString::Format(path_template, i).Data() << std::endl;
+                << TString::Format(path_barrel_template, i).Data() << std::endl;
 
     for (int j = 0; j < nLay; j++) {
       for (int k = 0; k < nCel; k++) {
@@ -245,17 +264,14 @@ void init(const char* ifile)
                    centerKLOE[2] + 2500, centerKLOE[0] + 2500);
   }
 
-  TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
+  TGeoTube* ec =
+      (TGeoTube*)geo->FindVolumeFast(endcap_mod_vol_name)->GetShape();
 
   double rmax = ec->GetRmax();
   double rmin = ec->GetRmin();
   double dz_ec = ec->GetDz();
 
   double dummyLoc_ec[4][3];
-
-  const char* path_endcapR_template =
-      "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 
   geo->cd(path_endcapR_template);
 
@@ -301,10 +317,6 @@ void init(const char* ifile)
       }
     }
   }
-
-  const char* path_endcapL_template =
-      "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
   geo->cd(path_endcapL_template);
 
   for (int j = 0; j < nLay_ec; j++) {
