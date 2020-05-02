@@ -408,7 +408,7 @@ void orderByWidth(TH1I& hmultX, std::map<int,int>& regionsX, std::vector<int>& r
         }
         reg0trX.insert(ite,it->first);
       }
-    }  
+    }
 }
 
 void filterDigitsModuleY(std::map<int, double>& yd, std::vector<int>& toremove, const double epsilon)
@@ -522,7 +522,7 @@ void filterDigits(std::vector<digit>* digits, TH1D& hdummy, const double epsilon
   }
 }
 
-void findvtx()
+void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
 {
   gROOT->SetBatch();
 
@@ -596,11 +596,32 @@ void findvtx()
     }
   }
   binning.push_back(last_z);
+  
+  const double z_sampl = 44.4;
+  const double xy_sampl = 5;
+  
+  int nall = 0;
+  int nok = 0;
+  
+  double vrmsX = 0.;
+  double vrmsY = 0.;
+  double vrmsZ = 0.;
+  double vrms3D = 0.;
+  double vmeanX = 0.;
+  double vmeanY = 0.;
+  double vmeanZ = 0.;
+  double vmean3D = 0.;
+  double norm_dist = 0.;
+  
+  std::cout << std::setw(20) << "Z sampling (mm)" << std::setw(20) << "XY sampling (mm)" << std::endl;
+  std::cout << std::setw(20) << z_sampl << std::setw(20) << xy_sampl << std::endl;
+  
   /*
-  for(unsigned int i = 0; i < binning.size(); i++)
+  for(unsigned int i = 0; i < binning.size()-1; i++)
   {
-    std::cout << i << " " << binning.data()[i] << std::endl;
-  }*/
+    std::cout << i << " " << binning.data()[i] << " " << binning.data()[i+1] << " " << binning.data()[i+1] - binning.data()[i] << std::endl;
+  }
+  */
     
   std::vector<digit>* digits = new std::vector<digit>;
   TG4Event* ev = new TG4Event;
@@ -624,6 +645,7 @@ void findvtx()
   unsigned int nM = 0;
   
   int isCC;
+  int isVtxReco;
     
   tv.Branch("xvtx_true",&xvtx_true,"xvtx_true/D");
   tv.Branch("yvtx_true",&yvtx_true,"yvtx_true/D");
@@ -632,6 +654,8 @@ void findvtx()
   tv.Branch("xvtx_reco",&xvtx_reco,"xvtx_reco/D");
   tv.Branch("yvtx_reco",&yvtx_reco,"yvtx_reco/D");
   tv.Branch("zvtx_reco",&zvtx_reco,"zvtx_reco/D");
+  
+  tv.Branch("isVtxReco",&isVtxReco,"isVtxReco/I");
   tv.Branch("isCC",&isCC,"isCC/I");
   //tv.Branch("nint",&nint,"nint/I"); 
   tv.Branch("n0",&n0,"n0/I"); 
@@ -731,11 +755,10 @@ void findvtx()
   TParameter<double> yv("yv",0);
   TParameter<double> zv("zv",0);
   
-  if(display)
-    init("../files/reco/numu_internal_10k.0.reco.root");
+  init("../files/reco/numu_internal_10k.0.reco.root");
   
   int first = 0;
-  int last = 10;/*tDigit->GetEntries();*/
+  int last = 9999;/*tDigit->GetEntries();*/
   int nev = last - first + 1;
     
   vector<double> zvX;
@@ -815,7 +838,6 @@ void findvtx()
     
     // filter digits
     // digits distant more than rms from mean are removed
-    double epsilon = 0.1;
     filterDigits(digits, hdummy, epsilon);
     
     // eveluate rms, mean and multiplicity in Y and X as a function of the STT module
@@ -847,7 +869,6 @@ void findvtx()
     // if regions of multi tracks and 0 tracks less than 
     // threshold are in the middle of 1 track region, the former
     // is merged to the latter
-    const int minreg = 3;
     
     processMtrVct(regMtr, reg0tr, regions, hmult, minreg);
     process0trVct(reg0tr, regions, hmult, minreg);
@@ -875,13 +896,29 @@ void findvtx()
     if(n0 + n1 + nM != regions.size())
       std::cout << "warning line:" << __LINE__ << std::endl;
     
-    
     // find vertex as modules with less spreas between tracks
+    int minb = 0;
+    int maxb = hmult.GetNbinsX();
+    
+    regMtr.clear();
+    reg0tr.clear();
+    
+    if(wideMultReg)
+    {
+      orderByWidth(hmult, regions, regMtr, reg0tr);
+      if(regMtr.size()>0)
+      {
+        std::map<int,int>::iterator it = regions.find(regMtr.front());
+        minb = it->first;
+        maxb = it->first + it->second;
+      }
+    }
+    
     int idx;
     double rms = 10000.; 
     double rmsX, rmsY;
-    bool found = false;
-    for(int j = 0; j < hmult.GetNbinsX(); j++)
+    isVtxReco = 0;
+    for(int j = minb; j < maxb; j++)
     {
       if(hmult.GetBinContent(j+1) == 2 && hrmsX.GetBinContent(j+1) > 0. && hrmsY.GetBinContent(j+1) > 0.)
       {
@@ -892,19 +929,19 @@ void findvtx()
         {
           rms = rmsX*rmsX+rmsY*rmsY;
           idx = j+1;
-          found = true;
+          isVtxReco = 1;
         }
       }
     }
     
-    for(int j = 0; j < hmult.GetNbinsX(); j++)
+    if(isVtxReco == 0)
     {
-      if(!found)
+      for(int j = 0; j < hmult.GetNbinsX(); j++)
       {
         if(hmult.GetBinContent(j+1) == 1)
         {
-          found = true;
           idx = j+1;
+          break;
         }
       }
     }
@@ -912,6 +949,24 @@ void findvtx()
     xvtx_reco = hmeanX.GetBinContent(idx);
     yvtx_reco = hmeanY.GetBinContent(idx);
     zvtx_reco = hmult.GetXaxis()->GetBinLowEdge(idx);
+    
+    const int tol = 3;
+    
+    nall++;
+    if(abs(xvtx_reco-xvtx_true) < tol*xy_sampl && abs(yvtx_reco-yvtx_true) < tol*xy_sampl && abs(zvtx_reco-zvtx_true) < tol*z_sampl)
+      nok++;
+    
+    norm_dist = sqrt(pow((xvtx_reco-xvtx_true)/xy_sampl,2)+pow((yvtx_reco-yvtx_true)/xy_sampl,2)+pow((zvtx_reco-zvtx_true)/z_sampl,2));
+    
+    vmeanX += xvtx_reco-xvtx_true;
+    vmeanY += yvtx_reco-yvtx_true;
+    vmeanZ += zvtx_reco-zvtx_true;
+    vmean3D += norm_dist;
+    
+    vrmsX += (xvtx_reco-xvtx_true)*(xvtx_reco-xvtx_true);
+    vrmsY += (yvtx_reco-yvtx_true)*(yvtx_reco-yvtx_true);
+    vrmsZ += (zvtx_reco-zvtx_true)*(zvtx_reco-zvtx_true);
+    vrms3D += norm_dist * norm_dist;
     
     /*
     // find surface between:
@@ -1280,9 +1335,201 @@ void findvtx()
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
   
+  vmeanX /= nall;
+  vmeanY /= nall;
+  vmeanZ /= nall;
+  vmean3D /= nall;
+  
+  vrmsX /= nall;
+  vrmsY /= nall;
+  vrmsZ /= nall;
+  vrms3D /= nall;
+  
+  vrmsX -= vmeanX*vmeanX;
+  vrmsY -= vmeanY*vmeanY;
+  vrmsZ -= vmeanZ*vmeanZ;
+  vrms3D -= vmean3D*vmean3D;
+  
+  vrmsX = sqrt(vrmsX);
+  vrmsY = sqrt(vrmsY);
+  vrmsZ = sqrt(vrmsZ);
+  vrms3D = sqrt(vrms3D);
+  
+  std::cout << std::setw(10) << "minreg" << std::setw(10) << "epsilon" << std::setw(15) << "wideMultReg" << std::setw(15) << "efficiency" << std::setw(10) << "rmsX" << std::setw(10) << "rmsY" << std::setw(10) << "rmsZ" << std::setw(10) << "rms3D" << std::endl;
+  std::cout << std::setw(10) << minreg << std::setw(10) << epsilon << std::setw(15) << wideMultReg << std::setw(15) << double(nok)/nall << std::setw(10) << vrmsX << std::setw(10) << vrmsY << std::setw(10) << vrmsZ << std::setw(10) << vrms3D << std::endl;  
   
   c.SaveAs("rms.pdf)");
   fout.cd();
   tv.Write();
   fout.Close();
+}
+
+void findvtx()
+{/*
+  VtxFinding(1, 0.0, false);
+  VtxFinding(1, 0.00000001, false);
+  VtxFinding(1, 0.0000001, false);
+  VtxFinding(1, 0.000001, false);
+  VtxFinding(1, 0.00001, false);
+  VtxFinding(1, 0.0001, false);
+  VtxFinding(1, 0.001, false);
+  VtxFinding(1, 0.01, false);
+  VtxFinding(1, 0.1, false);
+  VtxFinding(1, 0.5, false);
+  VtxFinding(1, 1., false);
+  VtxFinding(1, 2., false);
+  VtxFinding(1, 5., false);
+  VtxFinding(1, 20., false);
+  VtxFinding(1, 50., false);
+  VtxFinding(1, 100., false);
+  VtxFinding(1, 0.00001, false);
+  VtxFinding(2, 0.00001, false);
+  VtxFinding(3, 0.00001, false);
+  VtxFinding(4, 0.00001, false);
+  VtxFinding(5, 0.00001, false);*/
+  VtxFinding(2, 0.00001, false);
+  //VtxFinding(2, 0.00001, true);
+  
+  gStyle->SetPalette(53);
+  
+  TFile f("vtx.root");
+  TTree* tv = (TTree*) f.Get("tv");
+  TCanvas c;
+  TH1D* h;
+  
+  c.SetLogy(true);
+  // dx
+  tv->Draw("xvtx_reco-xvtx_true>>dvx","","");
+  h = (TH1D*) gROOT->FindObject("dvx");
+  h->SetTitle(";xreco-xtrue (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  c.SaveAs("vtx.pdf(");
+  // dy
+  tv->Draw("yvtx_reco-yvtx_true>>dvy","","");
+  h = (TH1D*) gROOT->FindObject("dvy");
+  h->SetTitle(";yreco-ytrue (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  c.SaveAs("vtx.pdf");
+  //dz
+  tv->Draw("zvtx_reco-zvtx_true>>dvz","","");
+  h = (TH1D*) gROOT->FindObject("dvz");
+  h->SetTitle(";zreco-ztrue (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  c.SaveAs("vtx.pdf");
+  // dxy
+  tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2))>>dvabsxy(500,0,5000)","","");
+  h = (TH1D*) gROOT->FindObject("dvabsxy");
+  h->SetTitle(";#Deltar_{xy} (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  c.SaveAs("vtx.pdf");
+  
+  c.SetLogy(false);
+  // dxy cumulative
+  TH1D hintxy(*h);
+  hintxy.SetFillColor(0);
+  hintxy.SetStats(false);
+  hintxy.GetYaxis()->SetRangeUser(0,1);
+  for(int i = 0; i < hintxy.GetNbinsX(); i++)
+  {
+    hintxy.SetBinContent(i+1,h->Integral(1,i+1)/h->Integral());
+  }
+  c.DrawFrame(0,0,1000,1,"fraction of events with #Deltar_{xy} < #Deltar^{thr}_{xy};#Deltar^{thr}_{xy} (mm)");
+  hintxy.Draw("csame");
+  c.SaveAs("vtx.pdf");
+  c.SetLogy(true);
+  
+  // dz
+  tv->Draw("abs(zvtx_reco-zvtx_true)>>dvabsz(100,0,4000)","","");
+  h = (TH1D*) gROOT->FindObject("dvabsz");
+  h->SetTitle(";|zreco-ztrue| (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  c.SaveAs("vtx.pdf");
+  
+  c.SetLogy(false);
+  // dz cumulative
+  TH1D hintz(*h);
+  hintz.SetFillColor(0);
+  hintz.SetStats(false);
+  hintz.GetYaxis()->SetRangeUser(0,1);
+  for(int i = 0; i < hintz.GetNbinsX(); i++)
+  {
+    hintz.SetBinContent(i+1,h->Integral(1,i+1)/h->Integral());
+  }
+  c.DrawFrame(0,0,1000,1,"fraction of events with |zreco-ztrue| < |zreco-ztrue|_{thr};|zreco-ztrue|_{thr} (mm)");
+  hintz.Draw("csame");
+  c.SaveAs("vtx.pdf");
+  c.SetLogy(true);
+  
+  // 3D
+  tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>dv3D(550,0,5500)","","");
+  h = (TH1D*) gROOT->FindObject("dv3D");
+  h->SetTitle(";#Deltar_{3D} (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  c.SaveAs("vtx.pdf");
+  
+  c.SetLogy(false);
+  // 3D cumulative
+  TH1D hint3D(*h);
+  hint3D.SetFillColor(0);
+  hint3D.SetStats(false);
+  hint3D.GetYaxis()->SetRangeUser(0,1);
+  for(int i = 0; i < hint3D.GetNbinsX(); i++)
+  {
+    hint3D.SetBinContent(i+1,h->Integral(1,i+1)/h->Integral());
+  }
+  c.DrawFrame(0,0,1000,1,"fraction of events with #Deltar_{3D} < #Deltar^{thr}_{3D};#Deltar^{thr}_{3D} (mm)");
+  hint3D.Draw("csame");
+  c.SaveAs("vtx.pdf");
+  
+  // xy
+  tv->Draw("yvtx_reco-yvtx_true:xvtx_reco-xvtx_true>>dvxy(500,-1000,1000,500,-1000,1000)","","colz");
+  h = (TH1D*) gROOT->FindObject("dvxy");
+  h->SetTitle(";xreco-xtrue (mm);yreco-ytrue (mm)");
+  h->Draw("colz");
+  TPad p("p","",0.12,0.55,0.45,0.88);
+  p.cd();
+  p.DrawFrame(-100,-100,100,100);
+  h->SetStats(false);
+  h->Draw("colzsame");
+  c.cd();
+  p.Draw();
+  c.SaveAs("vtx.pdf)");
+  
+  // dr 2D (dr < 50 cm)
+  int nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500");
+  h = (TH1D*) gROOT->FindObject("h");
+  h->SetTitle(";#Deltar_{zy} (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  std::cout << "dr_zy < 500 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
+  
+  // dr_zy (dr_zy < 5 cm)
+  nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50");
+  h = (TH1D*) gROOT->FindObject("h");
+  h->SetTitle(";#Deltar_{zy} (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  std::cout << "dr_zy < 50 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
+  
+  // dr_3D (dr_3D < 50 cm)
+  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500");
+  h = (TH1D*) gROOT->FindObject("h");
+  h->SetTitle(";#Deltar_{3D} (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  std::cout << "dr_3D < 500 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
+  
+  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50");
+  h = (TH1D*) gROOT->FindObject("h");
+  h->SetTitle(";#Deltar_{3D} (mm)");
+  h->SetFillColor(38);
+  h->Draw();
+  std::cout << "dr_3D < 50 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
+  c.SetLogy(false);
 }
