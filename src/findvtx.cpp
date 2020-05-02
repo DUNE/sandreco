@@ -411,12 +411,11 @@ void orderByWidth(TH1I& hmultX, std::map<int,int>& regionsX, std::vector<int>& r
     }  
 }
 
-void filterDigitsModuleY(std::map<int, double>& yd, std::vector<int>& toremove)
+void filterDigitsModuleY(std::map<int, double>& yd, std::vector<int>& toremove, const double epsilon)
 {
   double mean = 0.;
   double var = 0.;
   double rms = 0.;
-  double epsilon = 0.1;
   double rms_thr = 0.;
   
   for(std::map<int, double>::iterator it = yd.begin(); it != yd.end(); ++it)
@@ -446,16 +445,15 @@ void filterDigitsModuleY(std::map<int, double>& yd, std::vector<int>& toremove)
   {
     toremove.push_back(idx->first);
     yd.erase(idx);
-    filterDigitsModuleY(yd, toremove);
+    filterDigitsModuleY(yd, toremove, epsilon);
   }
 }
 
-void filterDigitsModuleX(std::map<int, double>& xd, std::vector<int>& toremove)
+void filterDigitsModuleX(std::map<int, double>& xd, std::vector<int>& toremove, const double epsilon)
 {
   double mean = 0.;
   double var = 0.;
   double rms = 0.;
-  double epsilon = 0.1;
   double rms_thr = 0.;
   
   for(std::map<int, double>::iterator it = xd.begin(); it != xd.end(); ++it)
@@ -485,11 +483,11 @@ void filterDigitsModuleX(std::map<int, double>& xd, std::vector<int>& toremove)
   {
     toremove.push_back(idx->first);
     xd.erase(idx);
-    filterDigitsModuleY(xd, toremove);
+    filterDigitsModuleY(xd, toremove, epsilon);
   }
 }
 
-void filterDigits(std::vector<digit>* digits, TH1D& hdummy)
+void filterDigits(std::vector<digit>* digits, TH1D& hdummy, const double epsilon)
 {
   std::map<int, std::map<int, double> > dy;
   std::map<int, std::map<int, double> > dx;
@@ -508,12 +506,12 @@ void filterDigits(std::vector<digit>* digits, TH1D& hdummy)
   
   for(std::map<int, std::map<int, double> >::iterator it = dy.begin(); it != dy.end(); ++it)
   {
-    filterDigitsModuleY(it->second, toremove);
+    filterDigitsModuleY(it->second, toremove, epsilon);
   }
   
   for(std::map<int, std::map<int, double> >::iterator it = dx.begin(); it != dx.end(); ++it)
   {
-    filterDigitsModuleX(it->second, toremove);
+    filterDigitsModuleX(it->second, toremove, epsilon);
   }
   
   std::sort(toremove.begin(),toremove.end());
@@ -528,7 +526,7 @@ void findvtx()
 {
   gROOT->SetBatch();
 
-  bool display = true;
+  bool display = false;
   bool save2root = true && display;
   bool save2pdf = true && display;
 
@@ -733,10 +731,11 @@ void findvtx()
   TParameter<double> yv("yv",0);
   TParameter<double> zv("zv",0);
   
-  init("../files/reco/numu_internal_10k.0.reco.root");
+  if(display)
+    init("../files/reco/numu_internal_10k.0.reco.root");
   
   int first = 0;
-  int last = 999;/*tDigit->GetEntries();*/
+  int last = 10;/*tDigit->GetEntries();*/
   int nev = last - first + 1;
     
   vector<double> zvX;
@@ -816,7 +815,8 @@ void findvtx()
     
     // filter digits
     // digits distant more than rms from mean are removed
-    filterDigits(digits, hdummy);
+    double epsilon = 0.1;
+    filterDigits(digits, hdummy, epsilon);
     
     // eveluate rms, mean and multiplicity in Y and X as a function of the STT module
     MeanAndRMS(digits, hmeanX, hrmsX, hnX, hmultX, hmeanY, hrmsY, hnY, hmultY);
