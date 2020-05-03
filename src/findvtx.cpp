@@ -570,6 +570,10 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
   std::vector<double> binning;
   bool is_first = true;
   
+  origin[0] = 0.;
+  origin[1] = 0.;
+  origin[2] = 0.;
+  
   // assuming they are order by Z position
   for(int i = 0; i < v->GetNdaughters(); i++)
   {
@@ -785,6 +789,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
               << "%]" << std::flush;
     
     TString reaction = ev->Primaries.at(0).GetReaction();
+    isVtxReco = 0;
     
     if(reaction.Contains("CC") == false)
       isCC = 0;
@@ -914,7 +919,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
       }
     }
     
-    int idx;
+    int idx = 0;
     double rms = 10000.; 
     double rmsX, rmsY;
     isVtxReco = 0;
@@ -1397,68 +1402,126 @@ void findvtx()
   TCanvas c;
   TH1D* h;
   
+  TCut notEmpty = "nM>0||n1>0";
+  TCut monoprong = "nM==0||n1>0";
+  TCut multiprong = "nM>0";
+  
   c.SetLogy(true);
-  // dx
-  tv->Draw("xvtx_reco-xvtx_true>>dvx","","");
-  h = (TH1D*) gROOT->FindObject("dvx");
-  h->SetTitle(";xreco-xtrue (mm)");
-  h->SetFillColor(38);
-  h->Draw();
+  // dx  
+  tv->Draw("xvtx_reco-xvtx_true>>dvx_multi(100,-2000,2000)",multiprong,"");
+  TH1D* dvx_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvx_multi")));
+  dvx_multi->SetFillColorAlpha(kBlue,0.3);
+  
+  tv->Draw("xvtx_reco-xvtx_true>>dvx_mono(100,-2000,2000)",monoprong,"");
+  TH1D* dvx_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvx_mono")));
+  dvx_mono->SetFillColorAlpha(kRed,0.3);
+  
+  THStack dvx_all("dvx_all",";xreco-xtrue (mm)");
+  dvx_all.Add(dvx_multi);
+  dvx_all.Add(dvx_mono);
+  
+  TLegend leg(0.79,0.79,0.99,0.99);
+  leg.AddEntry(dvx_multi,"multiplicity > 1","fl");
+  leg.AddEntry(dvx_mono,"multiplicity == 1","fl");
+  
+  dvx_all.Draw("nostack");
+  leg.Draw();
   c.SaveAs("vtx.pdf(");
+  
   // dy
-  tv->Draw("yvtx_reco-yvtx_true>>dvy","","");
-  h = (TH1D*) gROOT->FindObject("dvy");
-  h->SetTitle(";yreco-ytrue (mm)");
-  h->SetFillColor(38);
-  h->Draw();
+  tv->Draw("yvtx_reco-yvtx_true>>dvy_multi(100,-5000,5000)",multiprong,"");
+  TH1D* dvy_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvy_multi")));
+  dvy_multi->SetFillColorAlpha(kBlue,0.3);
+  
+  tv->Draw("yvtx_reco-yvtx_true>>dvy_mono(100,-5000,5000)",monoprong,"");
+  TH1D* dvy_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvy_mono")));
+  dvy_mono->SetFillColorAlpha(kRed,0.3);
+  
+  THStack dvy_all("dvy_all",";yreco-ytrue (mm)");
+  dvy_all.Add(dvy_multi);
+  dvy_all.Add(dvy_mono);
+  
+  dvy_all.Draw("nostack");
+  leg.Draw();
   c.SaveAs("vtx.pdf");
+  
   //dz
-  tv->Draw("zvtx_reco-zvtx_true>>dvz","","");
-  h = (TH1D*) gROOT->FindObject("dvz");
-  h->SetTitle(";zreco-ztrue (mm)");
-  h->SetFillColor(38);
-  h->Draw();
+  tv->Draw("zvtx_reco-zvtx_true>>dvz_multi(100,-4000,4000)",multiprong,"");
+  TH1D* dvz_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvz_multi")));
+  dvz_multi->SetFillColorAlpha(kBlue,0.3);
+  
+  tv->Draw("zvtx_reco-zvtx_true>>dvz_mono(100,-4000,4000)",monoprong,"");
+  TH1D* dvz_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvz_mono")));
+  dvz_mono->SetFillColorAlpha(kRed,0.3);
+  
+  THStack dvz_all("dvz_all",";zreco-ztrue (mm)");
+  dvz_all.Add(dvz_multi);
+  dvz_all.Add(dvz_mono);
+  
+  dvz_all.Draw("nostack");
+  leg.Draw();
   c.SaveAs("vtx.pdf");
+  
   // dxy
-  tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2))>>dvabsxy(500,0,5000)","","");
-  h = (TH1D*) gROOT->FindObject("dvabsxy");
-  h->SetTitle(";#Deltar_{xy} (mm)");
-  h->SetFillColor(38);
-  h->Draw();
+  tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2))>>dvabsxy_multi(200,0,5000)",multiprong,"");
+  TH1D* dvabsxy_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvabsxy_multi")));
+  dvabsxy_multi->SetFillColorAlpha(kBlue,0.3);
+  
+  tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2))>>dvabsxy_mono(200,0,5000)",monoprong,"");
+  TH1D* dvabsxy_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvabsxy_mono")));
+  dvabsxy_mono->SetFillColorAlpha(kRed,0.3);
+  
+  THStack dvabsxy_all("dvabsxy_all",";#Deltar_{xy} (mm)");
+  dvabsxy_all.Add(dvabsxy_multi);
+  dvabsxy_all.Add(dvabsxy_mono);
+  
+  dvabsxy_all.Draw("nostack");
+  leg.Draw();
   c.SaveAs("vtx.pdf");
   
   c.SetLogy(false);
+  
   // dxy cumulative
-  TH1D hintxy(*h);
+  TH1D hintxy(*dvabsxy_multi);
   hintxy.SetFillColor(0);
   hintxy.SetStats(false);
   hintxy.GetYaxis()->SetRangeUser(0,1);
   for(int i = 0; i < hintxy.GetNbinsX(); i++)
   {
-    hintxy.SetBinContent(i+1,h->Integral(1,i+1)/h->Integral());
+    hintxy.SetBinContent(i+1,(dvabsxy_multi->Integral(1,i+1)+dvabsxy_mono->Integral(1,i+1))/(dvabsxy_multi->Integral()+dvabsxy_mono->Integral()));
   }
   c.DrawFrame(0,0,1000,1,"fraction of events with #Deltar_{xy} < #Deltar^{thr}_{xy};#Deltar^{thr}_{xy} (mm)");
   hintxy.Draw("csame");
   c.SaveAs("vtx.pdf");
+  
   c.SetLogy(true);
   
   // dz
-  tv->Draw("abs(zvtx_reco-zvtx_true)>>dvabsz(100,0,4000)","","");
-  h = (TH1D*) gROOT->FindObject("dvabsz");
-  h->SetTitle(";|zreco-ztrue| (mm)");
-  h->SetFillColor(38);
-  h->Draw();
+  tv->Draw("abs(zvtx_reco-zvtx_true)>>dvabsz_multi(100,0,4000)",multiprong,"");
+  TH1D* dvabsz_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvabsz_multi")));
+  dvabsz_multi->SetFillColorAlpha(kBlue,0.3);
+  
+  tv->Draw("abs(zvtx_reco-zvtx_true)>>dvabsz_mono(100,0,4000)",monoprong,"");
+  TH1D* dvabsz_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvabsz_mono")));
+  dvabsz_mono->SetFillColorAlpha(kRed,0.3);
+  
+  THStack dvabsz_all("dvabsz_all",";|zreco-ztrue| (mm)");
+  dvabsz_all.Add(dvabsz_multi);
+  dvabsz_all.Add(dvabsz_mono);
+  
+  dvabsz_all.Draw("nostack");
+  leg.Draw();
   c.SaveAs("vtx.pdf");
   
   c.SetLogy(false);
   // dz cumulative
-  TH1D hintz(*h);
+  TH1D hintz(*dvabsz_multi);
   hintz.SetFillColor(0);
   hintz.SetStats(false);
   hintz.GetYaxis()->SetRangeUser(0,1);
   for(int i = 0; i < hintz.GetNbinsX(); i++)
   {
-    hintz.SetBinContent(i+1,h->Integral(1,i+1)/h->Integral());
+    hintz.SetBinContent(i+1,(dvabsz_multi->Integral(1,i+1)+dvabsz_mono->Integral(1,i+1))/(dvabsz_multi->Integral()+dvabsz_mono->Integral()));
   }
   c.DrawFrame(0,0,1000,1,"fraction of events with |zreco-ztrue| < |zreco-ztrue|_{thr};|zreco-ztrue|_{thr} (mm)");
   hintz.Draw("csame");
@@ -1466,29 +1529,39 @@ void findvtx()
   c.SetLogy(true);
   
   // 3D
-  tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>dv3D(550,0,5500)","","");
-  h = (TH1D*) gROOT->FindObject("dv3D");
-  h->SetTitle(";#Deltar_{3D} (mm)");
-  h->SetFillColor(38);
-  h->Draw();
+  tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>dv3D_multi(250,0,5500)",multiprong,"");
+  TH1D* dv3D_multi = new TH1D(*((TH1D*) gROOT->FindObject("dv3D_multi")));
+  dv3D_multi->SetFillColorAlpha(kBlue,0.3);
+  
+  tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>dv3D_mono(250,0,5500)",monoprong,"");
+  TH1D* dv3D_mono = new TH1D(*((TH1D*) gROOT->FindObject("dv3D_mono")));
+  dv3D_mono->SetFillColorAlpha(kRed,0.3);
+  
+  THStack dv3D_all("dv3D_all",";#Deltar_{3D} (mm)");
+  dv3D_all.Add(dv3D_multi);
+  dv3D_all.Add(dv3D_mono);
+  
+  dv3D_all.Draw("nostack");
+  leg.Draw();
   c.SaveAs("vtx.pdf");
   
   c.SetLogy(false);
+  
   // 3D cumulative
-  TH1D hint3D(*h);
+  TH1D hint3D(*dv3D_multi);
   hint3D.SetFillColor(0);
   hint3D.SetStats(false);
   hint3D.GetYaxis()->SetRangeUser(0,1);
   for(int i = 0; i < hint3D.GetNbinsX(); i++)
   {
-    hint3D.SetBinContent(i+1,h->Integral(1,i+1)/h->Integral());
+    hint3D.SetBinContent(i+1,(dv3D_multi->Integral(1,i+1)+dv3D_mono->Integral(1,i+1))/(dv3D_multi->Integral()+dv3D_mono->Integral()));
   }
   c.DrawFrame(0,0,1000,1,"fraction of events with #Deltar_{3D} < #Deltar^{thr}_{3D};#Deltar^{thr}_{3D} (mm)");
   hint3D.Draw("csame");
   c.SaveAs("vtx.pdf");
   
   // xy
-  tv->Draw("yvtx_reco-yvtx_true:xvtx_reco-xvtx_true>>dvxy(500,-1000,1000,500,-1000,1000)","","colz");
+  tv->Draw("yvtx_reco-yvtx_true:xvtx_reco-xvtx_true>>dvxy(500,-1000,1000,500,-1000,1000)",notEmpty,"colz");
   h = (TH1D*) gROOT->FindObject("dvxy");
   h->SetTitle(";xreco-xtrue (mm);yreco-ytrue (mm)");
   h->Draw("colz");
@@ -1496,13 +1569,13 @@ void findvtx()
   p.cd();
   p.DrawFrame(-100,-100,100,100);
   h->SetStats(false);
-  h->Draw("colzsame");
+  h->Draw("colsame");
   c.cd();
   p.Draw();
   c.SaveAs("vtx.pdf)");
   
   // dr 2D (dr < 50 cm)
-  int nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500");
+  int nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500",notEmpty);
   h = (TH1D*) gROOT->FindObject("h");
   h->SetTitle(";#Deltar_{zy} (mm)");
   h->SetFillColor(38);
@@ -1510,7 +1583,7 @@ void findvtx()
   std::cout << "dr_zy < 500 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
   
   // dr_zy (dr_zy < 5 cm)
-  nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50");
+  nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50",notEmpty);
   h = (TH1D*) gROOT->FindObject("h");
   h->SetTitle(";#Deltar_{zy} (mm)");
   h->SetFillColor(38);
@@ -1518,14 +1591,14 @@ void findvtx()
   std::cout << "dr_zy < 50 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
   
   // dr_3D (dr_3D < 50 cm)
-  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500");
+  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500",notEmpty);
   h = (TH1D*) gROOT->FindObject("h");
   h->SetTitle(";#Deltar_{3D} (mm)");
   h->SetFillColor(38);
   h->Draw();
   std::cout << "dr_3D < 500 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
   
-  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50");
+  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50",notEmpty);
   h = (TH1D*) gROOT->FindObject("h");
   h->SetTitle(";#Deltar_{3D} (mm)");
   h->SetFillColor(38);
