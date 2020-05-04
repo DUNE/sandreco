@@ -192,7 +192,7 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
     else if (z==0) {
         if (y<0) hitAngle = TMath::Pi();
         if (y>0) hitAngle = 0;
-        if (y==0) hitAngle = 0;
+        if (y==0) return false;
     }
     double cellAngle = int(hitAngle / cellDeltaAngle) * cellDeltaAngle + cellDeltaAngle/2;
     double modAngle = int((hitAngle + 0.5 * modDeltaAngle) / modDeltaAngle) * modDeltaAngle;
@@ -202,7 +202,7 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
     TString str = "";
     double rotated_z = z * cos(-modAngle) - y * sin(-modAngle);
     double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
-    if ( (rotated_y > ns_Draw::kloe_int_R) && (rotated_y < ns_Draw::kloe_int_R + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2) ) str = "volECAL";        // ECAL barrel
+    if ( (rotated_y > ns_Draw::kloe_int_R) && (rotated_y < ns_Draw::kloe_int_R + 2 * ns_Digit::ec_dzf) && (abs(x) < ns_Digit::lCalBarrel / 2) && (abs(rotated_z) < abs(rotated_y * tan(modDeltaAngle / 2))) ) str = "volECAL";        // ECAL barrel
     else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) > ns_Draw::kloe_int_dx) && (abs(x) < ns_Draw::kloe_int_dx + 2 * ns_Digit::ec_dzf) )      str = "endvolECAL";     // ECAL endcaps
     else if ( (rotated_y < ns_Digit::ec_rf) && (abs(x) < ns_Draw::kloe_int_dx) )                                                                str = "tracker";        // tracker
     else                                                                                                                                        str = "outside";        // outside
