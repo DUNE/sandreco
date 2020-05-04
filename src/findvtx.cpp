@@ -526,7 +526,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
 {
   gROOT->SetBatch();
 
-  bool display = false;
+  bool display = true;
   bool save2root = true && display;
   bool save2pdf = true && display;
 
@@ -764,7 +764,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
   init("../files/reco/numu_internal_10k.0.reco.root");
   
   int first = 0;
-  int last = 9999;/*tDigit->GetEntries();*/
+  int last = 999;/*tDigit->GetEntries()-1;*/
   int nev = last - first + 1;
     
   vector<double> zvX;
@@ -1075,74 +1075,54 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
       }
     }
     */
-    /*
+    
     double u, v, d;
-    double zc, yc;
-    double zz, yy;
+    double zz, yy;    
+  
+    TH2D hHT("hHT","; zc (mm); yc (mm)",100,-2000,2000,100,-2000,2000);
     
-    vguv.clear();
-    vharctg.clear();
-    vhHT.clear();
+    TH1D harctg("harctg","; #phi (rad)", 200, -TMath::Pi(), TMath::Pi());
     
-    nint = zvtx.size();
-    for(unsigned int k = 0; k < zvtx.size(); k++)
+    std::vector<double> vu;
+    std::vector<double> vv;
+    
+    for(unsigned int j = 0; j < digits->size(); j++)
     {
-      x_int[k] = hmeanX.GetBinContent(hmeanX.FindBin(zvtx[k]));
-      y_int[k] = hmeanY.GetBinContent(hmeanY.FindBin(zvtx[k]));
-      z_int[k] = zvtx[k];
-      
-      if(x_int[k] == -1. || y_int[k] == -1.)
+      if(digits->at(j).hor == 1)
       {
-        std::cout << "event: " << i << " ; z_int[k]   = " << z_int[k] << std::endl;
-        std::cout << "warning....: x_int[k]   = " << x_int[k] << " ; y_int[k]   = " << y_int[k] << std::endl;
-        std::cout << "next   ....: x_int[k+1] = " << hmeanX.GetBinContent(hmeanX.FindBin(zvtx[k])+1) << " ; y_int[k+1] = " << hmeanY.GetBinContent(hmeanY.FindBin(zvtx[k])+1) << std::endl;
-        continue;
-      }
-      TH2D hHT(TString::Format("hHT_%d",k).Data(),TString::Format("zv: %.1f - reco: %.1f; zc (mm); yc (mm)",zv.GetVal(),z_int[k]).Data(),100,-2000,2000,100,-2000,2000);
-      
-      TH1D harctg(TString::Format("harctg_%d",k).Data(),TString::Format("zv: %.1f - reco: %.1f; #phi (rad)",zv.GetVal(),z_int[k]).Data(), 200, -TMath::Pi(), TMath::Pi());
-      
-      std::vector<double> vu;
-      std::vector<double> vv;
-      
-      for(unsigned int j = 0; j < digits->size(); j++)
-      {
-        if(digits->at(j).hor == 1)
+        
+        u = (digits->at(j).z - zvtx_reco);
+        v = (yvtx_reco - digits->at(j).y);
+        d = (u*u + v*v);
+        
+        u /=d;
+        v /=d;
+        
+        vu.push_back(u);
+        vv.push_back(v);
+        
+        double y = digits->at(j).y - yvtx_reco;
+        double z = digits->at(j).z - zvtx_reco;
+        double R = z*z + y*y; 
+        
+        for(int kk = 0; kk < hHT.GetNbinsX(); kk++)
         {
-          
-          u = (digits->at(j).z - z_int[k]);
-          v = (y_int[k] - digits->at(j).y);
-          d = (u*u + v*v);
-          
-          u /=d;
-          v /=d;
-          
-          vu.push_back(u);
-          vv.push_back(v);
-          
-          double y = digits->at(j).y - y_int[k];
-          double z = digits->at(j).z - z_int[k];
-          double R = z*z + y*y; 
-          
-          for(int kk = 0; kk < hHT.GetNbinsX(); kk++)
-          {
-            zz = hHT.GetXaxis()->GetBinCenter(kk+1);
-            yy = (-z*zz + 0.5*R)/y;
-            hHT.Fill(zz, yy);
-          }
-          
-          harctg.Fill(TMath::ATan2(v,u));
+          zz = hHT.GetXaxis()->GetBinCenter(kk+1);
+          yy = (-z*zz + 0.5*R)/y;
+          hHT.Fill(zz, yy);
         }
-      } 
-      TGraph guv(vu.size(), vu.data(),vv.data());
-      guv.SetName(TString::Format("huv_%d",k).Data());
-      guv.SetTitle(TString::Format("zv: %.1f - reco: %.1f; u; v",zv.GetVal(),z_int[k]).Data()); 
-      
-      vguv.push_back(std::move(guv));
-      vharctg.push_back(std::move(harctg));
-      vhHT.push_back(std::move(hHT));
+        
+        harctg.Fill(TMath::ATan2(v,u));
+      }
     }
-    */
+    if(vu.size() == 0)
+    {
+      vu.push_back(0.);
+      vv.push_back(0.);
+    }
+    TGraph guv(vu.size(), vu.data(),vv.data());
+    guv.SetName("huv");
+    guv.SetTitle("; u; v"); 
     
     if(display)
     {
@@ -1238,15 +1218,12 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
         c.Clear();
         c.cd();
         
-        for(unsigned int k = 0; k < vharctg.size(); k++)
-        {
-          vharctg[k].Draw();
-          c.SaveAs("rms.pdf");
-          vguv[k].Draw("ap*");
-          c.SaveAs("rms.pdf");
-          vhHT[k].Draw("colz");
-          c.SaveAs("rms.pdf");
-        }
+        harctg.Draw();
+        c.SaveAs("rms.pdf");
+        guv.Draw("ap*");
+        c.SaveAs("rms.pdf");
+        hHT.Draw("colz");
+        c.SaveAs("rms.pdf");
       }
       
       c.Clear();
@@ -1338,13 +1315,10 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
       fd->Add(&xv);
       fd->Add(&yv);
       fd->Add(&zv);
-      /*
-      for(unsigned int k = 0; k < vharctg.size(); k++)
-      {
-        fd->Add(&vharctg[k]);
-        fd->Add(&vguv[k]);
-        fd->Add(&vhHT[k]);
-      }*/
+      
+      fd->Add(&harctg);
+      fd->Add(&guv);
+      fd->Add(&hHT);
       
       fout.cd();
       fd->Write();
@@ -1497,10 +1471,12 @@ void findvtx()
   tv->Draw("xvtx_reco-xvtx_true>>dvx_multi(100,-4000,4000)",multiprong,"");
   TH1D* dvx_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvx_multi")));
   dvx_multi->SetFillColorAlpha(kBlue,0.3);
+  std::cout << "dx (multi): " << dvx_multi->GetMean() << " " << dvx_multi->GetRMS() << std::endl;
   
   tv->Draw("xvtx_reco-xvtx_true>>dvx_mono(100,-4000,4000)",monoprong,"");
   TH1D* dvx_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvx_mono")));
   dvx_mono->SetFillColorAlpha(kRed,0.3);
+  std::cout << "dx (mono) : " << dvx_mono->GetMean() << " " << dvx_mono->GetRMS() << std::endl;
   
   THStack dvx_all("dvx_all",";xreco-xtrue (mm)");
   dvx_all.Add(dvx_multi);
@@ -1518,10 +1494,12 @@ void findvtx()
   tv->Draw("yvtx_reco-yvtx_true>>dvy_multi(100,-5000,5000)",multiprong,"");
   TH1D* dvy_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvy_multi")));
   dvy_multi->SetFillColorAlpha(kBlue,0.3);
+  std::cout << "dy (multi): " << dvy_multi->GetMean() << " " << dvy_multi->GetRMS() << std::endl;
   
   tv->Draw("yvtx_reco-yvtx_true>>dvy_mono(100,-5000,5000)",monoprong,"");
   TH1D* dvy_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvy_mono")));
   dvy_mono->SetFillColorAlpha(kRed,0.3);
+  std::cout << "dy (mono) : " << dvy_mono->GetMean() << " " << dvy_mono->GetRMS() << std::endl;
   
   THStack dvy_all("dvy_all",";yreco-ytrue (mm)");
   dvy_all.Add(dvy_multi);
@@ -1535,10 +1513,12 @@ void findvtx()
   tv->Draw("zvtx_reco-zvtx_true>>dvz_multi(100,-4000,4000)",multiprong,"");
   TH1D* dvz_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvz_multi")));
   dvz_multi->SetFillColorAlpha(kBlue,0.3);
+  std::cout << "dz (multi): " << dvz_multi->GetMean() << " " << dvz_multi->GetRMS() << std::endl;
   
   tv->Draw("zvtx_reco-zvtx_true>>dvz_mono(100,-4000,4000)",monoprong,"");
   TH1D* dvz_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvz_mono")));
   dvz_mono->SetFillColorAlpha(kRed,0.3);
+  std::cout << "dz (mono) : " << dvz_mono->GetMean() << " " << dvz_mono->GetRMS() << std::endl;
   
   THStack dvz_all("dvz_all",";zreco-ztrue (mm)");
   dvz_all.Add(dvz_multi);
@@ -1552,10 +1532,12 @@ void findvtx()
   tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2))>>dvabsxy_multi(200,0,5000)",multiprong,"");
   TH1D* dvabsxy_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvabsxy_multi")));
   dvabsxy_multi->SetFillColorAlpha(kBlue,0.3);
+  std::cout << "dr_xy (multi): " << dvabsxy_multi->GetMean() << " " << dvabsxy_multi->GetRMS() << std::endl;
   
   tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2))>>dvabsxy_mono(200,0,5000)",monoprong,"");
   TH1D* dvabsxy_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvabsxy_mono")));
   dvabsxy_mono->SetFillColorAlpha(kRed,0.3);
+  std::cout << "dr_xy (mono) : " << dvabsxy_mono->GetMean() << " " << dvabsxy_mono->GetRMS() << std::endl;
   
   THStack dvabsxy_all("dvabsxy_all",";#Deltar_{xy} (mm)");
   dvabsxy_all.Add(dvabsxy_multi);
@@ -1607,10 +1589,12 @@ void findvtx()
   tv->Draw("abs(zvtx_reco-zvtx_true)>>dvabsz_multi(100,0,4000)",multiprong,"");
   TH1D* dvabsz_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvabsz_multi")));
   dvabsz_multi->SetFillColorAlpha(kBlue,0.3);
+  std::cout << "|dz| (multi): " << dvabsz_multi->GetMean() << " " << dvabsz_multi->GetRMS() << std::endl;
   
   tv->Draw("abs(zvtx_reco-zvtx_true)>>dvabsz_mono(100,0,4000)",monoprong,"");
   TH1D* dvabsz_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvabsz_mono")));
   dvabsz_mono->SetFillColorAlpha(kRed,0.3);
+  std::cout << "|dz| (mono) : " << dvabsz_mono->GetMean() << " " << dvabsz_mono->GetRMS() << std::endl;
   
   THStack dvabsz_all("dvabsz_all",";|zreco-ztrue| (mm)");
   dvabsz_all.Add(dvabsz_multi);
@@ -1653,10 +1637,12 @@ void findvtx()
   tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>dv3D_multi(250,0,5500)",multiprong,"");
   TH1D* dv3D_multi = new TH1D(*((TH1D*) gROOT->FindObject("dv3D_multi")));
   dv3D_multi->SetFillColorAlpha(kBlue,0.3);
+  std::cout << "|dr_3D| (multi): " << dv3D_multi->GetMean() << " " << dv3D_multi->GetRMS() << std::endl;
   
   tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>dv3D_mono(250,0,5500)",monoprong,"");
   TH1D* dv3D_mono = new TH1D(*((TH1D*) gROOT->FindObject("dv3D_mono")));
   dv3D_mono->SetFillColorAlpha(kRed,0.3);
+  std::cout << "|dr_3D| (mono) : " << dv3D_mono->GetMean() << " " << dv3D_mono->GetRMS() << std::endl;
   
   THStack dv3D_all("dv3D_all",";#Deltar_{3D} (mm)");
   dv3D_all.Add(dv3D_multi);
