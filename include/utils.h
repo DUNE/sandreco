@@ -22,7 +22,7 @@ bool isDigBefore(digit d1, digit d2)
 
 namespace ns_Digit
 {
-const bool debug = false;
+const bool debug =false;
 
 bool flukatype=false;
 

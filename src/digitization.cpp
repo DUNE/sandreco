@@ -21,6 +21,8 @@
 #include <map>
 #include <iostream>
 #include <iomanip>
+#include <string>
+#include "TVector3.h" 
 
 #include "struct.h"
 #include "utils.h"
@@ -31,7 +33,7 @@
 // Time ns
 
 
-
+TH1F *PosCalR;
 
 
 double Attenuation(double d, int planeID)
@@ -228,7 +230,8 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         ns_Digit::cellCoordBarrel[modID][planeID][cellID][2] = + cellD * sin(-modAngle) - cellD * tan(cellAngle - modAngle) * cos(-modAngle);
         ns_Digit::cellCoordBarrel[modID][planeID][cellID][1] = + cellD * cos(-modAngle) + cellD * tan(cellAngle - modAngle) * sin(-modAngle);
     } else if (str=="endvolECAL") {
-        // modID
+        	
+	// modID
         if (x<0)        modID = 40;
         else if (x>0)   modID = 30;
         // planeID
@@ -374,6 +377,8 @@ bool ProcessHitEdepSim(TGeoManager* g, const TG4HitSegment& hit, int& modID,
             str.Contains("Active") == true) {
         TObjArray* obja = str.Tokenize("_");
         TObjArray* obja2 = str2.Tokenize("_");
+	float R=sqrt((hit.Start.Y()+2384.73)*(hit.Start.Y()+2384.73)+(hit.Start.Z()-23910)*(hit.Start.Z()-23910));	
+	PosCalR->Fill(R);
 
         int slabID;
         modID = ((TObjString*)obja2->At(4))->GetString().Atoi();
@@ -454,7 +459,7 @@ void SimulatePEFluka(TG4Event* ev,
             ev->SegmentDetectors.begin();
             it != ev->SegmentDetectors.end(); ++it) {
         if (it->first == "EMCalSci") {
-            for (unsigned int j = 0; j < it->second.size(); j++) {
+	      for (unsigned int j = 0; j < it->second.size(); j++) {
                 if (ProcessHitFluka(it->second[j], modID, planeID, cellID, d1, d2, t0, de) == true )  {
                     double en1 = de * Attenuation(d1, planeID);
                     double en2 = de * Attenuation(d2, planeID);
@@ -726,7 +731,7 @@ void init(TGeoManager* geo)  //initialize the calorimeter dimensions
             std::cout<<"ERROR ON ECAL GEOMETRY: xmin= "<<xmin<<" instead of "<<ns_Digit::xmin_f<<std::endl; 
             std::cout<<"ERROR ON ECAL GEOMETRY: xmax= "<<xmax<<" instead of "<<ns_Digit::xmax_f<<std::endl; 
             std::cout<<"ERROR ON ECAL GEOMETRY: dz= "<<dz<<" instead of "<<ns_Digit::dz_f<<std::endl; 
-            exit(1);
+            //exit(1);
         }
 
     } else{
@@ -770,6 +775,7 @@ void init(TGeoManager* geo)  //initialize the calorimeter dimensions
     if(ns_Digit::flukatype==false){
         TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
 
+
         ns_Digit::ec_r = ec->GetRmax();   //Maximum radius    =2000
         ns_Digit::ec_dz = ec->GetDz();    //half of thickness =115
         if(abs(ns_Digit::ec_r-ns_Digit::ec_rf)>0.2 || (abs(ns_Digit::ec_dz-ns_Digit::ec_dzf))) {
@@ -803,7 +809,7 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
     if(ns_Digit::flukatype==false) SimulatePEEdepSim(ev, geo, time_pe, id_hit, L);
     if(ns_Digit::flukatype==true) SimulatePEFluka(ev, time_pe, id_hit, L);
 
-    if (ns_Digit::debug) {
+   if (ns_Digit::debug) {
         std::cout << "TimeAndSignal" << std::endl;
     }
     TimeAndSignal(time_pe, adc, tdc);
@@ -814,6 +820,68 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
 }
 
 
+
+
+void ClusterFluka(TG4Event* ev, int NHits, Int_t DetType[10000], Float_t xPos[10000], Float_t yPos[10000], Float_t zPos[10000], 
+        std::map<std::string, std::vector<hit> >& cluster_map)
+{
+    cluster_map.clear();
+	
+	std::cout<<"seg in Stt "<<ev->SegmentDetectors["Straw"].size()<<std::endl;
+	std::cout<<"NHits "<<NHits<<std::endl;
+	
+	int sizeMapTree=0;
+	for(int h=0; h<NHits; h++) {
+		if(DetType[h]==1 || DetType[h]==2) sizeMapTree++;
+	}
+	std::cout<<"seg in MapTree per Stt "<<sizeMapTree<<std::endl;
+	
+
+   for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
+        const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
+
+        double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
+        double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
+        double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
+
+	std::string sttname= "NULL"; 
+
+	bool found=false;
+	for(int k=0; k<NHits; k++){
+		if(abs(x-xPos[k])<1 && abs(y-yPos[k])<1 && abs(z-zPos[k])<1) {   //1 mm
+			if(DetType[k]==0) std::cout<<"ERROR: this is not a point of stt "<<std::endl;
+			else if(DetType[k]==1) sttname="Horizontal";
+			else if(DetType[k]==2) sttname="Vertical";
+			else if(DetType[k]==3) sttname="Vertical";
+			else std::cout<<"ERROR: this point is not in standard detector!! DetType "<<DetType[k]<<std::endl;
+                        found=true;
+			break;
+                        }
+               	}
+
+	if(found==false)  {std::cout<<"ERROR: Point not FOUND!! "<<std::endl; exit(1); }
+	
+	hit h;
+        h.det = sttname; 
+        h.x1 = hseg.Start.X();
+        h.y1 = hseg.Start.Y();
+        h.z1 = hseg.Start.Z();
+        h.t1 = hseg.Start.T();
+        h.x2 = hseg.Stop.X();
+        h.y2 = hseg.Stop.Y();
+        h.z2 = hseg.Stop.Z();
+        h.t2 = hseg.Stop.T();
+        h.de = hseg.EnergyDeposit;
+        h.pid = hseg.PrimaryId;
+        h.index = j;
+
+        std::string cluster_name(sttname);
+        cluster_name += "_" + std::to_string(hseg.PrimaryId);
+
+        cluster_map[cluster_name].push_back(h);
+	
+    }
+}
 
 
 
@@ -829,8 +897,8 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
         double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
         double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
-        std::string sttname = geo->FindNode(x, y, z)->GetName();
-
+	std::string sttname= geo->FindNode(x, y, z)->GetName();
+	//std::cout<<"sttname "<<sttname<<std::endl;
         hit h;
         h.det = sttname; 
         h.x1 = hseg.Start.X();
@@ -899,9 +967,26 @@ void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
 
 
 
+void DigitizeFlukaStt(TG4Event* ev, int NHits, Int_t DetType[10000], Float_t xPos[10000], Float_t yPos[10000], Float_t zPos[10000], 
+		std::vector<digit>& digit_vec)
+{
+    std::map<std::string, std::vector<hit> > cluster_map;
+    digit_vec.clear();
+
+    ClusterFluka(ev, NHits, DetType, xPos, yPos, zPos, cluster_map);
+    Cluster2Digit(cluster_map, digit_vec);
+}
+
+
+
+
 
 void Digitize(const char* finname, const char* foutname)
 {
+
+    PosCalR = new TH1F("PosCalR","PosCalR",3000,0,2500); //-5000.0,0.0,1000,21500.0,26500.0);
+
+
     //TChain* t = new TChain("EDepSimEvents","EDepSimEvents");
     //t->Add(finname);
     //TFile f(t->GetListOfFiles()->At(0)->GetTitle());
@@ -910,15 +995,28 @@ void Digitize(const char* finname, const char* foutname)
     //TString (finname.c_str();
     if(TString(finname).Contains("fluka2edep") == true) {
         ns_Digit::flukatype=true; //dobbiamo leggere GeneratorName ..cambiare quando fatto
-    }
+	}
     if(ns_Digit::flukatype==true)  std::cout<<"This is a FLUKA SIMULATION"<<std::endl; 
     
     TTree* t = (TTree*) f.Get("EDepSimEvents");
+
+    TG4Event* ev = new TG4Event;
+    t->SetBranchAddress("Event",&ev);
+
 
     TGeoManager* geo = 0; 
     TTree* gRooTracker = 0; 
     TTree* InputKinem = 0; 
     TTree* InputFiles = 0; 	
+ 
+    TTree* MapTree; 
+
+        Int_t EvtNum;
+	Int_t NHits;
+	Float_t xHits[100000];
+	Float_t yHits[100000];
+	Float_t zHits[100000];	
+	Int_t DetType[100000];
 
     if(ns_Digit::flukatype==false){
         //initialize geometry for edepsim file
@@ -928,10 +1026,24 @@ void Digitize(const char* finname, const char* foutname)
         InputFiles = (TTree*) f.Get("DetSimPassThru/InputFiles");
 
         init(geo);
-    } 
+    }else{
 
-    TG4Event* ev = new TG4Event;
-    t->SetBranchAddress("Event",&ev);
+
+	MapTree=(TTree*)f.Get("MapTree");                     //geometry loaded for fluka file
+	if(MapTree->GetEntries()<1) {std::cout<<"MapTree Empty"<<std::endl; }
+	
+	//vector<float> xPos;
+	//vector<float> yPos;
+	MapTree->SetBranchAddress("EvtNum", &EvtNum);
+	MapTree->SetBranchAddress("NHits", &NHits);
+	MapTree->SetBranchAddress("xHits", xHits);
+	MapTree->SetBranchAddress("yHits", yHits);
+	MapTree->SetBranchAddress("zHits", zHits);
+	MapTree->SetBranchAddress("DetType", DetType);
+	t->AddFriend(MapTree);
+
+
+	} 
 
     std::vector<digit> digit_vec;    
     std::vector<cell> vec_cell;
@@ -951,6 +1063,8 @@ void Digitize(const char* finname, const char* foutname)
         t->GetEntry(i);
 
         std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i)/nev*100) << "%]" << std::flush;
+	std::cout<<"Entry "<<i<<std::endl;
+
 /*
         // FOR CHANGING COORDIN FIXME
         for (auto i = vec_cell.begin(); i != vec_cell.end(); ++i){
@@ -972,15 +1086,14 @@ void Digitize(const char* finname, const char* foutname)
         }
         /////////////////////////
 */
-	
-        DigitizeCal(ev, geo, vec_cell);
+	DigitizeCal(ev, geo, vec_cell);
         if(ns_Digit::flukatype==false) DigitizeStt(ev, geo, digit_vec);
-        //}else{
-        //	std::cout<<"Non ancora implementato in fluka"<<std::endl;
-        //	return;
-        //}
+        else DigitizeFlukaStt(ev, NHits, DetType, xHits, yHits, zHits,digit_vec);
 
-	//std::cout<<"Vec cell size "<<vec_cell.size()<<std::endl;
+
+//	std::cout<<"Vec cell size "<<vec_cell.size()<<std::endl;
+//	std::cout<<"Digit vec size "<<digit_vec.size()<<std::endl;
+
 
         //std::cout<<"Prima del salvataggio "<<std::endl;
         //USEFULE FUNCTION FOR CHANGING COORDINATE TO SAND CENTER
@@ -1009,6 +1122,8 @@ t->CloneTree()->Write();
 if(ns_Digit::flukatype==false)  gRooTracker->CloneTree()->Write();
 if(ns_Digit::flukatype==false)  InputKinem->CloneTree()->Write();
 if(ns_Digit::flukatype==false)  InputFiles->CloneTree()->Write();
+
+PosCalR->Write();
 fout.Close();
 
 f.Close();
