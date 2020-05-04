@@ -649,7 +649,8 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
   unsigned int nM = 0;
   
   int isCC;
-  int isVtxReco;
+  int VtxMulti;
+  int VtxMono;
     
   tv.Branch("xvtx_true",&xvtx_true,"xvtx_true/D");
   tv.Branch("yvtx_true",&yvtx_true,"yvtx_true/D");
@@ -659,7 +660,8 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
   tv.Branch("yvtx_reco",&yvtx_reco,"yvtx_reco/D");
   tv.Branch("zvtx_reco",&zvtx_reco,"zvtx_reco/D");
   
-  tv.Branch("isVtxReco",&isVtxReco,"isVtxReco/I");
+  tv.Branch("VtxMulti",&VtxMulti,"VtxMulti/I");
+  tv.Branch("VtxMono",&VtxMono,"VtxMono/I");
   tv.Branch("isCC",&isCC,"isCC/I");
   //tv.Branch("nint",&nint,"nint/I"); 
   tv.Branch("n0",&n0,"n0/I"); 
@@ -789,7 +791,8 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
               << "%]" << std::flush;
     
     TString reaction = ev->Primaries.at(0).GetReaction();
-    isVtxReco = 0;
+    VtxMulti = 0;
+    VtxMono = 0;
     
     if(reaction.Contains("CC") == false)
       isCC = 0;
@@ -922,7 +925,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
     int idx = 0;
     double rms = 10000.; 
     double rmsX, rmsY;
-    isVtxReco = 0;
+    VtxMulti = 0;
     for(int j = minb; j < maxb; j++)
     {
       if(hmult.GetBinContent(j+1) == 2 && hrmsX.GetBinContent(j+1) > 0. && hrmsY.GetBinContent(j+1) > 0.)
@@ -934,44 +937,57 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
         {
           rms = rmsX*rmsX+rmsY*rmsY;
           idx = j+1;
-          isVtxReco = 1;
+          VtxMulti = 1;
         }
       }
     }
     
-    if(isVtxReco == 0)
+    if(VtxMulti == 0)
     {
       for(int j = 0; j < hmult.GetNbinsX(); j++)
       {
-        if(hmult.GetBinContent(j+1) == 1)
+        if(hmult.GetBinContent(j+1) == 1 && hrmsX.GetBinContent(j+1) > -1. && hrmsY.GetBinContent(j+1) > -1.)
         {
           idx = j+1;
+          VtxMono = 1;
           break;
         }
       }
     }
     
-    xvtx_reco = hmeanX.GetBinContent(idx);
-    yvtx_reco = hmeanY.GetBinContent(idx);
-    zvtx_reco = hmult.GetXaxis()->GetBinLowEdge(idx);
+    if(VtxMulti == 1 || VtxMono == 1)
+    {
+      xvtx_reco = hmeanX.GetBinContent(idx);
+      yvtx_reco = hmeanY.GetBinContent(idx);
+      zvtx_reco = hmult.GetXaxis()->GetBinLowEdge(idx);
+    }
+    else
+    {
+      xvtx_reco = -1E10;
+      yvtx_reco = -1E10;
+      zvtx_reco = -1E10;
+    }
     
     const int tol = 3;
     
-    nall++;
-    if(abs(xvtx_reco-xvtx_true) < tol*xy_sampl && abs(yvtx_reco-yvtx_true) < tol*xy_sampl && abs(zvtx_reco-zvtx_true) < tol*z_sampl)
-      nok++;
-    
-    norm_dist = sqrt(pow((xvtx_reco-xvtx_true)/xy_sampl,2)+pow((yvtx_reco-yvtx_true)/xy_sampl,2)+pow((zvtx_reco-zvtx_true)/z_sampl,2));
-    
-    vmeanX += xvtx_reco-xvtx_true;
-    vmeanY += yvtx_reco-yvtx_true;
-    vmeanZ += zvtx_reco-zvtx_true;
-    vmean3D += norm_dist;
-    
-    vrmsX += (xvtx_reco-xvtx_true)*(xvtx_reco-xvtx_true);
-    vrmsY += (yvtx_reco-yvtx_true)*(yvtx_reco-yvtx_true);
-    vrmsZ += (zvtx_reco-zvtx_true)*(zvtx_reco-zvtx_true);
-    vrms3D += norm_dist * norm_dist;
+    if(VtxMulti == 1)
+    {
+      nall++;
+      if(abs(xvtx_reco-xvtx_true) < tol*xy_sampl && abs(yvtx_reco-yvtx_true) < tol*xy_sampl && abs(zvtx_reco-zvtx_true) < tol*z_sampl)
+        nok++;
+      
+      norm_dist = sqrt(pow((xvtx_reco-xvtx_true)/xy_sampl,2)+pow((yvtx_reco-yvtx_true)/xy_sampl,2)+pow((zvtx_reco-zvtx_true)/z_sampl,2));
+      
+      vmeanX += xvtx_reco-xvtx_true;
+      vmeanY += yvtx_reco-yvtx_true;
+      vmeanZ += zvtx_reco-zvtx_true;
+      vmean3D += norm_dist;
+      
+      vrmsX += (xvtx_reco-xvtx_true)*(xvtx_reco-xvtx_true);
+      vrmsY += (yvtx_reco-yvtx_true)*(yvtx_reco-yvtx_true);
+      vrmsZ += (zvtx_reco-zvtx_true)*(zvtx_reco-zvtx_true);
+      vrms3D += norm_dist * norm_dist;
+    }
     
     /*
     // find surface between:
@@ -1360,8 +1376,8 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
   vrmsZ = sqrt(vrmsZ);
   vrms3D = sqrt(vrms3D);
   
-  std::cout << std::setw(10) << "minreg" << std::setw(10) << "epsilon" << std::setw(15) << "wideMultReg" << std::setw(15) << "efficiency" << std::setw(10) << "rmsX" << std::setw(10) << "rmsY" << std::setw(10) << "rmsZ" << std::setw(10) << "rms3D" << std::endl;
-  std::cout << std::setw(10) << minreg << std::setw(10) << epsilon << std::setw(15) << wideMultReg << std::setw(15) << double(nok)/nall << std::setw(10) << vrmsX << std::setw(10) << vrmsY << std::setw(10) << vrmsZ << std::setw(10) << vrms3D << std::endl;  
+  std::cout << std::setw(10) << "minreg" << std::setw(10) << "epsilon" << std::setw(15) << "wideMultReg" << std::setw(15) << "gefficiency" << std::setw(15) << "efficiency" << std::setw(10) << "rmsX" << std::setw(10) << "rmsY" << std::setw(10) << "rmsZ" << std::setw(10) << "rms3D" << std::endl;
+  std::cout << std::setw(10) << minreg << std::setw(10) << epsilon << std::setw(15) << wideMultReg << std::setw(15) << double(nall)/nev << std::setw(15) << double(nok)/nall << std::setw(10) << vrmsX << std::setw(10) << vrmsY << std::setw(10) << vrmsZ << std::setw(10) << vrms3D << std::endl;  
   
   c.SaveAs("rms.pdf)");
   fout.cd();
@@ -1370,7 +1386,8 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
 }
 
 void findvtx()
-{/*
+{
+  /*
   VtxFinding(1, 0.0, false);
   VtxFinding(1, 0.00000001, false);
   VtxFinding(1, 0.0000001, false);
@@ -1380,20 +1397,37 @@ void findvtx()
   VtxFinding(1, 0.001, false);
   VtxFinding(1, 0.01, false);
   VtxFinding(1, 0.1, false);
+  VtxFinding(1, 0.2, false);
+  VtxFinding(1, 0.3, false);
+  VtxFinding(1, 0.4, false);
   VtxFinding(1, 0.5, false);
+  VtxFinding(1, 0.6, false);
+  VtxFinding(1, 0.7, false);
+  VtxFinding(1, 0.8, false);
+  VtxFinding(1, 0.9, false);
   VtxFinding(1, 1., false);
   VtxFinding(1, 2., false);
-  VtxFinding(1, 5., false);
-  VtxFinding(1, 20., false);
-  VtxFinding(1, 50., false);
-  VtxFinding(1, 100., false);
-  VtxFinding(1, 0.00001, false);
-  VtxFinding(2, 0.00001, false);
-  VtxFinding(3, 0.00001, false);
-  VtxFinding(4, 0.00001, false);
-  VtxFinding(5, 0.00001, false);*/
-  VtxFinding(2, 0.00001, false);
-  //VtxFinding(2, 0.00001, true);
+  VtxFinding(1, 0.5, true);
+  VtxFinding(2, 0.5, true);
+  VtxFinding(3, 0.5, true);
+  VtxFinding(4, 0.5, true);
+  VtxFinding(5, 0.5, true);
+  VtxFinding(6, 0.5, true);
+  VtxFinding(7, 0.5, true);
+  VtxFinding(8, 0.5, true);
+  VtxFinding(9, 0.5, true);
+  VtxFinding(10, 0.5, true);
+  VtxFinding(2, 0.5, false);
+  VtxFinding(3, 0.5, false);
+  VtxFinding(4, 0.5, false);
+  VtxFinding(5, 0.5, false);
+  VtxFinding(6, 0.5, false);
+  VtxFinding(7, 0.5, false);
+  VtxFinding(8, 0.5, false);
+  VtxFinding(9, 0.5, false);
+  VtxFinding(10, 0.5, false);*/
+  
+  VtxFinding(1, 0.5, false);
   
   gStyle->SetPalette(53);
   
@@ -1402,17 +1436,69 @@ void findvtx()
   TCanvas c;
   TH1D* h;
   
-  TCut notEmpty = "nM>0||n1>0";
-  TCut monoprong = "nM==0||n1>0";
-  TCut multiprong = "nM>0";
+  TCut vtxReco = "VtxMono == 1 || VtxMulti == 1";
+  TCut monoprong = "VtxMono == 1";
+  TCut multiprong = "VtxMulti == 1";
+  TCut notLAr = "zvtx_true > 22100";
+  
+  // x VS z
+  tv->Draw("xvtx_true:zvtx_true>>hxVSz","","");
+  TH2D* hxVSz = (TH2D*) gROOT->FindObject("hxVSz");
+  hxVSz->SetTitle(";Z (mm); X (mm); #Deltar_{3D} (mm)");
+  hxVSz->Draw();
+  c.SaveAs("vtx.pdf(");
+  
+  // y VS z
+  tv->Draw("yvtx_true:zvtx_true>>hyVSz","","");
+  TH2D* hyVSz = (TH2D*) gROOT->FindObject("hyVSz");
+  hyVSz->SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
+  hyVSz->Draw();
+  c.SaveAs("vtx.pdf");
+  
+  // x VS z reco
+  tv->Draw("xvtx_reco:zvtx_reco>>hxVSz_reco",vtxReco,"");
+  TH2D* hxVSz_reco = (TH2D*) gROOT->FindObject("hxVSz_reco");
+  hxVSz_reco->SetTitle(";Z (mm); X (mm); #Deltar_{3D} (mm)");
+  hxVSz_reco->Draw();
+  c.SaveAs("vtx.pdf");
+  
+  // y VS z reco
+  tv->Draw("yvtx_reco:zvtx_reco>>hyVSz_reco",vtxReco,"");
+  TH2D* hyVSz_reco = (TH2D*) gROOT->FindObject("hyVSz_reco");
+  hyVSz_reco->SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
+  hyVSz_reco->Draw();
+  c.SaveAs("vtx.pdf");
+  
+  // x VS z VS mean dr
+  tv->Draw("xvtx_reco:zvtx_reco>>hxVSz_n(25,21500,26500,25,-2000,2000)","VtxMulti == 1","colz");
+  TH2D* hxVSz_n = new TH2D(*((TH2D*) gROOT->FindObject("hxVSz_n")));
+  tv->Draw("xvtx_reco:zvtx_reco>>hxVSz_dv(25,21500,26500,25,-2000,2000)","(VtxMulti == 1)*sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))","colz");
+  TH2D* hxVSz_dv = new TH2D(*((TH2D*) gROOT->FindObject("hxVSz_dv")));
+  TH2D hxVSz_meandv = (*hxVSz_dv)/(*hxVSz_n);
+  hxVSz_meandv.SetStats(false);
+  hxVSz_meandv.SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
+  hxVSz_meandv.Draw("colz");
+  c.SaveAs("vtx.pdf");
+  
+  // y VS z VS mean dr
+  tv->Draw("yvtx_reco:zvtx_reco>>hyVSz_n(25,21500,26500,25,-5000,0)","VtxMulti == 1","colz");
+  TH2D* hyVSz_n = new TH2D(*((TH2D*) gROOT->FindObject("hyVSz_n")));
+  tv->Draw("yvtx_reco:zvtx_reco>>hyVSz_dv(25,21500,26500,25,-5000,0)","(VtxMulti == 1)*sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))","colz");
+  TH2D* hyVSz_dv = new TH2D(*((TH2D*) gROOT->FindObject("hyVSz_dv")));
+  TH2D hyVSz_meandv = (*hyVSz_dv)/(*hyVSz_n);
+  hyVSz_meandv.SetStats(false);
+  hyVSz_meandv.SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
+  hyVSz_meandv.Draw("colz");
+  c.SaveAs("vtx.pdf");
+  
   
   c.SetLogy(true);
   // dx  
-  tv->Draw("xvtx_reco-xvtx_true>>dvx_multi(100,-2000,2000)",multiprong,"");
+  tv->Draw("xvtx_reco-xvtx_true>>dvx_multi(100,-4000,4000)",multiprong,"");
   TH1D* dvx_multi = new TH1D(*((TH1D*) gROOT->FindObject("dvx_multi")));
   dvx_multi->SetFillColorAlpha(kBlue,0.3);
   
-  tv->Draw("xvtx_reco-xvtx_true>>dvx_mono(100,-2000,2000)",monoprong,"");
+  tv->Draw("xvtx_reco-xvtx_true>>dvx_mono(100,-4000,4000)",monoprong,"");
   TH1D* dvx_mono = new TH1D(*((TH1D*) gROOT->FindObject("dvx_mono")));
   dvx_mono->SetFillColorAlpha(kRed,0.3);
   
@@ -1421,12 +1507,12 @@ void findvtx()
   dvx_all.Add(dvx_mono);
   
   TLegend leg(0.79,0.79,0.99,0.99);
-  leg.AddEntry(dvx_multi,"multiplicity > 1","fl");
-  leg.AddEntry(dvx_mono,"multiplicity == 1","fl");
+  leg.AddEntry(dvx_multi,"mtr","fl");
+  leg.AddEntry(dvx_mono,"1tr","fl");
   
   dvx_all.Draw("nostack");
   leg.Draw();
-  c.SaveAs("vtx.pdf(");
+  c.SaveAs("vtx.pdf");
   
   // dy
   tv->Draw("yvtx_reco-yvtx_true>>dvy_multi(100,-5000,5000)",multiprong,"");
@@ -1481,17 +1567,38 @@ void findvtx()
   
   c.SetLogy(false);
   
-  // dxy cumulative
+  // dxy cumulative  
   TH1D hintxy(*dvabsxy_multi);
+  TH1D hintxy_mono(*dvabsxy_multi);
+  TH1D hintxy_multi(*dvabsxy_multi);
   hintxy.SetFillColor(0);
   hintxy.SetStats(false);
-  hintxy.GetYaxis()->SetRangeUser(0,1);
+  hintxy_multi.SetFillColor(0);
+  hintxy_multi.SetLineColor(kBlue);
+  hintxy_multi.SetLineStyle(2);
+  hintxy_multi.SetStats(false);
+  hintxy_mono.SetFillColor(0);
+  hintxy_mono.SetLineColor(kRed);
+  hintxy_mono.SetLineStyle(2);
+  hintxy_mono.SetStats(false);
   for(int i = 0; i < hintxy.GetNbinsX(); i++)
   {
     hintxy.SetBinContent(i+1,(dvabsxy_multi->Integral(1,i+1)+dvabsxy_mono->Integral(1,i+1))/(dvabsxy_multi->Integral()+dvabsxy_mono->Integral()));
+    hintxy_mono.SetBinContent(i+1,dvabsxy_mono->Integral(1,i+1)/dvabsxy_mono->Integral());
+    hintxy_multi.SetBinContent(i+1,dvabsxy_multi->Integral(1,i+1)/dvabsxy_multi->Integral());
   }
   c.DrawFrame(0,0,1000,1,"fraction of events with #Deltar_{xy} < #Deltar^{thr}_{xy};#Deltar^{thr}_{xy} (mm)");
   hintxy.Draw("csame");
+  hintxy_mono.Draw("csame");
+  hintxy_multi.Draw("csame");
+  
+  TLegend leg2(0.69,0.11,0.89,0.31);
+  leg2.AddEntry(&hintxy,"all vtx","l");
+  leg2.AddEntry(&hintxy_multi,"mtr","l");
+  leg2.AddEntry(&hintxy_mono,"1tr","l");
+  leg2.Draw();
+  
+  
   c.SaveAs("vtx.pdf");
   
   c.SetLogy(true);
@@ -1516,15 +1623,29 @@ void findvtx()
   c.SetLogy(false);
   // dz cumulative
   TH1D hintz(*dvabsz_multi);
+  TH1D hintz_mono(*dvabsz_multi);
+  TH1D hintz_multi(*dvabsz_multi);
   hintz.SetFillColor(0);
   hintz.SetStats(false);
-  hintz.GetYaxis()->SetRangeUser(0,1);
+  hintz_mono.SetFillColor(0);
+  hintz_mono.SetLineColor(kRed);
+  hintz_mono.SetLineStyle(2);
+  hintz_mono.SetStats(false);
+  hintz_multi.SetFillColor(0);
+  hintz_multi.SetLineColor(kBlue);
+  hintz_multi.SetLineStyle(2);
+  hintz_multi.SetStats(false);
   for(int i = 0; i < hintz.GetNbinsX(); i++)
   {
     hintz.SetBinContent(i+1,(dvabsz_multi->Integral(1,i+1)+dvabsz_mono->Integral(1,i+1))/(dvabsz_multi->Integral()+dvabsz_mono->Integral()));
+    hintz_mono.SetBinContent(i+1,dvabsz_mono->Integral(1,i+1)/dvabsz_mono->Integral());
+    hintz_multi.SetBinContent(i+1,dvabsz_multi->Integral(1,i+1)/dvabsz_multi->Integral());
   }
   c.DrawFrame(0,0,1000,1,"fraction of events with |zreco-ztrue| < |zreco-ztrue|_{thr};|zreco-ztrue|_{thr} (mm)");
   hintz.Draw("csame");
+  hintz_mono.Draw("csame");
+  hintz_multi.Draw("csame");
+  leg2.Draw();
   c.SaveAs("vtx.pdf");
   c.SetLogy(true);
   
@@ -1549,33 +1670,47 @@ void findvtx()
   
   // 3D cumulative
   TH1D hint3D(*dv3D_multi);
+  TH1D hint3D_mono(*dv3D_multi);
+  TH1D hint3D_multi(*dv3D_multi);
   hint3D.SetFillColor(0);
   hint3D.SetStats(false);
-  hint3D.GetYaxis()->SetRangeUser(0,1);
+  hint3D_mono.SetFillColor(0);
+  hint3D_mono.SetLineColor(kRed);
+  hint3D_mono.SetLineStyle(2);
+  hint3D_mono.SetStats(false);
+  hint3D_multi.SetFillColor(0);
+  hint3D_multi.SetLineColor(kBlue);
+  hint3D_multi.SetLineStyle(2);
+  hint3D_multi.SetStats(false);
   for(int i = 0; i < hint3D.GetNbinsX(); i++)
   {
     hint3D.SetBinContent(i+1,(dv3D_multi->Integral(1,i+1)+dv3D_mono->Integral(1,i+1))/(dv3D_multi->Integral()+dv3D_mono->Integral()));
+    hint3D_mono.SetBinContent(i+1,dv3D_mono->Integral(1,i+1)/dv3D_mono->Integral());
+    hint3D_multi.SetBinContent(i+1,dv3D_multi->Integral(1,i+1)/dv3D_multi->Integral());
   }
   c.DrawFrame(0,0,1000,1,"fraction of events with #Deltar_{3D} < #Deltar^{thr}_{3D};#Deltar^{thr}_{3D} (mm)");
   hint3D.Draw("csame");
+  hint3D_mono.Draw("csame");
+  hint3D_multi.Draw("csame");
+  leg2.Draw();
   c.SaveAs("vtx.pdf");
   
   // xy
-  tv->Draw("yvtx_reco-yvtx_true:xvtx_reco-xvtx_true>>dvxy(500,-1000,1000,500,-1000,1000)",notEmpty,"colz");
-  h = (TH1D*) gROOT->FindObject("dvxy");
-  h->SetTitle(";xreco-xtrue (mm);yreco-ytrue (mm)");
-  h->Draw("colz");
+  tv->Draw("yvtx_reco-yvtx_true:xvtx_reco-xvtx_true>>dvxy(500,-1000,1000,500,-1000,1000)",vtxReco,"colz");
+  TH2D* h2D = (TH2D*) gROOT->FindObject("dvxy");
+  h2D->SetTitle(";xreco-xtrue (mm);yreco-ytrue (mm)");
+  h2D->Draw("colz");
   TPad p("p","",0.12,0.55,0.45,0.88);
   p.cd();
   p.DrawFrame(-100,-100,100,100);
-  h->SetStats(false);
-  h->Draw("colsame");
+  h2D->SetStats(false);
+  h2D->Draw("colsame");
   c.cd();
   p.Draw();
   c.SaveAs("vtx.pdf)");
   
   // dr 2D (dr < 50 cm)
-  int nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500",notEmpty);
+  int nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500",vtxReco);
   h = (TH1D*) gROOT->FindObject("h");
   h->SetTitle(";#Deltar_{zy} (mm)");
   h->SetFillColor(38);
@@ -1583,7 +1718,7 @@ void findvtx()
   std::cout << "dr_zy < 500 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
   
   // dr_zy (dr_zy < 5 cm)
-  nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50",notEmpty);
+  nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50",vtxReco);
   h = (TH1D*) gROOT->FindObject("h");
   h->SetTitle(";#Deltar_{zy} (mm)");
   h->SetFillColor(38);
@@ -1591,14 +1726,14 @@ void findvtx()
   std::cout << "dr_zy < 50 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
   
   // dr_3D (dr_3D < 50 cm)
-  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500",notEmpty);
+  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500",vtxReco);
   h = (TH1D*) gROOT->FindObject("h");
   h->SetTitle(";#Deltar_{3D} (mm)");
   h->SetFillColor(38);
   h->Draw();
   std::cout << "dr_3D < 500 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
   
-  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50",notEmpty);
+  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50",vtxReco);
   h = (TH1D*) gROOT->FindObject("h");
   h->SetTitle(";#Deltar_{3D} (mm)");
   h->SetFillColor(38);
