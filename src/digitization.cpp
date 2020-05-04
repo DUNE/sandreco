@@ -91,11 +91,13 @@ double E2PE(double E)
 {
     // Average number of photoelectrons = 25*Ea(MeV)
     const double e2p2 = 25.;
+    const double e2p2_FLUKA = 18.5e3;
 
     if (ns_Digit::debug)
         std::cout << "E = " << E << " -> p.e. = " << e2p2* E << std::endl;
 
-    return e2p2 * E;
+    if (ns_Digit::flukatype==false) return e2p2 * E;
+    else if (ns_Digit::flukatype==true) return e2p2_FLUKA * E;
 }
 
 
