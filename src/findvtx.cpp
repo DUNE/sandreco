@@ -11,6 +11,130 @@
 
 #include "/wd/dune-it/ext_bkg/kloe-simu/src/display.cpp"
 
+int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y,
+              double& xc, double& yc, double& r, double& errr, double& chi2)
+{
+  xc = -999;
+  yc = -999;
+  r = -999;
+  errr = -999;
+  chi2 = -999;
+
+  if (x.size() != y.size()) return 1;
+
+  double sumx = 0, sumy = 0;                            // linear    terms
+  double sumx2 = 0, sumy2 = 0, sumxy = 0;               // quadratic terms
+  double sumxy2 = 0, sumx2y = 0, sumx3 = 0, sumy3 = 0;  // cubic     terms
+
+  for (int i = 0; i < n; i++) {
+    double xp = x.at(i);
+    double yp = y.at(i);
+    sumx += xp;
+    sumy += yp;
+    sumx2 += xp * xp;
+    sumy2 += yp * yp;
+    sumxy += xp * yp;
+    sumxy2 += xp * yp * yp;
+    sumx2y += xp * xp * yp;
+    sumx3 += xp * xp * xp;
+    sumy3 += yp * yp * yp;
+  }
+
+  double a = n * sumx2 - sumx * sumx;
+  double b = n * sumxy - sumx * sumy;
+  double c = n * sumy2 - sumy * sumy;
+  double d = 0.5 * (n * sumxy2 - sumx * sumy2 + n * sumx3 - sumx * sumx2);
+  double e = 0.5 * (n * sumx2y - sumy * sumx2 + n * sumy3 - sumy * sumy2);
+
+  if (a * c - b * b == 0.) return 2;
+
+  xc = (d * c - b * e) / (a * c - b * b);
+  yc = (a * e - b * d) / (a * c - b * b);
+
+  double rMean = 0;
+  double rrms = 0;
+
+  for (int i = 0; i < n; i++) {
+    double xp = x.at(i);
+    double yp = y.at(i);
+    double r2 = (xp - xc) * (xp - xc) + (yp - yc) * (yp - yc);
+
+    rMean += sqrt(r2);
+    rrms += r2;
+  }
+
+  rMean /= n;
+  rrms /= n;
+  r = rMean;
+
+  errr = sqrt(rrms - rMean * rMean);
+
+  chi2 = 0.0;
+
+  for (int i = 0; i < n; i++) {
+    chi2 += TMath::Abs((y.at(i) - yc) * (y.at(i) - yc) +
+                       (x.at(i) - xc) * (x.at(i) - xc) - r * r);
+  }
+
+  chi2 /= n;
+
+  /*
+  std::cout << "==== ZY =====" << std::endl;
+
+  for(int i = 0; i < n; i++)
+  {
+    std::cout << x.at(i) << " " << y.at(i) << std::endl;
+  }
+
+  std::cout << "---> " << xc << " " << yc << " " << r << " " << chi2 <<
+  std::endl;
+  */
+
+  return 0;
+}
+
+void fillLayers(std::map<int, std::vector<digit> >& m, std::vector<digit>* d, TH1D& hdummy, int hor)
+{
+  for(unsigned int k = 0; k < d->size(); k++)
+  {
+    if(d->at(k).hor == hor)
+      m[-1*hdummy.FindBin(d->at(k).z)].push_back(d->at(k));
+  }
+}
+
+void evalUV(double&u, double& v, double zv, double yv, double z, double y)
+{
+  u = (z - zv);
+  v = (yv - y);
+  double d = (u*u + v*v);
+  
+  u /=d;
+  v /=d;  
+}
+
+void evalPhi(double& phi, double u, double v)
+{
+  phi = TMath::ATan2(v,u);
+}
+
+void findNearDig(int& idx, double exp_phi, std::vector<digit>& vd, double zv, double yv)
+{
+  double dphi = 6.2831853;
+    
+  double phi, u, v;
+  
+  for(unsigned int k = 0; k < vd.size(); k++)
+  {
+    evalUV(u, v, zv, yv, vd.at(k).z, vd.at(k).y);
+    evalPhi(phi, u, v);
+    if(abs(exp_phi - phi) < dphi)
+    {
+      dphi = abs(exp_phi - phi);
+      idx = k;
+    }
+  }
+}
+
 void erase_element(int val, std::vector<int>& vec)
 {
   std::vector<int>::iterator ite = std::find(vec.begin(),vec.end(),val);
@@ -522,7 +646,73 @@ void filterDigits(std::vector<digit>* digits, TH1D& hdummy, const double epsilon
   }
 }
 
-void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
+void vtxFinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco, TH1I& hmult, TH1D& hmeanX, TH1D& hmeanY, TH1D& hrmsX, TH1D& hrmsY, std::vector<int>& regMtr, std::vector<int>& reg0tr, std::map<int,int>& regions, int& VtxMulti, int& VtxMono, bool wideMultReg)
+{
+  int minb = 0;
+  int maxb = hmult.GetNbinsX();
+  
+  regMtr.clear();
+  reg0tr.clear();
+  
+  if(wideMultReg)
+  {
+    orderByWidth(hmult, regions, regMtr, reg0tr);
+    if(regMtr.size()>0)
+    {
+      std::map<int,int>::iterator it = regions.find(regMtr.front());
+      minb = it->first;
+      maxb = it->first + it->second;
+    }
+  }
+  
+  int idx = 0;
+  double rms = 10000.; 
+  double rmsX, rmsY;
+  VtxMulti = 0;
+  for(int j = minb; j < maxb; j++)
+  {
+    if(hmult.GetBinContent(j+1) == 2 && hrmsX.GetBinContent(j+1) > 0. && hrmsY.GetBinContent(j+1) > 0.)
+    {
+      rmsX = hrmsX.GetBinContent(j+1);
+      rmsY = hrmsY.GetBinContent(j+1);
+      
+      if(rmsX*rmsX+rmsY*rmsY < rms)
+      {
+        rms = rmsX*rmsX+rmsY*rmsY;
+        idx = j+1;
+        VtxMulti = 1;
+      }
+    }
+  }
+  
+  if(VtxMulti == 0)
+  {
+    for(int j = 0; j < hmult.GetNbinsX(); j++)
+    {
+      if(hmult.GetBinContent(j+1) == 1 && hrmsX.GetBinContent(j+1) > -1. && hrmsY.GetBinContent(j+1) > -1.)
+      {
+        idx = j+1;
+        VtxMono = 1;
+        break;
+      }
+    }
+  }
+  
+  if(VtxMulti == 1 || VtxMono == 1)
+  {
+    xvtx_reco = hmeanX.GetBinContent(idx);
+    yvtx_reco = hmeanY.GetBinContent(idx);
+    zvtx_reco = hmult.GetXaxis()->GetBinLowEdge(idx);
+  }
+  else
+  {
+    xvtx_reco = -1E10;
+    yvtx_reco = -1E10;
+    zvtx_reco = -1E10;
+  }
+}
+
+void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
 {
   gROOT->SetBatch();
 
@@ -629,6 +819,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
     
   std::vector<digit>* digits = new std::vector<digit>;
   TG4Event* ev = new TG4Event;
+  std::vector<std::vector<digit> > clusters;
   
   tDigit->SetBranchAddress("Stt",&digits);
   tMC->SetBranchAddress("Event",&ev);
@@ -671,6 +862,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
   //tv.Branch("y_int",y_int,"y_int[nint]/D"); 
   //tv.Branch("z_int",z_int,"z_int[nint]/D"); 
   //tv.Branch("digits","std::vector<digit>",&digits); 
+  //tv.Branch("clusters","std::vector<std::vector<digit> >",&clusters);
   
   TH1D hrmsX("hrmsX","rmsX;Z (mm); rmsX (mm)",binning.size()-1,binning.data());
   TH1D hrmsY("hrmsY","rmsY;Z (mm); rmsY (mm)",binning.size()-1,binning.data());
@@ -764,7 +956,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
   init("../files/reco/numu_internal_10k.0.reco.root");
   
   int first = 0;
-  int last = 999;/*tDigit->GetEntries()-1;*/
+  int last = 99;/*tDigit->GetEntries()-1;*/
   int nev = last - first + 1;
     
   vector<double> zvX;
@@ -880,31 +1072,10 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
     
     processMtrVct(regMtr, reg0tr, regions, hmult, minreg);
     process0trVct(reg0tr, regions, hmult, minreg);
-      
-    n0 = 0;  
-    n1 = 0;  
-    nM = 0;  
-    
-    for(std::map<int,int>::iterator it = regions.begin(); it != regions.end(); ++it)
-    {
-      if(hmult.GetBinContent(it->first) == 0)
-      {
-        n0++;
-      }
-      else if(hmult.GetBinContent(it->first) == 1)
-      {
-        n1++;
-      }
-      else if(hmult.GetBinContent(it->first) == 2)
-      {
-        nM++;
-      }      
-    }
-    
-    if(n0 + n1 + nM != regions.size())
-      std::cout << "warning line:" << __LINE__ << std::endl;
     
     // find vertex as modules with less spreas between tracks
+    vtxFinding(xvtx_reco, yvtx_reco, zvtx_reco, hmult, hmeanX, hmeanY, hrmsX, hrmsY, regMtr, reg0tr, regions, VtxMulti, VtxMono, wideMultReg);
+    /*
     int minb = 0;
     int maxb = hmult.GetNbinsX();
     
@@ -967,7 +1138,219 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
       yvtx_reco = -1E10;
       zvtx_reco = -1E10;
     }
+    */
+    // track finding with clustering in arctg(v/u) VS z
+    tDigit->GetEntry(i);
+    std::map<int, std::vector<digit> > md;
+    fillLayers(md, digits, hdummy, 1);
+    clusters.clear();
+    /*
+    for(std::map<int, std::vector<digit> >::iterator iter = md.begin(); iter != md.end(); iter++)
+    {
+        std::cout << __LINE__ << " " << iter->first << " " << iter->second.size() << endl;
+      
+    }*/
     
+    int idx = 0;
+    int prev_mod;
+    double prev_phi, exp_phi;
+    double prev_z, slope;
+    
+    double u, v, phi, dphi;
+    
+    digit current_digit;
+    
+    const double phi_tol = 0.1;
+    const double dlay_tol = 5;
+    
+    
+    // loop on modules
+    while(md.size() != 0)
+    { 
+      // get most downstream module
+      std::map<int, std::vector<digit> >::iterator ite = md.begin();
+      std::vector<digit>* layer = &(ite->second);
+      
+      // loop on digits in the module
+      while(layer->size() != 0)
+      {
+        // get forst digit
+        current_digit = layer->front(); 
+        
+        // create cluster and insert first digit
+        std::vector<digit> cl;
+        cl.push_back(std::move(current_digit));
+        
+        // remove the current digit from the module
+        layer->erase(layer->begin());
+        
+        // get module id
+        prev_mod = ite->first;
+        
+        // get iterator to the next module
+        std::map<int, std::vector<digit> >::iterator nite = std::next(ite);
+        
+        // reset parameters
+        evalUV(u, v, zvtx_reco, yvtx_reco, current_digit.z, current_digit.y);
+        evalPhi(phi, u, v);
+        slope = 0.;
+        prev_phi = phi;
+        prev_z = hdummy.GetBinCenter(-1*ite->first);
+        prev_mod = ite->first;
+        
+        // loop on upstream modules
+        while(nite != md.end())
+        {
+          // check if module are downstream the reco vtx
+          if(hdummy.GetXaxis()->GetBinUpEdge(-1*nite->first) > zvtx_reco)
+          {
+            // get next layer
+            std::vector<digit>* nlayer = &(nite->second);
+            
+            // evaluate the distance (in number of modules) between this module and the previous one
+            int dlayer = nite->first - prev_mod;
+            
+            // check if the distance is within the tolerance
+            if(dlayer <= dlay_tol)
+            {
+              // eval prediction
+              exp_phi = slope * (prev_z - hdummy.GetBinCenter(-1*nite->first)) + prev_phi;
+              
+              // find nearest digit
+              findNearDig(idx, exp_phi, *nlayer, zvtx_reco, yvtx_reco);
+                
+              // eval phi
+              evalUV(u, v, zvtx_reco, yvtx_reco, nlayer->at(idx).z, nlayer->at(idx).y);
+              evalPhi(phi, u, v);
+              
+              // eval residual
+              dphi = exp_phi - phi;
+              
+              // check if distance is within tolerance
+              if(abs(dphi) <= phi_tol)
+              {
+                // get selected digit
+                current_digit = nlayer->at(idx);
+                
+                // add to the cluster
+                cl.push_back(std::move(current_digit));
+                
+                // update parameter
+                prev_mod = nite->first;
+                slope = (prev_phi-phi)/(prev_z - hdummy.GetBinCenter(-1*nite->first)); 
+                prev_phi = phi;
+                prev_z = hdummy.GetBinCenter(-1*nite->first);
+                
+                // remove from the module
+                nlayer->erase(nlayer->begin() + idx);
+                
+                // remove module if it is empty
+                if(nlayer->size() == 0)
+                {
+                  std::map<int, std::vector<digit> >::iterator dummy = std::next(nite);
+                  md.erase(nite);
+                  nite = dummy;
+                  continue;
+                }
+              } 
+            }
+          }
+          // go to upstream module
+          nite = std::next(nite);
+        }
+        // save cluster
+        clusters.push_back(cl);
+      }
+      // remove module from map
+      md.erase(ite);
+    }
+    
+    //fit
+    double errr, chi2;
+    std::vector<double> zc;
+    std::vector<double> yc;
+    std::vector<double> z;
+    std::vector<double> y;
+    std::vector<double> r;
+    std::vector<int> idc;
+    std::vector<int> res;
+    std::vector<int> h;
+    
+    for(unsigned int nn = 0; nn < clusters.size(); nn++)
+    {
+      if(clusters.at(nn).size()>3)
+      {
+        zc.push_back(0.);
+        yc.push_back(0.);
+        r.push_back(0.);
+        idc.push_back(nn);
+        
+        z.clear();
+        y.clear();
+        
+        for(unsigned int tt = 0; tt < clusters.at(nn).size(); tt++)
+        {
+          z.push_back(clusters.at(nn).at(tt).z);
+          y.push_back(clusters.at(nn).at(tt).y);
+        }
+        res.push_back(fitCircle(clusters.at(nn).size(), z, y, zc.back(), yc.back(), r.back(), errr, chi2));
+      }
+    }
+    
+    double prodVect = 0.;
+    double ry, rz;
+    double vely, velz;
+    std::vector<int> ysign;
+    
+    // evaluate particle direction in the circle
+    for(unsigned int nn = 0; nn < idc.size(); nn++)
+    {
+      prodVect = 0.;
+      
+      for(unsigned int tt = 0; tt < clusters.at(idc[nn]).size()-1; tt++)
+      {
+        ry = clusters.at(idc[nn]).at(tt).y - yc[nn];
+        rz = clusters.at(idc[nn]).at(tt).z - zc[nn];
+        vely = clusters.at(idc[nn]).at(tt+1).y - clusters.at(idc[nn]).at(tt).y;
+        velz = clusters.at(idc[nn]).at(tt+1).z - clusters.at(idc[nn]).at(tt).z;
+         
+        prodVect += ry * velz - rz * vely;
+      }
+      if(prodVect != 0.)
+        prodVect /= prodVect;
+      h.push_back(int(prodVect));
+    }
+    
+    // 
+    //std::map<int, std::vector<digit> > md;
+    //fillLayers(md, digits, hdummy, 1);
+      
+    
+    
+    // performance and result evaluation and output filling
+    n0 = 0;  
+    n1 = 0;  
+    nM = 0;  
+    
+    for(std::map<int,int>::iterator it = regions.begin(); it != regions.end(); ++it)
+    {
+      if(hmult.GetBinContent(it->first) == 0)
+      {
+        n0++;
+      }
+      else if(hmult.GetBinContent(it->first) == 1)
+      {
+        n1++;
+      }
+      else if(hmult.GetBinContent(it->first) == 2)
+      {
+        nM++;
+      }      
+    }
+    
+    if(n0 + n1 + nM != regions.size())
+      std::cout << "warning line:" << __LINE__ << std::endl;
+      
     const int tol = 3;
     
     if(VtxMulti == 1)
@@ -989,95 +1372,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
       vrms3D += norm_dist * norm_dist;
     }
     
-    /*
-    // find surface between:
-    // - 0 tracks => 1 tracks : mono prong vertex
-    // - 0 tracks => multi tracks: multi prong vertex
-    // - 1 track => multi tracks: re-interaction or vertex with back-scattering
-    zvX.clear();
-    zvY.clear();
-    
-    for(std::map<int,int>::iterator it = regionsX.begin(); std::next(it) != regionsX.end(); ++it)
-    {
-      if(hmultX.GetBinContent(it->first) == 0 && hmultX.GetBinContent(std::next(it)->first) != 0)
-      {
-        zvX.push_back(hmultX.GetXaxis()->GetBinLowEdge(std::next(it)->first));
-      }
-      else if(hmultX.GetBinContent(it->first) == 1 && hmultX.GetBinContent(std::next(it)->first) == 2)
-      {
-        zvX.push_back(hmultX.GetXaxis()->GetBinLowEdge(std::next(it)->first));
-      }
-    }
-    
-    for(std::map<int,int>::iterator it = regionsY.begin(); std::next(it) != regionsY.end(); ++it)
-    {
-      if(hmultY.GetBinContent(it->first) == 0 && hmultY.GetBinContent(std::next(it)->first) != 0)
-      {
-        zvY.push_back(hmultY.GetXaxis()->GetBinLowEdge(std::next(it)->first));
-      }
-      else if(hmultY.GetBinContent(it->first) == 1 && hmultY.GetBinContent(std::next(it)->first) == 2)
-      {
-        zvY.push_back(hmultY.GetXaxis()->GetBinLowEdge(std::next(it)->first));
-      }
-    }*/
-    
-    // merge vertex between X and Y plan
-    // if they are in between 200 mm => to be optimized
-    /*
-    std::map<double,int> vv;
-    for(unsigned int j = 0; j < zvX.size(); j++)
-    {
-      vv[zvX[j]] = 1;
-    }
-    for(unsigned int j = 0; j < zvY.size(); j++)
-    {
-      vv[zvY[j]] = -1;
-    }
-    
-    zvtx.clear();
-    const double max_dist = 0.; //mm
-    while(vv.size() != 0)
-    {
-      std::map<double,int>::iterator it = vv.begin();
-      std::map<double,int>::iterator itt = it;
-      bool found = false;
-      while(++itt != vv.end())
-      {
-        if(abs(itt->first-it->first) < max_dist)
-        {
-          if(it->second != itt->second)
-          {
-            if(std::next(itt) != vv.end())
-            {
-              if(abs(itt->first-it->first) < abs(itt->first-std::next(it)->first) || itt->second == std::next(itt)->second)
-              {
-                found = true;
-              }
-            }
-            else
-            {
-              found = true;
-            }
-            break;
-          }
-        }
-      }
-      if(found)
-      {
-        zvtx.push_back(0.5*(itt->first+it->first));
-        vv.erase(itt);
-        vv.erase(it);
-      }
-      else
-      {
-        zvtx.push_back(it->first);
-        vv.erase(it);
-      }
-    }
-    */
-    
-    double u, v, d;
-    double zz, yy;    
+    double zz, yy, d;    
   
     TH2D hHT("hHT","; zc (mm); yc (mm)",100,-2000,2000,100,-2000,2000);
     
@@ -1085,6 +1380,8 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
     
     std::vector<double> vu;
     std::vector<double> vv;
+    std::vector<double> vz;
+    std::vector<double> vphi;
     
     for(unsigned int j = 0; j < digits->size(); j++)
     {
@@ -1100,6 +1397,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
         
         vu.push_back(u);
         vv.push_back(v);
+        vz.push_back(digits->at(j).z);
         
         double y = digits->at(j).y - yvtx_reco;
         double z = digits->at(j).z - zvtx_reco;
@@ -1111,15 +1409,22 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
           yy = (-z*zz + 0.5*R)/y;
           hHT.Fill(zz, yy);
         }
-        
-        harctg.Fill(TMath::ATan2(v,u));
+        phi = TMath::ATan2(v,u);
+        harctg.Fill(phi);
+        vphi.push_back(phi);
       }
     }
     if(vu.size() == 0)
     {
       vu.push_back(0.);
       vv.push_back(0.);
+      vphi.push_back(0.);
+      vz.push_back(0.);
     }
+    TGraph gatgZ(vphi.size(), vphi.data(),vz.data());
+    gatgZ.SetName("gatgZ");
+    gatgZ.SetTitle("; #phi (rad); z (mm)"); 
+    
     TGraph guv(vu.size(), vu.data(),vv.data());
     guv.SetName("huv");
     guv.SetTitle("; u; v"); 
@@ -1205,6 +1510,17 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
       lv2.SetY2((hrmsX.GetMaximum() <= 0 && hrmsY.GetMaximum() <= 0) ? 1 : std::max(hrmsX.GetMaximum(),hrmsY.GetMaximum()));
       lv2.Draw();
       
+      TLine lvz_true(-TMath::Pi(),zvtx_true,TMath::Pi(),zvtx_true);
+      TLine lvz_reco(-TMath::Pi(),zvtx_reco,TMath::Pi(),zvtx_reco);
+      
+      lvz_reco.SetLineColor(kBlue);
+      lvz_true.SetLineColor(kRed);
+      lvz_true.SetLineStyle(2);
+      
+      TGraph* gr;
+      TMarker* m;
+      TEllipse* el;
+      
       // save to pdf
       if(save2pdf)
       {
@@ -1220,16 +1536,58 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
         
         harctg.Draw();
         c.SaveAs("rms.pdf");
-        guv.Draw("ap*");
+        guv.Draw("ap*");        
         c.SaveAs("rms.pdf");
         hHT.Draw("colz");
+        c.SaveAs("rms.pdf");
+        gatgZ.Draw("ap*");
+        lvz_true.Draw();
+        lvz_reco.Draw();
+        c.SaveAs("rms.pdf");
+        
+        c.Clear();
+        c.DrawFrame(21500, -5000, 26500, 0,";Z (mm);Y (mm)");
+        
+        for(unsigned int tt = 0; tt < idc.size(); tt++)
+        {          
+          gr = new TGraph(clusters.at(idc[tt]).size());
+          for(unsigned int mm = 0; mm < clusters.at(idc[tt]).size(); mm++)
+          {
+            gr->SetPoint(mm,clusters.at(idc[tt]).at(mm).z,clusters.at(idc[tt]).at(mm).y);
+          }
+          
+          gr->SetMarkerColor(kBlue);
+          gr->Draw("same*p");
+            
+          el = new TEllipse(zc[tt], yc[tt], r[tt]);
+          el->SetFillStyle(0);
+          el->SetLineColor(kRed);
+          el->Draw();
+        }
+        c.SaveAs("rms.pdf");
+        
+        c.Clear();
+        c.DrawFrame(-TMath::Pi(), binning.front() ,TMath::Pi(), binning.back(),";#phi (rad); Z (mm)");
+        for(unsigned int jj = 0; jj < clusters.size(); jj++)
+        {
+          gr = new TGraph(clusters.at(jj).size());
+          for(unsigned int kk = 0; kk < clusters.at(jj).size(); kk++)
+          {
+            evalUV(u, v, zvtx_reco, yvtx_reco, clusters.at(jj).at(kk).z, clusters.at(jj).at(kk).y);
+            evalPhi(phi, u, v);
+            gr->SetPoint(kk, phi, clusters.at(jj).at(kk).z);
+          }
+          lvz_reco.Draw();
+          lvz_true.Draw();
+          gr->SetMarkerColor(jj+1);
+          gr->Draw("*psame");
+        }
         c.SaveAs("rms.pdf");
       }
       
       c.Clear();
       c.Divide(2,1);
       
-      TMarker* m;
       TLine* l;
       TBox* b;
       
@@ -1319,6 +1677,7 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
       fd->Add(&harctg);
       fd->Add(&guv);
       fd->Add(&hHT);
+      fd->Add(&gatgZ);
       
       fout.cd();
       fd->Write();
@@ -1362,46 +1721,46 @@ void VtxFinding(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
 void findvtx()
 {
   /*
-  VtxFinding(1, 0.0, false);
-  VtxFinding(1, 0.00000001, false);
-  VtxFinding(1, 0.0000001, false);
-  VtxFinding(1, 0.000001, false);
-  VtxFinding(1, 0.00001, false);
-  VtxFinding(1, 0.0001, false);
-  VtxFinding(1, 0.001, false);
-  VtxFinding(1, 0.01, false);
-  VtxFinding(1, 0.1, false);
-  VtxFinding(1, 0.2, false);
-  VtxFinding(1, 0.3, false);
-  VtxFinding(1, 0.4, false);
-  VtxFinding(1, 0.5, false);
-  VtxFinding(1, 0.6, false);
-  VtxFinding(1, 0.7, false);
-  VtxFinding(1, 0.8, false);
-  VtxFinding(1, 0.9, false);
-  VtxFinding(1, 1., false);
-  VtxFinding(1, 2., false);
-  VtxFinding(1, 0.5, true);
-  VtxFinding(2, 0.5, true);
-  VtxFinding(3, 0.5, true);
-  VtxFinding(4, 0.5, true);
-  VtxFinding(5, 0.5, true);
-  VtxFinding(6, 0.5, true);
-  VtxFinding(7, 0.5, true);
-  VtxFinding(8, 0.5, true);
-  VtxFinding(9, 0.5, true);
-  VtxFinding(10, 0.5, true);
-  VtxFinding(2, 0.5, false);
-  VtxFinding(3, 0.5, false);
-  VtxFinding(4, 0.5, false);
-  VtxFinding(5, 0.5, false);
-  VtxFinding(6, 0.5, false);
-  VtxFinding(7, 0.5, false);
-  VtxFinding(8, 0.5, false);
-  VtxFinding(9, 0.5, false);
-  VtxFinding(10, 0.5, false);*/
+  processEvents(1, 0.0, false);
+  processEvents(1, 0.00000001, false);
+  processEvents(1, 0.0000001, false);
+  processEvents(1, 0.000001, false);
+  processEvents(1, 0.00001, false);
+  processEvents(1, 0.0001, false);
+  processEvents(1, 0.001, false);
+  processEvents(1, 0.01, false);
+  processEvents(1, 0.1, false);
+  processEvents(1, 0.2, false);
+  processEvents(1, 0.3, false);
+  processEvents(1, 0.4, false);
+  processEvents(1, 0.5, false);
+  processEvents(1, 0.6, false);
+  processEvents(1, 0.7, false);
+  processEvents(1, 0.8, false);
+  processEvents(1, 0.9, false);
+  processEvents(1, 1., false);
+  processEvents(1, 2., false);
+  processEvents(1, 0.5, true);
+  processEvents(2, 0.5, true);
+  processEvents(3, 0.5, true);
+  processEvents(4, 0.5, true);
+  processEvents(5, 0.5, true);
+  processEvents(6, 0.5, true);
+  processEvents(7, 0.5, true);
+  processEvents(8, 0.5, true);
+  processEvents(9, 0.5, true);
+  processEvents(10, 0.5, true);
+  processEvents(2, 0.5, false);
+  processEvents(3, 0.5, false);
+  processEvents(4, 0.5, false);
+  processEvents(5, 0.5, false);
+  processEvents(6, 0.5, false);
+  processEvents(7, 0.5, false);
+  processEvents(8, 0.5, false);
+  processEvents(9, 0.5, false);
+  processEvents(10, 0.5, false);*/
   
-  VtxFinding(1, 0.5, false);
+  processEvents(1, 0.5, false);
   
   gStyle->SetPalette(53);
   
