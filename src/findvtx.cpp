@@ -9,6 +9,8 @@
 #include <vector>
 #include <map>
 
+#include "../include/track3D.h"
+
 #include "/wd/dune-it/ext_bkg/kloe-simu/src/display.cpp"
 
 bool isCluBigger(const std::vector<digit>& v1, const std::vector<digit>& v2)
@@ -289,7 +291,6 @@ void MeanAndRMS(std::vector<digit>* digits, TH1D& hmeanX, TH1D& hrmsX, TH1I& hnX
       
       hrmsX.SetBinContent(j+1,rms);
       hmeanX.SetBinContent(j+1,mean);
-      //hmultX.SetBinContent(j+1,n);
       
       mean = -1;
       rms = -1;
@@ -305,7 +306,6 @@ void MeanAndRMS(std::vector<digit>* digits, TH1D& hmeanX, TH1D& hrmsX, TH1I& hnX
       
       hrmsY.SetBinContent(j+1,rms);
       hmeanY.SetBinContent(j+1,mean);
-      //hmultY.SetBinContent(j+1,n);
     }
 }
 
@@ -435,12 +435,8 @@ void vtxFinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco, int& Vt
   }
 }
 
-void findTracksY(std::map<int, std::vector<digit> >& mdY, std::vector<std::vector<digit> >& clustersY, TH1D& hdummy, double xvtx_reco, double yvtx_reco, double zvtx_reco)
-{
-  
-  const double phi_tol = 0.1;
-  const double dlay_tol = 5;
-    
+void findTracksY(std::map<int, std::vector<digit> >& mdY, std::vector<std::vector<digit> >& clustersY, TH1D& hdummy, double xvtx_reco, double yvtx_reco, double zvtx_reco, double phi_tol = 0.1, double dlay_tol = 5)
+{    
   int idx = 0;
   int prev_mod;
   double prev_phi, exp_phi;
@@ -552,14 +548,12 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY, std::vector<std::vecto
   }
 }
 
-void findTracksX(std::map<int, std::vector<digit> >& mdX, std::vector<std::vector<digit> >& clustersX, TH1D& hdummy, double xvtx_reco, double yvtx_reco, double zvtx_reco)
+void findTracksX(std::map<int, std::vector<digit> >& mdX, std::vector<std::vector<digit> >& clustersX, TH1D& hdummy, double xvtx_reco, double yvtx_reco, double zvtx_reco, double x_tol = 100, double dlay_tol = 5)
 {
   int idx = 0;
   int prev_mod;
   
   double prev_x, dx;
-  const double x_tol = 100;
-  const double dlay_tol = 5;
 
   digit current_digit;
   
@@ -653,13 +647,11 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX, std::vector<std::vecto
   }
 }
 
-void mergeXYTracks(std::vector<std::vector<digit> >& clustersX, std::vector<std::vector<digit> >& clustersY, std::map<int,int>& tr3D)
-{
-  // according by number of digits and Z position of most upstream digits
-  const double dn_tol = 0.7;
-  const double dz_tol = 200;
-  
+
+void mergeXYTracks(std::vector<std::vector<digit> >& clustersX, std::vector<std::vector<digit> >& clustersY, std::vector<track3D>& tr3D, double dn_tol = 0.7, double dz_tol = 200)
+{  
   double dzend;
+  int index = 0;
   
   // loop on Y clusters
   for(int jj = 0; jj < clustersY.size(); jj++)
@@ -683,180 +675,121 @@ void mergeXYTracks(std::vector<std::vector<digit> >& clustersX, std::vector<std:
         if(abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) + abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z)< dzend)
         {
           dzend = abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) + abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z);
-          tr3D[jj] = kk;
+          track3D tr;
+          tr.tid = index++;
+          tr.clX = std::move(clustersX.at(kk));
+          tr.clY = std::move(clustersY.at(jj));
+          tr3D.push_back(std::move(tr));
         }
       }
     }
   }
 }
 
-void fitAllCirc(std::vector<std::vector<digit> >& clustersY,
-    std::vector<double>& zc,
-    std::vector<double>& yc,
-    std::vector<double>& r,
-    std::vector<int>& idc,
-    std::vector<int>& res,
-    std::vector<int>& h, 
-    std::map<int,int>& idp,
-    TH1D& hdummy)
+void fitCircle(std::vector<track3D>& tr3D, TH1D& hdummy)
 {
     
-  double errr, chi2_cr;
+  double errr;
   
   std::vector<double> z;
   std::vector<double> y;
     
   // loop on clusters
-  for(unsigned int nn = 0; nn < clustersY.size(); nn++)
+  for(unsigned int nn = 0; nn < tr3D.size(); nn++)
   {
-    // create vector entries
-    zc.push_back(0.);
-    yc.push_back(0.);
-    r.push_back(0.);
-    idp[nn] = idc.size();
-    idc.push_back(nn);
-    
-    if(idc[idp[nn]] != nn)
-      std::cout << "problem with indexes" << std::endl;
-    
     // reset z, y digit position vector
     z.clear();
     y.clear();
     
     // loop on the digits of clusters
-    for(unsigned int tt = 0; tt < clustersY.at(nn).size(); tt++)
+    for(unsigned int tt = 0; tt < tr3D.at(nn).clY.size(); tt++)
     {
       // fill z, y digit position vector
-      z.push_back(clustersY.at(nn).at(tt).z);
-      y.push_back(clustersY.at(nn).at(tt).y);
+      z.push_back(tr3D.at(nn).clY.at(tt).z);
+      y.push_back(tr3D.at(nn).clY.at(tt).y);
     }
     // fit and save results
-    res.push_back(fitCircle(clustersY.at(nn).size(), z, y, zc.back(), yc.back(), r.back(), errr, chi2_cr));
-    
-    //if(i == 1)std::cout << i << " " << nn << " " << clustersY.at(nn).size() << " " << idp[nn] << " " << idc[idp[nn]] << " " << r[idp[nn]] << std::endl; 
+    tr3D.at(nn).ret_cr = fitCircle(tr3D.at(nn).clY.size(), z, y, tr3D.at(nn).zc, tr3D.at(nn).yc, tr3D.at(nn).r, errr, tr3D.at(nn).chi2_cr);
   }
-}
-
-void evalHandYsign(std::vector<std::vector<digit> >& clustersY,
-  std::vector<double>& zc,
-  std::vector<double>& yc,
-  std::vector<int>& idc,
-  std::vector<int>& h,
-  std::vector<int>& ysig)
-{
-    
+  
+  // evaluate if the track is up or down its y center and the direction in the circle
   // evaluate particle direction in the circle
   double prodVect = 0.;
+  double yres = 0.;
   double ry, rz;
   double vely, velz;
-  double yres;
   
-  for(unsigned int nn = 0; nn < idc.size(); nn++)
+  for(unsigned int nn = 0; nn < tr3D.size(); nn++)
   {
     prodVect = 0.;
     yres = 0.;
     
-    // sort according to Z (upstream first)
-    //std::sort(clustersY.at(idc[nn]).begin(), clustersY.at(idc[nn]).end(), isDigUpstream);
-    
-    for(unsigned int tt = 0; tt < clustersY.at(idc[nn]).size()-1; tt++)
+    for(unsigned int tt = 0; tt < tr3D.at(nn).clY.size()-1; tt++)
     {
-      yres += (clustersY.at(idc[nn]).at(tt).y - yc[nn]);
+      yres += (tr3D.at(nn).clY.at(tt).y - tr3D.at(nn).yc);
     
-      if(clustersY.at(idc[nn]).at(tt+1).z < clustersY.at(idc[nn]).at(tt).z)
-        std::cout << "problem: " << clustersY.at(idc[nn]).at(tt).z << " " << clustersY.at(idc[nn]).at(tt+1).z << std::endl;
+      if(tr3D.at(nn).clY.at(tt+1).z < tr3D.at(nn).clY.at(tt).z)
+        std::cout << "problem: " << tr3D.at(nn).clY.at(tt).z << " " << tr3D.at(nn).clY.at(tt+1).z << std::endl;
     
-      ry = clustersY.at(idc[nn]).at(tt).y - yc[nn];
-      rz = clustersY.at(idc[nn]).at(tt).z - zc[nn];
-      vely = clustersY.at(idc[nn]).at(tt+1).y - clustersY.at(idc[nn]).at(tt).y;
-      velz = clustersY.at(idc[nn]).at(tt+1).z - clustersY.at(idc[nn]).at(tt).z;
+      ry = tr3D.at(nn).clY.at(tt).y - tr3D.at(nn).yc;
+      rz = tr3D.at(nn).clY.at(tt).z - tr3D.at(nn).zc;
+      vely = tr3D.at(nn).clY.at(tt+1).y - tr3D.at(nn).clY.at(tt).y;
+      velz = tr3D.at(nn).clY.at(tt+1).z - tr3D.at(nn).clY.at(tt).z;
       
       prodVect += ry * velz - rz * vely;
     }
     if(prodVect != 0.)
       prodVect /= abs(prodVect);
-    h.push_back(int(prodVect));
+    tr3D.at(nn).h = int(prodVect);
     
     if(yres > 0)
-      ysig.push_back(+1);
+      tr3D.at(nn).ysig = +1;
     else
-      ysig.push_back(-1);
+      tr3D.at(nn).ysig = -1;
   }
 }
 
-void fitAllLine(std::map<int,int>& tr3D, 
-    std::vector<std::vector<digit> >& clustersX,
-    std::vector<double>& va,
-    std::vector<double>& vb,
-    std::vector<double>& vresl,
-    std::vector<int>& idc,
-    std::vector<int>& idcX,
-    std::map<int,int>& idpX,
-    std::vector<double>& yc,
-    std::vector<double>& zc,
-    std::vector<double>& r,
-    std::vector<int>& h,
-    std::vector<int>& ysig,
+void fitLine(std::vector<track3D>& tr3D,
     double xvtx_reco, double yvtx_reco, double zvtx_reco)
 {
   std::vector<double> vrho;
   std::vector<double> vx;
-  double rho, yexp, x, phi0, sin, cos;
-  int trXid, trYid;
-  
+  double rho, yexp, x, phi0, sin, cos;  
   
   double cov[2][2];
-  double a,b,chi2_ln;
   
-  //vrhox.clear();
-  //vfrhox.clear();
-  
-  for(std::map<int,int>::iterator it = tr3D.begin(); it != tr3D.end(); ++it)
+  for(unsigned int i = 0; i < tr3D.size(); i++)
   {
     vrho.clear();
     vx.clear();
     
-    trYid = it->first;
-    trXid = it->second;
-  
-    int jj = idc.at(it->first);
-    
-    
     // evaluate phi0    
-    phi0 = TMath::ATan2(yvtx_reco - yc[jj],zvtx_reco - zc[jj]);
+    phi0 = TMath::ATan2(yvtx_reco - tr3D.at(i).yc,zvtx_reco - tr3D.at(i).zc);
     
     // evalute sin and cos
     // http://www2.fisica.unimi.it/andreazz/AA_TrackingSystems.pdf
-    sin = -1 * h[jj] * TMath::Cos(phi0);
-    cos = h[jj] * TMath::Sin(phi0);
+    sin = -1 * tr3D.at(i).h * TMath::Cos(phi0);
+    cos = tr3D.at(i).h * TMath::Sin(phi0);
     
     // evaluate rho and x
-    for(unsigned int kk = 0; kk < clustersX.at(trXid).size(); kk++)
+    for(unsigned int kk = 0; kk < tr3D.at(i).clX.size(); kk++)
     {
       double radq;
-      if(abs(clustersX.at(trXid).at(kk).z - zc[jj]) > r[jj])
+      if(abs(tr3D.at(i).clX.at(kk).z - tr3D.at(i).zc) > tr3D.at(i).r)
         radq = 0;
       else
-        radq = TMath::Sqrt(r[jj]*r[jj] - (clustersX.at(trXid).at(kk).z - zc[jj])*(clustersX.at(trXid).at(kk).z - zc[jj]));
+        radq = TMath::Sqrt(tr3D.at(i).r*tr3D.at(i).r - (tr3D.at(i).clX.at(kk).z - tr3D.at(i).zc)*(tr3D.at(i).clX.at(kk).z - tr3D.at(i).zc));
                                                                                    
-      yexp = yc[jj] + ysig[jj] * radq;                                             
+      yexp = tr3D.at(i).yc + tr3D.at(i).ysig * radq;                                             
                                                                                    
-      rho = clustersX.at(trXid).at(kk).z * cos + yexp * sin;                       
+      rho = tr3D.at(i).clX.at(kk).z * cos + yexp * sin;                       
                                                                                    
       vrho.push_back(rho);                                                         
-      vx.push_back(clustersX.at(trXid).at(kk).x);  
+      vx.push_back(tr3D.at(i).clX.at(kk).x);  
     }
     
     // linear fit
-    vresl.push_back(fitLinear(vrho.size(), vrho, vx, a, b, cov, chi2_ln));
-    va.push_back(a);
-    vb.push_back(b);
-    idpX[trXid] = idcX.size();
-    idcX.push_back(trXid);
-    
-    if(idcX[idpX[trXid]] != trXid)
-      std::cout << "problem with X indexes" << std::endl;
-    
+    tr3D.at(i).ret_ln = fitLinear(vrho.size(), vrho, vx, tr3D.at(i).a, tr3D.at(i).b, cov, tr3D.at(i).chi2_ln);
   }
 }
 
@@ -864,7 +797,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
 {
   gROOT->SetBatch();
 
-  bool display = true;
+  bool display = false;
   bool save2root = true && display;
   bool save2pdf = true && display;
 
@@ -964,6 +897,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
     std::cout << i << " " << binning.data()[i] << " " << binning.data()[i+1] << " " << binning.data()[i+1] - binning.data()[i] << std::endl;
   }
   */
+  
+  gSystem->Load("lib/libTrack3D.so");
     
   std::vector<digit>* digits = new std::vector<digit>;
   TG4Event* ev = new TG4Event;
@@ -988,6 +923,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
   int VtxMulti;
   int VtxMono;
   int VtxType;
+  
+  std::vector<track3D> tracks;
     
   tv.Branch("xvtx_true",&xvtx_true,"xvtx_true/D");
   tv.Branch("yvtx_true",&yvtx_true,"yvtx_true/D");
@@ -1000,6 +937,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
   tv.Branch("VtxMulti",&VtxMulti,"VtxMulti/I");
   tv.Branch("VtxMono",&VtxMono,"VtxMono/I");
   tv.Branch("isCC",&isCC,"isCC/I");
+  
+  tv.Branch("tracks","std::vector<track3D>",&tracks);
   
   TH1D hrmsX("hrmsX","rmsX;Z (mm); rmsX (mm)",binning.size()-1,binning.data());
   TH1D hrmsY("hrmsY","rmsY;Z (mm); rmsY (mm)",binning.size()-1,binning.data());
@@ -1029,7 +968,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
   init("../files/reco/numu_internal_10k.0.reco.root");
   
   int first = 0;
-  int last = 99;/*tDigit->GetEntries()-1;*/
+  int last = 9999;/*tDigit->GetEntries()-1;*/
   int nev = last - first + 1;
     
   vector<double> zvX;
@@ -1044,6 +983,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
   
   for(int i = first; i < last+1; i++)
   {
+    tracks.clear();
     
     tDigit->GetEntry(i);
     tMC->GetEntry(i);
@@ -1103,20 +1043,25 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
     else if(VtxType == 1)
       VtxMono = 1;
     
-    // track finding with clustering in arctg(v/u) VS z
     tDigit->GetEntry(i);
+    
+    // track finding with clustering in arctg(v/u) VS z
     std::map<int, std::vector<digit> > mdY;
     fillLayers(mdY, digits, hdummy, 1);
     clustersY.clear();
-    
-    findTracksY(mdY, clustersY, hdummy, xvtx_reco, yvtx_reco, zvtx_reco);
     
     // find track on XZ view
     std::map<int, std::vector<digit> > mdX;
     fillLayers(mdX, digits, hdummy, 0);
     clustersX.clear();
     
-    findTracksX(mdX, clustersX, hdummy, xvtx_reco, yvtx_reco, zvtx_reco);
+    // tolerance in phi: 0.1 rad
+    // tolerance in module: 5
+    findTracksY(mdY, clustersY, hdummy, xvtx_reco, yvtx_reco, zvtx_reco, 0.1, 5);
+    
+    // tolerance in x: 10 cm
+    // tolerance in module: 5
+    findTracksX(mdX, clustersX, hdummy, xvtx_reco, yvtx_reco, zvtx_reco, 100, 5);
     
     // remove clusters with less than 3 digits
     for(unsigned int nn = 0; nn < clustersY.size(); nn++)
@@ -1128,9 +1073,6 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       }
     }
     
-    // order tracks by length
-    std::sort(clustersY.begin(), clustersY.end(), isCluBigger);
-    
     // remove clusters with less than 3 digits
     for(unsigned int nn = 0; nn < clustersX.size(); nn++)
     {
@@ -1140,6 +1082,9 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
         nn--;
       }
     }
+    
+    // order tracks by length
+    std::sort(clustersY.begin(), clustersY.end(), isCluBigger);
     
     // order tracks by length
     std::sort(clustersX.begin(), clustersX.end(), isCluBigger);
@@ -1155,46 +1100,16 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       std::sort(clustersY.at(jj).begin(), clustersY.at(jj).end(), isDigUpstream);
     }
     
-    // merge XZ and YZ clusters
-  
-    // merging map
-    //   key   -> Y cluster id
-    //   value -> X cluster id
-    std::map<int,int> tr3D;
-    
-    mergeXYTracks(clustersX, clustersY, tr3D);
-    
-    //fit parameters Y
-    std::vector<double> zc;
-    std::vector<double> yc;
-    std::vector<double> r;
-    std::vector<int> idc;
-    std::vector<int> res;
-    std::vector<int> h;
-    
-    // idc: par index -> cluster index
-    // idp: cluster index -> par index
-    std::map<int,int> idp;
-    
-    // fit parameters X
-    std::vector<double> va;
-    std::vector<double> vb;
-    std::vector<double> vresl;
-    std::vector<int> idcX;
-    std::map<int,int> idpX;
-    
-    // +1 if track is up the circle center
-    // -1 if track is up the circle center
-    std::vector<int> ysig;
+    // merge XZ and YZ clusters    
+    // tolerance in dn/n: 0.7
+    // tolerance dz: 20 cm
+    mergeXYTracks(clustersX, clustersY, tracks, 0.7, 200);
     
     // circular fit
-    fitAllCirc(clustersY, zc, yc, r, idc, res, h, idp, hdummy);
-    
-    // evaluate if the track is up or down its y center and the direction in the circle
-    evalHandYsign(clustersY, zc, yc, idc, h, ysig);
+    fitCircle(tracks, hdummy);
     
     // linear fit
-    fitAllLine(tr3D, clustersX, va, vb, vresl, idc, idcX, idpX, yc, zc, r, h, ysig, xvtx_reco, yvtx_reco, zvtx_reco);
+    fitLine(tracks, xvtx_reco, yvtx_reco, zvtx_reco);
     
     const int tol = 3;
     
@@ -1254,79 +1169,71 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
           TGraph* grY;
           TGraph* grX;
           
-          int index;
-          int iparX;
-          int iparY;
-          
-          for(std::map<int,int>::iterator it = tr3D.begin(); it != tr3D.end(); it++)
+          for(unsigned int j = 0; j < tracks.size(); j++)
           {
             dXx.clear();
             dXz.clear();
             dYy.clear();
             dYz.clear();
             
-            index = distance(tr3D.begin(),it);
-            iparY = idp[it->first];
-            iparX = idpX[it->second];
-            
             c.cd(1);
             
-            for(unsigned int kk = 0; kk < clustersY.at(it->first).size(); kk++)
+            for(unsigned int kk = 0; kk < tracks.at(j).clY.size(); kk++)
             {
-              dYy.push_back(clustersY.at(it->first).at(kk).y);
-              dYz.push_back(clustersY.at(it->first).at(kk).z);
+              dYy.push_back(tracks.at(j).clY.at(kk).y);
+              dYz.push_back(tracks.at(j).clY.at(kk).z);
             }
             
             grY = new TGraph(dYz.size(), dYz.data(), dYy.data());
-            grY->SetMarkerColor(index+1);
+            grY->SetMarkerColor(j+1);
             grY->SetMarkerStyle(7);
             grY->Draw("samep");
             
-            ffy = new TF1("","[0]+[1]*TMath::Sqrt([2]*[2]-(x-[3])*(x-[3]))",zc[iparY]-r[iparY]*0.99,zc[iparY]+r[iparY]*0.99);
-            ffy->SetParameter(0,yc[iparY]);
-            ffy->SetParameter(1,ysig[iparY]);
-            ffy->SetParameter(2,r[iparY]);
-            ffy->SetParameter(3,zc[iparY]);
-            ffy->SetLineColor(index+1);
+            ffy = new TF1("","[0]+[1]*TMath::Sqrt([2]*[2]-(x-[3])*(x-[3]))",tracks.at(j).zc-tracks.at(j).r*0.99,tracks.at(j).zc+tracks.at(j).r*0.99);
+            ffy->SetParameter(0,tracks.at(j).yc);
+            ffy->SetParameter(1,tracks.at(j).ysig);
+            ffy->SetParameter(2,tracks.at(j).r);
+            ffy->SetParameter(3,tracks.at(j).zc);
+            ffy->SetLineColor(j+1);
             ffy->Draw("same");
             
             c.cd(2);
             
-            for(unsigned int kk = 0; kk < clustersX.at(it->second).size(); kk++)
+            for(unsigned int kk = 0; kk < tracks.at(j).clX.size(); kk++)
             {
-              dXx.push_back(clustersX.at(it->second).at(kk).x);
-              dXz.push_back(clustersX.at(it->second).at(kk).z);
+              dXx.push_back(tracks.at(j).clX.at(kk).x);
+              dXz.push_back(tracks.at(j).clX.at(kk).z);
             }
             
             grX = new TGraph(dXz.size(), dXz.data(), dXx.data());
-            grX->SetMarkerColor(index+1);
+            grX->SetMarkerColor(j+1);
             grX->SetMarkerStyle(7);
             grX->Draw("samep");
             
-            double x0 = clustersX.at(it->second).front().x; 
-            double z0 = clustersX.at(it->second).front().z; 
+            double x0 = tracks.at(j).clX.front().x; 
+            double z0 = tracks.at(j).clX.front().z; 
                 
             double radq;
-            if(abs(z0 - zc[iparY]) > r[iparY])
+            if(abs(z0 - tracks.at(j).zc) > tracks.at(j).r)
               radq = 0;
             else
-              radq = TMath::Sqrt(r[iparY]*r[iparY] - (z0 - zc[iparY])*(z0 - zc[iparY]));
+              radq = TMath::Sqrt(tracks.at(j).r*tracks.at(j).r - (z0 - tracks.at(j).zc)*(z0 - tracks.at(j).zc));
                                                                                      
-            yexp = yc[iparY] + ysig[iparY] * radq; 
+            yexp = tracks.at(j).yc + tracks.at(j).ysig * radq; 
             
-            phi0 = TMath::ATan2(yexp - yc[iparY],z0 - zc[iparY]);
+            phi0 = TMath::ATan2(yexp - tracks.at(j).yc,z0 - tracks.at(j).zc);
             
-            ffx = new TF1("","[0] - [1]/[2]*(TMath::ATan2(([4]+[7]*TMath::Sqrt([1]*[1]-(x-[5])*(x-[5]))) - [4],x - [5]) - [6])*[3]",zc[iparY]-r[iparY]*0.99,zc[iparY]+r[iparY]*0.99);
+            ffx = new TF1("","[0] - [1]/[2]*(TMath::ATan2(([4]+[7]*TMath::Sqrt([1]*[1]-(x-[5])*(x-[5]))) - [4],x - [5]) - [6])*[3]",tracks.at(j).zc-tracks.at(j).r*0.99,tracks.at(j).zc+tracks.at(j).r*0.99);
             
             ffx->SetParameter(0,x0);
-            ffx->SetParameter(1,r[iparY]);
-            ffx->SetParameter(2,h[iparY]);
-            ffx->SetParameter(3,vb[iparX]);
-            ffx->SetParameter(4,yc[iparY]);
-            ffx->SetParameter(5,zc[iparY]);
+            ffx->SetParameter(1,tracks.at(j).r);
+            ffx->SetParameter(2,tracks.at(j).h);
+            ffx->SetParameter(3,tracks.at(j).b);
+            ffx->SetParameter(4,tracks.at(j).yc);
+            ffx->SetParameter(5,tracks.at(j).zc);
             ffx->SetParameter(6,phi0);
-            ffx->SetParameter(7,ysig[iparY]);
-            ffx->SetLineColor(index+1);
+            ffx->SetParameter(7,tracks.at(j).ysig);
+            ffx->SetLineColor(j+1);
             ffx->Draw("same");
           }
           c.SaveAs("rms.pdf");      
@@ -1722,7 +1629,7 @@ void findvtx()
   c.cd();
   p.Draw();
   c.SaveAs("vtx.pdf)");
-  
+  /*
   // dr 2D (dr < 50 cm)
   int nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500",vtxReco);
   h = (TH1D*) gROOT->FindObject("h");
@@ -1754,4 +1661,5 @@ void findvtx()
   h->Draw();
   std::cout << "dr_3D < 50 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
   c.SetLogy(false);
+  */
 }
