@@ -1085,7 +1085,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
   vector<TGraph> vrhox; 
   vector<TF1> vfrhox; 
   
-  TCanvas c;
+  TCanvas c("c","revo event",1200,600);
   c.SaveAs("rms.pdf(");
 
   std::cout << "Events: " << nev << " [";
@@ -1391,7 +1391,10 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
         clustersY.erase(clustersY.begin()+nn);
         nn--;
       }
-    }    
+    }
+    
+    // order tracks by length
+    std::sort(clustersY.begin(), clustersY.end(), isCluBigger);
     
     //fit
     double errr, chi2_cr;
@@ -1445,6 +1448,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       }
       // fit and save results
       res.push_back(fitCircle(clustersY.at(nn).size(), z, y, zc.back(), yc.back(), r.back(), errr, chi2_cr));
+      
+      //if(i == 1)std::cout << i << " " << nn << " " << clustersY.at(nn).size() << " " << idp[nn] << " " << idc[idp[nn]] << " " << r[idp[nn]] << std::endl; 
     }
     /*
     for(unsigned int tt = 0; tt < idc.size(); tt++)
@@ -1481,10 +1486,11 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
         vely = clustersY.at(idc[nn]).at(tt+1).y - clustersY.at(idc[nn]).at(tt).y;
         velz = clustersY.at(idc[nn]).at(tt+1).z - clustersY.at(idc[nn]).at(tt).z;
          
+        if(i==9)std::cout << i << " " << nn << " " << idc[nn] << " " << ry * velz - rz * vely << " " << prodVect << std::endl;
         prodVect += ry * velz - rz * vely;
       }
       if(prodVect != 0.)
-        prodVect /= prodVect;
+        prodVect /= abs(prodVect);
       h.push_back(int(prodVect));
       
       if(yres > 0)
@@ -1601,7 +1607,6 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
     }
     
     // order tracks by length
-    std::sort(clustersY.begin(), clustersY.end(), isCluBigger);
     std::sort(clustersX.begin(), clustersX.end(), isCluBigger);
     
     // order digits: upstream first
@@ -1640,19 +1645,19 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
         double dn = int(clustersY.at(jj).size()) - int(clustersX.at(kk).size());
         double mn = 0.5 * (clustersY.at(jj).size() + clustersX.at(kk).size());
         
-        //std::cout << i << " " << jj << " " << clustersY.at(jj).size() << " " << clustersY.at(jj).back().z << " " << kk << " " << clustersX.at(kk).size() << " " << clustersX.at(kk).back().z << " " << dn << " " << mn << " " << abs(dn)/mn << " " << abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) << std::endl;
+        //if(i == 1)std::cout << i << " " << jj << " " << r[idp[jj]] << " " << clustersY.at(jj).size() << " " << clustersY.at(jj).back().z << " " << kk << " " << clustersX.at(kk).size() << " " << clustersX.at(kk).back().z << " " << dn << " " << mn << " " << abs(dn)/mn << " " << abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) << std::endl;
         
         // search cluster X with abs(dn)/mn less than tolerance and 
         // residual in the most downstream digit z less than tolerance
-        if(abs(dn)/mn < dn_tol && abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) < dz_tol)
+        if(abs(dn)/mn < dn_tol && abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) < dz_tol && abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z) < dz_tol)
         {
           // find cluster X best matching Y cluster in term of 
-          // residual in the most downstream digit z
-          if(abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) < dzend)
+          // residual in the most downstream and upstream digit z
+          if(abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) + abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z)< dzend)
           {
-            dzend = abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z);
+            dzend = abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) + abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z);
             tr3D[jj] = kk;
-            //std::cout << " ok " << std::endl;
+            //if(i == 1)std::cout << " ok " << std::endl;
           }
         }
       }
@@ -1842,6 +1847,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       vrms3D += norm_dist * norm_dist;
     }
     
+    /*
+    
     double zz, yy, d;    
   
     TH2D hHT("hHT","; zc (mm); yc (mm)",100,-2000,2000,100,-2000,2000);
@@ -1898,6 +1905,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
     TGraph guv(vu.size(), vu.data(),vv.data());
     guv.SetName("huv");
     guv.SetTitle("; u; v"); 
+    */
     
     if(display)
     {
@@ -1936,7 +1944,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       show(i,true,false,true);
       
       TCanvas* cev = (TCanvas*) gROOT->FindObject("cev");
-      
+      /*
       // histograms with regions
       TLine lv1;
       lv1.SetLineStyle(2);
@@ -1986,10 +1994,13 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       lvz_reco.SetLineColor(kBlue);
       lvz_true.SetLineColor(kRed);
       lvz_true.SetLineStyle(2);
+      */
       
       TGraph* gr;
       TMarker* m;
       TEllipse* el;
+      TF1* ffx;
+      TF1* ffy;
       
       // save to pdf
       if(save2pdf)
@@ -1999,11 +2010,11 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
           cev->SaveAs("rms.pdf");
         }
         
-        c.SaveAs("rms.pdf");
+        //c.SaveAs("rms.pdf");
       
+        /*
         c.Clear();
         c.cd();
-        
         harctg.Draw();
         c.SaveAs("rms.pdf");
         guv.Draw("ap*");        
@@ -2014,7 +2025,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
         lvz_true.Draw();
         lvz_reco.Draw();
         c.SaveAs("rms.pdf");
-        
+        */
+        /*
         c.Clear();
         c.DrawFrame(21500, -5000, 26500, 0,";Z (mm);Y (mm)");
         
@@ -2035,7 +2047,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
           el->Draw();
         }
         c.SaveAs("rms.pdf");
-        
+        */
+        /*
         c.Clear();
         c.DrawFrame(-TMath::Pi(), binning.front() ,TMath::Pi(), binning.back(),";#phi (rad); Z (mm)");
         for(unsigned int jj = 0; jj < clustersY.size(); jj++)
@@ -2053,7 +2066,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
           gr->Draw("*psame");
         }
         c.SaveAs("rms.pdf");
-                
+        */
+        /*   
         for(std::map<int,int>::iterator iter = tr3D.begin(); iter != tr3D.end(); iter++)
         {
           TGraph grY(clustersY.at(iter->first).size());
@@ -2078,7 +2092,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
           grX.Draw("ap*");
           c.SaveAs("rms.pdf");
         }
-        
+        */
+        /*
         c.Clear();
         c.DrawFrame(21500, -2500, 26500, 2500,";Z (mm);X (mm)");
         
@@ -2093,41 +2108,43 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
             gr->SetPoint(kk, clustersX.at(jj).at(kk).z, clustersX.at(jj).at(kk).x);
           }
           gr->SetMarkerColor(jj+1);
-          gr->Draw("*psame");
+          gr->SetMarkerStyle(7);
+          gr->Draw("psame");
           
-          /*
           if(idpX.find(jj) != idpX.end())
           {
           
             int parXidx = idpX.at(jj);
             int parYidx = idp[tr3D.find(parXidx)->first];
-  
-            if(ysign.at(parYidx).find(-1*hdummy.FindBin(z0)) != ysign.at(parYidx).end())
-            {  
-              yexp = yc[parYidx] + ysign.at(parYidx).at(-1*hdummy.FindBin(z0)) * 
-                TMath::Sqrt(r[parYidx]*r[parYidx] - (z0 - zc[parYidx])*(z0 - zc[parYidx]));  
-              
-              phi0 = TMath::ATan2(yexp - yc[parYidx],z0 - zc[parYidx]);  
-            }
+            
+            double radq;
+            if(abs(z0 - zc[parYidx]) > r[parYidx])
+              radq = 0;
             else
-            {  
-              phi0 = TMath::ATan2(yvtx_reco - yc[parYidx],zvtx_reco - zc[parYidx]);
-  
-            }
-            TF1 ffx("ffx","[0] + [1]/[2]*(TMath::ATan2(([4]+[7]*TMath::Sqrt([1]*[1]-(x-[5])*(x-[5]))) - [4],x - [5]) - [6])*[3]",21500,26500);
-            ffx.SetParameter(0,x0);
-            ffx.SetParameter(1,r[parYidx]);
-            ffx.SetParameter(2,h[parYidx]);
-            ffx.SetParameter(3,vb[parXidx]);
-            ffx.SetParameter(4,yc[parYidx]);
-            ffx.SetParameter(5,zc[parYidx]);
-            ffx.SetParameter(6,phi0);
-            ffx.SetParameter(7,ysig[parYidx]);
-            ffx.Draw("same");
-          }*/
+              radq = TMath::Sqrt(r[parYidx]*r[parYidx] - (z0 - zc[parYidx])*(z0 - zc[parYidx]));
+                                                                                     
+            yexp = yc[parYidx] + ysig[parYidx] * radq; 
+            
+            phi0 = TMath::ATan2(yexp - yc[parYidx],z0 - zc[parYidx]);
+            
+            ffx = new TF1("","[0] - [1]/[2]*(TMath::ATan2(([4]+[7]*TMath::Sqrt([1]*[1]-(x-[5])*(x-[5]))) - [4],x - [5]) - [6])*[3]",zvtx_reco,zvtx_reco+500.);
+            
+            //std::cout << i << " " << jj << " " << x0 << " " << r[parYidx] << " " << h[parYidx] << " " << vb[parXidx] << " " << yc[parYidx] << " " << zc[parYidx] << " " << phi0 << " " << ysig[parYidx] << std::endl;
+            ffx->SetParameter(0,x0);
+            ffx->SetParameter(1,r[parYidx]);
+            ffx->SetParameter(2,h[parYidx]);
+            ffx->SetParameter(3,vb[parXidx]);
+            ffx->SetParameter(4,yc[parYidx]);
+            ffx->SetParameter(5,zc[parYidx]);
+            ffx->SetParameter(6,phi0);
+            ffx->SetParameter(7,ysig[parYidx]);
+            ffx->SetLineColor(kBlue);
+            ffx->Draw("same");
+          }
         }
         c.SaveAs("rms.pdf");   
-        
+        */
+        /*
         c.Clear();
         for(unsigned int kk = 0; kk < vrhox.size(); kk++)
         {
@@ -2135,6 +2152,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
           vfrhox[kk].Draw("same");
           c.SaveAs("rms.pdf");
         }
+        */
         
         /*
         c.Clear();
@@ -2148,10 +2166,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
           c.SaveAs("rms.pdf");
         }
         */
-        
-        
       }
-      
+      /*
       c.Clear();
       c.Divide(2,1);
       
@@ -2225,6 +2241,107 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       }
       
       c.SaveAs("rms.pdf");
+      */
+      
+      
+      c.Clear();
+      c.Divide(2,1);
+      
+      c.cd(1)->DrawFrame(21500,-5000,26500,0,TString::Format("Event: %d (ZY)",i).Data());
+      c.cd(2)->DrawFrame(21500,-2500,26500,2500,TString::Format("Event: %d (ZX)",i).Data());
+        
+      std::vector<double> dXx;
+      std::vector<double> dXz;
+      std::vector<double> dYy;
+      std::vector<double> dYz;
+      
+      TGraph* grY;
+      TGraph* grX;
+      
+      int index;
+      int iparX;
+      int iparY;
+      
+      for(std::map<int,int>::iterator it = tr3D.begin(); it != tr3D.end(); it++)
+      {
+        dXx.clear();
+        dXz.clear();
+        dYy.clear();
+        dYz.clear();
+        
+        index = distance(tr3D.begin(),it);
+        iparY = idp[it->first];
+        iparX = idpX[it->second];
+        
+        c.cd(1);
+        
+        for(unsigned int kk = 0; kk < clustersY.at(it->first).size(); kk++)
+        {
+          dYy.push_back(clustersY.at(it->first).at(kk).y);
+          dYz.push_back(clustersY.at(it->first).at(kk).z);
+        }
+        
+        grY = new TGraph(dYz.size(), dYz.data(), dYy.data());
+        grY->SetMarkerColor(index+1);
+        grY->SetMarkerStyle(7);
+        grY->Draw("samep");
+        
+        ffy = new TF1("","[0]+[1]*TMath::Sqrt([2]*[2]-(x-[3])*(x-[3]))",zc[iparY]-r[iparY]*0.99,zc[iparY]+r[iparY]*0.99);
+        ffy->SetParameter(0,yc[iparY]);
+        ffy->SetParameter(1,ysig[iparY]);
+        ffy->SetParameter(2,r[iparY]);
+        ffy->SetParameter(3,zc[iparY]);
+        ffy->SetLineColor(index+1);
+        ffy->Draw("same");
+        
+        /*  
+        el = new TEllipse(zc[iparY], yc[iparY], r[iparY]);
+        el->SetFillStyle(0);
+        el->SetLineColor(index+1);
+        el->Draw();
+        */
+        
+        c.cd(2);
+        
+        for(unsigned int kk = 0; kk < clustersX.at(it->second).size(); kk++)
+        {
+          dXx.push_back(clustersX.at(it->second).at(kk).x);
+          dXz.push_back(clustersX.at(it->second).at(kk).z);
+        }
+        
+        grX = new TGraph(dXz.size(), dXz.data(), dXx.data());
+        grX->SetMarkerColor(index+1);
+        grX->SetMarkerStyle(7);
+        grX->Draw("samep");
+        
+        double x0 = clustersX.at(it->second).front().x; 
+        double z0 = clustersX.at(it->second).front().z; 
+            
+        double radq;
+        if(abs(z0 - zc[iparY]) > r[iparY])
+          radq = 0;
+        else
+          radq = TMath::Sqrt(r[iparY]*r[iparY] - (z0 - zc[iparY])*(z0 - zc[iparY]));
+                                                                                 
+        yexp = yc[iparY] + ysig[iparY] * radq; 
+        
+        phi0 = TMath::ATan2(yexp - yc[iparY],z0 - zc[iparY]);
+        
+        ffx = new TF1("","[0] - [1]/[2]*(TMath::ATan2(([4]+[7]*TMath::Sqrt([1]*[1]-(x-[5])*(x-[5]))) - [4],x - [5]) - [6])*[3]",zc[iparY]-r[iparY]*0.99,zc[iparY]+r[iparY]*0.99);
+        
+        if(i==9)std::cout << i << " " << index << " " << it->first << " " << it->second << " " << x0 << " " << r[iparY] << " " << h[iparY] << " " << vb[iparX] << " " << yc[iparY] << " " << zc[iparY] << " " << phi0 << " " << ysig[iparY] << std::endl;  
+        ffx->SetParameter(0,x0);
+        ffx->SetParameter(1,r[iparY]);
+        ffx->SetParameter(2,h[iparY]);
+        ffx->SetParameter(3,vb[iparX]);
+        ffx->SetParameter(4,yc[iparY]);
+        ffx->SetParameter(5,zc[iparY]);
+        ffx->SetParameter(6,phi0);
+        ffx->SetParameter(7,ysig[iparY]);
+        ffx->SetLineColor(index+1);
+        ffx->Draw("same");
+      }
+      c.SaveAs("rms.pdf");      
     }
     
     if(save2root)
@@ -2240,11 +2357,12 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       fd->Add(&xv);
       fd->Add(&yv);
       fd->Add(&zv);
-      
+      /*
       fd->Add(&harctg);
       fd->Add(&guv);
       fd->Add(&hHT);
       fd->Add(&gatgZ);
+      */
       
       fout.cd();
       fd->Write();
