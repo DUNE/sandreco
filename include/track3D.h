@@ -6,6 +6,9 @@
 struct track3D
 {
   int tid;
+  double px;
+  double py;
+  double pz;
   double yc;
   double zc;
   double r;

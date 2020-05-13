@@ -210,7 +210,7 @@ void evalPhi(double& phi, double u, double v)
 
 void findNearDigPhi(int& idx, double exp_phi, std::vector<digit>& vd, double zv, double yv)
 {
-  double dphi = 6.2831853;
+  double dphi = 1E3;
     
   double phi, u, v;
   
@@ -648,7 +648,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX, std::vector<std::vecto
 }
 
 
-void mergeXYTracks(std::vector<std::vector<digit> >& clustersX, std::vector<std::vector<digit> >& clustersY, std::vector<track3D>& tr3D, double dn_tol = 0.7, double dz_tol = 200)
+void mergeXYTracks(std::vector<std::vector<digit> >& clustersX, std::vector<std::vector<digit> >& clustersY, std::vector<track3D>& tr3D, double dn_tol, double dz_tol, std::map<int,int>& trMCIDY,std::map<int,int>& trMCIDX, int& ntr3DOK ,int& ntr3DNO, TG4Event* ev)
 {  
   double dzend;
   int index = 0;
@@ -679,7 +679,30 @@ void mergeXYTracks(std::vector<std::vector<digit> >& clustersX, std::vector<std:
           tr.tid = index++;
           tr.clX = std::move(clustersX.at(kk));
           tr.clY = std::move(clustersY.at(jj));
+          clustersY.erase(clustersY.begin()+jj--);
+          clustersX.erase(clustersX.begin()+kk--);
+          
+          if(trMCIDY[jj] == trMCIDX[kk])
+          {
+            ntr3DOK++;
+            
+            TG4Trajectory pMC = ev->Trajectories.at(trMCIDY[jj]);
+            if(pMC.GetTrackId() != trMCIDY[jj])
+              std::cout << "Error: track MC does not macth" << std::endl;
+            tr.px = pMC.GetInitialMomentum().X();
+            tr.py = pMC.GetInitialMomentum().Y();
+            tr.pz = pMC.GetInitialMomentum().Z();
+          }
+          else
+          {
+            ntr3DNO++;
+            tr.px = -999;
+            tr.py = -999;
+            tr.pz = -999;
+          }
+          
           tr3D.push_back(std::move(tr));
+          break;
         }
       }
     }
@@ -793,9 +816,13 @@ void fitLine(std::vector<track3D>& tr3D,
   }
 }
 
-void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = false)
+void processEvents(const double tol_phi, const double tol_x, const double tol_mod, const int mindigtr, const double frac = 1.0, double dn_tol = 0.7, double dz_tol = 200.)
 {
   gROOT->SetBatch();
+  
+  const int minreg = 1;
+  const double epsilon = 0.5;
+  const bool wideMultReg = false;
 
   bool display = false;
   bool save2root = true && display;
@@ -875,8 +902,21 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
   const double z_sampl = 44.4;
   const double xy_sampl = 5;
   
+  TDatabasePDG *pdg = new TDatabasePDG();
+  int nPriPart = 0;
+  int nPriPartXFound = 0;
+  int nPriPartYFound = 0;
+  int nPriPartRecoOK = 0;
+  
   int nall = 0;
   int nok = 0;
+  
+  double avePurityY = 0;
+  double avePurityX = 0;
+  double aveNY = 0;
+  double aveNX = 0;
+  int countClY = 0;
+  int countClX = 0;
   
   double vrmsX = 0.;
   double vrmsY = 0.;
@@ -905,18 +945,22 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
   std::vector<std::vector<digit> > clustersY;
   std::vector<std::vector<digit> > clustersX;
   
+  std::map<int,int> trMCIDY;
+  std::map<int,int> trMCIDX;
+  
+  int ntr3DOK = 0;
+  int ntr3DNO = 0;
+  int n100MeV = 0;
+  int n500MeV = 0;
+  int n1GeV = 0;
+  
   tDigit->SetBranchAddress("Stt",&digits);
   tMC->SetBranchAddress("Event",&ev);
   
   TFile fout("vtx.root","RECREATE");
   TTree tv("tv","tv");
   
-  double xvtx_true, yvtx_true, zvtx_true;
-  int nint;
-  double x_int[256];
-  double y_int[256];
-  double z_int[256];
-  
+  double xvtx_true, yvtx_true, zvtx_true;  
   double xvtx_reco, yvtx_reco, zvtx_reco;
   
   int isCC;
@@ -970,10 +1014,6 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
   int first = 0;
   int last = 9999;/*tDigit->GetEntries()-1;*/
   int nev = last - first + 1;
-    
-  vector<double> zvX;
-  vector<double> zvY; 
-  vector<double> zvtx;
   
   TCanvas c("c","revo event",1200,600);
   c.SaveAs("rms.pdf(");
@@ -1057,16 +1097,16 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
     
     // tolerance in phi: 0.1 rad
     // tolerance in module: 5
-    findTracksY(mdY, clustersY, hdummy, xvtx_reco, yvtx_reco, zvtx_reco, 0.1, 5);
-    
+    findTracksY(mdY, clustersY, hdummy, xvtx_reco, yvtx_reco, zvtx_reco, tol_phi, tol_mod);
+        
     // tolerance in x: 10 cm
     // tolerance in module: 5
-    findTracksX(mdX, clustersX, hdummy, xvtx_reco, yvtx_reco, zvtx_reco, 100, 5);
+    findTracksX(mdX, clustersX, hdummy, xvtx_reco, yvtx_reco, zvtx_reco, tol_x, tol_mod);
     
     // remove clusters with less than 3 digits
     for(unsigned int nn = 0; nn < clustersY.size(); nn++)
     {
-      if(clustersY.at(nn).size() <= 3)
+      if(clustersY.at(nn).size() <= mindigtr)
       {
         clustersY.erase(clustersY.begin()+nn);
         nn--;
@@ -1076,7 +1116,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
     // remove clusters with less than 3 digits
     for(unsigned int nn = 0; nn < clustersX.size(); nn++)
     {
-      if(clustersX.at(nn).size() <= 3)
+      if(clustersX.at(nn).size() <= mindigtr)
       {
         clustersX.erase(clustersX.begin()+nn);
         nn--;
@@ -1100,10 +1140,162 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       std::sort(clustersY.at(jj).begin(), clustersY.at(jj).end(), isDigUpstream);
     }
     
+    //////////////////////////////////////////////////
+    
+    tDigit->GetEntry(i);
+    std::map<int,int> primaryDigX;
+    std::map<int,int> primaryDigY;
+    
+    vector<TG4HitSegment> hits = ev->SegmentDetectors["Straw"];
+    
+    for(unsigned int ll = 0; ll < digits->size(); ll++)
+    {
+      if(digits->at(ll).hor == 1)
+        primaryDigY[hits[digits->at(ll).hindex.front()].GetPrimaryId()]++;
+      else
+        primaryDigX[hits[digits->at(ll).hindex.front()].GetPrimaryId()]++;
+    }
+    
+    
+    std::vector<int> primaryidY;
+    int nhitYOK, nhitXOK;
+    
+    trMCIDY.clear();
+    trMCIDX.clear();
+    
+    
+    for(unsigned int ii = 0; ii < ev->Primaries.at(0).Particles.size(); ii++)
+    {
+      TParticlePDG* partPDG = pdg->GetParticle(ev->Primaries.at(0).Particles.at(ii).GetPDGCode());
+      if(partPDG != 0)
+      { 
+        if(partPDG->Charge() != 0.)
+        {
+          if(ev->Primaries.at(0).Particles.at(ii).GetMomentum().Z() > 0)
+          {            
+            if(primaryDigY[ev->Primaries.at(0).Particles.at(ii).GetTrackId()] > 3 && primaryDigX[ev->Primaries.at(0).Particles.at(ii).GetTrackId()] > 3)
+            {
+              primaryidY.push_back(ev->Primaries.at(0).Particles.at(ii).GetTrackId());
+              nPriPart++;
+              
+              double KE = ev->Primaries.at(0).Particles.at(ii).GetMomentum().E() - 1E3*partPDG->Mass();
+              
+              if(KE>100)
+                n100MeV++;
+              if(KE>500)
+                n500MeV++;
+              if(KE>1000)
+                n1GeV++;
+            }
+          }
+        }
+      }/*
+      else
+      {
+        std::cout <<  ev->Primaries.at(0).Particles.at(ii).GetPDGCode() << std::endl;
+      }*/
+    }
+    
+    std::vector<int> primaryidX = primaryidY;
+    
+    for(unsigned int ii = 0; ii < clustersY.size(); ii++)
+    {
+      std::map<int,int> pr;
+      int tot = 0;
+      
+      for(unsigned int jj = 0; jj < clustersY.at(ii).size(); jj++)
+      {
+        for(unsigned int kk = 0; kk < clustersY.at(ii).at(jj).hindex.size(); kk++)
+        {
+          pr[hits[clustersY.at(ii).at(jj).hindex.at(kk)].GetPrimaryId()]++;
+          tot++;
+        }
+      }
+      
+      nhitYOK = 0;
+      
+      for(std::map<int,int>::iterator it = pr.begin(); it != pr.end(); it++)
+      {
+        if(it->second > nhitYOK)
+        {
+          trMCIDY[ii] = it->first;
+          nhitYOK = it->second;
+        }
+      }
+      
+      for(std::map<int,int>::iterator it = pr.begin(); it != pr.end(); it++)
+      {
+        if(it->second >= frac * tot)
+        {
+          std::vector<int>::iterator iter = std::find(primaryidY.begin(),primaryidY.end(),it->first); 
+          if(iter != primaryidY.end())
+          {
+            primaryidY.erase(iter);
+            nPriPartYFound++;
+            break;
+          }
+        }
+      }
+      
+      avePurityY += double(nhitYOK)/tot;
+      aveNY += double(nhitYOK);
+      countClY++;
+    }
+    
+    
+    //////////////////////////////////////////////////
+    
+    //////////////////////////////////////////////////
+    
+    for(unsigned int ii = 0; ii < clustersX.size(); ii++)
+    {
+      std::map<int,int> pr;
+      int tot = 0;
+      
+      for(unsigned int jj = 0; jj < clustersX.at(ii).size(); jj++)
+      {
+        for(unsigned int kk = 0; kk < clustersX.at(ii).at(jj).hindex.size(); kk++)
+        {
+          pr[hits[clustersX.at(ii).at(jj).hindex.at(kk)].GetPrimaryId()]++;
+          tot++;
+        }
+      }
+      
+      nhitXOK = 0;
+      
+      for(std::map<int,int>::iterator it = pr.begin(); it != pr.end(); it++)
+      {
+        if(it->second > nhitXOK)
+        {
+          trMCIDX[ii] = it->first;
+          nhitXOK = it->second;
+        }
+      }
+      
+      for(std::map<int,int>::iterator it = pr.begin(); it != pr.end(); it++)
+      {
+        if(it->second >= frac * tot)
+        {
+          std::vector<int>::iterator iter = std::find(primaryidX.begin(),primaryidX.end(),it->first); 
+          if(iter != primaryidX.end())
+          {
+            primaryidX.erase(iter);
+            nPriPartXFound++;
+            break;
+          }
+        }
+      }
+      
+      avePurityX += double(nhitXOK)/tot;
+      aveNX += double(nhitXOK);
+      countClX++;
+    }  
+    //////////////////////////////////////////////////
+    
     // merge XZ and YZ clusters    
     // tolerance in dn/n: 0.7
     // tolerance dz: 20 cm
-    mergeXYTracks(clustersX, clustersY, tracks, 0.7, 200);
+    mergeXYTracks(clustersX, clustersY, tracks, dn_tol, dz_tol, trMCIDY, trMCIDX, ntr3DOK, ntr3DNO, ev);
     
     // circular fit
     fitCircle(tracks, hdummy);
@@ -1111,7 +1303,35 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
     // linear fit
     fitLine(tracks, xvtx_reco, yvtx_reco, zvtx_reco);
     
+    const double ptol = 0.1;
     const int tol = 3;
+    
+    double phi_true, pt_true;
+    double phi_reco, pt_reco;
+    double px_true, py_true, pz_true;
+    
+    for(unsigned int kk = 0; kk < ev->Primaries.at(0).Particles.size(); kk++)
+    {
+      px_true = ev->Primaries.at(0).Particles.at(kk).GetMomentum().X();
+      py_true = ev->Primaries.at(0).Particles.at(kk).GetMomentum().Y();
+      pz_true = ev->Primaries.at(0).Particles.at(kk).GetMomentum().Z();
+      
+      pt_true = TMath::Sqrt(py_true*py_true+pz_true*pz_true);
+      
+      phi_true = TMath::ATan2(px_true, pt_true);
+      
+      for(unsigned int jj = 0; jj < tracks.size(); jj++)
+      {
+        phi_reco = TMath::ATan(tracks.at(jj).b);
+        pt_reco = 0.299792458 * tracks.at(jj).r * 0.6;
+        
+        if(abs(pt_reco-pt_true)/pt_true < 0.2 && abs(phi_reco - phi_true) < 0.02)
+        {
+          nPriPartRecoOK++;
+          break;
+        }
+      }
+    }
     
     if(VtxMulti == 1)
     {
@@ -1131,6 +1351,8 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       vrmsZ += (zvtx_reco-zvtx_true)*(zvtx_reco-zvtx_true);
       vrms3D += norm_dist * norm_dist;
     }
+    
+    double minz, maxz;
     
     if(display)
     {
@@ -1187,9 +1409,12 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
             grY = new TGraph(dYz.size(), dYz.data(), dYy.data());
             grY->SetMarkerColor(j+1);
             grY->SetMarkerStyle(7);
-            grY->Draw("samep");
+            grY->Draw("samep"); 
             
-            ffy = new TF1("","[0]+[1]*TMath::Sqrt([2]*[2]-(x-[3])*(x-[3]))",tracks.at(j).zc-tracks.at(j).r*0.99,tracks.at(j).zc+tracks.at(j).r*0.99);
+            minz = std::max(tracks.at(j).zc-tracks.at(j).r,tracks.at(j).clY.front().z);
+            maxz = std::min(tracks.at(j).zc+tracks.at(j).r,tracks.at(j).clY.back().z);
+            
+            ffy = new TF1("","[0]+[1]*TMath::Sqrt([2]*[2]-(x-[3])*(x-[3]))",minz,maxz);
             ffy->SetParameter(0,tracks.at(j).yc);
             ffy->SetParameter(1,tracks.at(j).ysig);
             ffy->SetParameter(2,tracks.at(j).r);
@@ -1223,7 +1448,10 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
             
             phi0 = TMath::ATan2(yexp - tracks.at(j).yc,z0 - tracks.at(j).zc);
             
-            ffx = new TF1("","[0] - [1]/[2]*(TMath::ATan2(([4]+[7]*TMath::Sqrt([1]*[1]-(x-[5])*(x-[5]))) - [4],x - [5]) - [6])*[3]",tracks.at(j).zc-tracks.at(j).r*0.99,tracks.at(j).zc+tracks.at(j).r*0.99);
+            minz = std::max(tracks.at(j).zc-tracks.at(j).r,tracks.at(j).clX.front().z);
+            maxz = std::min(tracks.at(j).zc+tracks.at(j).r,tracks.at(j).clX.back().z);
+            
+            ffx = new TF1("","[0] - [1]/[2]*(TMath::ATan2(([4]+[7]*TMath::Sqrt([1]*[1]-(x-[5])*(x-[5]))) - [4],x - [5]) - [6])*[3]",minz,maxz);
             
             ffx->SetParameter(0,x0);
             ffx->SetParameter(1,tracks.at(j).r);
@@ -1236,7 +1464,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
             ffx->SetLineColor(j+1);
             ffx->Draw("same");
           }
-          c.SaveAs("rms.pdf");      
+          c.SaveAs("rms.pdf");
         }
       }  
     }
@@ -1257,8 +1485,7 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
       
       fout.cd();
       fd->Write();
-    }
-    
+    }    
     tv.Fill();
   }
   
@@ -1288,6 +1515,22 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
   std::cout << std::setw(10) << "minreg" << std::setw(10) << "epsilon" << std::setw(15) << "wideMultReg" << std::setw(15) << "gefficiency" << std::setw(15) << "efficiency" << std::setw(10) << "rmsX" << std::setw(10) << "rmsY" << std::setw(10) << "rmsZ" << std::setw(10) << "rms3D" << std::endl;
   std::cout << std::setw(10) << minreg << std::setw(10) << epsilon << std::setw(15) << wideMultReg << std::setw(15) << double(nall)/nev << std::setw(15) << double(nok)/nall << std::setw(10) << vrmsX << std::setw(10) << vrmsY << std::setw(10) << vrmsZ << std::setw(10) << vrms3D << std::endl;  
   
+  avePurityY /= countClY;
+  avePurityX /= countClX;
+  aveNY /= countClY;
+  aveNX /= countClX;
+  
+  std::cout << std::setw(10) << "fraction" << std::setw(10) << "tol_phi" << std::setw(10) << "tol_mod" << std::setw(10) << "mindigtr" << std::setw(10) << "dz_tol" << std::setw(10) << "dn_tol" << std::setw(10) << "total" << std::setw(10) << "fracY" << std::setw(10) << "avePY" << std::setw(10) << "aveNY" << std::setw(10) << "3DtrackOK" << std::setw(10) << "3DtrackNO" << std::endl;
+  std::cout << std::setw(10) << frac << std::setw(10) << tol_phi << std::setw(10) << tol_mod << std::setw(10) << mindigtr << std::setw(10) << dz_tol << std::setw(10) << dn_tol << std::setw(10) << nPriPart << std::setw(10) << double(nPriPartYFound)/nPriPart << std::setw(10) << avePurityY << std::setw(10) << aveNY << std::setw(10) << ntr3DOK << std::setw(10) << ntr3DNO << std::endl; 
+  
+  
+  std::cout << std::setw(10) << "fraction" << std::setw(10) << "tol_x" << std::setw(10) << "tol_mod" << std::setw(10) << "mindigtr" << std::setw(10) << "dz_tol" << std::setw(10) << "dn_tol" << std::setw(10) << "total" << std::setw(10) << "fracX" << std::setw(10) << "avePX" << std::setw(10) << "aveNX" << std::setw(10) << "3DtrackOK" << std::setw(10) << "3DtrackNO" << std::endl;
+  std::cout << std::setw(10) << frac << std::setw(10) << tol_x << std::setw(10) << tol_mod << std::setw(10) << mindigtr << std::setw(10) << dz_tol << std::setw(10) << dn_tol << std::setw(10) << nPriPart << std::setw(10) << double(nPriPartXFound)/nPriPart << std::setw(10) << avePurityX << std::setw(10) << aveNX << std::setw(10) << ntr3DOK << std::setw(10) << ntr3DNO << std::endl;  
+  
+  
+  std::cout << std::setw(10) << "total" << std::setw(10) << "n100MeV" << std::setw(10) << "n500MeV" << std::setw(10) << "n1GeV" << std::setw(10) << "3DtrOK" << std::setw(10) << "3DtrNO" << std::setw(10) << "3DtrGOOD" << std::endl;
+  std::cout << std::setw(10) << nPriPart << std::setw(10) << n100MeV << std::setw(10) << n500MeV << std::setw(10) << n1GeV << std::setw(10) << ntr3DOK << std::setw(10) << ntr3DNO << std::setw(10) << nPriPartRecoOK << std::endl;  
+  
   c.SaveAs("rms.pdf)");
   fout.cd();
   tv.Write();
@@ -1296,6 +1539,9 @@ void processEvents(int minreg = 3, double epsilon = 0.1, bool wideMultReg = fals
 
 void findvtx()
 {
+  // find best value of epsilon: 0.5
+  // filter out small region of different multiplicity: no
+  // start searching vtx from wider region: no
   /*
   processEvents(1, 0.0, false);
   processEvents(1, 0.00000001, false);
@@ -1335,9 +1581,91 @@ void findvtx()
   processEvents(8, 0.5, false);
   processEvents(9, 0.5, false);
   processEvents(10, 0.5, false);*/
+
+/*
+  processEvents(1E7,1E7,1,0,1.,1E7,1E7);
+  processEvents(1E7,1E7,1,1,1.,1E7,1E7);
+  processEvents(1E7,1E7,1,2,1.,1E7,1E7);
+  processEvents(1E7,1E7,1,3,1.,1E7,1E7);
+  processEvents(1E7,1E7,1,4,1.,1E7,1E7);
+  processEvents(1E7,1E7,1,5,1.,1E7,1E7);
+  processEvents(1E7,1E7,1,10,1.,1E7,1E7);
   
-  processEvents(1, 0.5, false);
+fraction tol_phi  tol_x tol_mod  mindigtr    dz_tol dn_tol total     fracY     fracX     avePY     avePX     aveNY     aveNX    3DtrOK    3DtrNO
+     1     1e+07  1e+07       1         0     1e+07  1e+07 31001  0.585529  0.666688  0.951308  0.956523   27.1775   20.2663     83410         0
+     1     1e+07  1e+07       1         1     1e+07  1e+07 31001  0.362956  0.466727  0.858389  0.883189   68.5525   44.3859     29058         0
+     1     1e+07  1e+07       1         2     1e+07  1e+07 31001  0.331118  0.427244   0.85393  0.887535   75.1021   52.5307     25875         0
+     1     1e+07  1e+07       1         3     1e+07  1e+07 31001   0.30928  0.400181  0.851226  0.888905   79.2529   57.0791     23924         0
+     1     1e+07  1e+07       1         4     1e+07  1e+07 31001  0.292249  0.376439  0.849571  0.888555   82.7189   60.4982     22385         0
+     1     1e+07  1e+07       1         5     1e+07  1e+07 31001  0.274411  0.354892  0.847312  0.888689   86.2045    63.515     20962         0
+     1     1e+07  1e+07       1        10     1e+07  1e+07 31001  0.218864  0.271862  0.841057  0.888397   99.0147   75.9628     16139         0
+*/
+/*
+  processEvents(0.0001,1E7,1,3,1.,1E7,1E7);
+  processEvents(0.001,1E7,1,3,1.,1E7,1E7);
+  processEvents(0.01,1E7,1,3,1.,1E7,1E7);
+  processEvents(0.1,1E7,1,3,1.,1E7,1E7);
+  processEvents(0.2,1E7,1,3,1.,1E7,1E7);
+  processEvents(0.5,1E7,1,3,1.,1E7,1E7);
+  processEvents(1.,1E7,1,3,1.,1E7,1E7);
+  processEvents(2.,1E7,1,3,1.,1E7,1E7);
+  processEvents(10.,1E7,1,3,1.,1E7,1E7);
+
+fraction   tol_phi tol_x tol_mod  mindigtr dz_tol    dn_tol     total     fracY     fracX     avePY     avePX     aveNY     aveNX    3DtrOK    3DtrNO
+       1    0.0001 1e+07       1         3  1e+07     1e+07     310010.00170962  0.400181         1  0.888905   10.4444   57.0791        72         0
+       1     0.001 1e+07       1         3  1e+07     1e+07     31001 0.0626109  0.400181  0.987784  0.888905    17.716   57.0791      3323         0
+       1      0.01 1e+07       1         3  1e+07     1e+07     31001  0.328989  0.400181  0.967039  0.888905   40.0435   57.0791     19067         0
+       1       0.1 1e+07       1         3  1e+07     1e+07     31001  0.421244  0.400181  0.924476  0.888905   63.6038   57.0791     27199         0
+       1       0.2 1e+07       1         3  1e+07     1e+07     31001  0.390149  0.400181  0.902731  0.888905   68.9421   57.0791     26616         0
+       1       0.5 1e+07       1         3  1e+07     1e+07     31001  0.346118  0.400181  0.874969  0.888905   75.4198   57.0791     25103         0
+       1         1 1e+07       1         3  1e+07     1e+07     31001  0.321119  0.400181  0.859481  0.888905   78.2855   57.0791     24226         0
+       1         2 1e+07       1         3  1e+07     1e+07     31001  0.309893  0.400181  0.851923  0.888905   79.2079   57.0791     23940         0
+       1        10 1e+07       1         3  1e+07     1e+07     31001   0.30928  0.400181  0.851226  0.888905   79.2529   57.0791     23924         0
+*/
+
+/*
+  processEvents(0.1,1,1,3,1.,1E7,1E7);
+  processEvents(0.1,2,1,3,1.,1E7,1E7);
+  processEvents(0.1,5,1,3,1.,1E7,1E7);
+  processEvents(0.1,10,1,3,1.,1E7,1E7);
+  processEvents(0.1,20,1,3,1.,1E7,1E7);
+  processEvents(0.1,50,1,3,1.,1E7,1E7);
+  processEvents(0.1,100,1,3,1.,1E7,1E7);
+  processEvents(0.1,1000,1,3,1.,1E7,1E7);
   
+fraction   tol_phi tol_x   tol_mod  mindigtr dz_tol dn_tol total     fracY     fracX     avePY     avePX     aveNY     aveNX 3DtrackOK 3DtrackNO
+       1       0.1     1         1         3  1e+07  1e+07 31001  0.421244 0.0393858  0.924476  0.983681   63.6038   23.0531      2821         0
+       1       0.1     2         1         3  1e+07  1e+07 31001  0.421244 0.0714816  0.924476  0.976192   63.6038   29.4961      5205         0
+       1       0.1     5         1         3  1e+07  1e+07 31001  0.421244  0.150931  0.924476  0.966015   63.6038   37.7544     10768         0
+       1       0.1    10         1         3  1e+07  1e+07 31001  0.421244  0.238896  0.924476   0.95911   63.6038    43.071     16509         0
+       1       0.1    20         1         3  1e+07  1e+07 31001  0.421244  0.334667  0.924476  0.954244   63.6038   48.8484     21732         0
+       1       0.1    50         1         3  1e+07  1e+07 31001  0.421244  0.420599  0.924476  0.945698   63.6038    54.109     25857         0
+       1       0.1   100         1         3  1e+07  1e+07 31001  0.421244   0.43605  0.924476  0.936404   63.6038   55.9506     26848         0
+       1       0.1  1000         1         3  1e+07  1e+07 31001  0.421244  0.407116  0.924476  0.895416   63.6038   57.2511     27194         0
+*/
+
+  /*
+  processEvents(0.1,100,2,3,1.,1E7,1E7);
+  processEvents(0.1,100,3,3,1.,1E7,1E7);
+  processEvents(0.1,100,4,3,1.,1E7,1E7);
+  processEvents(0.1,100,5,3,1.,1E7,1E7);
+  processEvents(0.1,100,10,3,1.,1E7,1E7);
+  processEvents(0.1,100,100,3,1.,1E7,1E7);
+
+
+  fraction   tol_phi tol_x   tol_mod  mindigtr dz_tol dn_tol     total     fracY     fracX     avePY     avePX     aveNY     aveNX 3DtrackOK 3DtrackNO
+         1       0.1   100         2         3  1e+07  1e+07     31001  0.403019  0.406051  0.915534  0.925119   66.9911   64.5242     25337         0
+         1       0.1   100         3         3  1e+07  1e+07     31001   0.39689  0.394116  0.910148   0.91927   67.5035   66.6706     24943         0
+         1       0.1   100         4         3  1e+07  1e+07     31001  0.393503  0.386858  0.906048  0.914574    67.637   67.5364     24749         0
+         1       0.1   100         5         3  1e+07  1e+07     31001  0.390665   0.38402  0.902626  0.911501   67.6032   67.5336     24746         0
+         1       0.1   100        10         3  1e+07  1e+07     31001  0.381762   0.37702  0.890486  0.898828    67.195    66.542     24996         0
+         1       0.1   100       100         3  1e+07  1e+07     31001  0.366053  0.363859   0.87025   0.86753    65.845   62.0067     25857         0
+
+  */
+  
+  
+  processEvents(0.1,100,4,3,1.,1E7,1E7);
+
   gStyle->SetPalette(53);
   
   TFile f("vtx.root");
@@ -1629,37 +1957,4 @@ void findvtx()
   c.cd();
   p.Draw();
   c.SaveAs("vtx.pdf)");
-  /*
-  // dr 2D (dr < 50 cm)
-  int nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500",vtxReco);
-  h = (TH1D*) gROOT->FindObject("h");
-  h->SetTitle(";#Deltar_{zy} (mm)");
-  h->SetFillColor(38);
-  h->Draw();
-  std::cout << "dr_zy < 500 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
-  
-  // dr_zy (dr_zy < 5 cm)
-  nn = tv->Draw("sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50",vtxReco);
-  h = (TH1D*) gROOT->FindObject("h");
-  h->SetTitle(";#Deltar_{zy} (mm)");
-  h->SetFillColor(38);
-  h->Draw();
-  std::cout << "dr_zy < 50 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
-  
-  // dr_3D (dr_3D < 50 cm)
-  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<500",vtxReco);
-  h = (TH1D*) gROOT->FindObject("h");
-  h->SetTitle(";#Deltar_{3D} (mm)");
-  h->SetFillColor(38);
-  h->Draw();
-  std::cout << "dr_3D < 500 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
-  
-  nn = tv->Draw("sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))>>h","sqrt(pow(xvtx_reco-xvtx_true,2)+pow(yvtx_reco-yvtx_true,2)+pow(zvtx_reco-zvtx_true,2))<50",vtxReco);
-  h = (TH1D*) gROOT->FindObject("h");
-  h->SetTitle(";#Deltar_{3D} (mm)");
-  h->SetFillColor(38);
-  h->Draw();
-  std::cout << "dr_3D < 50 mm => " << double(nn)/tv->GetEntries() << " rms: " << h->GetRMS() << std::endl;
-  c.SetLogy(false);
-  */
 }
