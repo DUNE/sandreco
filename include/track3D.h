@@ -28,7 +28,6 @@ struct track3D
   std::vector<digit> clY;
 };
 
-
 #ifdef __MAKECINT__
 #pragma link C++ class std::vector < track3D > +;
 #pragma link C++ class track3D + ;

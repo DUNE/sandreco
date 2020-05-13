@@ -144,7 +144,7 @@ p.mass*p.mass);
 void RecoFromTrack(particle& p)
 {
   if (p.tr.ret_ln == 0 && p.tr.ret_cr == 0) {
-    std::sort(p.tr.digits.begin(), p.tr.digits.end(), isDigBefore);
+    // std::sort(p.tr.digits.begin(), p.tr.digits.end(), isDigBefore);
 
     double yc = p.tr.yc;
     double zc = p.tr.zc;
