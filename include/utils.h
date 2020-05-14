@@ -57,6 +57,11 @@ const char* path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 
+const char* path_internal_volume =
+    "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/volSTTFULL_PV_0/";
+const char* name_internal_volume = "volSTTFULL_PV";
+
 const double tscin = 3.08;
 const double tscex = 0.588;
 const double vlfb = 5.85;
@@ -74,8 +79,8 @@ const double pe_threshold = 4;
 const double costant_fraction = 0.15;
 
 // stt resolution and threshold
-const double res_x = 0.2;        // 0.2 mm
-const double res_t = 0.;        // 1 ns
+const double res_x = 0.2;            // 0.2 mm
+const double res_t = 0.;             // 1 ns
 const double e_threshold = 0.25E-3;  // 0.25E-3 MeV
 
 // ADC to MeV
@@ -88,14 +93,18 @@ const double c = k * 1E3;  // mm/ns
 const double emk = 1.;
 const double hadk = 1.;
 
+bool isCluBigger(const std::vector<digit>& v1, const std::vector<digit>& v2);
+bool isDigUpstream(const digit& d1, const digit& d2);
 bool isHitBefore(hit h1, hit h2);
 bool isDigBefore(digit d1, digit d2);
 bool isCellBefore(cell c1, cell c2);
 bool isAfter(particle p1, particle p2);
 bool isBarrel(TString& str);
 bool isEndCap(TString& str);
-void BarrelModuleAndLayer(TString& str, TString& str2, int& modID, int& planeID);
-void EndCapModuleAndLayer(TString& str, TString& str2, int& modID, int& planeID);
+void BarrelModuleAndLayer(TString& str, TString& str2, int& modID,
+                          int& planeID);
+void EndCapModuleAndLayer(TString& str, TString& str2, int& modID,
+                          int& planeID);
 void BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
                 int& cellID, double& d1, double& d2);
 void EndCapCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
@@ -115,7 +124,5 @@ double XfromTDC(double t1, double t2);
 double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
 void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e);
 }
-
-
 
 #endif

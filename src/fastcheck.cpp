@@ -245,14 +245,16 @@ int main(int argc, char* argv[])
 
     n = tReco->Draw("track.y0:track.x0", trackRecoOK, "goff");
     g = new TGraph(n, tReco->GetV2(), tReco->GetV1());
+    c.DrawFrame(-2500, -5000, 2500, 0, "tracks; x0 (mm); y0 (mm)");
     g->SetTitle("tracks; x0 (mm); y0 (mm)");
-    g->Draw("ap");
+    g->Draw("psame");
     c.SaveAs(fout.Data());
 
     n = tReco->Draw("track.y0:track.z0", trackRecoOK, "goff");
     g = new TGraph(n, tReco->GetV2(), tReco->GetV1());
+    c.DrawFrame(21500, -5000, 26500, 0, "tracks; z0 (mm); y0 (mm)");
     g->SetTitle("tracks; z0 (mm); y0 (mm)");
-    g->Draw("ap");
+    g->Draw("psame");
     c.SaveAs(fout.Data());
 
     print(c, fout, tReco, "TMath::Log10(track.t0)", trackRecoOK, "",

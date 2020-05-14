@@ -12,6 +12,17 @@
 
 #include <iostream>
 
+bool kloe_simu::isCluBigger(const std::vector<digit>& v1,
+                            const std::vector<digit>& v2)
+{
+  return v1.size() > v2.size();
+}
+
+bool kloe_simu::isDigUpstream(const digit& d1, const digit& d2)
+{
+  return d1.z < d2.z;
+}
+
 bool kloe_simu::isHitBefore(hit h1, hit h2)
 {
   return h1.t1 < h2.t1;
@@ -50,7 +61,8 @@ bool kloe_simu::isEndCap(TString& str)
   return str.Contains("endvolECAL") == true && str.Contains("Active") == true;
 }
 
-void kloe_simu::BarrelModuleAndLayer(TString& str, TString& str2, int& modID, int& planeID)
+void kloe_simu::BarrelModuleAndLayer(TString& str, TString& str2, int& modID,
+                                     int& planeID)
 {
   TObjArray* obja = str.Tokenize("_");    // BARERL => volECALActiveSlab_21_PV_0
   TObjArray* obja2 = str2.Tokenize("_");  // BARREL => ECAL_lv_PV_18
@@ -72,7 +84,8 @@ void kloe_simu::BarrelModuleAndLayer(TString& str, TString& str2, int& modID, in
   if (planeID > 4) planeID = 4;
 }
 
-void kloe_simu::EndCapModuleAndLayer(TString& str, TString& str2, int& modID, int& planeID)
+void kloe_simu::EndCapModuleAndLayer(TString& str, TString& str2, int& modID,
+                                     int& planeID)
 {
   TObjArray* obja = str.Tokenize("_");  // ENDCAP => endvolECALActiveSlab_0_PV_0
   TObjArray* obja2 = str2.Tokenize("_");  // ENDCAP => ECAL_end_lv_PV_0
@@ -98,8 +111,8 @@ void kloe_simu::EndCapModuleAndLayer(TString& str, TString& str2, int& modID, in
   if (planeID > 4) planeID = 4;
 }
 
-void kloe_simu::BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
-                int& cellID, double& d1, double& d2)
+void kloe_simu::BarrelCell(double x, double y, double z, TGeoManager* g,
+                           TGeoNode* node, int& cellID, double& d1, double& d2)
 {
   double Pmaster[3];
   double Plocal[3];
@@ -139,8 +152,8 @@ void kloe_simu::BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNod
   cellID = (Plocal[0] + dx) / cellw;
 }
 
-void kloe_simu::EndCapCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
-                int& cellID, double& d1, double& d2)
+void kloe_simu::EndCapCell(double x, double y, double z, TGeoManager* g,
+                           TGeoNode* node, int& cellID, double& d1, double& d2)
 {
   double Pmaster[3];
   double Plocal[3];
@@ -189,8 +202,8 @@ bool kloe_simu::CheckAndProcessPath(TString& str2)
   return true;
 }
 
-void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel, double& x,
-                  double& y, double& z)
+void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
+                             double& x, double& y, double& z)
 {
   x = 0;
   y = 0;
@@ -286,8 +299,9 @@ void kloe_simu::DecodeID(int id, int& mod, int& lay, int& cel)
   cel = id - mod * 1000 - lay * 100;
 }
 
-double kloe_simu::mindist(double s1x, double s1y, double s1z, double s2x, double s2y,
-               double s2z, double px, double py, double pz)
+double kloe_simu::mindist(double s1x, double s1y, double s1z, double s2x,
+                          double s2y, double s2z, double px, double py,
+                          double pz)
 {
   double segmod = (s1x - s2x) * (s1x - s2x) + (s1y - s2y) * (s1y - s2y) +
                   (s1z - s2z) * (s1z - s2z);
@@ -305,7 +319,8 @@ double kloe_simu::mindist(double s1x, double s1y, double s1z, double s2x, double
               (pz - s3z) * (pz - s3z));
 }
 
-double kloe_simu::angle(double x1, double y1, double z1, double x2, double y2, double z2)
+double kloe_simu::angle(double x1, double y1, double z1, double x2, double y2,
+                        double z2)
 {
   double prod = x1 * x2 + y1 * y2 + z1 * z2;
   double mag1 = sqrt(x1 * x1 + y1 * y1 + z1 * z1);
@@ -372,7 +387,8 @@ double kloe_simu::XfromTDC(double t1, double t2)
   return 0.5 * (t1 - t2) / kloe_simu::vlfb * kloe_simu::m_to_mm;
 }
 
-double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2, int planeID)
+double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2,
+                           int planeID)
 {
   double f1 = AttenuationFactor(d1, planeID);
   double f2 = AttenuationFactor(d2, planeID);
@@ -380,7 +396,8 @@ double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2, int p
   return 0.5 * (adc1 / f1 + adc2 / f2) * kloe_simu::adc2MeV;
 }
 
-void kloe_simu::CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e)
+void kloe_simu::CellXYZTE(cell c, double& x, double& y, double& z, double& t,
+                          double& e)
 {
   if (c.id < 25000)  // Barrel
   {
