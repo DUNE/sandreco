@@ -64,8 +64,8 @@ void findNearDigPhi(int& idx, double exp_phi, std::vector<digit>& vd, double zv,
   for (unsigned int k = 0; k < vd.size(); k++) {
     evalUV(u, v, zv, yv, vd.at(k).z, vd.at(k).y);
     evalPhi(phi, u, v);
-    if (abs(exp_phi - phi) < dphi) {
-      dphi = abs(exp_phi - phi);
+    if (std::abs(exp_phi - phi) < dphi) {
+      dphi = std::abs(exp_phi - phi);
       idx = k;
     }
   }
@@ -85,9 +85,10 @@ bool findNearDigX(int& idx, double exp_x, std::vector<digit>& vd, double xvtx)
 
   for (unsigned int k = 0; k < vd.size(); k++) {
     x = vd.at(k).x;
-    if (abs(exp_x - x) < dx &&
-        (abs(x - xvtx) < abs(exp_x - xvtx) || abs(x - xvtx) < xtol_on_vtx)) {
-      dx = abs(exp_x - x);
+    if (std::abs(exp_x - x) < dx &&
+        (std::abs(x - xvtx) < std::abs(exp_x - xvtx) ||
+         std::abs(x - xvtx) < xtol_on_vtx)) {
+      dx = std::abs(exp_x - x);
       idx = k;
       found = true;
     }
@@ -536,7 +537,7 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
             dphi = exp_phi - phi;
 
             // check if distance is within tolerance
-            if (abs(dphi) <= phi_tol) {
+            if (std::abs(dphi) <= phi_tol) {
               // get selected digit
               current_digit = nlayer->at(idx);
 
@@ -634,7 +635,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
               dx = prev_x - nlayer->at(idx).x;
 
               // check if distance is within tolerance
-              if (abs(dx) <= x_tol) {
+              if (std::abs(dx) <= x_tol) {
                 // get selected digit
                 current_digit = nlayer->at(idx);
 
@@ -691,17 +692,20 @@ void mergeXYTracks(std::vector<std::vector<digit> >& clustersX,
 
       // search cluster X with abs(dn)/mn less than tolerance and
       // residual in the most downstream digit z less than tolerance
-      if (abs(dn) / mn < dn_tol &&
-          abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) < dz_tol &&
-          abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z) <
+      if (std::abs(dn) / mn < dn_tol &&
+          std::abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) <
+              dz_tol &&
+          std::abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z) <
               dz_tol) {
         // find cluster X best matching Y cluster in term of
         // residual in the most downstream and upstream digit z
-        if (abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) +
-                abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z) <
+        if (std::abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) +
+                std::abs(clustersY.at(jj).front().z -
+                         clustersX.at(kk).front().z) <
             dzend) {
-          dzend = abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) +
-                  abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z);
+          dzend =
+              std::abs(clustersY.at(jj).back().z - clustersX.at(kk).back().z) +
+              std::abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z);
           track tr;
           tr.tid = index++;
           tr.clX = std::move(clustersX.at(kk));
@@ -934,7 +938,7 @@ void fitCircle(std::vector<track>& tr3D, TH1D& hdummy)
 
       prodVect += ry * velz - rz * vely;
     }
-    if (prodVect != 0.) prodVect /= abs(prodVect);
+    if (prodVect != 0.) prodVect /= std::abs(prodVect);
     tr3D.at(nn).h = int(prodVect);
 
     if (yres > 0)
@@ -968,7 +972,7 @@ void fitLine(std::vector<track>& tr3D, double xvtx_reco, double yvtx_reco,
     // evaluate rho and x
     for (unsigned int kk = 0; kk < tr3D.at(i).clX.size(); kk++) {
       double radq;
-      if (abs(tr3D.at(i).clX.at(kk).z - tr3D.at(i).zc) > tr3D.at(i).r)
+      if (std::abs(tr3D.at(i).clX.at(kk).z - tr3D.at(i).zc) > tr3D.at(i).r)
         radq = 0;
       else
         radq = TMath::Sqrt(tr3D.at(i).r * tr3D.at(i).r -
@@ -989,6 +993,45 @@ void fitLine(std::vector<track>& tr3D, double xvtx_reco, double yvtx_reco,
   }
 }
 
+void fillPosAndTime(std::vector<track>& tracks)
+{
+  for (unsigned int i = 0; i < tracks.size(); i++) {
+
+    // std::cout << tracks.at(i).clY.front().z << " " <<
+    // tracks.at(i).clX.front().z << std::endl;
+
+    if (tracks.at(i).clY.front().z < tracks.at(i).clX.front().z) {
+      tracks.at(i).y0 = tracks.at(i).clY.front().y;
+      tracks.at(i).z0 = tracks.at(i).clY.front().z;
+      tracks.at(i).t0 = tracks.at(i).clY.front().t;
+
+      double cos =
+          tracks.at(i).h * (tracks.at(i).y0 - tracks.at(i).yc) / tracks.at(i).r;
+      double sin = -tracks.at(i).h * (tracks.at(i).z0 - tracks.at(i).zc) /
+                   tracks.at(i).r;
+
+      tracks.at(i).x0 =
+          tracks.at(i).a +
+          tracks.at(i).b * (tracks.at(i).z0 * cos + tracks.at(i).y0 * sin);
+
+      // std::cout << tracks.at(i).x0 << " " << tracks.at(i).a << " " <<
+      // tracks.at(i).b << " " << tracks.at(i).z0 << " " << cos << " " <<
+      // tracks.at(i).y0 << " " << sin << std::endl;
+    } else {
+      tracks.at(i).x0 = tracks.at(i).clX.front().x;
+      tracks.at(i).z0 = tracks.at(i).clX.front().z;
+      tracks.at(i).t0 = tracks.at(i).clX.front().t;
+
+      double dy2 = tracks.at(i).r * tracks.at(i).r -
+                   (tracks.at(i).z0 - tracks.at(i).zc) *
+                       (tracks.at(i).z0 - tracks.at(i).zc);
+      double dy = dy2 < 0. ? 0. : TMath::Sqrt(dy2);
+
+      tracks.at(i).y0 = tracks.at(i).yc + tracks.at(i).ysig * dy;
+    }
+  }
+}
+
 void TrackFit(std::vector<track>& tracks, std::vector<double>& binning,
               double xvtx_reco, double yvtx_reco, double zvtx_reco)
 {
@@ -1000,6 +1043,9 @@ void TrackFit(std::vector<track>& tracks, std::vector<double>& binning,
 
   // linear fit
   fitLine(tracks, xvtx_reco, yvtx_reco, zvtx_reco);
+
+  // track position
+  fillPosAndTime(tracks);
 }
 
 bool IsContiguous(const cell& c1, const cell& c2)
@@ -1246,7 +1292,7 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell,
         // good cell should have signal on both side and a tdc different less
         // than 30 ns (5.85 ns/m * 4 m)
         if (vec_cell->at(j).adc1 == 0 || vec_cell->at(j).adc2 == 0 ||
-            abs(vec_cell->at(j).tdc1 - vec_cell->at(j).tdc2) > cell_max_dt)
+            std::abs(vec_cell->at(j).tdc1 - vec_cell->at(j).tdc2) > cell_max_dt)
           continue;
 
         cl.cells.push_back(vec_cell->at(j));
@@ -1329,8 +1375,8 @@ void filterDigitsModule(std::map<int, double>& yd, std::vector<int>& toremove,
   std::map<int, double>::iterator idx;
 
   for (std::map<int, double>::iterator it = yd.begin(); it != yd.end(); ++it) {
-    if (abs(it->second - mean) > maxd) {
-      maxd = abs(it->second - mean);
+    if (std::abs(it->second - mean) > maxd) {
+      maxd = std::abs(it->second - mean);
       idx = it;
     }
   }
@@ -1555,6 +1601,7 @@ void Reconstruct(const char* fIn)
               tol_phi, tol_x, tol_mod, mindigtr, dn_tol, dz_tol);
     // TrackFit(vec_tr);
     TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
+
     // PreCluster(vec_cell, vec_cl);
     // Filter(vec_cl);
     PidBasedClustering(ev, vec_cell, vec_cl);
