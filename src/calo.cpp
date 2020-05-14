@@ -273,28 +273,27 @@ void calo()
   grp.Draw("ap");
 
   c.SaveAs("calo.pdf");
-  
+
   TRandom3 rand(0);
   double v_dE = 0.;
   double v_npe = 0.;
-  
+
   double mean_dE = 5.;
   double sigma_dE = 0.5;
   double k = 18.5 * 0.415;
-  
-  TH1D hdE("hdE","hdE; dE (MeV)",100,0,20);
-  TH1D hnpe("hnpe","hnpe; #p.e.",100,0,200);
+
+  TH1D hdE("hdE", "hdE; dE (MeV)", 100, 0, 20);
+  TH1D hnpe("hnpe", "hnpe; #p.e.", 100, 0, 200);
   hnpe.SetLineColor(kRed);
   hnpe.SetMarkerColor(kRed);
-  
+
   hdE.SetStats(kFALSE);
   hnpe.SetStats(kFALSE);
-  
-  for(int i = 0; i < 100000; i++)
-  {
-    v_dE = rand.Landau(mean_dE,sigma_dE);
-    v_npe = rand.Poisson(v_dE*k);
-    
+
+  for (int i = 0; i < 100000; i++) {
+    v_dE = rand.Landau(mean_dE, sigma_dE);
+    v_npe = rand.Poisson(v_dE * k);
+
     hdE.Fill(v_dE);
     hnpe.Fill(v_npe);
   }
@@ -302,8 +301,8 @@ void calo()
   t->Draw("cell.@pe_time1.size()>>h(100,0,200)", "cell.mod==18&&cell.cel==5",
           "E0");
   h = (TH1D*)gROOT->FindObject("h");
-  h->Scale(hnpe.Integral()/h->Integral());
-  
+  h->Scale(hnpe.Integral() / h->Integral());
+
   hdE.Draw("E0");
   c.SaveAs("calo.pdf");
   h->Draw("E0");
@@ -326,25 +325,25 @@ void calo()
   RooLandau landau("landau", "landau", de, de_mean, de_sigma);
 
   RooPoisson poisson("poisson", "poisson", npe, npe_mean);
-  
-  RooProdPdf prod("prod","landau x poisson",RooArgSet(landau,poisson));
-  
+
+  RooProdPdf prod("prod", "landau x poisson", RooArgSet(landau, poisson));
+
   auto pippo = prod.createIntegral(RooArgSet(de));
 
-  //RooFFTConvPdf lxp("lxp", "landau (X) poisson", de, landau, poisson);
+  // RooFFTConvPdf lxp("lxp", "landau (X) poisson", de, landau, poisson);
 
-  //prod.fitTo(histo);
+  // prod.fitTo(histo);
   /*
   RooPlot* frame1 = de.frame();
   landau.plotOn(frame1, RooFit::LineColor(kGreen));
   frame1->Draw();
   c.SaveAs("calo.pdf");*/
-  
+
   RooPlot* frame = npe.frame();
 
-  //histo.plotOn(frame);
+  // histo.plotOn(frame);
   pippo->plotOn(frame);
-  //poisson.plotOn(frame, RooFit::LineColor(kOrange));
+  // poisson.plotOn(frame, RooFit::LineColor(kOrange));
 
   frame->Draw();
   c.SaveAs("calo.pdf)");
