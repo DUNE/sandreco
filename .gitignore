@@ -14,10 +14,4 @@ analysis/old/*
 nohup.out
 ana.cpp
 files/*
-src/findvtx.cpp
-src/track3D.cxx
-include/track3D.h
-src/calo.cpp
-src/dispTrkFnd.cpp
-src/showElemPos.cpp
 
