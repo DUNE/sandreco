@@ -205,6 +205,12 @@ int main(int argc, char* argv[])
     g->Draw("ap");
     c.SaveAs(fout.Data());
 
+    n = tDigit->Draw("Stt.x:Stt.z", "", "goff", 1000);
+    g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
+    g->SetTitle("stt; z stt digit position (mm); x stt digit position (mm)");
+    g->Draw("ap");
+    c.SaveAs(fout.Data());
+
     c.SetLogy(true);
     print(c, fout, tDigit, "TMath::Log10(Stt.t)", "", "",
           "stt; log_{10}(stt time/ns)");

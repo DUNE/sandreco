@@ -356,6 +356,7 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
   CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell);
 }
 
+/*
 void Cluster(TG4Event* ev, TGeoManager* geo,
              std::map<std::string, std::vector<hit> >& cluster_map)
 {
@@ -390,7 +391,47 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     cluster_map[cluster_name].push_back(h);
   }
 }
+*/
 
+void Cluster(TG4Event* ev, TGeoManager* geo,
+             std::map<int, std::vector<hit> >& cluster_map)
+{
+  cluster_map.clear();
+
+  for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
+    const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
+
+    double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
+    double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
+    double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
+
+    std::string sttname = geo->FindNode(x, y, z)->GetName();
+    
+    int stid = getSTUniqID(geo, x, y, z);
+    
+    if(stid == -999)
+      continue;
+
+    hit h;
+    h.det = sttname;
+    h.did = stid;
+    h.x1 = hseg.Start.X();
+    h.y1 = hseg.Start.Y();
+    h.z1 = hseg.Start.Z();
+    h.t1 = hseg.Start.T();
+    h.x2 = hseg.Stop.X();
+    h.y2 = hseg.Stop.Y();
+    h.z2 = hseg.Stop.Z();
+    h.t2 = hseg.Stop.T();
+    h.de = hseg.EnergyDeposit;
+    h.pid = hseg.PrimaryId;
+    h.index = j;
+
+    cluster_map[stid].push_back(h);
+  }
+}
+
+/*
 void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
                    std::vector<digit>& digit_vec)
 {
@@ -431,11 +472,58 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
 
     digit_vec.push_back(d);
   }
+}*/
+
+
+void Cluster2Digit(std::map<int, std::vector<hit> >& cluster_map,
+                   std::vector<digit>& digit_vec)
+{
+  for (std::map<int, std::vector<hit> >::iterator it =
+           cluster_map.begin();
+       it != cluster_map.end(); ++it) {
+    digit d;
+
+    std::sort(it->second.begin(), it->second.end(), isHitBefore);
+    
+    d.de = it->second.front().de;
+    if (d.de < e_threshold) continue;
+    
+    d.det = it->second[0].det;
+    d.did = it->first;
+
+
+    d.hor = d.did%2 == 0 ? true : false;
+
+    for (unsigned int k = 0; k < it->second.size(); k++) {
+      d.hindex.push_back(it->second[k].index);
+    }
+    
+    if(d.hor)
+    {
+      d.x = 0.0;
+      d.y = 0.5 * (it->second.front().y1 + it->second.front().y2) +
+            r.Gaus(0., res_x);
+    }
+    else
+    {
+      d.x = 0.5 * (it->second.front().x1 + it->second.front().x2) +
+            r.Gaus(0., res_x);
+      d.y = 0.0;
+    }
+
+    d.t = 0.5 * (it->second.front().t1 + it->second.front().t2) +
+          r.Gaus(0., res_t);
+    d.z = 0.5 * (it->second.front().z1 + it->second.front().z2) +
+          r.Gaus(0., res_x);
+
+    digit_vec.push_back(d);
+  }
 }
 
 void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
 {
-  std::map<std::string, std::vector<hit> > cluster_map;
+  //std::map<std::string, std::vector<hit> > cluster_map;
+  std::map<int, std::vector<hit> > cluster_map;
   digit_vec.clear();
 
   Cluster(ev, geo, cluster_map);
@@ -493,6 +581,7 @@ void Digitize(const char* finname, const char* foutname)
   if (gRooTracker) gRooTracker->CloneTree()->Write();
   if (InputKinem) InputKinem->CloneTree()->Write();
   if (InputFiles) InputFiles->CloneTree()->Write();
+  
   fout.Close();
 
   f.Close();

@@ -45,6 +45,7 @@ struct cluster
 struct hit
 {
   std::string det;
+  int did;
   double x1;
   double y1;
   double z1;
@@ -61,6 +62,7 @@ struct hit
 struct digit
 {
   std::string det;
+  int did;
   double x;
   double y;
   double z;
