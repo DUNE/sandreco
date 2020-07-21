@@ -14,16 +14,24 @@
 
 #include "/wd/dune-it/ext_bkg/kloe-simu/src/display.cpp"
 
-
-TPRegexp rST("(sttmod|frontST)([0-9]+)_(ST|vol)_(hor|ver)_ST_stGas_([a-zA-Z]{2})19_vol_PV_([0-9]+)");
+TPRegexp rST(
+    "(sttmod|frontST)([0-9]+)_(ST|vol)_(hor|ver)_ST_stGas_([a-zA-Z]{2})19_vol_"
+    "PV_([0-9]+)");
 TPRegexp rSTplane("(sttmod|frontST)([0-9]+)_(ST|vol)_(hor|ver)_vol_PV_0");
 TPRegexp rSlab("sttmod([0-9]+)_slab_vol_PV_0");
 
-void decodeSTID(int id, int& mod, int& type, int& stid)
+void decodeSTID(int id, int& mod, int& type, int& stid, int& plid, int& uplid)
 {
-  stid = id/1000;
-  mod = (id - stid*1000)/10;
-  type = id - stid*1000 - mod * 10;
+  // tube id in the plane
+  stid = id / 1000;
+  // module id
+  mod = (id - stid * 1000) / 10;
+  // type: 1-> vertical; 2-> horizontal
+  type = id - stid * 1000 - mod * 10;
+  // plane id: 0 -> upstream; 1-> downstream
+  plid = stid % 2;
+  // unique plane id: 10 * mod + plid
+  uplid = 10 * mod + plid;
 }
 
 bool isSlab(TString name)
@@ -46,91 +54,82 @@ int getSTId(TString name)
   int id = -999;
 
   TObjArray* obj = name.Tokenize("_");
-  
-  if(obj->GetEntries() != 9)
-  {
+
+  if (obj->GetEntries() != 9) {
     std::cout << "Error: tokenizing " << name.Data() << std::endl;
-  }
-  else
-  {
-    TString sid  = ((TObjString*)obj->At(8))->GetString();
-    
+  } else {
+    TString sid = ((TObjString*)obj->At(8))->GetString();
+
     id = sid.Atoi();
   }
   delete obj;
-  
+
   return id;
 }
 
 int getPlaneID(TString name)
 {
-  int mod  = 0;
+  int mod = 0;
   int type = 0;
-  
+
   TObjArray* obj = name.Tokenize("_");
-  
-  if(obj->GetEntries() != 6)
-  {
+
+  if (obj->GetEntries() != 6) {
     std::cout << "Error: tokenizing " << name.Data() << std::endl;
-  }
-  else
-  {
+  } else {
     TString stype = ((TObjString*)obj->At(2))->GetString();
-    TString smod  = ((TObjString*)obj->At(0))->GetString();
-      
+    TString smod = ((TObjString*)obj->At(0))->GetString();
+
     TObjArray* oarr;
-    
-    if(smod.Contains("frontST"))
-    {
+
+    if (smod.Contains("frontST")) {
       oarr = smod.Tokenize("frontST");
       mod = 90 + ((TObjString*)oarr->At(0))->GetString().Atoi();
-    }
-    else if(smod.Contains("sttmod"))
-    {
+    } else if (smod.Contains("sttmod")) {
       oarr = smod.Tokenize("sttmod");
       mod = ((TObjString*)oarr->At(0))->GetString().Atoi();
-    }
-    else
-      std::cout << "Error evaluating module id for: " << name.Data() << std::endl;
-    
-    if(stype.Contains("ver"))
+    } else
+      std::cout << "Error evaluating module id for: " << name.Data()
+                << std::endl;
+
+    if (stype.Contains("ver"))
       type = 1;
-    else if(stype.Contains("hor"))
+    else if (stype.Contains("hor"))
       type = 2;
     else
       std::cout << "Error evaluating type for: " << name.Data() << std::endl;
-      
+
     delete oarr;
   }
-  
+
   delete obj;
-  
+
   return type + 10 * mod;
 }
 
-void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid, std::map<double, int>& stX, std::map<int, TVector2>& stPos)
+void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
+               std::map<double, int>& stX, std::map<int, TVector2>& stPos)
 {
-  int ic = pid - int(double(pid)/10.)*10 - 1;
-  
-  if(ic != 0 && ic != 1)
+  int ic = pid - int(double(pid) / 10.) * 10 - 1;
+
+  if (ic != 0 && ic != 1)
     std::cout << "Error: ic expected 0 or 1 -> " << ic << std::endl;
-  
-  for(int i = 0; i < nod->GetNdaughters(); i++)
-  {
+
+  for (int i = 0; i < nod->GetNdaughters(); i++) {
     TString name = nod->GetDaughter(i)->GetName();
-    
-    if(!isST(name))
+
+    if (!isST(name))
       std::cout << "Error: expected ST but not -> " << name.Data() << std::endl;
-    
+
     TGeoMatrix* thismat = nod->GetDaughter(i)->GetMatrix();
     TGeoHMatrix mymat = mat * (*thismat);
-    
+
     int id = getSTId(name);
-    
+
     TVector2 v;
     v.SetX(mymat.GetTranslation()[2]);
     v.SetY(mymat.GetTranslation()[ic]);
-    
+
     stX[v.Y()] = id;
     stPos[id] = v;
   }
@@ -141,117 +140,101 @@ void getSlabInfo(TGeoNode* nod, TGeoHMatrix mat, int& pid, double& z)
   TString name = nod->GetName();
 
   TObjArray* obj = name.Tokenize("_");
-  
-  if(obj->GetEntries() != 5)
-  {
+
+  if (obj->GetEntries() != 5) {
     std::cout << "Error: tokenizing " << name.Data() << std::endl;
-  }
-  else
-  {
-    TString smod  = ((TObjString*)obj->At(0))->GetString();
-      
+  } else {
+    TString smod = ((TObjString*)obj->At(0))->GetString();
+
     TObjArray* oarr = smod.Tokenize("sttmod");
     pid = ((TObjString*)oarr->At(0))->GetString().Atoi();
-    
+
     z = mat.GetTranslation()[2];
-      
+
     delete oarr;
   }
-  
+
   delete obj;
-  
 }
 
-void getSTModinfo(TGeoNode* nod, TGeoHMatrix mat, std::map<int, std::map<double, int> >& stX, std::map<int, std::map<int, TVector2> >& stPos, std::map<int, double>& slabPos)
+void getSTModinfo(TGeoNode* nod, TGeoHMatrix mat,
+                  std::map<int, std::map<double, int> >& stX,
+                  std::map<int, std::map<int, TVector2> >& stPos,
+                  std::map<int, double>& slabPos)
 {
   TString name = nod->GetName();
   TGeoMatrix* thismat = nod->GetMatrix();
   TGeoHMatrix mymat = mat * (*thismat);
-  
+
   int pid = 0;
   double x = 0;
   double z = 0;
-  
-  if(isSTPlane(name))
-  {
+
+  if (isSTPlane(name)) {
     pid = getPlaneID(name);
-    
+
     std::map<double, int> mstX;
     std::map<int, TVector2> mstPos;
-    
+
     getSTinfo(nod, mymat, pid, mstX, mstPos);
-    
+
     stX[pid] = mstX;
     stPos[pid] = mstPos;
-  }
-  else if(isSlab(name))
-  {
+  } else if (isSlab(name)) {
     getSlabInfo(nod, mymat, pid, z);
     slabPos[pid] = z;
-  }
-  else
-  {
-    
-    for(int i = 0; i < nod->GetNdaughters(); i++)
-    {
+  } else {
+
+    for (int i = 0; i < nod->GetNdaughters(); i++) {
       getSTModinfo(nod->GetDaughter(i), mymat, stX, stPos, slabPos);
     }
-  }  
+  }
 }
 
-int getSTUniqID(TGeoManager* g, double x, double y, double z, 
-  std::map<int, std::map<double, int> >& stX,
-  std::map<int, std::map<int, TVector2> >& stPos)
+int getSTUniqID(TGeoManager* g, double x, double y, double z,
+                std::map<int, std::map<double, int> >& stX,
+                std::map<int, std::map<int, TVector2> >& stPos)
 {
   TString sttname = g->FindNode(x, y, z)->GetName();
-  
+
   int sid = -999;
   int pid = getPlaneID(sttname);
-  
-  if(pid == 0)
-    return -999;
-  
-  double xt = 0.;  
-  
-  if(pid%2 == 1)
+
+  if (pid == 0) return -999;
+
+  double xt = 0.;
+
+  if (pid % 2 == 1)
     xt = x;
   else
-    xt = y; 
-    
+    xt = y;
+
   std::map<double, int>::iterator it = stX.at(pid).lower_bound(xt);
-  
-  if(it == stX.at(pid).begin())
-  {
+
+  if (it == stX.at(pid).begin()) {
     sid = stX.at(pid).begin()->second;
-  }
-  else if (it == stX.at(pid).end())
-  {
+  } else if (it == stX.at(pid).end()) {
     sid = stX.at(pid).rbegin()->second;
-  }
-  else
-  {
+  } else {
     TVector2 v1 = stPos.at(pid).at(it->second);
     TVector2 v2 = stPos.at(pid).at(std::prev(it)->second);
-    
+
     TVector2 v(z, xt);
-    
-    if((v-v1).Mod() > (v-v2).Mod())
-    {
-      if((v-v2).Mod() > 5)
+
+    if ((v - v1).Mod() > (v - v2).Mod()) {
+      if ((v - v2).Mod() > 5)
         std::cout << "Error: distance grater than ST radius" << std::endl;
-      
+
       sid = std::prev(it)->second;
-    }
-    else
-    {
-      if((v-v1).Mod() > 5)
+    } else {
+      if ((v - v1).Mod() > 5)
         std::cout << "Error: distance grater than ST radius" << std::endl;
-        
+
       sid = it->second;
     }
   }
-  
-  return sid*1000 + pid;
+
+  return sid * 1000 + pid;
 }
 
 bool isCluBigger(const std::vector<digit>& v1, const std::vector<digit>& v2)
@@ -542,31 +525,32 @@ void MeanAndRMS(std::vector<digit>* digits, TH1D& hmeanX, TH1D& hrmsX,
     hmeanY.SetBinContent(j + 1, mean);
   }
 }
-*/
 
-void MeanAndRMS(std::vector<digit>* digits, std::map<int,double>& hmeanX, std::map<int,double>& hrmsX,
-                std::map<int,int>& hnX, std::map<int,double>& hmeanY, std::map<int,double>& hrmsY, std::map<int,int>& hnY)
+void MeanAndRMS(std::vector<digit>* digits, std::map<int, double>& hmeanX,
+                std::map<int, double>& hrmsX, std::map<int, int>& hnX,
+                std::map<int, double>& hmeanY, std::map<int, double>& hrmsY,
+                std::map<int, int>& hnY)
 {
 
   double mean, mean2, var, rms;
   int n;
-  int layid, stid, mod, type;
+  int plid, stid, mod, type, uplid;
 
   for (unsigned int j = 0; j < digits->size(); j++) {
-    decodeSTID(digits->at(j).did, mod, type, stid);
-    layid = stid%2 + mod * 10;
+    decodeSTID(digits->at(j).did, mod, type, stid, plid, uplid);
     if (digits->at(j).hor == 1) {
-      hrmsY[layid] += digits->at(j).y * digits->at(j).y;
-      hmeanY[layid] += digits->at(j).y;
-      hnY[layid]++;
+      hrmsY[uplid] += digits->at(j).y * digits->at(j).y;
+      hmeanY[uplid] += digits->at(j).y;
+      hnY[uplid]++;
     } else {
-      hrmsX[layid] += digits->at(j).x * digits->at(j).x;
-      hmeanX[layid] += digits->at(j).x;
-      hnX[layid]++;
+      hrmsX[uplid] += digits->at(j).x * digits->at(j).x;
+      hmeanX[uplid] += digits->at(j).x;
+      hnX[uplid]++;
     }
   }
 
-  for (std::map<int,double>::iterator it = hmeanX.begin(); it != hmeanX.end(); ++it) {
+  for (std::map<int, double>::iterator it = hmeanX.begin(); it != hmeanX.end();
+       ++it) {
     mean = it->second / hnX.at(it->first);
     mean2 = hrmsX.at(it->first) / hnX.at(it->first);
     var = mean2 - mean * mean;
@@ -575,7 +559,59 @@ void MeanAndRMS(std::vector<digit>* digits, std::map<int,double>& hmeanX, std::m
     hrmsX[it->first] = rms;
   }
 
-  for (std::map<int,double>::iterator it = hmeanY.begin(); it != hmeanY.end(); ++it) {
+  for (std::map<int, double>::iterator it = hmeanY.begin(); it != hmeanY.end();
+       ++it) {
+    mean = it->second / hnY.at(it->first);
+    mean2 = hrmsY.at(it->first) / hnY.at(it->first);
+    var = mean2 - mean * mean;
+    rms = sqrt(var);
+    hmeanY[it->first] = mean;
+    hrmsY[it->first] = rms;
+  }
+}
+*/
+
+void MeanAndRMS(std::map<int, std::vector<double> >& clustersX,
+                std::map<int, std::vector<double> >& clustersY,
+                std::map<int, double>& hmeanX, std::map<int, double>& hrmsX,
+                std::map<int, int>& hnX, std::map<int, double>& hmeanY,
+                std::map<int, double>& hrmsY, std::map<int, int>& hnY)
+{
+
+  double mean, mean2, var, rms;
+  int n;
+  int plid, stid, mod, type, uplid;
+
+  for (std::map<int, std::vector<double> >::iterator it = clustersX.begin();
+       it != clustersX.end(); ++it) {
+    for (unsigned int k = 0; k < it->second.size(); k++) {
+      hrmsX[it->first] += it->second.at(k) * it->second.at(k);
+      hmeanX[it->first] += it->second.at(k);
+      hnX[it->first]++;
+    }
+  }
+
+  for (std::map<int, std::vector<double> >::iterator it = clustersY.begin();
+       it != clustersY.end(); ++it) {
+    for (unsigned int k = 0; k < it->second.size(); k++) {
+      hrmsY[it->first] += it->second.at(k) * it->second.at(k);
+      hmeanY[it->first] += it->second.at(k);
+      hnY[it->first]++;
+    }
+  }
+
+  for (std::map<int, double>::iterator it = hmeanX.begin(); it != hmeanX.end();
+       ++it) {
+    mean = it->second / hnX.at(it->first);
+    mean2 = hrmsX.at(it->first) / hnX.at(it->first);
+    var = mean2 - mean * mean;
+    rms = sqrt(var);
+    hmeanX[it->first] = mean;
+    hrmsX[it->first] = rms;
+  }
+
+  for (std::map<int, double>::iterator it = hmeanY.begin(); it != hmeanY.end();
+       ++it) {
     mean = it->second / hnY.at(it->first);
     mean2 = hrmsY.at(it->first) / hnY.at(it->first);
     var = mean2 - mean * mean;
@@ -585,6 +621,7 @@ void MeanAndRMS(std::vector<digit>* digits, std::map<int,double>& hmeanX, std::m
   }
 }
 
+/*
 void filterDigitsModule(std::map<int, double>& yd, std::vector<int>& toremove,
                         const double epsilon)
 {
@@ -619,32 +656,54 @@ void filterDigitsModule(std::map<int, double>& yd, std::vector<int>& toremove,
     filterDigitsModule(yd, toremove, epsilon);
   }
 }
+*/
 
+void filterDigitsModule(std::vector<double>& yd, const double epsilon)
+{
+  double mean = 0.;
+  double var = 0.;
+  double rms = 0.;
+  double rms_thr = 0.;
+
+  for (unsigned int i = 0; i < yd.size(); i++) {
+    mean += yd.at(i);
+    var += yd.at(i) * yd.at(i);
+  }
+
+  mean /= yd.size();
+  var /= yd.size();
+  var -= mean * mean;
+  rms = sqrt(var) * (1. + epsilon);
+
+  double maxd = 0.;
+  int idx;
+
+  for (unsigned int i = 0; i < yd.size(); i++) {
+    if (abs(yd.at(i) - mean) > maxd) {
+      maxd = abs(yd.at(i) - mean);
+      idx = i;
+    }
+  }
+
+  if (maxd > rms && rms > rms_thr) {
+    yd.erase(yd.begin() + idx);
+    filterDigitsModule(yd, epsilon);
+  }
+}
+
+/*
 void filterDigits(std::vector<digit>* digits, TH1D& hdummy,
                   const double epsilon)
 {
   std::map<int, std::map<int, double> > dy;
   std::map<int, std::map<int, double> > dx;
   std::vector<int> toremove;
-  /*
+
   for (unsigned int i = 0; i < digits->size(); i++) {
     if (digits->at(i).hor == 1) {
       dy[hdummy.FindBin(digits->at(i).z)][i] = digits->at(i).y;
     } else {
       dx[hdummy.FindBin(digits->at(i).z)][i] = digits->at(i).x;
-    }
-  }
-  */
-  
-  int mod, type, stid, layid;
-  
-  for (unsigned int i = 0; i < digits->size(); i++) {
-    decodeSTID(digits->at(i).did, mod, type, stid);
-    layid = stid%2 + mod * 10;
-    if (digits->at(i).hor == 1) {
-      dy[layid][i] = digits->at(i).y;
-    } else {
-      dx[layid][i] = digits->at(i).x;
     }
   }
 
@@ -664,6 +723,128 @@ void filterDigits(std::vector<digit>* digits, TH1D& hdummy,
     digits->erase(digits->begin() + toremove[i]);
   }
 }
+
+
+void filterDigits(std::vector<digit>* digits, TH1D& hdummy,
+                  const double epsilon)
+{
+  std::map<int, std::map<int, double> > dy;
+  std::map<int, std::map<int, double> > dx;
+  std::vector<int> toremove;
+
+  int mod, type, stid, plid, uplid;
+
+  for (unsigned int i = 0; i < digits->size(); i++) {
+    decodeSTID(digits->at(i).did, mod, type, stid, plid, uplid);
+    if (digits->at(i).hor == 1) {
+      dy[uplid][i] = digits->at(i).y;
+    } else {
+      dx[uplid][i] = digits->at(i).x;
+    }
+  }
+
+  for (std::map<int, std::map<int, double> >::iterator it = dy.begin();
+       it != dy.end(); ++it) {
+    filterDigitsModule(it->second, toremove, epsilon);
+  }
+
+  for (std::map<int, std::map<int, double> >::iterator it = dx.begin();
+       it != dx.end(); ++it) {
+    filterDigitsModule(it->second, toremove, epsilon);
+  }
+
+  std::sort(toremove.begin(), toremove.end());
+
+  for (int i = toremove.size() - 1; i >= 0; i--) {
+    digits->erase(digits->begin() + toremove[i]);
+  }
+}*/
+
+void filterDigits(std::map<int, std::vector<double> >& clustersX,
+                  std::map<int, std::vector<double> >& clustersY,
+                  const double epsilon)
+{
+
+  for (std::map<int, std::vector<double> >::iterator it = clustersY.begin();
+       it != clustersY.end(); ++it) {
+    filterDigitsModule(it->second, epsilon);
+  }
+
+  for (std::map<int, std::vector<double> >::iterator it = clustersX.begin();
+       it != clustersX.end(); ++it) {
+    filterDigitsModule(it->second, epsilon);
+  }
+}
+
+void clusterizeSTTDig(std::vector<digit>* digits,
+                      std::map<int, std::vector<double> >& clustersX,
+                      std::map<int, std::vector<double> >& clustersY,
+                      const int maxclntub, const int maxclntublong)
+{
+  std::map<int, std::map<int, double> > tx;
+  std::map<int, std::map<int, double> > ty;
+
+  int mod, type, stid, plid, uplid;
+
+  for (unsigned int i = 0; i < digits->size(); i++) {
+    decodeSTID(digits->at(i).did, mod, type, stid, plid, uplid);
+    if (type == 1)  // vertical
+      tx[mod][stid] = digits->at(i).x;
+    else if (type == 2)
+      ty[mod][stid] = digits->at(i).y;
+  }
+
+  for (std::map<int, std::map<int, double> >::iterator it = tx.begin();
+       it != tx.end(); ++it) {
+    int last_tb = it->second.begin()->first;
+    int first_tb = it->second.begin()->first;
+    double sum = 0.;
+    int ntb = 0;
+
+    for (std::map<int, double>::iterator iter = it->second.begin();
+         iter != it->second.end(); ++iter) {
+      if (iter->first - last_tb <= 2) {
+        sum += iter->second;
+        ntb++;
+      } else {
+        if(ntb <= maxclntub && last_tb - first_tb < maxclntublong)
+          clustersX[it->first].push_back(sum / ntb);
+        first_tb = iter->first;
+        sum = iter->second;
+        ntb = 1;
+      }
+      last_tb = iter->first;
+    }
+    if(ntb <= maxclntub && last_tb - first_tb < maxclntublong)
+      clustersX[it->first].push_back(sum / ntb);
+  }
+
+  for (std::map<int, std::map<int, double> >::iterator it = ty.begin();
+       it != ty.end(); ++it) {
+    int last_tb = it->second.begin()->first;
+    int first_tb = it->second.begin()->first;
+    double sum = 0.;
+    int ntb = 0;
+
+    for (std::map<int, double>::iterator iter = it->second.begin();
+         iter != it->second.end(); ++iter) {
+      if (iter->first - last_tb <= 2) {
+        sum += iter->second;
+        ntb++;
+      } else {
+        if(ntb <= maxclntub  && last_tb - first_tb < maxclntublong)
+          clustersY[it->first].push_back(sum / ntb);
+        first_tb = iter->first;
+        sum = iter->second;
+        ntb = 1;
+      }
+      last_tb = iter->first;
+    }
+    if(ntb <= maxclntub && last_tb - first_tb < maxclntublong)
+      clustersY[it->first].push_back(sum / ntb);
+  }
+}
+
 /*
 void vtxFinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
                 int& VtxType, TH1D& hmeanX, TH1D& hmeanY, TH1D& hrmsX,
@@ -708,23 +889,23 @@ void vtxFinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
   }
 }*/
 
-
 void vtxFinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
-                int& VtxType, std::map<int,double>& hmeanX, std::map<int,double>& hmeanY, std::map<int,double>& hrmsX,
-                std::map<int,double>& hrmsY, std::map<int,int>& hnX, std::map<int,int>& hnY, std::map<int,double>& slabPos, std::map<double,int>& slabPosId)
+                int& VtxType, std::map<int, double>& hmeanX,
+                std::map<int, double>& hmeanY, std::map<int, double>& hrmsX,
+                std::map<int, double>& hrmsY, std::map<int, int>& hnX,
+                std::map<int, int>& hnY, std::map<int, double>& slabPos,
+                std::map<double, int>& slabPosId)
 {
   int plID;
   double rms = 10000.;
   double rmsX, rmsY;
   VtxType = -1;
 
-  for (std::map<int,int>::iterator it = hnX.begin(); it != hnX.end(); ++it) {
-    if(it->first % 2  != 0)
-      continue;
-    
-    if (it->second >= 2 && hnY[it->first] >= 2 && hnX[it->first+1] >= 2 && hnY[it->first+1] >= 2) {
-      rmsX = 0.5 * (hrmsX.at(it->first) + hrmsX.at(it->first+1));
-      rmsY = 0.5 * (hrmsY.at(it->first) + hrmsY.at(it->first+1));
+  for (std::map<int, int>::iterator it = hnX.begin(); it != hnX.end(); ++it) {
+
+    if (it->second >= 2 && hnY[it->first] >= 2) {
+      rmsX = hrmsX.at(it->first);
+      rmsY = hrmsY.at(it->first);
 
       if (rmsX * rmsX + rmsY * rmsY < rms) {
         rms = rmsX * rmsX + rmsY * rmsY;
@@ -735,9 +916,11 @@ void vtxFinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
   }
 
   if (VtxType == -1) {
-    for (std::map<double,int>::iterator it = slabPosId.begin(); it != slabPosId.end(); ++it) {
-      if (hnX[it->second*10] > 0 && hnX[it->second*10+1] > 0  && hnY[it->second*10] > 0 && hnY[it->second*10+1] > 0 ) {
-        plID = it->second*10;
+    for (std::map<double, int>::iterator it = slabPosId.begin();
+         it != slabPosId.end(); ++it) {
+      if (hnX[it->second] > 0 &&
+          hnY[it->second] > 0 ) {
+        plID = it->second;
         VtxType = 1;
         break;
       }
@@ -747,7 +930,7 @@ void vtxFinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
   if (VtxType != -1) {
     xvtx_reco = hmeanX.at(plID);
     yvtx_reco = hmeanY.at(plID);
-    zvtx_reco = slabPos.at(int(plID/10));
+    zvtx_reco = slabPos.at(int(plID));
   } else {
     xvtx_reco = -1E10;
     yvtx_reco = -1E10;
@@ -1138,13 +1321,11 @@ void fitLine(std::vector<track3D>& tr3D, double xvtx_reco, double yvtx_reco,
 
 void processEvents(const double tol_phi, const double tol_x,
                    const double tol_mod, const int mindigtr,
-                   const double frac = 1.0, double dn_tol = 0.7,
-                   double dz_tol = 200., double epsilon = 0.5)
+                   const double frac = 1.0, const double dn_tol = 0.7,
+                   const double dz_tol = 200., const double epsilon = 0.5,
+                   const int maxclntub = 4, const int maxclntublong = 4)
 {
   gROOT->SetBatch();
-
-  const int minreg = 1;
-  const bool wideMultReg = false;
 
   bool display = false;
   bool save2root = true && display;
@@ -1175,7 +1356,7 @@ void processEvents(const double tol_phi, const double tol_x,
   double kloe_center[] = {0.0000000, -2384.7300, 23910.000};
   double kloe_size[] = {2 * 1690.00000, 2 * 2000.00000, 2 * 2000.00000};
 
-  //TFile f("../files/reco/numu_internal_10k.0.reco.root");
+  // TFile f("../files/reco/numu_internal_10k.0.reco.root");
   TFile f("tmp.root");
 
   TTree* tDigit = (TTree*)f.Get("tDigit");
@@ -1186,38 +1367,38 @@ void processEvents(const double tol_phi, const double tol_x,
       "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
       "MagIntVol_volume_PV_0/volSTTFULL_PV_0/";
   TGeoVolume* v = g->FindVolumeFast("volSTTFULL_PV");
-  
+
   TGeoHMatrix mat = *gGeoIdentity;
-  
+
   std::map<int, std::map<double, int> > stX;
   std::map<int, std::map<int, TVector2> > stPos;
   std::map<int, double> slabPos;
   std::map<double, int> slabPosId;
   std::map<int, double> stZ;
-  
+
   getSTModinfo(g->GetTopVolume()->GetNode(0), mat, stX, stPos, slabPos);
-  
+
   slabPos[85] = slabPos[84];
   slabPos[86] = slabPos[84];
   slabPos[87] = slabPos[84];
   slabPos[88] = slabPos[84];
   slabPos[89] = slabPos[84];
-  slabPos[90] = 22000.-0.01; // more or less the center of LAr target. -0.01 in this way slab 90 will be first in map slabPosId
+  slabPos[90] = 22000. - 0.01;  // more or less the center of LAr target. -0.01
+                                // in this way slab 90 will be first in map
+                                // slabPosId
   slabPos[91] = 22000.;
-  
-  for(std::map<int, double>::iterator it = slabPos.begin(); it != slabPos.end(); ++it)
-  {
+
+  for (std::map<int, double>::iterator it = slabPos.begin();
+       it != slabPos.end(); ++it) {
     slabPosId[it->second] = it->first;
   }
-  
-  for(std::map<int, std::map<int, TVector2> >::iterator it = stPos.begin(); it != stPos.end(); ++it)
-  {
+
+  for (std::map<int, std::map<int, TVector2> >::iterator it = stPos.begin();
+       it != stPos.end(); ++it) {
     stZ[it->first] = it->second[0].X();
-    stZ[1000+it->first] = it->second[1].X();
+    stZ[1000 + it->first] = it->second[1].X();
   }
-  
-  
-  
+
   ////////////////////////////////////////////////
 
   double origin[3];
@@ -1225,14 +1406,14 @@ void processEvents(const double tol_phi, const double tol_x,
   double last_z = 0.;
   double dz;
   std::vector<double> binning;
-  std::map<int,double> mod2Z;
-  std::map<double,int> Z2mod;
+  std::map<int, double> mod2Z;
+  std::map<double, int> Z2mod;
   bool is_first = true;
 
   origin[0] = 0.;
   origin[1] = 0.;
   origin[2] = 0.;
-  
+
   int modID;
 
   // assuming they are order by Z position
@@ -1241,26 +1422,23 @@ void processEvents(const double tol_phi, const double tol_x,
 
     if (name.Contains("sttmod") || name.Contains("volfrontST")) {
       TObjArray* arr = name.Tokenize("_");
-    
+
       TString mod_name = ((TObjString*)arr->At(0))->GetString();
-      
-      if(name.Contains("sttmod"))
-      {
+
+      if (name.Contains("sttmod")) {
         TObjArray* oarr = name.Tokenize("sttmod");
-        
+
         modID = ((TObjString*)oarr->At(0))->GetString().Atoi();
-        
+
         delete oarr;
-      }
-      else if(name.Contains("volfrontST"))
-      {
+      } else if (name.Contains("volfrontST")) {
         TObjArray* oarr = name.Tokenize("volfrontST");
-        
+
         modID = 90 + ((TObjString*)oarr->At(0))->GetString().Atoi();
-        
+
         delete oarr;
       }
-    
+
       TString path = path_prefix + name;
       g->cd(path.Data());
       g->LocalToMaster(origin, master);
@@ -1277,7 +1455,7 @@ void processEvents(const double tol_phi, const double tol_x,
       }
       last_z = master[2] + dz;
       Z2mod[mod2Z.at(modID)] = modID;
-      
+
       delete arr;
     }
   }
@@ -1348,7 +1526,7 @@ void processEvents(const double tol_phi, const double tol_x,
   TTree tv("tv", "tv");
   TTree tclX("tclX", "tclX");
   TTree tclY("tclY", "tclY");
-  
+
   std::vector<digit> cluX;
   std::vector<digit> cluY;
   TLorentzVector PartPX;
@@ -1373,7 +1551,7 @@ void processEvents(const double tol_phi, const double tol_x,
   int VtxType;
 
   std::vector<track3D> tracks;
-  
+
   int i;
 
   tv.Branch("xvtx_true", &xvtx_true, "xvtx_true/D");
@@ -1389,7 +1567,7 @@ void processEvents(const double tol_phi, const double tol_x,
   tv.Branch("isCC", &isCC, "isCC/I");
 
   tv.Branch("tracks", "std::vector<track3D>", &tracks);
-  
+
   tclX.Branch("evID", &i, "evID/I");
   tclX.Branch("cluX", "std::vector<digit>", &cluX);
   tclX.Branch("cluXID", &cluXID, "cluXID/I");
@@ -1398,7 +1576,7 @@ void processEvents(const double tol_phi, const double tol_x,
   tclX.Branch("PartDX", "std::vector<digit>", &PartDX);
   tclX.Branch("PartPDGX", &PartPDGX, "PartPDGX/I");
   tclX.Branch("pHX", &pHX, "pHX/D");
-  
+
   tclY.Branch("evID", &i, "evID/I");
   tclY.Branch("cluY", "std::vector<digit>", &cluY);
   tclX.Branch("cluYID", &cluYID, "cluYID/I");
@@ -1497,23 +1675,31 @@ void processEvents(const double tol_phi, const double tol_x,
     hnX.SetTitle(TString::Format("event: %d", i).Data());
     hnY.SetTitle(TString::Format("event: %d", i).Data());
 
+    // clusterize STT digit
+    std::map<int, std::vector<double> > clustX;
+    std::map<int, std::vector<double> > clustY;
+    clusterizeSTTDig(digits, clustX, clustY, maxclntub, maxclntublong);
+
     // filter digits
     // digits distant more than rms from mean are removed
-    filterDigits(digits, hdummy, epsilon);
+    // filterDigits(digits, hdummy, epsilon);
+    filterDigits(clustX, clustY, epsilon);
 
     // eveluate rms, mean and multiplicity in Y and X as a function of the STT
     // module
-    //MeanAndRMS(digits, hmeanX, hrmsX, hnX, hmeanY, hrmsY, hnY);
-    std::map<int,double> meanX;
-    std::map<int,double> rmsX;
-    std::map<int,int> nX;
-    std::map<int,double> meanY;
-    std::map<int,double> rmsY;
-    std::map<int,int> nY;
-    MeanAndRMS(digits, meanX, rmsX, nX, meanY, rmsY, nY);
+    // MeanAndRMS(digits, hmeanX, hrmsX, hnX, hmeanY, hrmsY, hnY);
+    std::map<int, double> meanX;
+    std::map<int, double> rmsX;
+    std::map<int, int> nX;
+    std::map<int, double> meanY;
+    std::map<int, double> rmsY;
+    std::map<int, int> nY;
+    // MeanAndRMS(digits, meanX, rmsX, nX, meanY, rmsY, nY);
+    MeanAndRMS(clustX, clustY, meanX, rmsX, nX, meanY, rmsY, nY);
 
     // find vertex as modules with less spreas between tracks
-    //vtxFinding(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, hmeanX, hmeanY, hrmsX,
+    // vtxFinding(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, hmeanX, hmeanY,
+    // hrmsX,
     //           hrmsY, hnX, hnY);
     vtxFinding(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, meanX, meanY, rmsX,
                rmsY, nX, nY, mod2Z, Z2mod);
@@ -1522,24 +1708,24 @@ void processEvents(const double tol_phi, const double tol_x,
       VtxMulti = 1;
     else if (VtxType == 1)
       VtxMono = 1;
-      
-    std::vector<digit> filtered_digits = *digits;
 
     tDigit->GetEntry(i);
-    
+
     ////////////////////////////////////////////////
     vector<TG4HitSegment> hits = ev->SegmentDetectors["Straw"];
-    
+
     std::map<int, std::vector<digit> > pdX;
     std::map<int, std::vector<digit> > pdY;
 
     for (unsigned int ll = 0; ll < digits->size(); ll++) {
       if (digits->at(ll).hor == 1)
-        pdY[hits[digits->at(ll).hindex.front()].GetPrimaryId()].push_back(digits->at(ll));
+        pdY[hits[digits->at(ll).hindex.front()].GetPrimaryId()]
+            .push_back(digits->at(ll));
       else
-        pdX[hits[digits->at(ll).hindex.front()].GetPrimaryId()].push_back(digits->at(ll));
+        pdX[hits[digits->at(ll).hindex.front()].GetPrimaryId()]
+            .push_back(digits->at(ll));
     }
-    
+
     //////////////////////////////////////////////////
 
     // track finding with clustering in arctg(v/u) VS z
@@ -1561,77 +1747,75 @@ void processEvents(const double tol_phi, const double tol_x,
     // tolerance in module: 5
     findTracksX(mdX, clustersX, hdummy, xvtx_reco, yvtx_reco, zvtx_reco, tol_x,
                 tol_mod);
-    
-    
+
     //////////////////////////////////////////////////
     cluYID = 0;
     cluXID = 0;
-    
-    for(unsigned int ii = 0; ii < clustersY.size(); ii++)
-    {
+
+    for (unsigned int ii = 0; ii < clustersY.size(); ii++) {
       cluY = clustersY.at(ii);
-      
+
       std::map<int, int> pIDHY;
-      
+
       int ntot = 0;
       for (unsigned int jj = 0; jj < cluY.size(); jj++) {
         pIDHY[hits[cluY.at(jj).hindex.front()].GetPrimaryId()]++;
       }
-    
+
       int nmax = 0;
       int pid = 0;
-  
-      for (std::map<int, int>::iterator it = pIDHY.begin(); it != pIDHY.end(); it++) {
+
+      for (std::map<int, int>::iterator it = pIDHY.begin(); it != pIDHY.end();
+           it++) {
         ntot += it->second;
         if (it->second > nmax) {
           pid = it->first;
           nmax = it->second;
         }
       }
-      
-      pHY = double(nmax)/ntot;
-      
+
+      pHY = double(nmax) / ntot;
+
       PartIDY = pid;
-      PartDY = pdY[PartIDY]; 
-      
+      PartDY = pdY[PartIDY];
+
       PartPY = ev->Trajectories.at(PartIDY).GetInitialMomentum();
       PartPDGY = ev->Trajectories.at(PartIDY).GetPDGCode();
-      
-      
+
       tclY.Fill();
       cluYID++;
     }
-    
-    for(unsigned int ii = 0; ii < clustersX.size(); ii++)
-    {
+
+    for (unsigned int ii = 0; ii < clustersX.size(); ii++) {
       cluX = clustersX.at(ii);
-      
+
       std::map<int, int> pIDHX;
-      
+
       int ntot = 0;
       for (unsigned int jj = 0; jj < cluX.size(); jj++) {
         pIDHX[hits[cluX.at(jj).hindex.front()].GetPrimaryId()]++;
         ntot++;
       }
-    
+
       int nmax = 0;
       int pid = 0;
-  
-      for (std::map<int, int>::iterator it = pIDHX.begin(); it != pIDHX.end(); it++) {
+
+      for (std::map<int, int>::iterator it = pIDHX.begin(); it != pIDHX.end();
+           it++) {
         if (it->second > nmax) {
           pid = it->first;
           nmax = it->second;
         }
       }
-      
-      pHX = double(nmax)/ntot;
-      
+
+      pHX = double(nmax) / ntot;
+
       PartIDX = pid;
-      PartDX = pdX[PartIDX]; 
-      
+      PartDX = pdX[PartIDX];
+
       PartPX = ev->Trajectories.at(PartIDX).GetInitialMomentum();
       PartPDGX = ev->Trajectories.at(PartIDX).GetPDGCode();
-      
+
       tclX.Fill();
       cluXID++;
     }
@@ -1889,28 +2073,59 @@ void processEvents(const double tol_phi, const double tol_x,
         if (cev) {
           cev->SaveAs("rms.pdf");
         }
-        
+
         std::vector<double> fdx;
         std::vector<double> fdxz;
         std::vector<double> fdy;
         std::vector<double> fdyz;
 
-        for (unsigned int kk = 0; kk < filtered_digits.size(); kk++) {
-          if(filtered_digits.at(kk).hor == 1)
-          {
-            fdy.push_back(filtered_digits.at(kk).y);
-            fdyz.push_back(filtered_digits.at(kk).z);
-          }
-          else
-          {
-            fdx.push_back(filtered_digits.at(kk).x);
-            fdxz.push_back(filtered_digits.at(kk).z);
+        for (unsigned int kk = 0; kk < digits->size(); kk++) {
+          if (digits->at(kk).hor == 1) {
+            fdy.push_back(digits->at(kk).y);
+            fdyz.push_back(digits->at(kk).z);
+          } else {
+            fdx.push_back(digits->at(kk).x);
+            fdxz.push_back(digits->at(kk).z);
           }
         }
-        
-        TGraph grYZ(fdy.size(),fdyz.data(),fdy.data());
-        TGraph grXZ(fdx.size(),fdxz.data(),fdx.data());
-        
+
+        TGraph grYZ(fdy.size(), fdyz.data(), fdy.data());
+        TGraph grXZ(fdx.size(), fdxz.data(), fdx.data());
+        grYZ.SetMarkerStyle(8);
+        grXZ.SetMarkerStyle(8);
+        grYZ.SetMarkerSize(0.05);
+        grXZ.SetMarkerSize(0.05);
+
+        std::vector<double> cdx;
+        std::vector<double> cdxz;
+        std::vector<double> cdy;
+        std::vector<double> cdyz;
+
+        for (std::map<int, std::vector<double> >::iterator it = clustX.begin(); it != clustX.end(); it++) {
+          for(unsigned int kk = 0; kk < it->second.size(); kk++)
+          {
+            cdx.push_back(it->second.at(kk));
+            cdxz.push_back(mod2Z.at(it->first)+25.);
+          }
+        }
+
+        for (std::map<int, std::vector<double> >::iterator it = clustY.begin(); it != clustY.end(); it++) {
+          for(unsigned int kk = 0; kk < it->second.size(); kk++)
+          {
+            cdy.push_back(it->second.at(kk));
+            cdyz.push_back(mod2Z.at(it->first)+25.);
+          }
+        }
+
+        TGraph grclYZ(cdy.size(), cdyz.data(), cdy.data());
+        TGraph grclXZ(cdx.size(), cdxz.data(), cdx.data());
+        grclYZ.SetMarkerStyle(8);
+        grclXZ.SetMarkerStyle(8);
+        grclYZ.SetMarkerSize(0.1);
+        grclXZ.SetMarkerSize(0.1);
+        grclYZ.SetMarkerColor(kViolet);
+        grclXZ.SetMarkerColor(kViolet);
+
         std::vector<double> valx1X;
         std::vector<double> valy1X;
         std::vector<double> xerr1X;
@@ -1919,7 +2134,7 @@ void processEvents(const double tol_phi, const double tol_x,
         std::vector<double> valyMX;
         std::vector<double> xerrMX;
         std::vector<double> yerrMX;
-        
+
         std::vector<double> valx1Y;
         std::vector<double> valy1Y;
         std::vector<double> xerr1Y;
@@ -1929,63 +2144,140 @@ void processEvents(const double tol_phi, const double tol_x,
         std::vector<double> xerrMY;
         std::vector<double> yerrMY;
 
-        for (std::map<int,int>::iterator it = nX.begin(); it != nX.end(); ++it) {
-          if(it->second > 1)
-          {
-            int id = 1 + 10*int(it->first/10) + 1000*(it->first%2);
-            
-            valxMX.push_back(stZ.at(id));
+        for (std::map<int, int>::iterator it = nX.begin(); it != nX.end();
+             ++it) {
+          if (it->second > 1) {
+            int id = 1 + 10 * int(it->first / 10) + 1000 * (it->first % 2);
+
+            valxMX.push_back(stZ.at(1 + 10 * it->first));
             valyMX.push_back(meanX.at(it->first));
-            xerrMX.push_back(0.5*TMath::Sin(60./180.*TMath::Pi()));
+            xerrMX.push_back(0.5 * TMath::Sin(60. / 180. * TMath::Pi()));
             yerrMX.push_back(rmsX.at(it->first));
-          }
-          else if(it->second == 1)
-          {
-            int id = 1 + 10*int(it->first/10) + 1000*(it->first%2);
-            
-            valx1X.push_back(stZ.at(id));
+          } else if (it->second == 1) {
+            int id = 1 + 10 * int(it->first / 10) + 1000 * (it->first % 2);
+
+            valx1X.push_back(stZ.at(1 + 10 * it->first));
             valy1X.push_back(meanX.at(it->first));
-            xerr1X.push_back(0.5*TMath::Sin(60./180.*TMath::Pi()));
+            xerr1X.push_back(0.5 * TMath::Sin(60. / 180. * TMath::Pi()));
             yerr1X.push_back(rmsX.at(it->first));
           }
         }
 
-        for (std::map<int,int>::iterator it = nY.begin(); it != nY.end(); ++it) {
-          if(it->second > 1)
-          {
-            int id = 2 + 10*int(it->first/10) + 1000*(it->first%2);
-            
-            valxMY.push_back(stZ.at(id));
+        for (std::map<int, int>::iterator it = nY.begin(); it != nY.end();
+             ++it) {
+          if (it->second > 1) {
+            int id = 2 + 10 * int(it->first / 10) + 1000 * (it->first % 2);
+
+            valxMY.push_back(stZ.at(2 + 10 * it->first));
             valyMY.push_back(meanY.at(it->first));
-            xerrMY.push_back(0.5*TMath::Sin(60./180.*TMath::Pi()));
+            xerrMY.push_back(0.5 * TMath::Sin(60. / 180. * TMath::Pi()));
             yerrMY.push_back(rmsY.at(it->first));
-          }
-          else if(it->second == 1)
-          {
-            int id = 2 + 10*int(it->first/10) + 1000*(it->first%2);
-            
-            valx1Y.push_back(stZ.at(id));
+          } else if (it->second == 1) {
+            int id = 2 + 10 * int(it->first / 10) + 1000 * (it->first % 2);
+
+            valx1Y.push_back(stZ.at(2 + 10 * it->first));
             valy1Y.push_back(meanY.at(it->first));
-            xerr1Y.push_back(0.5*TMath::Sin(60./180.*TMath::Pi()));
+            xerr1Y.push_back(0.5 * TMath::Sin(60. / 180. * TMath::Pi()));
             yerr1Y.push_back(rmsY.at(it->first));
           }
         }
-        
-        TGraphErrors grProfMYZ(valxMY.size(),valxMY.data(),valyMY.data(),xerrMY.data(),yerrMY.data());
-        TGraphErrors grProfMXZ(valxMX.size(),valxMX.data(),valyMX.data(),xerrMX.data(),yerrMX.data());
-        TGraphErrors grProf1YZ(valx1Y.size(),valx1Y.data(),valy1Y.data(),xerr1Y.data(),yerr1Y.data());
-        TGraphErrors grProf1XZ(valx1X.size(),valx1X.data(),valy1X.data(),xerr1X.data(),yerr1X.data());
-        
+
+        TGraphErrors grProfMYZ(valxMY.size(), valxMY.data(), valyMY.data(),
+                               xerrMY.data(), yerrMY.data());
+        TGraphErrors grProfMXZ(valxMX.size(), valxMX.data(), valyMX.data(),
+                               xerrMX.data(), yerrMX.data());
+        TGraphErrors grProf1YZ(valx1Y.size(), valx1Y.data(), valy1Y.data(),
+                               xerr1Y.data(), yerr1Y.data());
+        TGraphErrors grProf1XZ(valx1X.size(), valx1X.data(), valy1X.data(),
+                               xerr1X.data(), yerr1X.data());
+
         grProfMYZ.SetMarkerColor(kBlue);
         grProfMYZ.SetLineColor(kBlue);
         grProfMXZ.SetMarkerColor(kBlue);
         grProfMXZ.SetLineColor(kBlue);
-        
+
         grProf1YZ.SetMarkerColor(kRed);
         grProf1YZ.SetLineColor(kRed);
         grProf1XZ.SetMarkerColor(kRed);
         grProf1XZ.SetLineColor(kRed);
+
+        c.Clear();
+        c.Divide(2, 1);
+
+        /*
+        c.cd(1)->DrawFrame(21500, -5000, 26500, 0,
+                           TString::Format("Event: %d (ZY)", i).Data());
+        c.cd(2)->DrawFrame(21500, -2500, 26500, 2500,
+                           TString::Format("Event: %d (ZX)", i).Data());
+        */
+
+        c.cd(1)->DrawFrame(21500, -5000, 26500, 0,
+                           TString::Format("Event: %d (ZY)", i).Data());
+        c.cd(2)->DrawFrame(21500, -2500, 26500, 2500,
+                           TString::Format("Event: %d (ZX)", i).Data());
+
+        c.cd(1);
         
+        /*
+        for (std::map<int, std::map<int, TVector2> >::iterator it =
+                 stPos.begin();
+             it != stPos.end(); ++it) {
+          if (it->first % 2 == 0) {
+            for (std::map<int, TVector2>::iterator iter = it->second.begin();
+                 iter != it->second.end(); ++iter) {
+              el = new TEllipse(iter->second.X(), iter->second.Y(), 2.5);
+              el->SetFillStyle(0);
+              el->SetLineColor(kOrange);
+              el->Draw();
+            }
+          }
+        }
+        */
+
+        m = new TMarker(zvtx_true, yvtx_true, 20);  // circle
+        m->SetMarkerColor(kBlue);
+        m->Draw();
+        m = new TMarker(zvtx_reco, yvtx_reco, 21);  // square
+        m->SetMarkerColor(kBlack);
+        m->Draw();
+
+        if (grProfMYZ.GetN() > 0) grProfMYZ.Draw("psame");
+        if (grProf1YZ.GetN() > 0) grProf1YZ.Draw("psame");
+        if (grclYZ.GetN() > 0) grclYZ.Draw("psame");
+        if (grYZ.GetN() > 0) grYZ.Draw("psame");
+
+        c.cd(2);
+        
+        /*
+        for (std::map<int, std::map<int, TVector2> >::iterator it =
+                 stPos.begin();
+             it != stPos.end(); ++it) {
+          if (it->first % 2 == 1) {
+            for (std::map<int, TVector2>::iterator iter = it->second.begin();
+                 iter != it->second.end(); ++iter) {
+              el = new TEllipse(iter->second.X(), iter->second.Y(), 2.5);
+              el->SetFillStyle(0);
+              el->SetLineColor(kOrange);
+              el->Draw();
+            }
+          }
+        }
+        */
+
+        m = new TMarker(zvtx_true, xvtx_true, 20);
+        m->SetMarkerColor(kBlue);
+        m->Draw();
+        m = new TMarker(zvtx_reco, xvtx_reco, 21);
+        m->SetMarkerColor(kBlack);
+        m->Draw();
+
+        if (grProfMXZ.GetN() > 0) grProfMXZ.Draw("psame");
+        if (grProf1XZ.GetN() > 0) grProf1XZ.Draw("psame");
+        if (grclXZ.GetN() > 0) grclXZ.Draw("psame");
+        if (grXZ.GetN() > 0) grXZ.Draw("psame");
+
+        c.SaveAs("rms.pdf");
+
         c.Clear();
         c.Divide(2, 1);
 
@@ -1993,41 +2285,24 @@ void processEvents(const double tol_phi, const double tol_x,
                            TString::Format("Event: %d (ZY)", i).Data());
         c.cd(2)->DrawFrame(21500, -2500, 26500, 2500,
                            TString::Format("Event: %d (ZX)", i).Data());
-        
+                           
         c.cd(1);
-        m = new TMarker(zvtx_reco,yvtx_reco,21); // square
+
+        m = new TMarker(zvtx_true, yvtx_true, 20);  // circle
+        m->SetMarkerColor(kBlue);
+        m->Draw();
+        m = new TMarker(zvtx_reco, yvtx_reco, 21);  // square
         m->SetMarkerColor(kBlack);
         m->Draw();
-        m = new TMarker(zvtx_true,yvtx_true,20); // circle
-        m->SetMarkerColor(kBlack);
-        m->Draw();
-        
-        if(grYZ.GetN()>0)grYZ.Draw("psame");
-        if(grProfMYZ.GetN()>0)grProfMYZ.Draw("psame");
-        if(grProf1YZ.GetN()>0)grProf1YZ.Draw("psame");        
         
         c.cd(2);
-        m = new TMarker(zvtx_reco,xvtx_reco,21);
+
+        m = new TMarker(zvtx_true, xvtx_true, 20);
+        m->SetMarkerColor(kBlue);
+        m->Draw();
+        m = new TMarker(zvtx_reco, xvtx_reco, 21);
         m->SetMarkerColor(kBlack);
         m->Draw();
-        m = new TMarker(zvtx_true,xvtx_true,20);
-        m->SetMarkerColor(kBlack);
-        m->Draw();
-        
-        if(grXZ.GetN()>0)grXZ.Draw("psame");
-        if(grProfMXZ.GetN()>0)grProfMXZ.Draw("psame");
-        if(grProf1XZ.GetN()>0)grProf1XZ.Draw("psame");
-        
-        c.SaveAs("rms.pdf");
-        
-        c.Clear();
-        c.Divide(2, 1);
-
-        c.cd(1)->DrawFrame(21500, -5000, 26500, 0,
-                           TString::Format("Event: %d (ZY)", i).Data());
-        c.cd(2)->DrawFrame(21500, -2500, 26500, 2500,
-                           TString::Format("Event: %d (ZX)", i).Data());
-
         std::vector<double> dXx;
         std::vector<double> dXz;
         std::vector<double> dYy;
@@ -2087,9 +2362,8 @@ void processEvents(const double tol_phi, const double tol_x,
           if (abs(z0 - tracks.at(j).zc) > tracks.at(j).r)
             radq = 0;
           else
-            radq =
-                TMath::Sqrt(tracks.at(j).r * tracks.at(j).r -
-                            (z0 - tracks.at(j).zc) * (z0 - tracks.at(j).zc));
+            radq = TMath::Sqrt(tracks.at(j).r * tracks.at(j).r -
+                               (z0 - tracks.at(j).zc) * (z0 - tracks.at(j).zc));
 
           yexp = tracks.at(j).yc + tracks.at(j).ysig * radq;
 
@@ -2118,7 +2392,7 @@ void processEvents(const double tol_phi, const double tol_x,
           ffx->SetLineColor(j + 1);
           ffx->Draw("same");
         }
-        
+
         c.SaveAs("rms.pdf");
       }
     }
@@ -2165,16 +2439,14 @@ void processEvents(const double tol_phi, const double tol_x,
   vrmsZ = sqrt(vrmsZ);
   vrms3D = sqrt(vrms3D);
 
-  std::cout << std::setw(10) << "minreg" << std::setw(10) << "epsilon"
-            << std::setw(15) << "wideMultReg" << std::setw(15) << "gefficiency"
+  std::cout << std::setw(10) << "epsilon" << std::setw(15) << "gefficiency"
             << std::setw(15) << "efficiency" << std::setw(10) << "rmsX"
             << std::setw(10) << "rmsY" << std::setw(10) << "rmsZ"
             << std::setw(10) << "rms3D" << std::endl;
-  std::cout << std::setw(10) << minreg << std::setw(10) << epsilon
-            << std::setw(15) << wideMultReg << std::setw(15)
-            << double(nall) / nev << std::setw(15) << double(nok) / nall
-            << std::setw(10) << vrmsX << std::setw(10) << vrmsY << std::setw(10)
-            << vrmsZ << std::setw(10) << vrms3D << std::endl;
+  std::cout << std::setw(10) << epsilon << std::setw(15) << double(nall) / nev
+            << std::setw(15) << double(nok) / nall << std::setw(10) << vrmsX
+            << std::setw(10) << vrmsY << std::setw(10) << vrmsZ << std::setw(10)
+            << vrms3D << std::endl;
 
   avePurityY /= countClY;
   avePurityX /= countClX;
@@ -2230,192 +2502,45 @@ void processEvents(const double tol_phi, const double tol_x,
 
 void findvtx()
 {
-  // find best value of epsilon: 0.5
-  // filter out small region of different multiplicity: no
-  // start searching vtx from wider region: no
   /*
-  processEvents(1, 0.0, false);
-  processEvents(1, 0.00000001, false);
-  processEvents(1, 0.0000001, false);
-  processEvents(1, 0.000001, false);
-  processEvents(1, 0.00001, false);
-  processEvents(1, 0.0001, false);
-  processEvents(1, 0.001, false);
-  processEvents(1, 0.01, false);
-  processEvents(1, 0.1, false);
-  processEvents(1, 0.2, false);
-  processEvents(1, 0.3, false);
-  processEvents(1, 0.4, false);
-  processEvents(1, 0.5, false);
-  processEvents(1, 0.6, false);
-  processEvents(1, 0.7, false);
-  processEvents(1, 0.8, false);
-  processEvents(1, 0.9, false);
-  processEvents(1, 1., false);
-  processEvents(1, 2., false);
-  processEvents(1, 0.5, true);
-  processEvents(2, 0.5, true);
-  processEvents(3, 0.5, true);
-  processEvents(4, 0.5, true);
-  processEvents(5, 0.5, true);
-  processEvents(6, 0.5, true);
-  processEvents(7, 0.5, true);
-  processEvents(8, 0.5, true);
-  processEvents(9, 0.5, true);
-  processEvents(10, 0.5, true);
-  processEvents(2, 0.5, false);
-  processEvents(3, 0.5, false);
-  processEvents(4, 0.5, false);
-  processEvents(5, 0.5, false);
-  processEvents(6, 0.5, false);
-  processEvents(7, 0.5, false);
-  processEvents(8, 0.5, false);
-  processEvents(9, 0.5, false);
-  processEvents(10, 0.5, false);*/
-
-  /*
-    processEvents(1E7,1E7,1,0,1.,1E7,1E7);
-    processEvents(1E7,1E7,1,1,1.,1E7,1E7);
-    processEvents(1E7,1E7,1,2,1.,1E7,1E7);
-    processEvents(1E7,1E7,1,3,1.,1E7,1E7);
-    processEvents(1E7,1E7,1,4,1.,1E7,1E7);
-    processEvents(1E7,1E7,1,5,1.,1E7,1E7);
-    processEvents(1E7,1E7,1,10,1.,1E7,1E7);
-
-  fraction tol_phi  tol_x tol_mod  mindigtr    dz_tol dn_tol total     fracY
-  fracX     avePY     avePX     aveNY     aveNX    3DtrOK    3DtrNO
-       1     1e+07  1e+07       1         0     1e+07  1e+07 31001  0.585529
-  0.666688  0.951308  0.956523   27.1775   20.2663     83410         0
-       1     1e+07  1e+07       1         1     1e+07  1e+07 31001  0.362956
-  0.466727  0.858389  0.883189   68.5525   44.3859     29058         0
-       1     1e+07  1e+07       1         2     1e+07  1e+07 31001  0.331118
-  0.427244   0.85393  0.887535   75.1021   52.5307     25875         0
-       1     1e+07  1e+07       1         3     1e+07  1e+07 31001   0.30928
-  0.400181  0.851226  0.888905   79.2529   57.0791     23924         0
-       1     1e+07  1e+07       1         4     1e+07  1e+07 31001  0.292249
-  0.376439  0.849571  0.888555   82.7189   60.4982     22385         0
-       1     1e+07  1e+07       1         5     1e+07  1e+07 31001  0.274411
-  0.354892  0.847312  0.888689   86.2045    63.515     20962         0
-       1     1e+07  1e+07       1        10     1e+07  1e+07 31001  0.218864
-  0.271862  0.841057  0.888397   99.0147   75.9628     16139         0
+  void processEvents(const double tol_phi, const double tol_x,
+                   const double tol_mod, const int mindigtr,
+                   const double frac = 1.0, const double dn_tol = 0.7,
+                   const double dz_tol = 200., const double epsilon = 0.5,
+                   const int maxclntub = 4, const int maxclntublong = 4)
   */
-  /*
-    processEvents(0.0001,1E7,1,3,1.,1E7,1E7);
-    processEvents(0.001,1E7,1,3,1.,1E7,1E7);
-    processEvents(0.01,1E7,1,3,1.,1E7,1E7);
-    processEvents(0.1,1E7,1,3,1.,1E7,1E7);
-    processEvents(0.2,1E7,1,3,1.,1E7,1E7);
-    processEvents(0.5,1E7,1,3,1.,1E7,1E7);
-    processEvents(1.,1E7,1,3,1.,1E7,1E7);
-    processEvents(2.,1E7,1,3,1.,1E7,1E7);
-    processEvents(10.,1E7,1,3,1.,1E7,1E7);
-
-  fraction   tol_phi tol_x tol_mod  mindigtr dz_tol    dn_tol     total
-  fracY     fracX     avePY     avePX     aveNY     aveNX    3DtrOK    3DtrNO
-         1    0.0001 1e+07       1         3  1e+07     1e+07
-  310010.00170962  0.400181         1  0.888905   10.4444   57.0791        72 0
-         1     0.001 1e+07       1         3  1e+07     1e+07     31001
-  0.0626109  0.400181  0.987784  0.888905    17.716   57.0791      3323 0
-         1      0.01 1e+07       1         3  1e+07     1e+07     31001
-  0.328989  0.400181  0.967039  0.888905   40.0435   57.0791     19067         0
-         1       0.1 1e+07       1         3  1e+07     1e+07     31001
-  0.421244  0.400181  0.924476  0.888905   63.6038   57.0791     27199         0
-         1       0.2 1e+07       1         3  1e+07     1e+07     31001
-  0.390149  0.400181  0.902731  0.888905   68.9421   57.0791     26616         0
-         1       0.5 1e+07       1         3  1e+07     1e+07     31001
-  0.346118  0.400181  0.874969  0.888905   75.4198   57.0791     25103         0
-         1         1 1e+07       1         3  1e+07     1e+07     31001
-  0.321119  0.400181  0.859481  0.888905   78.2855   57.0791     24226         0
-         1         2 1e+07       1         3  1e+07     1e+07     31001
-  0.309893  0.400181  0.851923  0.888905   79.2079   57.0791     23940         0
-         1        10 1e+07       1         3  1e+07     1e+07     31001
-  0.30928  0.400181  0.851226  0.888905   79.2529   57.0791     23924         0
-  */
-
-  /*
-    processEvents(0.1,1,1,3,1.,1E7,1E7);
-    processEvents(0.1,2,1,3,1.,1E7,1E7);
-    processEvents(0.1,5,1,3,1.,1E7,1E7);
-    processEvents(0.1,10,1,3,1.,1E7,1E7);
-    processEvents(0.1,20,1,3,1.,1E7,1E7);
-    processEvents(0.1,50,1,3,1.,1E7,1E7);
-    processEvents(0.1,100,1,3,1.,1E7,1E7);
-    processEvents(0.1,1000,1,3,1.,1E7,1E7);
-
-  fraction   tol_phi tol_x   tol_mod  mindigtr dz_tol dn_tol total     fracY
-  fracX     avePY     avePX     aveNY     aveNX 3DtrackOK 3DtrackNO
-         1       0.1     1         1         3  1e+07  1e+07 31001  0.421244
-  0.0393858  0.924476  0.983681   63.6038   23.0531      2821         0
-         1       0.1     2         1         3  1e+07  1e+07 31001  0.421244
-  0.0714816  0.924476  0.976192   63.6038   29.4961      5205         0
-         1       0.1     5         1         3  1e+07  1e+07 31001  0.421244
-  0.150931  0.924476  0.966015   63.6038   37.7544     10768         0
-         1       0.1    10         1         3  1e+07  1e+07 31001  0.421244
-  0.238896  0.924476   0.95911   63.6038    43.071     16509         0
-         1       0.1    20         1         3  1e+07  1e+07 31001  0.421244
-  0.334667  0.924476  0.954244   63.6038   48.8484     21732         0
-         1       0.1    50         1         3  1e+07  1e+07 31001  0.421244
-  0.420599  0.924476  0.945698   63.6038    54.109     25857         0
-         1       0.1   100         1         3  1e+07  1e+07 31001  0.421244
-  0.43605  0.924476  0.936404   63.6038   55.9506     26848         0
-         1       0.1  1000         1         3  1e+07  1e+07 31001  0.421244
-  0.407116  0.924476  0.895416   63.6038   57.2511     27194         0
-  */
-
-  /*
-  processEvents(0.1,100,2,3,1.,1E7,1E7);
-  processEvents(0.1,100,3,3,1.,1E7,1E7);
-  processEvents(0.1,100,4,3,1.,1E7,1E7);
-  processEvents(0.1,100,5,3,1.,1E7,1E7);
-  processEvents(0.1,100,10,3,1.,1E7,1E7);
-  processEvents(0.1,100,100,3,1.,1E7,1E7);
-
-
-  fraction   tol_phi tol_x   tol_mod  mindigtr dz_tol dn_tol     total     fracY
-  fracX     avePY     avePX     aveNY     aveNX 3DtrackOK 3DtrackNO
-         1       0.1   100         2         3  1e+07  1e+07     31001  0.403019
-  0.406051  0.915534  0.925119   66.9911   64.5242     25337         0
-         1       0.1   100         3         3  1e+07  1e+07     31001   0.39689
-  0.394116  0.910148   0.91927   67.5035   66.6706     24943         0
-         1       0.1   100         4         3  1e+07  1e+07     31001  0.393503
-  0.386858  0.906048  0.914574    67.637   67.5364     24749         0
-         1       0.1   100         5         3  1e+07  1e+07     31001  0.390665
-  0.38402  0.902626  0.911501   67.6032   67.5336     24746         0
-         1       0.1   100        10         3  1e+07  1e+07     31001  0.381762
-  0.37702  0.890486  0.898828    67.195    66.542     24996         0
-         1       0.1   100       100         3  1e+07  1e+07     31001  0.366053
-  0.363859   0.87025   0.86753    65.845   62.0067     25857         0
-
-  */
-  /*
-  processEvents(0.0001, 1, 4, 3, 1., 1E7, 1E7);
-  processEvents(0.001, 2, 4, 3, 1., 1E7, 1E7);
-  processEvents(0.01, 5, 4, 3, 1., 1E7, 1E7);
-  processEvents(0.02, 10, 4, 3, 1., 1E7, 1E7);
-  processEvents(0.05, 20, 4, 3, 1., 1E7, 1E7);
-  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7);
-  processEvents(0.2, 100, 4, 3, 1., 1E7, 1E7);
   
-    fraction   tol_phi   tol_mod  mindigtr    dz_tol    dn_tol     total     fracY     avePY     aveNY 3DtrackOK 3DtrackNO
-         1    0.0001         4         3     1e+07     1e+07     197280.00734996  0.988038   11.0962       101         0
-         1     0.001         4         3     1e+07     1e+07     19728  0.109895  0.969556   17.7685      1795         0
-         1      0.01         4         3     1e+07     1e+07     19728  0.490622   0.94203   42.1133      8821         0
-         1      0.02         4         3     1e+07     1e+07     19728  0.582218  0.933524   52.1915     14102         0
-         1      0.05         4         3     1e+07     1e+07     19728  0.623733  0.920472   61.9823     19337         0
-         1       0.1         4         3     1e+07     1e+07     19728  0.610807  0.905732   67.6131     23570         0
-         1       0.2         4         3     1e+07     1e+07     19728  0.568177  0.886972   72.3547     24587         0
-  fraction     tol_x   tol_mod  mindigtr    dz_tol    dn_tol     total     fracX     avePX     aveNX 3DtrackOK 3DtrackNO
-         1         1         4         3     1e+07     1e+07     19728  0.060371  0.956231   26.8948       101         0
-         1         2         4         3     1e+07     1e+07     19728  0.107005  0.946723   34.4203      1795         0
-         1         5         4         3     1e+07     1e+07     19728  0.217863  0.941275   44.4333      8821         0
-         1        10         4         3     1e+07     1e+07     19728  0.339974  0.940689   51.9156     14102         0
-         1        20         4         3     1e+07     1e+07     19728  0.470397  0.938008   59.7647     19337         0
-         1        50         4         3     1e+07     1e+07     19728  0.584854  0.927056   66.1079     23570         0
-         1       100         4         3     1e+07     1e+07     19728  0.598236  0.914042    67.425     24587         0
-  */
-
-  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1E7);
   
+  /*
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1E-5);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1E-3);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1E-2);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 2E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 3E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 4E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 5E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 6E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 7E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 8E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 9E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1.);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 11E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 12E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 13E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 14E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 15E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 16E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 17E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 18E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 19E-1);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 2.);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 5.);
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 10.);
+  */
+  
+  processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1E7, 3, 4);
+
   gStyle->SetPalette(53);
 
   TFile f("vtx.root");
@@ -2429,31 +2554,32 @@ void findvtx()
   TCut notLAr = "zvtx_true > 22100";
 
   // x VS z
-  tv->Draw("xvtx_true:zvtx_true>>hxVSz", "", "");
-  TH2D* hxVSz = (TH2D*)gROOT->FindObject("hxVSz");
-  hxVSz->SetTitle(";Z (mm); X (mm); #Deltar_{3D} (mm)");
-  hxVSz->Draw();
+  long int nev;
+  nev = tv->Draw("xvtx_true:zvtx_true", "", "goff");
+  TGraph gxVSz(nev,tv->GetV2(),tv->GetV1());
+  gxVSz.SetTitle(";Z (mm); X (mm); #Deltar_{3D} (mm)");
+  gxVSz.Draw("ap");
   c.SaveAs("vtx.pdf(");
 
   // y VS z
-  tv->Draw("yvtx_true:zvtx_true>>hyVSz", "", "");
-  TH2D* hyVSz = (TH2D*)gROOT->FindObject("hyVSz");
-  hyVSz->SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
-  hyVSz->Draw();
+  nev = tv->Draw("yvtx_true:zvtx_true", "", "goff");
+  TGraph gyVSz(nev,tv->GetV2(),tv->GetV1());
+  gyVSz.SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
+  gyVSz.Draw("ap");
   c.SaveAs("vtx.pdf");
 
   // x VS z reco
-  tv->Draw("xvtx_reco:zvtx_reco>>hxVSz_reco", vtxReco, "");
-  TH2D* hxVSz_reco = (TH2D*)gROOT->FindObject("hxVSz_reco");
-  hxVSz_reco->SetTitle(";Z (mm); X (mm); #Deltar_{3D} (mm)");
-  hxVSz_reco->Draw();
+  nev = tv->Draw("xvtx_reco:zvtx_reco", vtxReco, "goff");
+  TGraph gxVSz_reco(nev,tv->GetV2(),tv->GetV1());
+  gxVSz_reco.SetTitle(";Z (mm); X (mm); #Deltar_{3D} (mm)");
+  gxVSz_reco.Draw("ap");
   c.SaveAs("vtx.pdf");
 
   // y VS z reco
-  tv->Draw("yvtx_reco:zvtx_reco>>hyVSz_reco", vtxReco, "");
-  TH2D* hyVSz_reco = (TH2D*)gROOT->FindObject("hyVSz_reco");
-  hyVSz_reco->SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
-  hyVSz_reco->Draw();
+  nev = tv->Draw("yvtx_reco:zvtx_reco", vtxReco, "goff");
+  TGraph gyVSz_reco(nev,tv->GetV2(),tv->GetV1());
+  gyVSz_reco.SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
+  gyVSz_reco.Draw("ap");
   c.SaveAs("vtx.pdf");
 
   // x VS z VS mean dr

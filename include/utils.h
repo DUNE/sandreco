@@ -64,8 +64,11 @@ const char* path_internal_volume =
     "MagIntVol_volume_PV_0/volSTTFULL_PV_0/";
 const char* name_internal_volume = "volSTTFULL_PV";
 
-const char* rST_string = "(sttmod|frontST)([0-9]+)_(ST|vol)_(hor|ver)_ST_stGas_([a-zA-Z]{2})19_vol_PV_([0-9]+)";
-const char* rSTplane_string = "(sttmod|frontST)([0-9]+)_(ST|vol)_(hor|ver)_vol_PV_0";
+const char* rST_string =
+    "(sttmod|frontST)([0-9]+)_(ST|vol)_(hor|ver)_ST_stGas_([a-zA-Z]{2})19_vol_"
+    "PV_([0-9]+)";
+const char* rSTplane_string =
+    "(sttmod|frontST)([0-9]+)_(ST|vol)_(hor|ver)_vol_PV_0";
 
 TPRegexp* rST;
 TPRegexp* rSTplane;
@@ -140,8 +143,11 @@ bool isST(TString name);
 bool isSTPlane(TString name);
 int getSTId(TString name);
 int getPlaneID(TString name);
-void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid, std::map<double, int>& stX, std::map<int, TVector2>& stPos);
-void getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat, std::map<int, std::map<double, int> >& stX, std::map<int, std::map<int, TVector2> >& stPos);
+void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
+               std::map<double, int>& stX, std::map<int, TVector2>& stPos);
+void getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
+                    std::map<int, std::map<double, int> >& stX,
+                    std::map<int, std::map<int, TVector2> >& stPos);
 int getSTUniqID(TGeoManager* g, double x, double y, double z);
 }
 
