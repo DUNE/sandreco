@@ -1535,11 +1535,12 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   binning.push_back(last_z);
 }
 
-void Reconstruct(const char* fIn)
+void Reconstruct(const char* fMc, const char* fIn)
 {
+  TFile ftrue(fMc, "READ");
   TFile f(fIn, "UPDATE");
   TTree* tDigit = (TTree*)f.Get("tDigit");
-  TTree* tTrueMC = (TTree*)f.Get("EDepSimEvents");
+  TTree* tTrueMC = (TTree*)ftrue.Get("EDepSimEvents");
   TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
 
   std::vector<double> sampling;
@@ -1623,17 +1624,18 @@ void Reconstruct(const char* fIn)
   f.cd();
   tout.Write("", TObject::kOverwrite);
   f.Close();
+  ftrue.Close();
 }
 
 void help_reco()
 {
-  std::cout << "Reconstruct <input file>" << std::endl;
+  std::cout << "Reconstruct <MC file> <digit file>" << std::endl;
 }
 
 int main(int argc, char* argv[])
 {
-  if (argc != 2)
+  if (argc != 3)
     help_reco();
   else
-    Reconstruct(argv[1]);
+    Reconstruct(argv[1], argv[2]);
 }

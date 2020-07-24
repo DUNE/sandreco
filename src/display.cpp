@@ -57,6 +57,7 @@ double kloe_int_R = 2000.;
 double kloe_int_dx = 1690.;
 
 TFile* f = 0;
+TFile* fmc = 0;
 TTree* t = 0;
 TG4Event* ev = new TG4Event;
 event* evt = new event;
@@ -92,16 +93,18 @@ const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
 
 using namespace display;
 
-void init(const char* ifile)
+void init(const char* mcfile, const char* ifile)
 {
   gStyle->SetPalette(palette);
 
+  fmc = new TFile(mcfile);
   f = new TFile(ifile);
   TTree* tEvent = reinterpret_cast<TTree*>(f->Get("tEvent"));
   TTree* tReco = reinterpret_cast<TTree*>(f->Get("tReco"));
   TTree* tDigit = reinterpret_cast<TTree*>(f->Get("tDigit"));
-  TTree* tEdep = reinterpret_cast<TTree*>(f->Get("EDepSimEvents"));
-  TTree* tGenie = reinterpret_cast<TTree*>(f->Get("gRooTracker"));
+  TTree* tEdep = reinterpret_cast<TTree*>(fmc->Get("EDepSimEvents"));
+  TTree* tGenie =
+      reinterpret_cast<TTree*>(fmc->Get("DetSimPassThru/gRooTracker"));
 
   if (!tEdep) return;
 
@@ -1315,33 +1318,36 @@ int main(int argc, char* argv[])
 
   int evid = 0;
   TString fname;
+  TString fmc;
   TString tmp;
 
-  if (argc < 3) {
-    std::cout << "Display <event number> <input file> [show trajectories] "
-                 "[show fits] [show digits]" << std::endl;
+  if (argc < 4) {
+    std::cout
+        << "Display <event number> <MC file> <input file> [show trajectories] "
+           "[show fits] [show digits]" << std::endl;
     return 1;
   } else {
     evid = atoi(argv[1]);
-    fname = argv[2];
-
-    if (argc > 3) {
-      tmp = argv[3];
-      if (tmp.CompareTo("false") == 0) showtrj = false;
-    }
+    fmc = argv[2];
+    fname = argv[3];
 
     if (argc > 4) {
       tmp = argv[4];
-      if (tmp.CompareTo("false") == 0) showfit = false;
+      if (tmp.CompareTo("false") == 0) showtrj = false;
     }
 
     if (argc > 5) {
       tmp = argv[5];
+      if (tmp.CompareTo("false") == 0) showfit = false;
+    }
+
+    if (argc > 6) {
+      tmp = argv[6];
       if (tmp.CompareTo("false") == 0) showdig = false;
     }
   }
 
-  init(fname.Data());
+  init(fmc.Data(), fname.Data());
 
   show(evid, showtrj, showfit, showdig);
 
