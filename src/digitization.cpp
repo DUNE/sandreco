@@ -391,6 +391,7 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
   }
 }
 
+/*
 void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
                    std::vector<digit>& digit_vec)
 {
@@ -427,6 +428,112 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
     d.z = 0.5 * (it->second.front().z1 + it->second.back().z2);
 
     digit_vec.push_back(d);
+  }
+}
+*/
+
+void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
+                   std::vector<digit>& digit_vec)
+{
+  for (std::map<std::string, std::vector<hit> >::iterator it =
+           cluster_map.begin();
+       it != cluster_map.end(); ++it) {
+
+    std::sort(it->second.begin(), it->second.end(), isHitBefore);
+
+    double pstart[4];
+    double pstop[4];
+
+    pstart[0] = it->second.front().x1;
+    pstart[1] = it->second.front().y1;
+    pstart[2] = it->second.front().z1;
+    pstart[3] = it->second.front().t1;
+
+    pstop[0] = it->second.front().x2;
+    pstop[1] = it->second.front().y2;
+    pstop[2] = it->second.front().z2;
+    pstop[3] = it->second.front().t2;
+    
+    digit* d = new digit;
+    d->de = it->second.at(0).de;
+    d->det = it->second.at(0).det;
+    d->hor = (d->det.find("hor") != std::string::npos) ? false : true;
+    d->hindex.push_back(it->second.at(0).index);
+
+    for(unsigned int i = 1; i < it->second.size(); i++)
+    {
+        if(pstop[0] == it->second.at(i).x1 && pstop[1] == it->second.at(i).y1 && pstop[2] == it->second.at(i).z1)
+        {
+
+            pstop[0] = it->second.at(i).x2;
+            pstop[1] = it->second.at(i).y2;
+            pstop[2] = it->second.at(i).z2;
+            pstop[3] = it->second.at(i).t2;
+
+            d->de += it->second.at(i).de;
+            d->hindex.push_back(it->second.at(i).index);
+
+        }
+        else
+        {
+            if (d->de > e_threshold)
+            {
+                if(d->hor)
+                {
+                    d->x = 0.0;
+                    d->y = 0.5 * (pstart[1] + pstop[1]) +
+                            r.Gaus(0., res_x);
+                }
+                else
+                {
+                    d->x = 0.5 * (pstart[0] + pstop[0]) +
+                            r.Gaus(0., res_x);
+                    d->y = 0.0;
+                }
+
+                d->t = 0.5 * (pstart[3] + pstop[3]) +
+                    r.Gaus(0., res_t);
+                d->z = 0.5 * (pstart[2] + pstop[2]);
+
+                digit_vec.push_back(std::move(*d));
+            }
+            
+            pstart[0] = it->second.at(i).x1;
+            pstart[1] = it->second.at(i).y1;
+            pstart[2] = it->second.at(i).z1;
+
+            pstop[0] = it->second.at(i).x2;
+            pstop[1] = it->second.at(i).y2;
+            pstop[2] = it->second.at(i).z2;
+            
+            d = new digit;
+            d->de = it->second.at(i).de;
+            d->det = it->second.at(i).det;
+            d->hor = (d->det.find("hor") != std::string::npos) ? false : true;
+            d->hindex.push_back(it->second.at(i).index);
+        }
+    }
+    if (d->de > e_threshold)
+    {
+        if(d->hor)
+        {
+            d->x = 0.0;
+            d->y = 0.5 * (pstart[1] + pstop[1]) +
+                    r.Gaus(0., res_x);
+        }
+        else
+        {
+            d->x = 0.5 * (pstart[0] + pstop[0]) +
+                    r.Gaus(0., res_x);
+            d->y = 0.0;
+        }
+
+        d->t = 0.5 * (pstart[3] + pstop[3]) +
+            r.Gaus(0., res_t);
+        d->z = 0.5 * (pstart[2] + pstop[2]);
+
+        digit_vec.push_back(std::move(*d));
+    }
   }
 }
 
