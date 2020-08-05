@@ -452,14 +452,16 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
 
     std::sort(it->second.begin(), it->second.end(), isHitBefore);
 
+<<<<<<< HEAD
     if(d.hor)
     {
+=======
+    if (d.hor) {
+>>>>>>> develop
       d.x = 0.0;
       d.y = 0.5 * (it->second.front().y1 + it->second.back().y2) +
             r.Gaus(0., res_x);
-    }
-    else
-    {
+    } else {
       d.x = 0.5 * (it->second.front().x1 + it->second.back().x2) +
             r.Gaus(0., res_x);
       d.y = 0.0;
@@ -531,9 +533,9 @@ void Digitize(const char* finname, const char* foutname)
   TFile f(finname, "READ");
   TTree* t = (TTree*)f.Get("EDepSimEvents");
   TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
-  TTree* gRooTracker = (TTree*)f.Get("DetSimPassThru/gRooTracker");
-  TTree* InputKinem = (TTree*)f.Get("DetSimPassThru/InputKinem");
-  TTree* InputFiles = (TTree*)f.Get("DetSimPassThru/InputFiles");
+  // TTree* gRooTracker = (TTree*)f.Get("DetSimPassThru/gRooTracker");
+  // TTree* InputKinem = (TTree*)f.Get("DetSimPassThru/InputKinem");
+  // TTree* InputFiles = (TTree*)f.Get("DetSimPassThru/InputFiles");
 
   init(geo);
 
@@ -570,11 +572,10 @@ void Digitize(const char* finname, const char* foutname)
   fout.cd();
   tout.Write();
   geo->Write();
-  t->CloneTree()->Write();
-  if (gRooTracker) gRooTracker->CloneTree()->Write();
-  if (InputKinem) InputKinem->CloneTree()->Write();
-  if (InputFiles) InputFiles->CloneTree()->Write();
-
+  // t->CloneTree()->Write();
+  // if (gRooTracker) gRooTracker->CloneTree()->Write();
+  // if (InputKinem) InputKinem->CloneTree()->Write();
+  // if (InputFiles) InputFiles->CloneTree()->Write();
   fout.Close();
 
   f.Close();
@@ -582,8 +583,8 @@ void Digitize(const char* finname, const char* foutname)
 
 void help_digit()
 {
-  std::cout << "Digitize <input file> <output file>" << std::endl;
-  std::cout << "input file name could contain wild card" << std::endl;
+  std::cout << "Digitize <MC file> <digit file>" << std::endl;
+  std::cout << "MC file name could contain wild card" << std::endl;
 }
 
 int main(int argc, char* argv[])

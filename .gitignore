@@ -13,5 +13,7 @@ loader/code.txt
 analysis/old/*
 nohup.out
 ana.cpp
+src/processTrkFnd.cpp
+src/processVtxLog.cpp
 files/*
 
