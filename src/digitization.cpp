@@ -452,12 +452,7 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
 
     std::sort(it->second.begin(), it->second.end(), isHitBefore);
 
-<<<<<<< HEAD
-    if(d.hor)
-    {
-=======
     if (d.hor) {
->>>>>>> develop
       d.x = 0.0;
       d.y = 0.5 * (it->second.front().y1 + it->second.back().y2) +
             r.Gaus(0., res_x);
