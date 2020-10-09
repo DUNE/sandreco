@@ -356,7 +356,6 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
   CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell);
 }
 
-/*
 void Cluster(TG4Event* ev, TGeoManager* geo,
              std::map<std::string, std::vector<hit> >& cluster_map)
 {
@@ -391,8 +390,8 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     cluster_map[cluster_name].push_back(h);
   }
 }
-*/
 
+/*
 void Cluster(TG4Event* ev, TGeoManager* geo,
              std::map<int, std::vector<hit> >& cluster_map)
 {
@@ -429,8 +428,8 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     cluster_map[stid].push_back(h);
   }
 }
+*/
 
-/*
 void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
                    std::vector<digit>& digit_vec)
 {
@@ -468,8 +467,9 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
 
     digit_vec.push_back(d);
   }
-}*/
+}
 
+/*
 void Cluster2Digit(std::map<int, std::vector<hit> >& cluster_map,
                    std::vector<digit>& digit_vec)
 {
@@ -509,6 +509,7 @@ void Cluster2Digit(std::map<int, std::vector<hit> >& cluster_map,
     digit_vec.push_back(d);
   }
 }
+*/
 
 void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
 {
