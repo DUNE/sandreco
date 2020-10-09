@@ -513,8 +513,8 @@ void Cluster2Digit(std::map<int, std::vector<hit> >& cluster_map,
 
 void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
 {
-  // std::map<std::string, std::vector<hit> > cluster_map;
-  std::map<int, std::vector<hit> > cluster_map;
+  std::map<std::string, std::vector<hit> > cluster_map;
+  // std::map<int, std::vector<hit> > cluster_map;
   digit_vec.clear();
 
   Cluster(ev, geo, cluster_map);
