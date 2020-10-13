@@ -356,6 +356,7 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
   CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell);
 }
 
+/*
 void Cluster(TG4Event* ev, TGeoManager* geo,
              std::map<std::string, std::vector<hit> >& cluster_map)
 {
@@ -390,12 +391,12 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     cluster_map[cluster_name].push_back(h);
   }
 }
+*/
 
-/*
-void Cluster(TG4Event* ev, TGeoManager* geo,
-             std::map<int, std::vector<hit> >& cluster_map)
+void FillHitMap(TG4Event* ev, TGeoManager* geo,
+                std::map<int, std::map<int, std::vector<hit> > >& hit_map)
 {
-  cluster_map.clear();
+  hit_map.clear();
 
   for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
     const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
@@ -409,6 +410,9 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     int stid = getSTUniqID(geo, x, y, z);
 
     if (stid == -999) continue;
+
+    int sid = stid / 1000;
+    int mod = stid % 1000;
 
     hit h;
     h.det = sttname;
@@ -425,11 +429,191 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     h.pid = hseg.PrimaryId;
     h.index = j;
 
-    cluster_map[stid].push_back(h);
+    hit_map[mod][sid].push_back(h);
+  }
+}
+
+void Hit2Digit(std::map<int, std::map<int, std::vector<hit> > >& hit_map,
+               std::map<int, std::map<int, digit> >& digit_map)
+{
+  for (std::map<int, std::map<int, std::vector<hit> > >::iterator it =
+           hit_map.begin();
+       it != hit_map.end(); ++it) {
+    for (std::map<int, std::vector<hit> >::iterator iter = it->second.begin();
+         iter != it->second.end(); ++iter) {
+      digit d;
+
+      std::sort(iter->second.begin(), iter->second.end(), isHitBefore);
+
+      d.det = iter->second[0].det;
+      d.did = iter->first;
+
+      d.hor = d.did % 2 == 0 ? true : false;
+
+      for (unsigned int k = 0; k < iter->second.size(); k++) {
+        d.hindex.push_back(iter->second[k].index);
+        d.de += iter->second[k].de;
+      }
+
+      if (d.de < e_threshold) continue;
+
+      d.x = 0.5 * (iter->second.front().x1 + iter->second.front().x2);
+      d.y = 0.5 * (iter->second.front().y1 + iter->second.front().y2);
+      d.z = 0.5 * (iter->second.front().z1 + iter->second.front().z2);
+      d.t = 0.5 * (iter->second.front().t1 + iter->second.front().t2);
+
+      digit_map[it->first][iter->first] = d;
+    }
+  }
+}
+
+void ClusterizeDigit(std::map<int, std::map<int, digit> >& digit_map,
+                     std::vector<digit>& digit_vec)
+{
+  for (std::map<int, std::map<int, digit> >::iterator it = digit_map.begin();
+       it != digit_map.end(); ++it) {
+    std::map<int, digit>::iterator iter = it->second.begin();
+    digit& th_dg = iter->second;
+
+    double x1 = th_dg.x;
+    double y1 = th_dg.y;
+    double z1 = th_dg.z;
+    double t1 = th_dg.t;
+
+    double x2 = th_dg.x;
+    double y2 = th_dg.y;
+    double z2 = th_dg.z;
+    double t2 = th_dg.t;
+
+    digit d;
+    d.det = th_dg.det;
+    d.did = th_dg.did % 1000;
+    d.de = th_dg.de;
+    d.hor = th_dg.hor;
+    d.hindex.clear();
+
+    for (unsigned int i = 0; i < th_dg.hindex.size(); i++) {
+      d.hindex.push_back(th_dg.hindex.at(i));
+    }
+
+    while (std::next(iter) != it->second.end()) {
+      digit& nx_dg = std::next(iter)->second;
+      if (std::next(iter)->first - iter->first <= 2) {
+        if (nx_dg.t < t1) {
+          x1 = nx_dg.x;
+          y1 = nx_dg.y;
+          z1 = nx_dg.z;
+          t1 = nx_dg.t;
+          d.de += nx_dg.de;
+
+          for (unsigned int i = 0; i < nx_dg.hindex.size(); i++) {
+            d.hindex.push_back(nx_dg.hindex.at(i));
+          }
+        } else if (nx_dg.t > t2) {
+          x2 = nx_dg.x;
+          y2 = nx_dg.y;
+          z2 = nx_dg.z;
+          t2 = nx_dg.t;
+          d.de += nx_dg.de;
+
+          for (unsigned int i = 0; i < nx_dg.hindex.size(); i++) {
+            d.hindex.push_back(nx_dg.hindex.at(i));
+          }
+        }
+      } else {
+        if (d.hor) {
+          d.x = 0.;
+          d.y = 0.5 * (y1 + y2) + r.Gaus(0., res_x);
+        } else {
+          d.x = 0.5 * (x1 + x2) + r.Gaus(0., res_x);
+          d.y = 0.;
+        }
+
+        d.z = 0.5 * (z1 + z2) + r.Gaus(0., res_x);
+        d.t = 0.5 * (t1 + t2) + r.Gaus(0., res_t);
+        digit_vec.push_back(d);
+
+        x1 = nx_dg.x;
+        y1 = nx_dg.y;
+        z1 = nx_dg.z;
+        t1 = nx_dg.t;
+
+        x2 = nx_dg.x;
+        y2 = nx_dg.y;
+        z2 = nx_dg.z;
+        t2 = nx_dg.t;
+
+        digit d;
+        d.det = nx_dg.det;
+        d.did = nx_dg.did % 1000;
+        d.de = nx_dg.de;
+        d.hor = nx_dg.hor;
+        d.hindex.clear();
+
+        for (unsigned int i = 0; i < nx_dg.hindex.size(); i++) {
+          d.hindex.push_back(nx_dg.hindex[i]);
+        }
+      }
+
+      iter++;
+    }
+    
+    if (d.hor) {
+      d.x = 0.;
+      d.y = 0.5 * (y1 + y2) + r.Gaus(0., res_x);
+    } else {
+      d.x = 0.5 * (x1 + x2) + r.Gaus(0., res_x);
+      d.y = 0.;
+    }
+
+    d.z = 0.5 * (z1 + z2) + r.Gaus(0., res_x);
+    d.t = 0.5 * (t1 + t2) + r.Gaus(0., res_t);
+    digit_vec.push_back(d);
+  }
+}
+
+/*
+void Cluster(TG4Event* ev, TGeoManager* geo,
+             std::map<int, std::map<int, std::vector<hit> > >& cluster_map)
+{
+  cluster_map.clear();
+
+  for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
+    const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
+
+    double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
+    double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
+    double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
+
+    std::string sttname = geo->FindNode(x, y, z)->GetName();
+
+    int stid = getSTUniqID(geo, x, y, z);
+
+    if (stid == -999) continue;
+
+    int sid = stid / 1000;
+    int mod = (stid % 1000) / 10;
+
+    hit h;
+    h.det = sttname;
+    h.did = stid;
+    h.x1 = hseg.Start.X();
+    h.y1 = hseg.Start.Y();
+    h.z1 = hseg.Start.Z();
+    h.t1 = hseg.Start.T();
+    h.x2 = hseg.Stop.X();
+    h.y2 = hseg.Stop.Y();
+    h.z2 = hseg.Stop.Z();
+    h.t2 = hseg.Stop.T();
+    h.de = hseg.EnergyDeposit;
+    h.pid = hseg.PrimaryId;
+    h.index = j;
+
+    cluster_map[mod][sid].push_back(h);
   }
 }
 */
-
+/*
 void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
                    std::vector<digit>& digit_vec)
 {
@@ -468,7 +652,7 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
     digit_vec.push_back(d);
   }
 }
-
+*/
 /*
 void Cluster2Digit(std::map<int, std::vector<hit> >& cluster_map,
                    std::vector<digit>& digit_vec)
@@ -513,12 +697,15 @@ void Cluster2Digit(std::map<int, std::vector<hit> >& cluster_map,
 
 void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
 {
-  std::map<std::string, std::vector<hit> > cluster_map;
+  // std::map<std::string, std::vector<hit> > cluster_map;
   // std::map<int, std::vector<hit> > cluster_map;
+  std::map<int, std::map<int, std::vector<hit> > > hit_map;
+  std::map<int, std::map<int, digit> > digit_map;
   digit_vec.clear();
 
-  Cluster(ev, geo, cluster_map);
-  Cluster2Digit(cluster_map, digit_vec);
+  FillHitMap(ev, geo, hit_map);
+  Hit2Digit(hit_map, digit_map);
+  ClusterizeDigit(digit_map, digit_vec);
 }
 
 void Digitize(const char* finname, const char* foutname)

@@ -807,7 +807,7 @@ void clusterizeSTTDig(std::vector<digit>* digits,
         sum += iter->second;
         ntb++;
       } else {
-        if(ntb <= maxclntub && last_tb - first_tb < maxclntublong)
+        if (ntb <= maxclntub && last_tb - first_tb < maxclntublong)
           clustersX[it->first].push_back(sum / ntb);
         first_tb = iter->first;
         sum = iter->second;
@@ -815,7 +815,7 @@ void clusterizeSTTDig(std::vector<digit>* digits,
       }
       last_tb = iter->first;
     }
-    if(ntb <= maxclntub && last_tb - first_tb < maxclntublong)
+    if (ntb <= maxclntub && last_tb - first_tb < maxclntublong)
       clustersX[it->first].push_back(sum / ntb);
   }
 
@@ -832,7 +832,7 @@ void clusterizeSTTDig(std::vector<digit>* digits,
         sum += iter->second;
         ntb++;
       } else {
-        if(ntb <= maxclntub  && last_tb - first_tb < maxclntublong)
+        if (ntb <= maxclntub && last_tb - first_tb < maxclntublong)
           clustersY[it->first].push_back(sum / ntb);
         first_tb = iter->first;
         sum = iter->second;
@@ -840,7 +840,7 @@ void clusterizeSTTDig(std::vector<digit>* digits,
       }
       last_tb = iter->first;
     }
-    if(ntb <= maxclntub && last_tb - first_tb < maxclntublong)
+    if (ntb <= maxclntub && last_tb - first_tb < maxclntublong)
       clustersY[it->first].push_back(sum / ntb);
   }
 }
@@ -918,8 +918,7 @@ void vtxFinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
   if (VtxType == -1) {
     for (std::map<double, int>::iterator it = slabPosId.begin();
          it != slabPosId.end(); ++it) {
-      if (hnX[it->second] > 0 &&
-          hnY[it->second] > 0 ) {
+      if (hnX[it->second] > 0 && hnY[it->second] > 0) {
         plID = it->second;
         VtxType = 1;
         break;
@@ -2101,19 +2100,19 @@ void processEvents(const double tol_phi, const double tol_x,
         std::vector<double> cdy;
         std::vector<double> cdyz;
 
-        for (std::map<int, std::vector<double> >::iterator it = clustX.begin(); it != clustX.end(); it++) {
-          for(unsigned int kk = 0; kk < it->second.size(); kk++)
-          {
+        for (std::map<int, std::vector<double> >::iterator it = clustX.begin();
+             it != clustX.end(); it++) {
+          for (unsigned int kk = 0; kk < it->second.size(); kk++) {
             cdx.push_back(it->second.at(kk));
-            cdxz.push_back(mod2Z.at(it->first)+25.);
+            cdxz.push_back(mod2Z.at(it->first) + 25.);
           }
         }
 
-        for (std::map<int, std::vector<double> >::iterator it = clustY.begin(); it != clustY.end(); it++) {
-          for(unsigned int kk = 0; kk < it->second.size(); kk++)
-          {
+        for (std::map<int, std::vector<double> >::iterator it = clustY.begin();
+             it != clustY.end(); it++) {
+          for (unsigned int kk = 0; kk < it->second.size(); kk++) {
             cdy.push_back(it->second.at(kk));
-            cdyz.push_back(mod2Z.at(it->first)+25.);
+            cdyz.push_back(mod2Z.at(it->first) + 25.);
           }
         }
 
@@ -2217,7 +2216,7 @@ void processEvents(const double tol_phi, const double tol_x,
                            TString::Format("Event: %d (ZX)", i).Data());
 
         c.cd(1);
-        
+
         /*
         for (std::map<int, std::map<int, TVector2> >::iterator it =
                  stPos.begin();
@@ -2247,7 +2246,7 @@ void processEvents(const double tol_phi, const double tol_x,
         if (grYZ.GetN() > 0) grYZ.Draw("psame");
 
         c.cd(2);
-        
+
         /*
         for (std::map<int, std::map<int, TVector2> >::iterator it =
                  stPos.begin();
@@ -2285,7 +2284,7 @@ void processEvents(const double tol_phi, const double tol_x,
                            TString::Format("Event: %d (ZY)", i).Data());
         c.cd(2)->DrawFrame(21500, -2500, 26500, 2500,
                            TString::Format("Event: %d (ZX)", i).Data());
-                           
+
         c.cd(1);
 
         m = new TMarker(zvtx_true, yvtx_true, 20);  // circle
@@ -2294,7 +2293,7 @@ void processEvents(const double tol_phi, const double tol_x,
         m = new TMarker(zvtx_reco, yvtx_reco, 21);  // square
         m->SetMarkerColor(kBlack);
         m->Draw();
-        
+
         c.cd(2);
 
         m = new TMarker(zvtx_true, xvtx_true, 20);
@@ -2509,8 +2508,7 @@ void findvtx()
                    const double dz_tol = 200., const double epsilon = 0.5,
                    const int maxclntub = 4, const int maxclntublong = 4)
   */
-  
-  
+
   /*
   processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1E-5);
   processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1E-3);
@@ -2538,7 +2536,7 @@ void findvtx()
   processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 5.);
   processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 10.);
   */
-  
+
   processEvents(0.1, 50, 4, 3, 1., 1E7, 1E7, 1E7, 3, 4);
 
   gStyle->SetPalette(53);
@@ -2556,28 +2554,28 @@ void findvtx()
   // x VS z
   long int nev;
   nev = tv->Draw("xvtx_true:zvtx_true", "", "goff");
-  TGraph gxVSz(nev,tv->GetV2(),tv->GetV1());
+  TGraph gxVSz(nev, tv->GetV2(), tv->GetV1());
   gxVSz.SetTitle(";Z (mm); X (mm); #Deltar_{3D} (mm)");
   gxVSz.Draw("ap");
   c.SaveAs("vtx.pdf(");
 
   // y VS z
   nev = tv->Draw("yvtx_true:zvtx_true", "", "goff");
-  TGraph gyVSz(nev,tv->GetV2(),tv->GetV1());
+  TGraph gyVSz(nev, tv->GetV2(), tv->GetV1());
   gyVSz.SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
   gyVSz.Draw("ap");
   c.SaveAs("vtx.pdf");
 
   // x VS z reco
   nev = tv->Draw("xvtx_reco:zvtx_reco", vtxReco, "goff");
-  TGraph gxVSz_reco(nev,tv->GetV2(),tv->GetV1());
+  TGraph gxVSz_reco(nev, tv->GetV2(), tv->GetV1());
   gxVSz_reco.SetTitle(";Z (mm); X (mm); #Deltar_{3D} (mm)");
   gxVSz_reco.Draw("ap");
   c.SaveAs("vtx.pdf");
 
   // y VS z reco
   nev = tv->Draw("yvtx_reco:zvtx_reco", vtxReco, "goff");
-  TGraph gyVSz_reco(nev,tv->GetV2(),tv->GetV1());
+  TGraph gyVSz_reco(nev, tv->GetV2(), tv->GetV1());
   gyVSz_reco.SetTitle(";Z (mm); Y (mm); #Deltar_{3D} (mm)");
   gyVSz_reco.Draw("ap");
   c.SaveAs("vtx.pdf");
