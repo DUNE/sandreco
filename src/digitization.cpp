@@ -446,7 +446,7 @@ void Hit2Digit(std::map<int, std::map<int, std::vector<hit> > >& hit_map,
       std::sort(iter->second.begin(), iter->second.end(), isHitBefore);
 
       d.det = iter->second[0].det;
-      d.did = iter->first;
+      d.did = iter->second[0].did;
 
       d.hor = d.did % 2 == 0 ? true : false;
 
