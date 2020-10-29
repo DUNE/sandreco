@@ -1,12 +1,22 @@
+#include <TGeoManager.h>
+#include <TFile.h>
+#include <TTree.h>
+#include <TString.h>
+#include <TSystem.h>
+
+#include "../include/struct.h"
+
+#include "/opt/exp_software/neutrino/EDEPSIM/include/EDepSim/TG4Event.h"
+
 void extract_info()
 {
   gSystem->Load("/data/mt/reco/kloe-simu/lib/libStruct.so");
   
-  TFile f("/data/mt/reco/files/reco/numu_internal_10k.0.reco.root");
+  TFile f("/data/mt/reco/files/reco/numu_internal_10k.1.reco.root");
   TTree* t = (TTree*) f.Get("tDigit");
   TGeoManager* geo = (TGeoManager*) f.Get("EDepSimGeometry");
   
-  TFile fmc("/data/mt/reco/files/edep-sim/numu_internal_10k.0.edep-sim.root");
+  TFile fmc("/data/mt/reco/files/edep-sim/numu_internal_10k.1.edep-sim.root");
   TTree* tmc = (TTree*) fmc.Get("EDepSimEvents");
   TTree* tgn = (TTree*) fmc.Get("DetSimPassThru/gRooTracker");
   
@@ -24,8 +34,9 @@ void extract_info()
   tgn->SetBranchAddress("StdHepPdg",&gn_pdg);
   tgn->SetBranchAddress("StdHepP4",&gn_p4);
   
-  TFile fout("/data/mt/reco/files/reco/ev_info.root","RECREATE");
-  TTree tout("tinfo","tinfo");
+  TFile fout("/data/mt/reco/files/reco/event_info.1.root","RECREATE");
+  TTree teve("teve","teve");
+  TTree tgeo("tgeo","tgeo");
 
   double ev_x;
   double ev_y;
@@ -59,34 +70,44 @@ void extract_info()
   int pp_pdg[max_particle];
   int pp_tid[max_particle];
   
-  tout.Branch("ev_x",&ev_x,"ev_x/D");
-  tout.Branch("ev_y",&ev_y,"ev_y/D");
-  tout.Branch("ev_z",&ev_z,"ev_z/D");
-  tout.Branch("ev_t",&ev_t,"ev_t/D");
-  tout.Branch("ev_px",&ev_px,"ev_px/D");
-  tout.Branch("ev_py",&ev_py,"ev_py/D");
-  tout.Branch("ev_pz",&ev_pz,"ev_pz/D");
-  tout.Branch("ev_nupdg",&ev_nupdg,"ev_nupdg/I");
-  tout.Branch("ev_tgpdg",&ev_tgpdg,"ev_tgpdg/I");
-  tout.Branch("ev_CC",&ev_CC,"ev_CC/I");
+  double pl_z;
+  double pl_id;
+  double pl_uid;
+  double pl_hor;
   
-  tout.Branch("dg_n",&dg_n,"dg_n/I");
-  tout.Branch("dg_x",&dg_x,"dg_x[dg_n]/D");
-  tout.Branch("dg_y",&dg_y,"dg_y[dg_n]/D");
-  tout.Branch("dg_z",&dg_z,"dg_z[dg_n]/D");
-  tout.Branch("dg_t",&dg_t,"dg_t[dg_n]/D");
-  tout.Branch("dg_de",&dg_de,"dg_de[dg_n]/D");
-  tout.Branch("dg_did",&dg_did,"dg_did[dg_n]/I");
-  tout.Branch("dg_hor",&dg_hor,"dg_hor[dg_n]/I");
-  tout.Branch("dg_tid",&dg_tid,"dg_tid[dg_n]/I");
+  teve.Branch("ev_x",&ev_x,"ev_x/D");
+  teve.Branch("ev_y",&ev_y,"ev_y/D");
+  teve.Branch("ev_z",&ev_z,"ev_z/D");
+  teve.Branch("ev_t",&ev_t,"ev_t/D");
+  teve.Branch("ev_px",&ev_px,"ev_px/D");
+  teve.Branch("ev_py",&ev_py,"ev_py/D");
+  teve.Branch("ev_pz",&ev_pz,"ev_pz/D");
+  teve.Branch("ev_nupdg",&ev_nupdg,"ev_nupdg/I");
+  teve.Branch("ev_tgpdg",&ev_tgpdg,"ev_tgpdg/I");
+  teve.Branch("ev_CC",&ev_CC,"ev_CC/I");
   
-  tout.Branch("pp_n",&pp_n,"pp_n/I");
-  tout.Branch("pp_px",&pp_px,"pp_px[pp_n]/D");
-  tout.Branch("pp_py",&pp_py,"pp_py[pp_n]/D");
-  tout.Branch("pp_pz",&pp_pz,"pp_pz[pp_n]/D");
-  tout.Branch("pp_E",&pp_E,"pp_E[pp_n]/D");
-  tout.Branch("pp_pdg",&pp_pdg,"pp_pdg[pp_n]/I");
-  tout.Branch("pp_tid",&pp_tid,"pp_tid[pp_n]/I");
+  teve.Branch("dg_n",&dg_n,"dg_n/I");
+  teve.Branch("dg_x",&dg_x,"dg_x[dg_n]/D");
+  teve.Branch("dg_y",&dg_y,"dg_y[dg_n]/D");
+  teve.Branch("dg_z",&dg_z,"dg_z[dg_n]/D");
+  teve.Branch("dg_t",&dg_t,"dg_t[dg_n]/D");
+  teve.Branch("dg_de",&dg_de,"dg_de[dg_n]/D");
+  teve.Branch("dg_did",&dg_did,"dg_did[dg_n]/I");
+  teve.Branch("dg_hor",&dg_hor,"dg_hor[dg_n]/I");
+  teve.Branch("dg_tid",&dg_tid,"dg_tid[dg_n]/I");
+  
+  teve.Branch("pp_n",&pp_n,"pp_n/I");
+  teve.Branch("pp_px",&pp_px,"pp_px[pp_n]/D");
+  teve.Branch("pp_py",&pp_py,"pp_py[pp_n]/D");
+  teve.Branch("pp_pz",&pp_pz,"pp_pz[pp_n]/D");
+  teve.Branch("pp_E",&pp_E,"pp_E[pp_n]/D");
+  teve.Branch("pp_pdg",&pp_pdg,"pp_pdg[pp_n]/I");
+  teve.Branch("pp_tid",&pp_tid,"pp_tid[pp_n]/I");
+  
+  tgeo.Branch("pl_z",&pl_z,"pl_z/D");
+  tgeo.Branch("pl_id",&pl_id,"pl_id/I");
+  tgeo.Branch("pl_uid",&pl_uid,"pl_uid/I");
+  tgeo.Branch("pl_hor",&pl_hor,"pl_hor/I");
   
   for(int i = 0; i < t->GetEntries(); i++)
   {
@@ -150,15 +171,123 @@ void extract_info()
           pp_pz[j] = ev->Primaries.at(0).Particles.at(j).GetMomentum().Z();
           pp_E[j] = ev->Primaries.at(0).Particles.at(j).GetMomentum().T();
           pp_pdg[j] = ev->Primaries.at(0).Particles.at(j).GetPDGCode();
-          pp_pdg[j] = ev->Primaries.at(0).Particles.at(j).GetTrackId();
+          pp_tid[j] = ev->Primaries.at(0).Particles.at(j).GetTrackId();
       }
 
-      tout.Fill();
+      teve.Fill();
+  }
+  
+  TString stt_path = "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/volSTTFULL_PV_0/";
+  TString full_path;
+  TGeoNode* pla;
+  TString pla_name;
+  
+  double master[3];
+  double local[] = {0., 0., 0.};
+  
+  TGeoVolume* stt = geo->FindVolumeFast("volSTTFULL_PV");
+  
+  for(int i = 0; i < stt->GetNdaughters(); i++)
+  {
+    TGeoNode* mod = stt->GetNode(i);
+    TString mod_name = mod->GetName();
+    
+    if(mod_name.Contains("volfrontST") == true)
+    {
+      TObjArray* oba = mod_name.Tokenize("_");
+      
+      TString* str = (TString*) oba->At(0);
+      int mid = str->ReplaceAll("volfrontST","").Atoi();
+    
+      for(int j = 0; j < mod->GetVolume()->GetNdaughters(); j++)
+      {
+         pla = mod->GetVolume()->GetNode(j);
+         pla_name = pla->GetName();
+         
+         if(pla_name.Contains("hor") == true)
+         {
+           full_path = stt_path + mod_name + "/" + pla_name;
+           
+           geo->cd(full_path.Data());
+           
+           geo->LocalToMaster(local,master);
+           
+           pl_z = master[2];
+           pl_id = mid + 90;
+           pl_uid = pl_id * 10 + 2;
+           pl_hor = 1;
+           
+           tgeo.Fill();
+         }
+         else if(pla_name.Contains("ver") == true)
+         {
+           full_path = stt_path + mod_name + "/" + pla_name;
+           
+           geo->cd(full_path.Data());
+           
+           geo->LocalToMaster(local,master);
+           
+           pl_z = master[2];
+           pl_id = mid;
+           pl_uid = mid * 10 + 1;
+           pl_hor = 0;
+           
+           tgeo.Fill();
+         }
+      }
+      
+      delete oba;     
+    }
+    else if(mod_name.Contains("sttmod") == true)
+    {
+      TObjArray* oba = mod_name.Tokenize("_");
+      
+      TString* str = (TString*) oba->At(0);
+      int mid = str->ReplaceAll("volfrontST","").Atoi();
+    
+      for(int j = 0; j < mod->GetVolume()->GetNdaughters(); j++)
+      {
+         pla = mod->GetVolume()->GetNode(j);
+         pla_name = pla->GetName();
+         
+         if(pla_name.Contains("hor") == true)
+         {
+           full_path = stt_path + mod_name + "/" + pla_name;
+           
+           geo->cd(full_path.Data());
+           
+           geo->LocalToMaster(local,master);
+           
+           pl_z = master[2];
+           pl_id = mid;
+           pl_uid = mid * 10 + 2;
+           pl_hor = 1;
+           
+           tgeo.Fill();
+         }
+         else if(pla_name.Contains("ver") == true)
+         {
+           full_path = stt_path + mod_name + "/" + pla_name;
+           
+           geo->cd(full_path.Data());
+           
+           geo->LocalToMaster(local,master);
+           
+           pl_z = master[2];
+           pl_id = mid;
+           pl_uid = pl_id * 10 + 1;
+           pl_hor = 0;
+           
+           tgeo.Fill();
+         }
+      } 
+      delete oba;    
+    }
   }
   
   fout.cd();
-  geo->Write("geo");
-  tout.Write("tdig");
+  tgeo.Write("tgeo");
+  teve.Write("teve");
 
   f.Close();
   fout.Close();
