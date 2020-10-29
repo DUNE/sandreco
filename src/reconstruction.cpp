@@ -17,6 +17,13 @@
 
 using namespace kloe_simu;
 
+TFile* _f;
+TTree* _t;
+
+double _xv;
+double _yv;
+double _zv;
+
 void reset(track& tr)
 {
   tr.tid = -1;
@@ -1575,6 +1582,13 @@ void Reconstruct(const char* fMc, const char* fIn)
   const int mindigtr = 3;
   const double dn_tol = 1.E7;
   const double dz_tol = 1.E7;
+  
+  _f = new TFile("vtx_pos.root","RECREATE");
+  _t = new TTree("vtx_pos","vtx_pos");
+  
+  _t->Branch("reco_xv",&_xv,"reco_xv/D");
+  _t->Branch("reco_yv",&_yv,"reco_yv/D");
+  _t->Branch("reco_zv",&_zv,"reco_zv/D");
 
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -1596,6 +1610,11 @@ void Reconstruct(const char* fMc, const char* fIn)
 
     VertexFind(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, *vec_digi, sampling,
                epsilon);
+    
+  
+    _xv = xvtx_reco;
+    _yv = yvtx_reco;
+    _zv = zvtx_reco;
 
     // TrackFind(ev, vec_digi, vec_tr);
     TrackFind(vec_tr, *vec_digi, sampling, xvtx_reco, yvtx_reco, zvtx_reco,
@@ -1608,6 +1627,7 @@ void Reconstruct(const char* fMc, const char* fIn)
     PidBasedClustering(ev, vec_cell, vec_cl);
     Merge(vec_cl);
     tout.Fill();
+    _t->Fill();
   }
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
