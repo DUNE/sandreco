@@ -8,6 +8,8 @@
 
 #include "/opt/exp_software/neutrino/EDEPSIM/include/EDepSim/TG4Event.h"
 
+#include <iostream>
+
 void extract_info()
 {
   gSystem->Load("/data/mt/reco/kloe-simu/lib/libStruct.so");
@@ -71,9 +73,9 @@ void extract_info()
   int pp_tid[max_particle];
   
   double pl_z;
-  double pl_id;
-  double pl_uid;
-  double pl_hor;
+  int pl_id;
+  int pl_uid;
+  int pl_hor;
   
   teve.Branch("ev_x",&ev_x,"ev_x/D");
   teve.Branch("ev_y",&ev_y,"ev_y/D");
@@ -109,7 +111,7 @@ void extract_info()
   tgeo.Branch("pl_uid",&pl_uid,"pl_uid/I");
   tgeo.Branch("pl_hor",&pl_hor,"pl_hor/I");
   
-  for(int i = 0; i < t->GetEntries(); i++)
+  for(int i = 0; i < 10/*t->GetEntries()*/; i++)
   {
       t->GetEntry(i);
       tmc->GetEntry(i);
@@ -181,6 +183,8 @@ void extract_info()
   TString full_path;
   TGeoNode* pla;
   TString pla_name;
+  TGeoNode* pls;
+  TString pls_name;
   
   double master[3];
   double local[] = {0., 0., 0.};
@@ -196,8 +200,9 @@ void extract_info()
     {
       TObjArray* oba = mod_name.Tokenize("_");
       
-      TString* str = (TString*) oba->At(0);
-      int mid = str->ReplaceAll("volfrontST","").Atoi();
+      TString str = ((TObjString*) oba->At(0))->GetString();
+      
+      int mid = str.ReplaceAll("volfrontST","").Atoi();
     
       for(int j = 0; j < mod->GetVolume()->GetNdaughters(); j++)
       {
@@ -228,8 +233,8 @@ void extract_info()
            geo->LocalToMaster(local,master);
            
            pl_z = master[2];
-           pl_id = mid;
-           pl_uid = mid * 10 + 1;
+           pl_id = mid + 90;
+           pl_uid = pl_id * 10 + 1;
            pl_hor = 0;
            
            tgeo.Fill();
@@ -242,43 +247,52 @@ void extract_info()
     {
       TObjArray* oba = mod_name.Tokenize("_");
       
-      TString* str = (TString*) oba->At(0);
-      int mid = str->ReplaceAll("volfrontST","").Atoi();
+      TString str = ((TObjString*) oba->At(0))->GetString();
+      int mid = str.ReplaceAll("sttmod","").Atoi();
     
       for(int j = 0; j < mod->GetVolume()->GetNdaughters(); j++)
       {
-         pla = mod->GetVolume()->GetNode(j);
-         pla_name = pla->GetName();
+         pls = mod->GetVolume()->GetNode(j);
+         pls_name = pls->GetName();
          
-         if(pla_name.Contains("hor") == true)
+         if(pls_name.Contains("_ST_") == true)
          {
-           full_path = stt_path + mod_name + "/" + pla_name;
-           
-           geo->cd(full_path.Data());
-           
-           geo->LocalToMaster(local,master);
-           
-           pl_z = master[2];
-           pl_id = mid;
-           pl_uid = mid * 10 + 2;
-           pl_hor = 1;
-           
-           tgeo.Fill();
-         }
-         else if(pla_name.Contains("ver") == true)
-         {
-           full_path = stt_path + mod_name + "/" + pla_name;
-           
-           geo->cd(full_path.Data());
-           
-           geo->LocalToMaster(local,master);
-           
-           pl_z = master[2];
-           pl_id = mid;
-           pl_uid = pl_id * 10 + 1;
-           pl_hor = 0;
-           
-           tgeo.Fill();
+           for(int k = 0; k < pls->GetVolume()->GetNdaughters(); k++)
+           {
+             pla = pls->GetVolume()->GetNode(k);
+             pla_name = pla->GetName();
+             
+             if(pla_name.Contains("hor") == true)
+             {
+               full_path = stt_path + mod_name + "/" + pls_name + "/" + pla_name;
+               
+               geo->cd(full_path.Data());
+               
+               geo->LocalToMaster(local,master);
+               
+               pl_z = master[2];
+               pl_id = mid;
+               pl_uid = pl_id * 10 + 2;
+               pl_hor = 1;
+               
+               tgeo.Fill();
+             }
+             else if(pla_name.Contains("ver") == true)
+             {
+               full_path = stt_path + mod_name + "/" + pls_name + "/" + pla_name;
+               
+               geo->cd(full_path.Data());
+               
+               geo->LocalToMaster(local,master);
+               
+               pl_z = master[2];
+               pl_id = mid;
+               pl_uid = pl_id * 10 + 1;
+               pl_hor = 0;
+               
+               tgeo.Fill();
+             }
+           }
          }
       } 
       delete oba;    
