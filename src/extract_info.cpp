@@ -111,7 +111,7 @@ void extract_info()
   tgeo.Branch("pl_uid",&pl_uid,"pl_uid/I");
   tgeo.Branch("pl_hor",&pl_hor,"pl_hor/I");
   
-  for(int i = 0; i < 10/*t->GetEntries()*/; i++)
+  for(int i = 0; i < t->GetEntries(); i++)
   {
       t->GetEntry(i);
       tmc->GetEntry(i);
