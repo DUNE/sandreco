@@ -1645,6 +1645,10 @@ void Reconstruct(const char* fMc, const char* fIn)
   tout.Write("", TObject::kOverwrite);
   f.Close();
   ftrue.Close();
+  
+  _f->cd();
+  _t->Write();
+  _f->Close();
 }
 
 void help_reco()
