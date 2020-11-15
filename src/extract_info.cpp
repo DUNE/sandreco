@@ -84,6 +84,7 @@ void extract_info()
   teve.Branch("ev_px",&ev_px,"ev_px/D");
   teve.Branch("ev_py",&ev_py,"ev_py/D");
   teve.Branch("ev_pz",&ev_pz,"ev_pz/D");
+  teve.Branch("ev_E",&ev_E,"ev_E/D");
   teve.Branch("ev_nupdg",&ev_nupdg,"ev_nupdg/I");
   teve.Branch("ev_tgpdg",&ev_tgpdg,"ev_tgpdg/I");
   teve.Branch("ev_CC",&ev_CC,"ev_CC/I");
