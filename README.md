@@ -23,7 +23,7 @@ Digitization
 - Create digits of STT and cells of calorimeter
 
 ```
-$ Digitize <input file> <output file>
+$ Digitize <MC file> <digit file>
 ```
 
 Reconstruction
@@ -31,7 +31,7 @@ Reconstruction
 - Clustering of calorimeter cells
 
 ```
-$ Reconstruct <input file>
+$ Reconstruct <MC file> <digit file>
 ```
 
 Analysis
@@ -39,7 +39,7 @@ Analysis
 - Evaluate neutrino energy
 
 ```
-Analyze <input file>
+Analyze <MC file> <digit file>
 ```
 
 The description of the data format can be found [here](https://baltig.infn.it/dune/kloe-simu/-/wikis/Data-Model)
