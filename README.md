@@ -23,7 +23,7 @@ Digitization
 - Create digits of STT and cells of calorimeter
 
 ```
-$ Digitize <MC file> <digit file>
+$ Digitize <input file> <output file>
 ```
 
 Reconstruction
@@ -31,7 +31,7 @@ Reconstruction
 - Clustering of calorimeter cells
 
 ```
-$ Reconstruct <MC file> <digit file>
+$ Reconstruct <input file>
 ```
 
 Analysis
@@ -39,7 +39,7 @@ Analysis
 - Evaluate neutrino energy
 
 ```
-Analyze <MC file> <digit file>
+Analyze <input file>
 ```
 
 The description of the data format can be found [here](https://github.com/DUNE-ND-SAND/sand-stt/wiki/Data-Model)
