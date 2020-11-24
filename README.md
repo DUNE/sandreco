@@ -42,6 +42,6 @@ Analysis
 Analyze <MC file> <digit file>
 ```
 
-The description of the data format can be found [here](https://baltig.infn.it/dune/kloe-simu/-/wikis/Data-Model)
+The description of the data format can be found [here](https://github.com/DUNE-ND-SAND/sand-stt/wiki/Data-Model)
 
-The code format can be find [here](https://baltig.infn.it/dune/kloe-simu/-/wikis/Code-Format)
+The code format can be find [here](https://github.com/DUNE-ND-SAND/sand-stt/wiki/Code-Formatting)
