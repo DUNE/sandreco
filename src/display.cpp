@@ -587,10 +587,15 @@ void show(int index, bool showtrj = true, bool showfit = true,
       if (vec_tr->at(i).ret_cr == 0 && vec_tr->at(i).ret_ln == 0) {
         cev->cd(1);
 
+        //double minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
+        //                       vec_tr->at(i).clY.front().z);
+        //double maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
+        //                       vec_tr->at(i).clY.back().z);
+
         double minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
-                               vec_tr->at(i).clY.front().z);
+                               vec_tr->at(i).digits.front().z);
         double maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
-                               vec_tr->at(i).clY.back().z);
+                               vec_tr->at(i).digits.back().z);
 
         TF1* ffy = new TF1("", "[0]+[1]*TMath::Sqrt([2]*[2]-(x-[3])*(x-[3]))",
                            minz, maxz);
@@ -608,8 +613,11 @@ void show(int index, bool showtrj = true, bool showfit = true,
 
         cev->cd(2);
 
-        double x0 = vec_tr->at(i).clX.front().x;
-        double z0 = vec_tr->at(i).clX.front().z;
+        //double x0 = vec_tr->at(i).clX.front().x;
+        //double z0 = vec_tr->at(i).clX.front().z;
+
+        double x0 = vec_tr->at(i).digits.front().x;
+        double z0 = vec_tr->at(i).digits.front().z;
 
         double radq;
         if (abs(z0 - vec_tr->at(i).zc) > vec_tr->at(i).r)
@@ -623,10 +631,15 @@ void show(int index, bool showtrj = true, bool showfit = true,
         double phi0 =
             TMath::ATan2(yexp - vec_tr->at(i).yc, z0 - vec_tr->at(i).zc);
 
+        //minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
+        //                vec_tr->at(i).clX.front().z);
+        //maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
+        //                vec_tr->at(i).clX.back().z);
+
         minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
-                        vec_tr->at(i).clX.front().z);
+                        vec_tr->at(i).digits.front().z);
         maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
-                        vec_tr->at(i).clX.back().z);
+                        vec_tr->at(i).digits.back().z);
 
         TF1* ffx = new TF1("",
                            "[0] - "
