@@ -1,16 +1,21 @@
+Requirements
+- [ROOT](https://root.cern/)
+- [edep-sim](https://github.com/ClarkMcGrew/edep-sim)
+
 Build
-- make sure you have *root-config* in your ${PATH} environment variable
-- open Makefile and customize the location of *Edep-sim* installation
-- Then:
 
 ```
+$ mkdir build
+$ cd build
+$ cmake -DCMAKE_INSTALL_PREFIX=<install-dir> <source-dir>
 $ make
+$ make install
 ```
 
 Before running application
 - To have dictionaties of the structs loaded at run time:
 ```
-$ source scripts/env.sh
+$ source setup.sh
 ```
 
 Using with ROOT
