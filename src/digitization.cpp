@@ -411,15 +411,12 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
     d.hor = (d.det.find("hor") != std::string::npos) ? false : true;
 
     std::sort(it->second.begin(), it->second.end(), isHitBefore);
-    
-    if(d.hor)
-    {
+
+    if (d.hor) {
       d.x = 0.0;
       d.y = 0.5 * (it->second.front().y1 + it->second.back().y2) +
             r.Gaus(0., res_x);
-    }
-    else
-    {
+    } else {
       d.x = 0.5 * (it->second.front().x1 + it->second.back().x2) +
             r.Gaus(0., res_x);
       d.y = 0.0;
