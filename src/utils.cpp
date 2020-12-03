@@ -187,24 +187,22 @@ bool kloe_simu::CheckAndProcessPath(TString& str2)
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_18/volECALActiveSlab_21_PV_0"
   // BARREL ==> ìsomething like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0/endvolECALActiveSlab_0_PV_0"
-  
+
   TObjArray* obj = str2.Tokenize("/");
   TString str;
 
   // BARREL => ECAL_lv_PV_18
   // ENDCAP => ECAL_end_lv_PV_0
-  
-  for(int i = 0; i < obj->GetEntries(); i++)
-  {
+
+  for (int i = 0; i < obj->GetEntries(); i++) {
     str = ((TObjString*)obj->At(i))->GetString();
-    if(str.Contains("ECAL_"))
-    {
+    if (str.Contains("ECAL_")) {
       str2 = str;
       delete obj;
       return true;
     }
   }
-  
+
   delete obj;
   return false;
 }
