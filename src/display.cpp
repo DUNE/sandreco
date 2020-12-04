@@ -232,10 +232,10 @@ void init(const char* mcfile, const char* ifile)
                     << " " << local_index << " " << nMod << " " << nLay << " "
                     << nCel << std::endl;
 
-        for (int m = 0; m < 4; m++) {
-          dummyLoc[0] = CellLocalX[local_index][m];
+        for (int mm = 0; mm < 4; mm++) {
+          dummyLoc[0] = CellLocalX[local_index][mm];
           dummyLoc[1] = 0.;
-          dummyLoc[2] = CellLocalZ[local_index][m];
+          dummyLoc[2] = CellLocalZ[local_index][mm];
 
           geo->LocalToMaster(dummyLoc, dummyMas);
 
@@ -246,11 +246,11 @@ void init(const char* mcfile, const char* ifile)
                       << dummyMas[2] << std::endl;
           }
 
-          calocell[id].Y[m] = dummyMas[1];
-          calocell[id].Z[m] = dummyMas[2];
+          calocell[id].Y[mm] = dummyMas[1];
+          calocell[id].Z[mm] = dummyMas[2];
 
-          CellMasterY[local_index][m] = dummyMas[1];
-          CellMasterZ[local_index][m] = dummyMas[2];
+          CellMasterY[local_index][mm] = dummyMas[1];
+          CellMasterZ[local_index][mm] = dummyMas[2];
         }
 
         if (debug) {
@@ -301,19 +301,19 @@ void init(const char* mcfile, const char* ifile)
       dummyLoc_ec[3][1] = 0.;
       dummyLoc_ec[3][2] = zlevel[j];
 
-      for (int m = 0; m < 4; m++) {
-        geo->LocalToMaster(dummyLoc_ec[m], dummyMas);
+      for (int mm = 0; mm < 4; mm++) {
+        geo->LocalToMaster(dummyLoc_ec[mm], dummyMas);
 
         if (debug) {
-          std::cout << "local : " << dummyLoc_ec[m][0] << " "
-                    << dummyLoc_ec[m][1] << " " << dummyLoc_ec[m][2]
+          std::cout << "local : " << dummyLoc_ec[mm][0] << " "
+                    << dummyLoc_ec[mm][1] << " " << dummyLoc_ec[mm][2]
                     << std::endl;
           std::cout << "master: " << dummyMas[0] << " " << dummyMas[1] << " "
                     << dummyMas[2] << std::endl;
         }
 
-        calocell[id].Y[m] = dummyMas[0];
-        calocell[id].Z[m] = dummyMas[2];
+        calocell[id].Y[mm] = dummyMas[0];
+        calocell[id].Z[mm] = dummyMas[2];
       }
       if (debug) {
         TGraph* gr1 = new TGraph(4, calocell[id].Z, calocell[id].Y);
@@ -345,19 +345,19 @@ void init(const char* mcfile, const char* ifile)
       dummyLoc_ec[3][1] = 0.;
       dummyLoc_ec[3][2] = zlevel[j];
 
-      for (int m = 0; m < 4; m++) {
-        geo->LocalToMaster(dummyLoc_ec[m], dummyMas);
+      for (int mm = 0; mm < 4; mm++) {
+        geo->LocalToMaster(dummyLoc_ec[mm], dummyMas);
 
         if (debug) {
-          std::cout << "local : " << dummyLoc_ec[m][0] << " "
-                    << dummyLoc_ec[m][1] << " " << dummyLoc_ec[m][2]
+          std::cout << "local : " << dummyLoc_ec[mm][0] << " "
+                    << dummyLoc_ec[mm][1] << " " << dummyLoc_ec[mm][2]
                     << std::endl;
           std::cout << "master: " << dummyMas[0] << " " << dummyMas[1] << " "
                     << dummyMas[2] << std::endl;
         }
 
-        calocell[id].Y[m] = dummyMas[0];
-        calocell[id].Z[m] = dummyMas[2];
+        calocell[id].Y[mm] = dummyMas[0];
+        calocell[id].Z[mm] = dummyMas[2];
       }
       if (debug) {
         TGraph* gr1 = new TGraph(4, calocell[id].Z, calocell[id].Y);

@@ -680,12 +680,12 @@ void mergeXYTracks(std::vector<std::vector<digit> >& clustersX,
   int index = 0;
 
   // loop on Y clusters
-  for (int jj = 0; jj < clustersY.size(); jj++) {
+  for (unsigned int jj = 0; jj < clustersY.size(); jj++) {
     // resent downstream z residual
     dzend = 10000.;
 
     // loop on X clusters
-    for (int kk = 0; kk < clustersX.size(); kk++) {
+    for (unsigned int kk = 0; kk < clustersX.size(); kk++) {
       // evaluate the percentege difference in number of digits: abs(dn)/mn
       double dn = int(clustersY.at(jj).size()) - int(clustersX.at(kk).size());
       double mn = 0.5 * (clustersY.at(jj).size() + clustersX.at(kk).size());
@@ -724,7 +724,7 @@ void mergeXYTracks(std::vector<std::vector<digit> >& clustersX,
 void TrackFind(std::vector<track>& tracks, std::vector<digit> digits,
                std::vector<double>& binning, double xvtx_reco, double yvtx_reco,
                double zvtx_reco, double tol_phi, double tol_x, int tol_mod,
-               int mindigtr, const double dn_tol, const double dz_tol)
+               unsigned int mindigtr, const double dn_tol, const double dz_tol)
 {
   TH1D hdummy("hdummy", "hdummy;Z (mm); multipliciy", binning.size() - 1,
               binning.data());
@@ -774,11 +774,11 @@ void TrackFind(std::vector<track>& tracks, std::vector<digit> digits,
   std::sort(clustersX.begin(), clustersX.end(), isCluBigger);
 
   // order digits: upstream first
-  for (int jj = 0; jj < clustersX.size(); jj++) {
+  for (unsigned int jj = 0; jj < clustersX.size(); jj++) {
     std::sort(clustersX.at(jj).begin(), clustersX.at(jj).end(), isDigUpstream);
   }
 
-  for (int jj = 0; jj < clustersY.size(); jj++) {
+  for (unsigned int jj = 0; jj < clustersY.size(); jj++) {
     std::sort(clustersY.at(jj).begin(), clustersY.at(jj).end(), isDigUpstream);
   }
 
@@ -1196,29 +1196,29 @@ void Merge(std::vector<cluster>& vec_cl)
     double zouter = -999.;
     double dir = 0.;
 
-    for (int i = 0; i < 5; i++) {
-      if (elayer[i] != 0.) {
-        xv[i] /= elayer[i];
-        yv[i] /= elayer[i];
-        zv[i] /= elayer[i];
-        tv[i] /= elayer[i];
+    for (int ii = 0; ii < 5; ii++) {
+      if (elayer[ii] != 0.) {
+        xv[ii] /= elayer[ii];
+        yv[ii] /= elayer[ii];
+        zv[ii] /= elayer[ii];
+        tv[ii] /= elayer[ii];
 
         if (tinner < 0) {
-          tinner = tv[i];
-          zinner = zv[i];
+          tinner = tv[ii];
+          zinner = zv[ii];
         }
 
-        touter = tv[i];
-        zouter = zv[i];
+        touter = tv[ii];
+        zouter = zv[ii];
 
-        sx += xv[i];
-        sy += yv[i];
-        sz += zv[i];
-        sxz += xv[i] * zv[i];
-        syz += yv[i] * zv[i];
-        sx2 += xv[i] * xv[i];
-        sy2 += yv[i] * yv[i];
-        sz2 += zv[i] * zv[i];
+        sx += xv[ii];
+        sy += yv[ii];
+        sz += zv[ii];
+        sxz += xv[ii] * zv[ii];
+        syz += yv[ii] * zv[ii];
+        sx2 += xv[ii] * xv[ii];
+        sy2 += yv[ii] * yv[ii];
+        sz2 += zv[ii] * zv[ii];
 
         nlayer++;
       }
@@ -1321,7 +1321,7 @@ void MeanAndRMS(std::vector<digit>& digits, TH1D& hmeanX, TH1D& hrmsX,
     }
   }
 
-  for (unsigned int j = 0; j < hmeanX.GetNbinsX(); j++) {
+  for (int j = 0; j < hmeanX.GetNbinsX(); j++) {
     mean = -1;
     rms = -1;
     n = hnX.GetBinContent(j + 1);

@@ -16,4 +16,10 @@ ana.cpp
 src/processTrkFnd.cpp
 src/processVtxLog.cpp
 files/*
-
+src/findvtx.cpp
+src/track3D.cxx
+include/track3D.h
+src/calo.cpp
+!CMakeLists.txt
+bin/*
+lib/*
