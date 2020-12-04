@@ -23,3 +23,5 @@ src/calo.cpp
 !CMakeLists.txt
 bin/*
 lib/*
+bin
+lib
