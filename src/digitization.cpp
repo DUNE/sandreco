@@ -557,7 +557,7 @@ void ClusterizeDigit(std::map<int, std::map<int, digit> >& digit_map,
 
       iter++;
     }
-    
+
     if (d.hor) {
       d.x = 0.;
       d.y = 0.5 * (y1 + y2) + r.Gaus(0., res_x);
