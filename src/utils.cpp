@@ -9,8 +9,47 @@
 #include <TCanvas.h>
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
+#include <TRandom3.h>
 
 #include <iostream>
+
+double kloe_simu::getT(double y1, double y2, double y, double z1, double z2,
+                       double z)
+{
+  double t = 0;
+  if (y1 != y2 || z1 != z2) {
+    t = -((y1 - y) * (y2 - y1) + (z1 - z) * (z2 - z1)) /
+        ((y2 - y1) * (y2 - y1) + (z2 - z1) * (z2 - z1));
+  }
+  if (t < 0)
+    return 0;
+  else if (t > 1)
+    return 1;
+  else
+    return t;
+}
+
+int kloe_simu::encodeSTID(int planeid, int tubeid)
+{
+  return tubeid * 1000 + planeid;
+}
+
+void kloe_simu::decodeSTID(int id, int& planeid, int& tubeid)
+{
+  tubeid = id / 1000;
+  planeid = id % 1000;
+}
+
+int kloe_simu::encodePlaneID(int moduleid, int type)
+{
+  return moduleid * 10 + type;
+}
+
+void kloe_simu::decodePlaneID(int id, int& moduleid, int& type)
+{
+  moduleid = id / 10;
+  type = id % 10;
+}
 
 bool kloe_simu::isST(TString name)
 {
@@ -78,14 +117,17 @@ int kloe_simu::getPlaneID(TString name)
 
   delete obj;
 
-  return type + 10 * mod;
+  return encodePlaneID(mod, type);
 }
 
 void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
                           std::map<double, int>& stX,
                           std::map<int, TVector2>& stPos)
 {
-  int ic = pid - int(double(pid) / 10.) * 10 - 1;
+  int type;
+  int mod;
+  decodePlaneID(pid, mod, type);
+  int ic = type - 1;
 
   if (ic != 0 && ic != 1)
     std::cout << "Error: ic expected 0 or 1 -> " << ic << std::endl;
@@ -181,16 +223,16 @@ int kloe_simu::getSTUniqID(TGeoManager* g, double x, double y, double z)
     }
   }
 
-  return sid * 1000 + pid;
+  return encodeSTID(pid, sid);
 }
 
-bool kloe_simu::isCluBigger(const std::vector<digit>& v1,
-                            const std::vector<digit>& v2)
+bool kloe_simu::isCluBigger(const std::vector<dg_tube>& v1,
+                            const std::vector<dg_tube>& v2)
 {
   return v1.size() > v2.size();
 }
 
-bool kloe_simu::isDigUpstream(const digit& d1, const digit& d2)
+bool kloe_simu::isDigUpstream(const dg_tube& d1, const dg_tube& d2)
 {
   return d1.z < d2.z;
 }
@@ -200,12 +242,12 @@ bool kloe_simu::isHitBefore(hit h1, hit h2)
   return h1.t1 < h2.t1;
 }
 
-bool kloe_simu::isDigBefore(digit d1, digit d2)
+bool kloe_simu::isDigBefore(dg_tube d1, dg_tube d2)
 {
-  return d1.t < d2.t;
+  return d1.tdc < d2.tdc;
 }
 
-bool kloe_simu::isCellBefore(cell c1, cell c2)
+bool kloe_simu::isCellBefore(dg_cell c1, dg_cell c2)
 {
   if (c1.adc1 == 0 || c1.adc2 == 0)
     return false;
@@ -357,7 +399,7 @@ bool kloe_simu::CheckAndProcessPath(TString& str2)
 {
   // ENDCAP ==> something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_18/volECALActiveSlab_21_PV_0"
-  // BARREL ==> ìsomething like:
+  // BARREL ==> ï¿½something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0/endvolECALActiveSlab_0_PV_0"
   TObjArray* obj = str2.Tokenize("/");
 
@@ -460,11 +502,39 @@ void kloe_simu::init(TGeoManager* geo)
 
   TGeoHMatrix mat = *gGeoIdentity;
 
-  rST = new TPRegexp(rST_string);
-  rSTplane = new TPRegexp(rSTplane_string);
+  kloe_simu::rST = new TPRegexp(rST_string);
+  kloe_simu::rSTplane = new TPRegexp(rSTplane_string);
 
   getSTPlaneinfo(gGeoManager->GetTopVolume()->GetNode(0), mat, kloe_simu::stX,
                  kloe_simu::stPos);
+
+  for (std::map<int, std::map<int, TVector2> >::iterator it =
+           kloe_simu::stPos.begin();
+       it != kloe_simu::stPos.end(); it++) {
+    int mod_id = it->first;
+    for (std::map<int, TVector2>::iterator ite = it->second.begin();
+         ite != it->second.end(); ite++) {
+      int tub_id = ite->first;
+      int id = encodeSTID(mod_id, tub_id);
+      tubePos[id] = ite->second;
+    }
+  }
+}
+
+void kloe_simu::initT0(TG4Event* ev)
+{
+  TRandom3 r(0);
+  kloe_simu::t0.clear();
+
+  double t0_beam = ev->Primaries[0].Position.T() -
+                   ev->Primaries[0].Position.Z() / kloe_simu::c +
+                   r.Gaus(0, kloe_simu::bucket_rms);
+
+  for (std::map<int, std::map<int, TVector2> >::iterator it = stPos.begin();
+       it != stPos.end(); it++) {
+    kloe_simu::t0[it->first] =
+        t0_beam + it->second.begin()->second.X() / kloe_simu::c;
+  }
 }
 
 int kloe_simu::EncodeID(int mod, int lay, int cel)
@@ -576,7 +646,7 @@ double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2,
   return 0.5 * (adc1 / f1 + adc2 / f2) * kloe_simu::adc2MeV;
 }
 
-void kloe_simu::CellXYZTE(cell c, double& x, double& y, double& z, double& t,
+void kloe_simu::CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
                           double& e)
 {
   if (c.id < 25000)  // Barrel

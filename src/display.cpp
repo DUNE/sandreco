@@ -65,8 +65,8 @@ TGeoManager* geo = 0;
 TCanvas* cev = 0;
 TCanvas* cpr = 0;
 
-std::vector<cell>* vec_cell = new std::vector<cell>;
-std::vector<digit>* vec_digi = new std::vector<digit>;
+std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
+std::vector<dg_tube>* vec_digi = new std::vector<dg_tube>;
 std::vector<track>* vec_tr = new std::vector<track>;
 std::vector<cluster>* vec_cl = new std::vector<cluster>;
 std::map<int, gcell> calocell;
@@ -114,7 +114,7 @@ void init(const char* mcfile, const char* ifile)
   if (tGenie) tEdep->AddFriend(tGenie);
 
   tEdep->SetBranchAddress("Event", &ev);
-  if (tDigit) tDigit->SetBranchAddress("cell", &vec_cell);
+  if (tDigit) tDigit->SetBranchAddress("dg_cell", &vec_cell);
   if (tDigit) tDigit->SetBranchAddress("Stt", &vec_digi);
   if (tReco) tReco->SetBranchAddress("track", &vec_tr);
   if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);

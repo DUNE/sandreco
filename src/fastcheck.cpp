@@ -54,11 +54,11 @@ int main(int argc, char* argv[])
   TTree* tReco = (TTree*)fin.Get("tReco");
   TTree* tEvent = (TTree*)fin.Get("tEvent");
 
-  TCut barrel_module = "cell.mod < 24";
-  TCut endcap_module = "cell.mod > 24";
-  TCut up_barrel_module = "cell.mod==0";
-  TCut left_endcap_module = "cell.mod==30";
-  TCut cellOK = "cell.adc1>0&&cell.adc2>0";
+  TCut barrel_module = "dg_cell.mod < 24";
+  TCut endcap_module = "dg_cell.mod > 24";
+  TCut up_barrel_module = "dg_cell.mod==0";
+  TCut left_endcap_module = "dg_cell.mod==30";
+  TCut cellOK = "dg_cell.adc1>0&&dg_cell.adc2>0";
   TCut trackRecoOK = "track.ret_ln==0&&track.ret_cr==0";
   TCut EnuRecoOK = "Enureco>0.";
   TCut PrimaryPart = "particles.primary==1";
@@ -67,72 +67,72 @@ int main(int argc, char* argv[])
   std::cout << "tDigit histograms..." << std::flush;
 
   if (tDigit) {
-    print(c, fout, tDigit, "cell.mod", "", "", "cells; module id", -1);
-    print(c, fout, tDigit, "cell.lay", "", "", "cells; layer id");
-    print(c, fout, tDigit, "cell.cel", barrel_module, "",
+    print(c, fout, tDigit, "dg_cell.mod", "", "", "cells; module id", -1);
+    print(c, fout, tDigit, "dg_cell.lay", "", "", "cells; layer id");
+    print(c, fout, tDigit, "dg_cell.cel", barrel_module, "",
           "barrel modules; cell id");
-    print(c, fout, tDigit, "cell.l", barrel_module, "",
+    print(c, fout, tDigit, "dg_cell.l", barrel_module, "",
           "barrel modules; cell length (mm)");
-    print(c, fout, tDigit, "cell.cel", endcap_module, "",
+    print(c, fout, tDigit, "dg_cell.cel", endcap_module, "",
           "endcap modules; cell id");
-    print(c, fout, tDigit, "cell.l", endcap_module, "",
+    print(c, fout, tDigit, "dg_cell.l", endcap_module, "",
           "endcap modules; cell length (mm)");
 
-    n = tDigit->Draw("cell.y:cell.x", "", "goff");
+    n = tDigit->Draw("dg_cell.y:dg_cell.x", "", "goff");
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
     g->SetTitle("cells; x cell position (mm); y cell position (mm)");
     g->Draw("ap");
     c.SaveAs(fout.Data());
 
-    n = tDigit->Draw("cell.y:cell.z", "", "goff");
+    n = tDigit->Draw("dg_cell.y:dg_cell.z", "", "goff");
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
     g->SetTitle("cells; z cell position (mm); y cell position (mm)");
     g->Draw("ap");
     c.SaveAs(fout.Data());
 
-    n = tDigit->Draw("cell.y:cell.z", up_barrel_module, "goff");
+    n = tDigit->Draw("dg_cell.y:dg_cell.z", up_barrel_module, "goff");
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
     g->SetTitle("module id == 0; z cell position (mm); y cell position (mm)");
     g->Draw("ap*");
     c.SaveAs(fout.Data());
 
     n = tDigit->Draw(
-        "TMath::ATan2(23910.000-cell.z,cell.y+2384.7300)/"
-        "TMath::Pi()*180.:cell.mod",
+        "TMath::ATan2(23910.000-dg_cell.z,dg_cell.y+2384.7300)/"
+        "TMath::Pi()*180.:dg_cell.mod",
         barrel_module, "goff");
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
     g->SetTitle("barrel modules; module id; angle from y axis (rad)");
     g->Draw("ap");
     c.SaveAs(fout.Data());
 
-    n = tDigit->Draw("cell.y:cell.lay", up_barrel_module, "goff");
+    n = tDigit->Draw("dg_cell.y:dg_cell.lay", up_barrel_module, "goff");
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
     g->SetTitle("module id == 0; lay id; y cell position (mm)");
     g->Draw("ap*");
     c.SaveAs(fout.Data());
 
-    n = tDigit->Draw("cell.z:cell.cel", up_barrel_module, "goff");
+    n = tDigit->Draw("dg_cell.z:dg_cell.cel", up_barrel_module, "goff");
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
     g->SetTitle("module id == 0; cel id; z cell position (mm)");
     g->Draw("ap*");
     c.SaveAs(fout.Data());
 
-    n = tDigit->Draw("cell.x:cell.z", left_endcap_module, "goff");
+    n = tDigit->Draw("dg_cell.x:dg_cell.z", left_endcap_module, "goff");
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
     g->SetTitle("module id == 30; z cell position (mm); x cell position (mm)");
     g->Draw("ap*");
     c.SaveAs(fout.Data());
 
-    n = tDigit->Draw("cell.x:cell.mod", endcap_module, "goff");
+    n = tDigit->Draw("dg_cell.x:dg_cell.mod", endcap_module, "goff");
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
     g->SetTitle("endcap module; module id; x cell position (mm)");
     g->Draw("ap");
     c.SaveAs(fout.Data());
 
     c.SetLogy(true);
-    print(c, fout, tDigit, "TMath::Log10(cell.adc1)", "", "",
+    print(c, fout, tDigit, "TMath::Log10(dg_cell.adc1)", "", "",
           "cells; log_{10}(adc1)");
-    print(c, fout, tDigit, "TMath::Log10(cell.adc2)", "", "",
+    print(c, fout, tDigit, "TMath::Log10(dg_cell.adc2)", "", "",
           "cells; log_{10}(adc2)");
     c.SetLogy(false);
 
@@ -154,13 +154,13 @@ int main(int argc, char* argv[])
     c.SaveAs(fout.Data());
 
     c.SetLogy(true);
-    print(c, fout, tDigit, "TMath::Log10(cell.tdc1)", "cell.adc1>0", "",
+    print(c, fout, tDigit, "TMath::Log10(dg_cell.tdc1)", "dg_cell.adc1>0", "",
           "OK cells; log_{10}(tdc1/ns)");
-    print(c, fout, tDigit, "TMath::Log10(cell.tdc2)", "cell.adc2>0", "",
+    print(c, fout, tDigit, "TMath::Log10(dg_cell.tdc2)", "dg_cell.adc2>0", "",
           "OK cells; log_{10}(tdc2/ns)");
-    print(c, fout, tDigit, "TMath::Log10(abs(cell.tdc1-cell.tdc2))", "", "",
-          "OK cells; log_{10}(|tdc1-tdc2|/ns)");
-    print(c, fout, tDigit, "TMath::Log10(cell.tdc1+cell.tdc2)", "", "",
+    print(c, fout, tDigit, "TMath::Log10(abs(dg_cell.tdc1-dg_cell.tdc2))", "",
+          "", "OK cells; log_{10}(|tdc1-tdc2|/ns)");
+    print(c, fout, tDigit, "TMath::Log10(dg_cell.tdc1+dg_cell.tdc2)", "", "",
           "OK cells; log_{10}((tdc1+tdc2)/ns)");
     c.SetLogy(false);
 
@@ -183,41 +183,70 @@ int main(int argc, char* argv[])
     c.SetLogz(false);
 
     c.SetLogy(true);
-    print(c, fout, tDigit, "TMath::Log10(cell.@pe_time1.size())", "", "",
+    print(c, fout, tDigit, "TMath::Log10(dg_cell.@pe_time1.size())", "", "",
           "cells; log_{10}(#p.e.)");
-    print(c, fout, tDigit, "TMath::Log10(cell.@pe_time2.size())", "", "",
+    print(c, fout, tDigit, "TMath::Log10(dg_cell.@pe_time2.size())", "", "",
           "cells; log_{10}(#p.e.)");
-    print(c, fout, tDigit, "TMath::Log10(cell.pe_time1)", "", "",
+    print(c, fout, tDigit, "TMath::Log10(dg_cell.pe_time1)", "", "",
           "cells; log_{10}(p.e. time1/ns)");
-    print(c, fout, tDigit, "TMath::Log10(cell.pe_time2)", "", "",
+    print(c, fout, tDigit, "TMath::Log10(dg_cell.pe_time2)", "", "",
           "cells; log_{10}(p.e. time2/ns)");
     c.SetLogy(false);
 
-    n = tDigit->Draw("Stt.y:Stt.x", "", "goff", 1000);
+    n = tDigit->Draw("dg_tube.y:dg_tube.x", "dg_tube.hor", "goff", 1000);
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
-    g->SetTitle("stt; x stt digit position (mm); y stt digit position (mm)");
+    g->SetTitle(
+        "stt (hor); x stt digit position (mm); y stt digit position (mm)");
     g->Draw("ap");
     c.SaveAs(fout.Data());
 
-    n = tDigit->Draw("Stt.y:Stt.z", "", "goff", 1000);
+    n = tDigit->Draw("dg_tube.y:dg_tube.x", "!dg_tube.hor", "goff", 1000);
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
-    g->SetTitle("stt; z stt digit position (mm); y stt digit position (mm)");
+    g->SetTitle(
+        "stt (ver); x stt digit position (mm); y stt digit position (mm)");
     g->Draw("ap");
     c.SaveAs(fout.Data());
 
-    n = tDigit->Draw("Stt.x:Stt.z", "", "goff", 1000);
+    n = tDigit->Draw("dg_tube.y:dg_tube.z", "dg_tube.hor", "goff", 1000);
     g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
-    g->SetTitle("stt; z stt digit position (mm); x stt digit position (mm)");
+    g->SetTitle(
+        "stt (hor); z stt digit position (mm); y stt digit position (mm)");
+    g->Draw("ap");
+    c.SaveAs(fout.Data());
+
+    n = tDigit->Draw("dg_tube.y:dg_tube.z", "!dg_tube.hor", "goff", 1000);
+    g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
+    g->SetTitle(
+        "stt (ver); z stt digit position (mm); y stt digit position (mm)");
+    g->Draw("ap");
+    c.SaveAs(fout.Data());
+
+    n = tDigit->Draw("dg_tube.x:dg_tube.z", "dg_tube.hor", "goff", 1000);
+    g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
+    g->SetTitle(
+        "stt (hor); z stt digit position (mm); x stt digit position (mm)");
+    g->Draw("ap");
+    c.SaveAs(fout.Data());
+
+    n = tDigit->Draw("dg_tube.x:dg_tube.z", "!dg_tube.hor", "goff", 1000);
+    g = new TGraph(n, tDigit->GetV2(), tDigit->GetV1());
+    g->SetTitle(
+        "stt (ver); z stt digit position (mm); x stt digit position (mm)");
     g->Draw("ap");
     c.SaveAs(fout.Data());
 
     c.SetLogy(true);
-    print(c, fout, tDigit, "TMath::Log10(Stt.t)", "", "",
-          "stt; log_{10}(stt time/ns)");
-    print(c, fout, tDigit, "TMath::Log10(Stt.de)", "", "",
+    print(c, fout, tDigit, "TMath::Log10(dg_tube.de)", "", "",
           "stt; log_{10}(dE/MeV)");
+    print(c, fout, tDigit, "dg_tube.t0", "", "", "stt; t0 (ns)");
+    print(c, fout, tDigit, "TMath::Log10(dg_tube.adc)", "", "",
+          "stt; log_{10}(adc)");
+    print(c, fout, tDigit, "TMath::Log10(dg_tube.tdc)", "", "",
+          "stt; log_{10}(tdc/ns)");
+    print(c, fout, tDigit, "TMath::Log10(dg_tube.tdc-dg_tube.t0)", "", "",
+          "stt; log_{10}(drift/ns)");
     c.SetLogy(false);
-    print(c, fout, tDigit, "Stt.hor", "", "", "stt; hor/ver");
+    print(c, fout, tDigit, "dg_tube.hor", "", "", "stt; hor/ver");
   }
 
   std::cout << " done" << std::endl;

@@ -6,6 +6,8 @@
 
 #include "struct.h"
 
+#include <TG4Event.h>
+
 #ifndef UTILS_H
 #define UTILS_H
 
@@ -123,14 +125,23 @@ const double emk = 1.;
 const double hadk = 1.;
 
 // STT position
+const double stt_int_time = 400.;    // ns
+const double bucket_rms = 1.;        // ns
+const double wire_radius = 0.02;     // mm
+const double v_drift = 0.05;         // mm/ns
+const double tm_stt_smearing = 3.5;  // ns
+
 std::map<int, std::map<double, int> > stX;
 std::map<int, std::map<int, TVector2> > stPos;
+std::map<int, TVector2> tubePos;
+std::map<int, double> t0;
 
-bool isCluBigger(const std::vector<digit>& v1, const std::vector<digit>& v2);
-bool isDigUpstream(const digit& d1, const digit& d2);
+bool isCluBigger(const std::vector<dg_tube>& v1,
+                 const std::vector<dg_tube>& v2);
+bool isDigUpstream(const dg_tube& d1, const dg_tube& d2);
 bool isHitBefore(hit h1, hit h2);
-bool isDigBefore(digit d1, digit d2);
-bool isCellBefore(cell c1, cell c2);
+bool isDigBefore(dg_tube d1, dg_tube d2);
+bool isCellBefore(dg_cell c1, dg_cell c2);
 bool isAfter(particle p1, particle p2);
 bool isBarrel(TString& str);
 bool isEndCap(TString& str);
@@ -155,7 +166,8 @@ double AttenuationFactor(double d, int planeID);
 double TfromTDC(double t1, double t2, double L);
 double XfromTDC(double t1, double t2);
 double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
-void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e);
+void CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
+               double& e);
 
 bool isST(TString name);
 bool isSTPlane(TString name);
@@ -167,6 +179,12 @@ void getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
                     std::map<int, std::map<double, int> >& stX,
                     std::map<int, std::map<int, TVector2> >& stPos);
 int getSTUniqID(TGeoManager* g, double x, double y, double z);
+int encodeSTID(int planeid, int tubeid);
+void decodeSTID(int id, int& planeid, int& tubeid);
+int encodePlaneID(int moduleid, int type);
+void decodePlaneID(int id, int& moduleid, int& type);
+double getT(double y1, double y2, double y, double z1, double z2, double z);
+void initT0(TG4Event* ev);
 }
 
 #endif
