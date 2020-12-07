@@ -13,6 +13,8 @@
 
 #include <iostream>
 
+// value of parameter of segment (y1,z1,y2,z2)
+// corresponding to minimal distance to point (y,z)
 double kloe_simu::getT(double y1, double y2, double y, double z1, double z2,
                        double z)
 {
@@ -61,6 +63,7 @@ bool kloe_simu::isSTPlane(TString name)
   return name.Contains(*kloe_simu::rSTplane);
 }
 
+// get local id of tube
 int kloe_simu::getSTId(TString name)
 {
   int id = -999;
@@ -79,6 +82,7 @@ int kloe_simu::getSTId(TString name)
   return id;
 }
 
+// get plane id
 int kloe_simu::getPlaneID(TString name)
 {
   int mod = 0;
@@ -120,6 +124,7 @@ int kloe_simu::getPlaneID(TString name)
   return encodePlaneID(mod, type);
 }
 
+// get position of the center of the tube for a plane
 void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
                           std::map<double, int>& stX,
                           std::map<int, TVector2>& stPos)
@@ -152,6 +157,7 @@ void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
   }
 }
 
+// get position of the center of the tube for each plane
 void kloe_simu::getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
                                std::map<int, std::map<double, int> >& stX,
                                std::map<int, std::map<int, TVector2> >& stPos)
@@ -182,6 +188,7 @@ void kloe_simu::getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
   }
 }
 
+// get unique id of the tube corresponding to (x,y,z)
 int kloe_simu::getSTUniqID(TGeoManager* g, double x, double y, double z)
 {
   TString sttname = g->FindNode(x, y, z)->GetName();
@@ -275,6 +282,7 @@ bool kloe_simu::isEndCap(TString& str)
   return str.Contains("endvolECAL") == true && str.Contains("Active") == true;
 }
 
+// find module id and plane id for barrel
 void kloe_simu::BarrelModuleAndLayer(TString& str, TString& str2, int& modID,
                                      int& planeID)
 {
@@ -298,6 +306,7 @@ void kloe_simu::BarrelModuleAndLayer(TString& str, TString& str2, int& modID,
   if (planeID > 4) planeID = 4;
 }
 
+// find module id and plane id for endcaps
 void kloe_simu::EndCapModuleAndLayer(TString& str, TString& str2, int& modID,
                                      int& planeID)
 {
@@ -325,6 +334,7 @@ void kloe_simu::EndCapModuleAndLayer(TString& str, TString& str2, int& modID,
   if (planeID > 4) planeID = 4;
 }
 
+// find barrel cell from (x,y,z)
 void kloe_simu::BarrelCell(double x, double y, double z, TGeoManager* g,
                            TGeoNode* node, int& cellID, double& d1, double& d2)
 {
@@ -366,6 +376,7 @@ void kloe_simu::BarrelCell(double x, double y, double z, TGeoManager* g,
   cellID = (Plocal[0] + dx) / cellw;
 }
 
+// find endcap cell from (x,y,z)
 void kloe_simu::EndCapCell(double x, double y, double z, TGeoManager* g,
                            TGeoNode* node, int& cellID, double& d1, double& d2)
 {
@@ -395,11 +406,12 @@ void kloe_simu::EndCapCell(double x, double y, double z, TGeoManager* g,
   cellID = int((Plocal[0] / rmax + 1.) * kloe_simu::nCel_ec * 0.5);
 }
 
+// check if the geometry path is ok
 bool kloe_simu::CheckAndProcessPath(TString& str2)
 {
   // ENDCAP ==> something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_18/volECALActiveSlab_21_PV_0"
-  // BARREL ==> �something like:
+  // BARREL ==> something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0/endvolECALActiveSlab_0_PV_0"
   TObjArray* obj = str2.Tokenize("/");
 
@@ -416,6 +428,7 @@ bool kloe_simu::CheckAndProcessPath(TString& str2)
   return true;
 }
 
+// get cell center from module id, layer id and cell id
 void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
                              double& x, double& y, double& z)
 {
@@ -456,6 +469,9 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
   z = dummyMas[2];
 }
 
+// init geometry
+// - costruct calo cells
+// - find straw tube center
 void kloe_simu::init(TGeoManager* geo)
 {
   TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
@@ -521,6 +537,8 @@ void kloe_simu::init(TGeoManager* geo)
   }
 }
 
+// evaluated t0 for each tube assuming the bucket that
+// produced the neutrino is known
 void kloe_simu::initT0(TG4Event* ev)
 {
   TRandom3 r(0);
@@ -549,6 +567,8 @@ void kloe_simu::DecodeID(int id, int& mod, int& lay, int& cel)
   cel = id - mod * 1000 - lay * 100;
 }
 
+// evaluate minimum distance between segment (s1x,s1y,s1z) -> (s2x,s2y,s2z)
+// and point (px,py,pz)
 double kloe_simu::mindist(double s1x, double s1y, double s1z, double s2x,
                           double s2y, double s2z, double px, double py,
                           double pz)
@@ -569,6 +589,7 @@ double kloe_simu::mindist(double s1x, double s1y, double s1z, double s2x,
               (pz - s3z) * (pz - s3z));
 }
 
+// evaluate angle between (x1,y1,z1) and (x2,y2,z2)
 double kloe_simu::angle(double x1, double y1, double z1, double x2, double y2,
                         double z2)
 {
@@ -579,6 +600,9 @@ double kloe_simu::angle(double x1, double y1, double z1, double x2, double y2,
   return TMath::ACos(prod / (mag1 * mag2));
 }
 
+// get fiber attenuation factor.
+// It depends on distance from pmt (d)
+// and planeID (planes have different fibers)
 double kloe_simu::AttenuationFactor(double d, int planeID)
 {
   /*
@@ -627,16 +651,20 @@ double kloe_simu::AttenuationFactor(double d, int planeID)
          (1. - kloe_simu::p1) * TMath::Exp(-d / atl2);
 }
 
+// reconstruct t of the hit from tdc1 and tdc2
 double kloe_simu::TfromTDC(double t1, double t2, double L)
 {
   return 0.5 * (t1 + t2 - kloe_simu::vlfb * L / kloe_simu::m_to_mm);
 }
 
+// reconstruct longitudinal coordinate of the hit from tdc1 and tdc2
 double kloe_simu::XfromTDC(double t1, double t2)
 {
   return 0.5 * (t1 - t2) / kloe_simu::vlfb * kloe_simu::m_to_mm;
 }
 
+// energy deposit of the hit from adc1 and adc2 and
+// reconstructed longidutinal coordinate
 double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2,
                            int planeID)
 {
@@ -646,6 +674,7 @@ double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2,
   return 0.5 * (adc1 / f1 + adc2 / f2) * kloe_simu::adc2MeV;
 }
 
+// reconstruct hit position, time and energy of the cell
 void kloe_simu::CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
                           double& e)
 {

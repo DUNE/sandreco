@@ -33,6 +33,10 @@ using namespace kloe_simu;
 
 TRandom3 r(0);
 
+/*
+// get fiber attenuation factor.
+// It depends on distance from pmt (d)
+// and planeID (planes have different fibers)
 double Attenuation(double d, int planeID)
 {
   double atl2 = 0.0;
@@ -53,7 +57,6 @@ double Attenuation(double d, int planeID)
       break;
 
     default:
-      // std::cout << "planeID out if range" << std::endl;
       atl2 = -999.0;
       break;
   }
@@ -70,7 +73,9 @@ double Attenuation(double d, int planeID)
 
   return p1 * TMath::Exp(-d / atl1) + (1. - p1) * TMath::Exp(-d / atl2);
 }
-
+*/
+// convert deposited energy into
+// into the mean number of pe
 double E2PE(double E)
 {
   if (debug) std::cout << "E = " << E << " -> p.e. = " << e2p2* E << std::endl;
@@ -78,6 +83,7 @@ double E2PE(double E)
   return e2p2 * E;
 }
 
+// simulate pe arrival time to pmt
 double petime(double t0, double d)
 {
   /*
@@ -112,6 +118,15 @@ C                      + 1ns  uncertainty
   return time;
 }
 
+// process calorimeter hits
+// return:
+//  - module id
+//  - plane id
+//  - cell id
+//  - d1: distance from pmt1
+//  - d2: distance from pmt2
+//  - t: time of the hit
+//  - de: energy deposit
 bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
                 int& planeID, int& cellID, double& d1, double& d2, double& t,
                 double& de)
@@ -201,8 +216,8 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
       for (unsigned int j = 0; j < it->second.size(); j++) {
         if (ProcessHit(g, it->second[j], modID, planeID, cellID, d1, d2, t0,
                        de) == true) {
-          double en1 = de * Attenuation(d1, planeID);
-          double en2 = de * Attenuation(d2, planeID);
+          double en1 = de * kloe_simu::Attenuation(d1, planeID);
+          double en2 = de * kloe_simu::Attenuation(d2, planeID);
 
           double ave_pe1 = E2PE(en1);
           double ave_pe2 = E2PE(en2);
@@ -239,6 +254,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
   }
 }
 
+// from simulated pe produce adc e tdc of calo cell
 void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
                    std::map<int, double>& adc, std::map<int, double>& tdc)
 {
@@ -292,6 +308,7 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
   }
 }
 
+// construct calo digit and collect them in a vector
 void CollectSignal(TGeoManager* geo,
                    std::map<int, std::vector<double> >& time_pe,
                    std::map<int, double>& adc, std::map<int, double>& tdc,
@@ -332,6 +349,7 @@ void CollectSignal(TGeoManager* geo,
   }
 }
 
+// simulate calorimeter responce for whole event
 void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<dg_cell>& vec_cell)
 {
   std::map<int, std::vector<double> > time_pe;
@@ -356,43 +374,7 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<dg_cell>& vec_cell)
   CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell);
 }
 
-/*
-void Cluster(TG4Event* ev, TGeoManager* geo,
-             std::map<std::string, std::vector<hit> >& cluster_map)
-{
-  cluster_map.clear();
-
-  for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
-    const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
-
-    double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
-    double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
-    double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
-
-    std::string sttname = geo->FindNode(x, y, z)->GetName();
-
-    hit h;
-    h.det = sttname;
-    h.x1 = hseg.Start.X();
-    h.y1 = hseg.Start.Y();
-    h.z1 = hseg.Start.Z();
-    h.t1 = hseg.Start.T();
-    h.x2 = hseg.Stop.X();
-    h.y2 = hseg.Stop.Y();
-    h.z2 = hseg.Stop.Z();
-    h.t2 = hseg.Stop.T();
-    h.de = hseg.EnergyDeposit;
-    h.pid = hseg.PrimaryId;
-    h.index = j;
-
-    std::string cluster_name(sttname);
-    cluster_name += "_" + std::to_string(hseg.PrimaryId);
-
-    cluster_map[cluster_name].push_back(h);
-  }
-}
-*/
-
+// Group hits into tube
 void CollectHits(TG4Event* ev, TGeoManager* geo,
                  std::map<int, std::vector<hit> >& hits2Tube)
 {
@@ -430,6 +412,9 @@ void CollectHits(TG4Event* ev, TGeoManager* geo,
   }
 }
 
+// for each tube simulate tdc and adc
+// tdc is the time of closest point to wire + drift time
+// adc is the sum of energy deposit within integration time window
 void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
                 std::vector<dg_tube>& digit_vec)
 {
@@ -492,7 +477,7 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
 
       if (min_time_hit < min_time_tub) min_time_tub = min_time_hit;
 
-      if (t < kloe_simu::stt_int_time) d.de += it->second[i].de;
+      if (t - d.t0 < kloe_simu::stt_int_time) d.de += it->second[i].de;
 
       d.hindex.push_back(it->second[i].index);
     }
@@ -504,6 +489,7 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
   }
 }
 
+// simulate stt responce for whole event
 void DigitizeStt(TG4Event* ev, TGeoManager* geo,
                  std::vector<dg_tube>& digit_vec)
 {
@@ -514,6 +500,7 @@ void DigitizeStt(TG4Event* ev, TGeoManager* geo,
   Hits2Digit(hits2Tube, digit_vec);
 }
 
+// digitize event
 void Digitize(const char* finname, const char* foutname)
 {
   TFile f(finname, "READ");
