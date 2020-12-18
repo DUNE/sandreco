@@ -54,8 +54,8 @@ void evalPhi(double& phi, double u, double v)
   phi = TMath::ATan2(v, u);
 }
 
-void findNearDigPhi(int& idx, double exp_phi, std::vector<digit>& vd, double zv,
-                    double yv)
+void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_tube>& vd,
+                    double zv, double yv)
 {
   double dphi = 1E3;
 
@@ -71,7 +71,7 @@ void findNearDigPhi(int& idx, double exp_phi, std::vector<digit>& vd, double zv,
   }
 }
 
-bool findNearDigX(int& idx, double exp_x, std::vector<digit>& vd, double xvtx)
+bool findNearDigX(int& idx, double exp_x, std::vector<dg_tube>& vd, double xvtx)
 {
   double dx = 10000.;
 
@@ -223,7 +223,7 @@ void GetRho(const std::vector<double>& z_v, const std::vector<double>& y_v,
 
 void FillPositionInfo(track& tr, int signy, double cos, double sin)
 {
-  digit d = tr.digits.front();
+  dg_tube d = tr.digits.front();
   tr.z0 = d.z;
   tr.t0 = d.t;
   if (d.hor == true) {
@@ -412,7 +412,7 @@ void fillInfoCircFit(int n, const std::vector<double>& z,
   tr.h = EvalDirection(z, y, tr.zc, tr.yc);
 }
 
-void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi,
+void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
                std::vector<track>& vec_tr)
 {
   vec_tr.clear();
@@ -453,8 +453,8 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi,
 }
 */
 
-void fillLayers(std::map<int, std::vector<digit> >& m, std::vector<digit>& d,
-                TH1D& hdummy, int hor)
+void fillLayers(std::map<int, std::vector<dg_tube> >& m,
+                std::vector<dg_tube>& d, TH1D& hdummy, int hor)
 {
   for (unsigned int k = 0; k < d.size(); k++) {
     if (d.at(k).hor == hor)
@@ -462,8 +462,8 @@ void fillLayers(std::map<int, std::vector<digit> >& m, std::vector<digit>& d,
   }
 }
 
-void findTracksY(std::map<int, std::vector<digit> >& mdY,
-                 std::vector<std::vector<digit> >& clustersY, TH1D& hdummy,
+void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
+                 std::vector<std::vector<dg_tube> >& clustersY, TH1D& hdummy,
                  double xvtx_reco, double yvtx_reco, double zvtx_reco,
                  double phi_tol = 0.1, double dlay_tol = 5)
 {
@@ -474,13 +474,13 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
 
   double u, v, phi, dphi;
 
-  digit current_digit;
+  dg_tube current_digit;
 
   // loop on modules
   while (mdY.size() != 0) {
     // get most downstream module
-    std::map<int, std::vector<digit> >::iterator ite = mdY.begin();
-    std::vector<digit>* layer = &(ite->second);
+    std::map<int, std::vector<dg_tube> >::iterator ite = mdY.begin();
+    std::vector<dg_tube>* layer = &(ite->second);
 
     // loop on digits in the module
     while (layer->size() != 0) {
@@ -488,7 +488,7 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
       current_digit = layer->front();
 
       // create cluster and insert first digit
-      std::vector<digit> clY;
+      std::vector<dg_tube> clY;
       clY.push_back(std::move(current_digit));
 
       // remove the current digit from the module
@@ -498,7 +498,7 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
       prev_mod = ite->first;
 
       // get iterator to the next module
-      std::map<int, std::vector<digit> >::iterator nite = std::next(ite);
+      std::map<int, std::vector<dg_tube> >::iterator nite = std::next(ite);
 
       // reset parameters
       evalUV(u, v, zvtx_reco, yvtx_reco, current_digit.z, current_digit.y);
@@ -513,7 +513,7 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
         // check if module are downstream the reco vtx
         if (hdummy.GetXaxis()->GetBinUpEdge(-1 * nite->first) > zvtx_reco) {
           // get next layer
-          std::vector<digit>* nlayer = &(nite->second);
+          std::vector<dg_tube>* nlayer = &(nite->second);
 
           // evaluate the distance (in number of modules) between this module
           // and the previous one
@@ -556,7 +556,7 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
 
               // remove module if it is empty
               if (nlayer->size() == 0) {
-                std::map<int, std::vector<digit> >::iterator dummy =
+                std::map<int, std::vector<dg_tube> >::iterator dummy =
                     std::next(nite);
                 mdY.erase(nite);
                 nite = dummy;
@@ -576,8 +576,8 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
   }
 }
 
-void findTracksX(std::map<int, std::vector<digit> >& mdX,
-                 std::vector<std::vector<digit> >& clustersX, TH1D& hdummy,
+void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
+                 std::vector<std::vector<dg_tube> >& clustersX, TH1D& hdummy,
                  double xvtx_reco, double yvtx_reco, double zvtx_reco,
                  double x_tol = 100, double dlay_tol = 5)
 {
@@ -586,13 +586,13 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
 
   double prev_x, dx;
 
-  digit current_digit;
+  dg_tube current_digit;
 
   // loop on modules from downstream to upstream
   while (mdX.size() != 0) {
     // get most downstream module
-    std::map<int, std::vector<digit> >::iterator ite = mdX.begin();
-    std::vector<digit>* layer = &(ite->second);
+    std::map<int, std::vector<dg_tube> >::iterator ite = mdX.begin();
+    std::vector<dg_tube>* layer = &(ite->second);
 
     // loop on digits in the module
     while (layer->size() != 0) {
@@ -600,7 +600,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
       current_digit = layer->front();
 
       // create cluster and insert first digit
-      std::vector<digit> clX;
+      std::vector<dg_tube> clX;
       clX.push_back(std::move(current_digit));
 
       // remove the current digit from the module
@@ -610,7 +610,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
       prev_mod = ite->first;
 
       // get iterator to the next module
-      std::map<int, std::vector<digit> >::iterator nite = std::next(ite);
+      std::map<int, std::vector<dg_tube> >::iterator nite = std::next(ite);
 
       // reset parameters
       prev_x = current_digit.x;
@@ -621,7 +621,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
         // check if module are downstream the reco vtx
         if (hdummy.GetXaxis()->GetBinUpEdge(-1 * nite->first) > zvtx_reco) {
           // get next layer
-          std::vector<digit>* nlayer = &(nite->second);
+          std::vector<dg_tube>* nlayer = &(nite->second);
 
           // evaluate the distance (in number of modules) between this module
           // and the previous one
@@ -651,7 +651,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
 
                 // remove module if it is empty
                 if (nlayer->size() == 0) {
-                  std::map<int, std::vector<digit> >::iterator dummy =
+                  std::map<int, std::vector<dg_tube> >::iterator dummy =
                       std::next(nite);
                   mdX.erase(nite);
                   nite = dummy;
@@ -672,8 +672,8 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
   }
 }
 
-void mergeXYTracks(std::vector<std::vector<digit> >& clustersX,
-                   std::vector<std::vector<digit> >& clustersY,
+void mergeXYTracks(std::vector<std::vector<dg_tube> >& clustersX,
+                   std::vector<std::vector<dg_tube> >& clustersY,
                    std::vector<track>& tr3D, double dn_tol, double dz_tol)
 {
   double dzend;
@@ -721,23 +721,23 @@ void mergeXYTracks(std::vector<std::vector<digit> >& clustersX,
   }
 }
 
-void TrackFind(std::vector<track>& tracks, std::vector<digit> digits,
+void TrackFind(std::vector<track>& tracks, std::vector<dg_tube> digits,
                std::vector<double>& binning, double xvtx_reco, double yvtx_reco,
                double zvtx_reco, double tol_phi, double tol_x, int tol_mod,
                unsigned int mindigtr, const double dn_tol, const double dz_tol)
 {
   TH1D hdummy("hdummy", "hdummy;Z (mm); multipliciy", binning.size() - 1,
               binning.data());
-  std::vector<std::vector<digit> > clustersY;
-  std::vector<std::vector<digit> > clustersX;
+  std::vector<std::vector<dg_tube> > clustersY;
+  std::vector<std::vector<dg_tube> > clustersX;
 
   // track finding with clustering in arctg(v/u) VS z
-  std::map<int, std::vector<digit> > mdY;
+  std::map<int, std::vector<dg_tube> > mdY;
   fillLayers(mdY, digits, hdummy, 1);
   clustersY.clear();
 
   // find track on XZ view
-  std::map<int, std::vector<digit> > mdX;
+  std::map<int, std::vector<dg_tube> > mdX;
   fillLayers(mdX, digits, hdummy, 0);
   clustersX.clear();
 
@@ -1003,7 +1003,7 @@ void fillPosAndTime(std::vector<track>& tracks)
     if (tracks.at(i).clY.front().z < tracks.at(i).clX.front().z) {
       tracks.at(i).y0 = tracks.at(i).clY.front().y;
       tracks.at(i).z0 = tracks.at(i).clY.front().z;
-      tracks.at(i).t0 = tracks.at(i).clY.front().t;
+      tracks.at(i).t0 = tracks.at(i).clY.front().tdc;
 
       double cos =
           tracks.at(i).h * (tracks.at(i).y0 - tracks.at(i).yc) / tracks.at(i).r;
@@ -1020,7 +1020,7 @@ void fillPosAndTime(std::vector<track>& tracks)
     } else {
       tracks.at(i).x0 = tracks.at(i).clX.front().x;
       tracks.at(i).z0 = tracks.at(i).clX.front().z;
-      tracks.at(i).t0 = tracks.at(i).clX.front().t;
+      tracks.at(i).t0 = tracks.at(i).clX.front().tdc;
 
       double dy2 = tracks.at(i).r * tracks.at(i).r -
                    (tracks.at(i).z0 - tracks.at(i).zc) *
@@ -1048,7 +1048,7 @@ void TrackFit(std::vector<track>& tracks, std::vector<double>& binning,
   fillPosAndTime(tracks);
 }
 
-bool IsContiguous(const cell& c1, const cell& c2)
+bool IsContiguous(const dg_cell& c1, const dg_cell& c2)
 {
   if (c1.mod == c2.mod) {
     if (TMath::Abs(c1.lay - c2.lay) <= 1) {
@@ -1066,7 +1066,7 @@ bool IsContiguous(const cell& c1, const cell& c2)
   return false;
 }
 
-bool IsContiguous(cluster cl, const cell& c)
+bool IsContiguous(cluster cl, const dg_cell& c)
 {
   for (unsigned int i = 0; i < cl.cells.size(); i++) {
     if (IsContiguous(cl.cells.at(i), c)) {
@@ -1076,14 +1076,14 @@ bool IsContiguous(cluster cl, const cell& c)
   return false;
 }
 
-void PreCluster(std::vector<cell>* vec_cell, std::vector<cluster>& vec_precl)
+void PreCluster(std::vector<dg_cell>* vec_cell, std::vector<cluster>& vec_precl)
 {
   vec_precl.clear();
 
-  std::vector<cell> vec_tmpcell(*vec_cell);
+  std::vector<dg_cell> vec_tmpcell(*vec_cell);
 
   while (vec_tmpcell.size() != 0) {
-    cell c = vec_tmpcell.front();
+    dg_cell c = vec_tmpcell.front();
 
     // std::cout << vec_tmpcell.size() << std::endl;
 
@@ -1249,7 +1249,7 @@ bool value_comparer(std::map<int, int>::value_type& i1,
   return i1.second < i2.second;
 }
 
-void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell,
+void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
                         std::vector<cluster>& vec_cl)
 {
   const double cell_max_dt = 30.;  // ns -> dt > 30. ns is unphysical
@@ -1302,7 +1302,7 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell,
   }
 }
 
-void MeanAndRMS(std::vector<digit>& digits, TH1D& hmeanX, TH1D& hrmsX,
+void MeanAndRMS(std::vector<dg_tube>& digits, TH1D& hmeanX, TH1D& hrmsX,
                 TH1I& hnX, TH1D& hmeanY, TH1D& hrmsY, TH1I& hnY)
 {
 
@@ -1388,7 +1388,7 @@ void filterDigitsModule(std::map<int, double>& yd, std::vector<int>& toremove,
   }
 }
 
-void filterDigits(std::vector<digit>& digits, TH1D& hdummy,
+void filterDigits(std::vector<dg_tube>& digits, TH1D& hdummy,
                   const double epsilon)
 {
   std::map<int, std::map<int, double> > dy;
@@ -1463,7 +1463,7 @@ void vtxfinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
 }
 
 void VertexFind(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
-                int& VtxType, std::vector<digit> digits,
+                int& VtxType, std::vector<dg_tube> digits,
                 std::vector<double>& binning, double epsilon)
 {
   TH1D hrmsX("hrmsX", "rmsX;Z (mm); rmsX (mm)", binning.size() - 1,
@@ -1554,11 +1554,11 @@ void Reconstruct(const char* fMc, const char* fIn)
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event", &ev);
 
-  std::vector<digit>* vec_digi = new std::vector<digit>;
-  std::vector<cell>* vec_cell = new std::vector<cell>;
+  std::vector<dg_tube>* vec_digi = new std::vector<dg_tube>;
+  std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
 
-  t->SetBranchAddress("Stt", &vec_digi);
-  t->SetBranchAddress("cell", &vec_cell);
+  t->SetBranchAddress("dg_tube", &vec_digi);
+  t->SetBranchAddress("dg_cell", &vec_cell);
 
   std::vector<track> vec_tr;
   std::vector<cluster> vec_cl;
@@ -1591,8 +1591,8 @@ void Reconstruct(const char* fMc, const char* fIn)
     double xvtx_reco, yvtx_reco, zvtx_reco;
     int VtxType;
 
-    std::vector<digit> clustersY;
-    std::vector<digit> clustersX;
+    std::vector<dg_tube> clustersY;
+    std::vector<dg_tube> clustersX;
 
     VertexFind(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, *vec_digi, sampling,
                epsilon);
