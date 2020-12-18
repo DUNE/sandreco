@@ -124,14 +124,17 @@ const double c = k * 1E3;  // mm/ns
 const double emk = 1.;
 const double hadk = 1.;
 
-// STT position
-const double stt_int_time = 400.;    // ns
-const double bucket_rms = 1.;        // ns
-const double wire_radius = 0.02;     // mm
-const double v_drift = 0.05;         // mm/ns
-const double tm_stt_smearing = 3.5;  // ns
+// STT
+double stt_center[3];
+const double stt_int_time = 400.;     // ns
+const double bucket_rms = 1.;         // ns
+const double wire_radius = 0.02;      // mm
+const double v_drift = 0.05;          // mm/ns
+const double v_signal_inwire = 200.;  // mm/ns
+const double tm_stt_smearing = 3.5;   // ns
 
 std::map<int, std::map<double, int> > stX;
+std::map<int, double> stL;
 std::map<int, std::map<int, TVector2> > stPos;
 std::map<int, TVector2> tubePos;
 std::map<int, double> t0;
@@ -174,9 +177,11 @@ bool isSTPlane(TString name);
 int getSTId(TString name);
 int getPlaneID(TString name);
 void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
-               std::map<double, int>& stX, std::map<int, TVector2>& stPos);
+               std::map<double, int>& stX, std::map<int, double>& stL,
+               std::map<int, TVector2>& stPos);
 void getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
                     std::map<int, std::map<double, int> >& stX,
+                    std::map<int, double>& stL,
                     std::map<int, std::map<int, TVector2> >& stPos);
 int getSTUniqID(TGeoManager* g, double x, double y, double z);
 int encodeSTID(int planeid, int tubeid);

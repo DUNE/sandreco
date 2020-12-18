@@ -216,8 +216,8 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
       for (unsigned int j = 0; j < it->second.size(); j++) {
         if (ProcessHit(g, it->second[j], modID, planeID, cellID, d1, d2, t0,
                        de) == true) {
-          double en1 = de * kloe_simu::Attenuation(d1, planeID);
-          double en2 = de * kloe_simu::Attenuation(d2, planeID);
+          double en1 = de * kloe_simu::AttenuationFactor(d1, planeID);
+          double en2 = de * kloe_simu::AttenuationFactor(d2, planeID);
 
           double ave_pe1 = E2PE(en1);
           double ave_pe2 = E2PE(en2);
@@ -426,6 +426,7 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
     int did = it->first;
 
     int mod, tub, type, pla;
+    double dwire = 0.;
 
     decodeSTID(did, pla, tub);
     decodePlaneID(pla, mod, type);
@@ -440,13 +441,15 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
     d.t0 = kloe_simu::t0[pla];
 
     if (d.hor == true) {
-      d.x = 0;
+      d.x = kloe_simu::stt_center[0];
       d.y = wire.Y();
       d.z = wire.X();
+      dwire = d.x - 0.5 * kloe_simu::stL[did];
     } else {
       d.x = wire.Y();
-      d.y = 0;
+      d.y = kloe_simu::stt_center[1];
       d.z = wire.X();
+      dwire = d.y - 0.5 * kloe_simu::stL[did];
     }
 
     for (unsigned int i = 0; i < it->second.size(); i++) {
@@ -473,7 +476,8 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
       TVector2 min_dist_point(x, y);
       double min_dist_hit = (min_dist_point - wire).Mod();
       double min_time_hit =
-          t + (min_dist_hit - kloe_simu::wire_radius) / kloe_simu::v_drift;
+          t + (min_dist_hit - kloe_simu::wire_radius) / kloe_simu::v_drift +
+          dwire / kloe_simu::v_signal_inwire;
 
       if (min_time_hit < min_time_tub) min_time_tub = min_time_hit;
 

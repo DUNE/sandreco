@@ -127,6 +127,7 @@ int kloe_simu::getPlaneID(TString name)
 // get position of the center of the tube for a plane
 void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
                           std::map<double, int>& stX,
+                          std::map<int, double>& stL,
                           std::map<int, TVector2>& stPos)
 {
   int type;
@@ -138,7 +139,10 @@ void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
     std::cout << "Error: ic expected 0 or 1 -> " << ic << std::endl;
 
   for (int i = 0; i < nod->GetNdaughters(); i++) {
-    TString name = nod->GetDaughter(i)->GetName();
+    TGeoNode* dau = nod->GetDaughter(i);
+    TGeoTube* tub = (TGeoTube*)dau->GetVolume()->GetShape();
+    double lenght = 2 * tub->GetDz();
+    TString name = dau->GetName();
 
     if (!isST(name))
       std::cout << "Error: expected ST but not -> " << name.Data() << std::endl;
@@ -153,6 +157,7 @@ void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
     v.SetY(mymat.GetTranslation()[ic]);
 
     stX[v.Y()] = id;
+    stL[id] = lenght;
     stPos[id] = v;
   }
 }
@@ -160,6 +165,7 @@ void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
 // get position of the center of the tube for each plane
 void kloe_simu::getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
                                std::map<int, std::map<double, int> >& stX,
+                               std::map<int, double>& stL,
                                std::map<int, std::map<int, TVector2> >& stPos)
 {
   TString name = nod->GetName();
@@ -176,14 +182,14 @@ void kloe_simu::getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
     std::map<double, int> mstX;
     std::map<int, TVector2> mstPos;
 
-    getSTinfo(nod, mymat, pid, mstX, mstPos);
+    getSTinfo(nod, mymat, pid, mstX, stL, mstPos);
 
     stX[pid] = mstX;
     stPos[pid] = mstPos;
   } else {
 
     for (int i = 0; i < nod->GetNdaughters(); i++) {
-      getSTPlaneinfo(nod->GetDaughter(i), mymat, stX, stPos);
+      getSTPlaneinfo(nod->GetDaughter(i), mymat, stX, stL, stPos);
     }
   }
 }
@@ -522,7 +528,7 @@ void kloe_simu::init(TGeoManager* geo)
   kloe_simu::rSTplane = new TPRegexp(rSTplane_string);
 
   getSTPlaneinfo(gGeoManager->GetTopVolume()->GetNode(0), mat, kloe_simu::stX,
-                 kloe_simu::stPos);
+                 kloe_simu::stL, kloe_simu::stPos);
 
   for (std::map<int, std::map<int, TVector2> >::iterator it =
            kloe_simu::stPos.begin();
@@ -535,9 +541,13 @@ void kloe_simu::init(TGeoManager* geo)
       tubePos[id] = ite->second;
     }
   }
+
+  geo->cd(kloe_simu::path_internal_volume);
+  double master[3];
+  geo->LocalToMaster(kloe_simu::stt_center, master);
 }
 
-// evaluated t0 for each tube assuming the bucket that
+// evaluated t0 for each tube assuming the beam bucket that
 // produced the neutrino is known
 void kloe_simu::initT0(TG4Event* ev)
 {
