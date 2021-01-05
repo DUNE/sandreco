@@ -79,6 +79,7 @@ struct track
   double a;
   double b;
   double h;
+  double ysig;
   double x0;
   double y0;
   double z0;
@@ -87,7 +88,8 @@ struct track
   double chi2_ln;
   int ret_cr;
   double chi2_cr;
-  std::vector<digit> digits;
+  std::vector<digit> clX;
+  std::vector<digit> clY;
 };
 
 struct particle
@@ -115,7 +117,7 @@ struct particle
   double yreco;
   double zreco;
   double treco;
-
+  bool kalman_ok;
   bool has_track;
   double charge_reco;
   track tr;

@@ -14,13 +14,7 @@
 #include <string>
 #include <iomanip>
 
-const double k = 0.299792458;
-const double B = 0.6;
-const double m_to_mm = 1000.;
-const double GeV_to_MeV = 1000.;
-const double c = k * 1E3;  // mm/ns
-const double emk = 2.76455e-01;
-const double hadk = 3.15234e-01;
+using namespace kloe_simu;
 
 TDatabasePDG db;
 
@@ -51,11 +45,6 @@ void reset(particle& p)
   p.treco = 0.;
   p.has_cluster = false;
   p.has_daughter = false;
-}
-
-bool isDigitBefore(digit d1, digit d2)
-{
-  return (d1.t < d2.t);
 }
 
 bool IsPrimary(TG4Event* ev, int tid)
@@ -152,48 +141,15 @@ p.mass*p.mass);
 }
 */
 
-bool isCellBefore(cell c1, cell c2)
-{
-  if (c1.adc1 == 0 || c1.adc2 == 0)
-    return false;
-  else if (c2.adc1 == 0 || c2.adc2 == 0)
-    return true;
-  else
-    return ((c1.tdc1 + c1.tdc2) < (c2.tdc1 + c2.tdc2));
-}
-
-double TfromTDC(double t1, double t2, double L)
-{
-  return 0.5 * (t1 + t2 - ns_Digit::vlfb * L / m_to_mm);
-}
-
-double XfromTDC(double t1, double t2, double x0)
-{
-  return 0.5 * (t1 - t2) / ns_Digit::vlfb * m_to_mm + x0;
-}
-
-void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e)
-{
-  if (c.id < 25000)  // Barrel
-  {
-    x = 0.5 * (c.tdc1 - c.tdc2) / ns_Digit::vlfb * m_to_mm + c.x;
-    y = c.y;
-  } else {
-    x = c.x;
-    y = -0.5 * (c.tdc1 - c.tdc2) / ns_Digit::vlfb * m_to_mm + c.y;
-  }
-  z = c.z;
-  t = 0.5 * (c.tdc1 + c.tdc2 - ns_Digit::vlfb * c.l / m_to_mm);
-  e = c.adc1 + c.adc2;
-}
-
 void RecoFromTrack(particle& p)
 {
   if (p.tr.ret_ln == 0 && p.tr.ret_cr == 0) {
-    std::sort(p.tr.digits.begin(), p.tr.digits.end(), isDigBefore);
+    // std::sort(p.tr.digits.begin(), p.tr.digits.end(), isDigBefore);
 
     double yc = p.tr.yc;
     double zc = p.tr.zc;
+
+    /*
 
     double l = 0.;
 
@@ -213,6 +169,8 @@ void RecoFromTrack(particle& p)
 
     l /= TMath::Abs(l);
 
+    */
+
     double r0z = p.tr.z0 - p.tr.zc;
     double r0y = p.tr.y0 - p.tr.yc;
 
@@ -220,7 +178,7 @@ void RecoFromTrack(particle& p)
     double ang_yz = TMath::ATan2(r0z, -r0y);
     double ang_x = 0.5 * TMath::Pi() - TMath::ATan(1. / p.tr.b);
 
-    p.charge_reco = -l;
+    p.charge_reco = -p.tr.h;
     p.pxreco = mom_yz * TMath::Tan(ang_x);
     p.pyreco = p.charge_reco * mom_yz * TMath::Sin(ang_yz);
     p.pzreco = p.charge_reco * mom_yz * TMath::Cos(ang_yz);
@@ -750,11 +708,6 @@ cl.cells.at(i).tdc2, cl.cells.at(i).y);
   }
 }
 */
-
-bool isAfter(particle p1, particle p2)
-{
-  return p1.tid > p2.tid;
-}
 
 void EvalNuEnergy(event& ev)
 {

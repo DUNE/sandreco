@@ -12,16 +12,21 @@
 #include <TBox.h>
 #include <TGeoTube.h>
 #include <TArrow.h>
+#include <TROOT.h>
+#include <TApplication.h>
+#include <TF1.h>
 
+#include <stdlib.h>
 #include <iostream>
 #include <map>
 
 #include "../include/struct.h"
+#include "../include/utils.h"
 
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4Event.h"
-#include "/wd/sw/EDEPSIM/edep-sim.binary/include/EDepSim/TG4HitSegment.h"
+#include "TG4Event.h"
+#include "TG4HitSegment.h"
 
-namespace ns_draw
+namespace display
 {
 const bool debug = false;
 
@@ -59,14 +64,33 @@ TGeoManager* geo = 0;
 TCanvas* cev = 0;
 TCanvas* cpr = 0;
 
-std::vector<cell>* vec_cell;
-std::vector<digit>* vec_digi;
-std::vector<track>* vec_tr;
-std::vector<cluster>* vec_cl;
+std::vector<cell>* vec_cell = new std::vector<cell>;
+std::vector<digit>* vec_digi = new std::vector<digit>;
+std::vector<track>* vec_tr = new std::vector<track>;
+std::vector<cluster>* vec_cl = new std::vector<cluster>;
 std::map<int, gcell> calocell;
+
+const char* path_intreg =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/volSTTFULL_PV_0";
+
+const char* path_barrel_template =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
+
+const char* path_endcapR_template =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+
+const char* path_endcapL_template =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
+
+const char* barrel_mod_vol_name = "ECAL_lv_PV";
+const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
 }
 
-using namespace ns_draw;
+using namespace display;
 
 void init(const char* ifile)
 {
@@ -79,60 +103,71 @@ void init(const char* ifile)
   TTree* tEdep = reinterpret_cast<TTree*>(f->Get("EDepSimEvents"));
   TTree* tGenie = reinterpret_cast<TTree*>(f->Get("gRooTracker"));
 
-  tEvent->AddFriend(tReco);
-  tEvent->AddFriend(tDigit);
-  tEvent->AddFriend(tEdep);
-  tEvent->AddFriend(tGenie);
+  if (!tEdep) return;
+
+  if (tReco) tEdep->AddFriend(tReco);
+  if (tDigit) tEdep->AddFriend(tDigit);
+  if (tEvent) tEdep->AddFriend(tEvent);
+  if (tGenie) tEdep->AddFriend(tGenie);
 
   tEdep->SetBranchAddress("Event", &ev);
-  tDigit->SetBranchAddress("cell", &vec_cell);
-  tDigit->SetBranchAddress("Stt", &vec_digi);
-  tReco->SetBranchAddress("track", &vec_tr);
-  tReco->SetBranchAddress("cluster", &vec_cl);
-  tEvent->SetBranchAddress("event", &evt);
+  if (tDigit) tDigit->SetBranchAddress("cell", &vec_cell);
+  if (tDigit) tDigit->SetBranchAddress("Stt", &vec_digi);
+  if (tReco) tReco->SetBranchAddress("track", &vec_tr);
+  if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);
+  if (tEvent) tEvent->SetBranchAddress("event", &evt);
 
-  t = tEvent;
+  t = tEdep;
 
   geo = reinterpret_cast<TGeoManager*>(f->Get("EDepSimGeometry"));
+
+  if (!geo) return;
 
   double dummyLoc[3];
   double dummyMas[3];
 
-  geo->cd(
-      "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "volSTTFULL_PV_0");
+  geo->cd(path_intreg);
 
   dummyLoc[0] = 0.;
   dummyLoc[1] = 0.;
   dummyLoc[2] = 0.;
   geo->LocalToMaster(dummyLoc, centerKLOE);
 
-  double dzlay[nLay + 1] = {
-      115,                     115 - 22,
-      115 - 22 - 22,           115 - 22 - 22 - 22,
-      115 - 22 - 22 - 22 - 22, 115 - 22 - 22 - 22 - 22 - 27};
+  double dzlay[nLay] = {44., 44., 44., 44., 54.};
   double dx1[nLay];
   double dx2[nLay];
 
-  TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
+  TGeoTrd2* mod =
+      (TGeoTrd2*)geo->FindVolumeFast(barrel_mod_vol_name)->GetShape();
 
-  double xmax = mod->GetDx1();
-  double xmin = mod->GetDx2();
+  double xmin = mod->GetDx1();
+  double xmax = mod->GetDx2();
   double dz = mod->GetDz();
 
   if (debug) {
     std::cout << dz << " " << xmax << " " << xmin << std::endl;
   }
 
+  double m = 0.5 * (xmax - xmin) / dz;
+  double q = 0.5 * (xmax + xmin);
+
+  // z edge of the cells
+  double zlevel[nLay + 1];
+  zlevel[0] = -dz;
+
   for (int i = 0; i < nLay; i++) {
-    dx1[i] = xmax - (xmax - xmin) / dz * dzlay[i];
-    dx2[i] = xmax - (xmax - xmin) / dz * dzlay[i + 1];
+    zlevel[i + 1] = zlevel[i] + dzlay[i];
+  }
+
+  for (int i = 0; i < nLay; i++) {
+    dx1[i] = 2 * (m * zlevel[i] + q);
+    dx2[i] = 2 * (m * zlevel[i + 1] + q);
   }
 
   if (debug) {
     for (int i = 0; i < nLay; i++) {
-      std::cout << dx1[i] << " " << dx2[i] << " " << dzlay[i] << " "
-                << dzlay[i + 1] << std::endl;
+      std::cout << dx1[i] << " " << dx2[i] << " " << zlevel[i] << " "
+                << zlevel[i + 1] << std::endl;
     }
   }
 
@@ -140,15 +175,15 @@ void init(const char* ifile)
     for (int j = 0; j < nCel; j++) {
       // from bottom-left to top-right
 
-      CellLocalX[i * nCel + j][0] = -dx1[i] + 2 * dx1[i] / 12. * j;
-      CellLocalX[i * nCel + j][1] = -dx1[i] + 2 * dx1[i] / 12. * (j + 1);
-      CellLocalX[i * nCel + j][2] = -dx2[i] + 2 * dx2[i] / 12. * (j + 1);
-      CellLocalX[i * nCel + j][3] = -dx2[i] + 2 * dx2[i] / 12. * j;
+      CellLocalX[i * nCel + j][0] = dx1[i] * (j / 12. - 0.5);
+      CellLocalX[i * nCel + j][1] = dx1[i] * ((j + 1) / 12. - 0.5);
+      CellLocalX[i * nCel + j][2] = dx2[i] * ((j + 1) / 12. - 0.5);
+      CellLocalX[i * nCel + j][3] = dx2[i] * (j / 12. - 0.5);
 
-      CellLocalZ[i * nCel + j][0] = -dz + 2 * dzlay[i];
-      CellLocalZ[i * nCel + j][1] = -dz + 2 * dzlay[i];
-      CellLocalZ[i * nCel + j][2] = -dz + 2 * dzlay[i + 1];
-      CellLocalZ[i * nCel + j][3] = -dz + 2 * dzlay[i + 1];
+      CellLocalZ[i * nCel + j][0] = zlevel[i];
+      CellLocalZ[i * nCel + j][1] = zlevel[i];
+      CellLocalZ[i * nCel + j][2] = zlevel[i + 1];
+      CellLocalZ[i * nCel + j][3] = zlevel[i + 1];
 
       if (debug)
         std::cout << CellLocalZ[i * nCel + j][0] << " "
@@ -162,10 +197,6 @@ void init(const char* ifile)
     }
   }
 
-  const char* path_template =
-      "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
-
   double CellMasterY[nCellModule][4];
   double CellMasterZ[nCellModule][4];
 
@@ -176,12 +207,12 @@ void init(const char* ifile)
   }
 
   for (int i = 0; i < nMod; i++) {
-    geo->cd(TString::Format(path_template, i).Data());
+    geo->cd(TString::Format(path_barrel_template, i).Data());
 
     if (debug)
       std::cout << "node: " << i << " " << geo->GetCurrentNode() << " "
                 << geo->GetCurrentNode()->GetName() << " "
-                << TString::Format(path_template, i).Data() << std::endl;
+                << TString::Format(path_barrel_template, i).Data() << std::endl;
 
     for (int j = 0; j < nLay; j++) {
       for (int k = 0; k < nCel; k++) {
@@ -198,10 +229,10 @@ void init(const char* ifile)
                     << " " << local_index << " " << nMod << " " << nLay << " "
                     << nCel << std::endl;
 
-        for (int m = 0; m < 4; m++) {
-          dummyLoc[0] = CellLocalX[local_index][m];
+        for (int mm = 0; mm < 4; mm++) {
+          dummyLoc[0] = CellLocalX[local_index][mm];
           dummyLoc[1] = 0.;
-          dummyLoc[2] = CellLocalZ[local_index][m];
+          dummyLoc[2] = CellLocalZ[local_index][mm];
 
           geo->LocalToMaster(dummyLoc, dummyMas);
 
@@ -212,11 +243,11 @@ void init(const char* ifile)
                       << dummyMas[2] << std::endl;
           }
 
-          calocell[id].Y[m] = dummyMas[1];
-          calocell[id].Z[m] = dummyMas[2];
+          calocell[id].Y[mm] = dummyMas[1];
+          calocell[id].Z[mm] = dummyMas[2];
 
-          CellMasterY[local_index][m] = dummyMas[1];
-          CellMasterZ[local_index][m] = dummyMas[2];
+          CellMasterY[local_index][mm] = dummyMas[1];
+          CellMasterZ[local_index][mm] = dummyMas[2];
         }
 
         if (debug) {
@@ -234,17 +265,14 @@ void init(const char* ifile)
                    centerKLOE[2] + 2500, centerKLOE[0] + 2500);
   }
 
-  TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
+  TGeoTube* ec =
+      (TGeoTube*)geo->FindVolumeFast(endcap_mod_vol_name)->GetShape();
 
   double rmax = ec->GetRmax();
   double rmin = ec->GetRmin();
   double dz_ec = ec->GetDz();
 
   double dummyLoc_ec[4][3];
-
-  const char* path_endcapR_template =
-      "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 
   geo->cd(path_endcapR_template);
 
@@ -256,33 +284,33 @@ void init(const char* ifile)
 
       dummyLoc_ec[0][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[0][1] = 0.;
-      dummyLoc_ec[0][2] = dz - 2 * dzlay[j];
+      dummyLoc_ec[0][2] = zlevel[j];
 
       dummyLoc_ec[1][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[1][1] = 0.;
-      dummyLoc_ec[1][2] = dz - 2 * dzlay[j + 1];
+      dummyLoc_ec[1][2] = zlevel[j + 1];
 
       dummyLoc_ec[2][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[2][1] = 0.;
-      dummyLoc_ec[2][2] = dz - 2 * dzlay[j + 1];
+      dummyLoc_ec[2][2] = zlevel[j + 1];
 
       dummyLoc_ec[3][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[3][1] = 0.;
-      dummyLoc_ec[3][2] = dz - 2 * dzlay[j];
+      dummyLoc_ec[3][2] = zlevel[j];
 
-      for (int m = 0; m < 4; m++) {
-        geo->LocalToMaster(dummyLoc_ec[m], dummyMas);
+      for (int mm = 0; mm < 4; mm++) {
+        geo->LocalToMaster(dummyLoc_ec[mm], dummyMas);
 
         if (debug) {
-          std::cout << "local : " << dummyLoc_ec[m][0] << " "
-                    << dummyLoc_ec[m][1] << " " << dummyLoc_ec[m][2]
+          std::cout << "local : " << dummyLoc_ec[mm][0] << " "
+                    << dummyLoc_ec[mm][1] << " " << dummyLoc_ec[mm][2]
                     << std::endl;
           std::cout << "master: " << dummyMas[0] << " " << dummyMas[1] << " "
                     << dummyMas[2] << std::endl;
         }
 
-        calocell[id].Y[m] = dummyMas[0];
-        calocell[id].Z[m] = dummyMas[2];
+        calocell[id].Y[mm] = dummyMas[0];
+        calocell[id].Z[mm] = dummyMas[2];
       }
       if (debug) {
         TGraph* gr1 = new TGraph(4, calocell[id].Z, calocell[id].Y);
@@ -290,10 +318,6 @@ void init(const char* ifile)
       }
     }
   }
-
-  const char* path_endcapL_template =
-      "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-      "kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
   geo->cd(path_endcapL_template);
 
   for (int j = 0; j < nLay_ec; j++) {
@@ -304,33 +328,33 @@ void init(const char* ifile)
 
       dummyLoc_ec[0][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[0][1] = 0.;
-      dummyLoc_ec[0][2] = -dz + 2 * dzlay[j];
+      dummyLoc_ec[0][2] = zlevel[j];
 
       dummyLoc_ec[1][0] = rmax / 45. * k - rmax;
       dummyLoc_ec[1][1] = 0.;
-      dummyLoc_ec[1][2] = -dz + 2 * dzlay[j + 1];
+      dummyLoc_ec[1][2] = zlevel[j + 1];
 
       dummyLoc_ec[2][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[2][1] = 0.;
-      dummyLoc_ec[2][2] = -dz + 2 * dzlay[j + 1];
+      dummyLoc_ec[2][2] = zlevel[j + 1];
 
       dummyLoc_ec[3][0] = rmax / 45. * (k + 1) - rmax;
       dummyLoc_ec[3][1] = 0.;
-      dummyLoc_ec[3][2] = -dz + 2 * dzlay[j];
+      dummyLoc_ec[3][2] = zlevel[j];
 
-      for (int m = 0; m < 4; m++) {
-        geo->LocalToMaster(dummyLoc_ec[m], dummyMas);
+      for (int mm = 0; mm < 4; mm++) {
+        geo->LocalToMaster(dummyLoc_ec[mm], dummyMas);
 
         if (debug) {
-          std::cout << "local : " << dummyLoc_ec[m][0] << " "
-                    << dummyLoc_ec[m][1] << " " << dummyLoc_ec[m][2]
+          std::cout << "local : " << dummyLoc_ec[mm][0] << " "
+                    << dummyLoc_ec[mm][1] << " " << dummyLoc_ec[mm][2]
                     << std::endl;
           std::cout << "master: " << dummyMas[0] << " " << dummyMas[1] << " "
                     << dummyMas[2] << std::endl;
         }
 
-        calocell[id].Y[m] = dummyMas[0];
-        calocell[id].Z[m] = dummyMas[2];
+        calocell[id].Y[mm] = dummyMas[0];
+        calocell[id].Z[mm] = dummyMas[2];
       }
       if (debug) {
         TGraph* gr1 = new TGraph(4, calocell[id].Z, calocell[id].Y);
@@ -562,17 +586,71 @@ void show(int index, bool showtrj = true, bool showfit = true,
     for (unsigned int i = 0; i < vec_tr->size(); i++) {
       if (vec_tr->at(i).ret_cr == 0 && vec_tr->at(i).ret_ln == 0) {
         cev->cd(1);
+
+        double minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
+                               vec_tr->at(i).clY.front().z);
+        double maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
+                               vec_tr->at(i).clY.back().z);
+
+        TF1* ffy = new TF1("", "[0]+[1]*TMath::Sqrt([2]*[2]-(x-[3])*(x-[3]))",
+                           minz, maxz);
+        ffy->SetParameter(0, vec_tr->at(i).yc);
+        ffy->SetParameter(1, vec_tr->at(i).ysig);
+        ffy->SetParameter(2, vec_tr->at(i).r);
+        ffy->SetParameter(3, vec_tr->at(i).zc);
+        ffy->Draw("same");
+
+        /*
         TEllipse* e =
             new TEllipse(vec_tr->at(i).zc, vec_tr->at(i).yc, vec_tr->at(i).r);
         e->SetFillStyle(0);
-        e->Draw();
+        e->Draw();*/
 
         cev->cd(2);
+
+        double x0 = vec_tr->at(i).clX.front().x;
+        double z0 = vec_tr->at(i).clX.front().z;
+
+        double radq;
+        if (abs(z0 - vec_tr->at(i).zc) > vec_tr->at(i).r)
+          radq = 0;
+        else
+          radq = TMath::Sqrt(vec_tr->at(i).r * vec_tr->at(i).r -
+                             (z0 - vec_tr->at(i).zc) * (z0 - vec_tr->at(i).zc));
+
+        double yexp = vec_tr->at(i).yc + vec_tr->at(i).ysig * radq;
+
+        double phi0 =
+            TMath::ATan2(yexp - vec_tr->at(i).yc, z0 - vec_tr->at(i).zc);
+
+        minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
+                        vec_tr->at(i).clX.front().z);
+        maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
+                        vec_tr->at(i).clX.back().z);
+
+        TF1* ffx = new TF1("",
+                           "[0] - "
+                           "[1]/"
+                           "[2]*(TMath::ATan2(([4]+[7]*TMath::Sqrt([1]*[1]-(x-["
+                           "5])*(x-[5]))) - [4],x - [5]) - [6])*[3]",
+                           minz, maxz);
+
+        ffx->SetParameter(0, x0);
+        ffx->SetParameter(1, vec_tr->at(i).r);
+        ffx->SetParameter(2, vec_tr->at(i).h);
+        ffx->SetParameter(3, vec_tr->at(i).b);
+        ffx->SetParameter(4, vec_tr->at(i).yc);
+        ffx->SetParameter(5, vec_tr->at(i).zc);
+        ffx->SetParameter(6, phi0);
+        ffx->SetParameter(7, vec_tr->at(i).ysig);
+        ffx->Draw("same");
+
+        /*
         TLine* l = new TLine(
             vec_tr->at(i).z0, vec_tr->at(i).x0, centerKLOE[2] + dwz,
             vec_tr->at(i).x0 +
                 vec_tr->at(i).b * (centerKLOE[2] + dwz - vec_tr->at(i).z0));
-        l->Draw();
+        l->Draw();*/
       }
     }
 
@@ -1225,4 +1303,49 @@ void DumpPri(int nev = 100, int istart = 0)
   for (int i = 0; i < nev; i++) ids[i] = istart + i;
 
   DumpPri(nev, ids);
+}
+
+int main(int argc, char* argv[])
+{
+  TApplication* myapp = new TApplication("myapp", 0, 0);
+
+  bool showtrj = true;
+  bool showfit = true;
+  bool showdig = true;
+
+  int evid = 0;
+  TString fname;
+  TString tmp;
+
+  if (argc < 3) {
+    std::cout << "Display <event number> <input file> [show trajectories] "
+                 "[show fits] [show digits]" << std::endl;
+    return 1;
+  } else {
+    evid = atoi(argv[1]);
+    fname = argv[2];
+
+    if (argc > 3) {
+      tmp = argv[3];
+      if (tmp.CompareTo("false") == 0) showtrj = false;
+    }
+
+    if (argc > 4) {
+      tmp = argv[4];
+      if (tmp.CompareTo("false") == 0) showfit = false;
+    }
+
+    if (argc > 5) {
+      tmp = argv[5];
+      if (tmp.CompareTo("false") == 0) showdig = false;
+    }
+  }
+
+  init(fname.Data());
+
+  show(evid, showtrj, showfit, showdig);
+
+  myapp->Run();
+
+  return 0;
 }
