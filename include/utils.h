@@ -11,7 +11,7 @@ namespace kloe_simu
 {
 const bool debug =false;
 
-bool flukatype=false;
+bool flukatype=false;  //for FLUKA
 
 const double mm_to_m = 1E-3;
 const double m_to_mm = 1000.;
@@ -41,13 +41,20 @@ const int nLay = 5;
 const int nCel = 12;
 const int nCel_ec = 90;
 
+
+
 //ecal dimension for fluka
 static const double xmin_f=262.55;
 static const double xmax_f=292.85;
 static const double dz_f=115.0;
 
+
 static const double ec_rf=1980.0;
 static const double ec_dzf=115.0;
+static const double lCalBarrel = 4300;
+
+double kloe_int_R_f = 2000.;
+double kloe_int_dx_f = 1690.;
 
 // coordinates of the cells for FLUKA
 double cellCoordBarrel[nMod][nLay][nCel][3];
@@ -61,7 +68,8 @@ double cxlay[nLay][nCel];
 double ec_r;
 double ec_dz;
 
-/*
+
+
 ////////////////////////////////////////////////////////////////////////
 // geometry v0
 const char* path_barrel_template =
@@ -74,8 +82,8 @@ const char* path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 //////////////////////////////////////////////////////////////////////////
-*/
 
+/*
 ////////////////////////////////////////////////////////////////////////
 // geometry v1
 const char* path_barrel_template =
@@ -88,7 +96,7 @@ const char* path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 //////////////////////////////////////////////////////////////////////////
-
+*/
 const char* path_internal_volume =
     "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/volSTTFULL_PV_0/";
@@ -103,8 +111,7 @@ const double vlfb = 5.85;
 /*
 // da qui in poi non ci sono più nella master
 //
-static const double lCalBarrel = 4300;
-}
+
 
 namespace ns_Draw
 {

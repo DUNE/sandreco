@@ -24,6 +24,7 @@
 
 #include "struct.h"
 #include "utils.h"
+#include "transf.h"
 
 // Energy MeV
 // Distance mm
@@ -133,6 +134,8 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   t = 0.5 * (hit.Start.T() + hit.Stop.T());
   de = hit.EnergyDeposit;
 
+
+/////
   TGeoNode* node = g->FindNode(x, y, z);
 
   if (node == 0) return false;
@@ -145,6 +148,8 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   }
 
   if (CheckAndProcessPath(str2) == false) return false;
+//////
+
 
   // barrel modules
   if (isBarrel(str)) {
@@ -186,6 +191,123 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   }
 }
 
+
+bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
+        int& planeID, int& cellID, double& d1, double& d2, double& t,
+        double& de)
+{
+    if (debug) {
+        std::cout << "ProcessHit FLUKA" << std::endl;
+    }
+
+    modID = -999;
+    planeID = -999;
+    cellID = -999;
+    d1 = -999;
+    d2 = -999;
+    t = -999;
+
+    double x = 0.5 * (hit.Start.X() + hit.Stop.X());
+    double y = 0.5 * (hit.Start.Y() + hit.Stop.Y());
+    double z = 0.5 * (hit.Start.Z() + hit.Stop.Z());
+
+    t = 0.5 * (hit.Start.T() + hit.Stop.T());
+    de = hit.EnergyDeposit;
+
+    // Global to local coordinates
+    //
+    TLorentzVector globalPos(x, y, z, 0);
+    TLorentzVector localPos = GlobalToLocalCoordinates(globalPos);
+    x = localPos.X();
+    y = localPos.Y();
+    z = localPos.Z();
+    double radius = sqrt(y*y + z*z);
+    if (debug) std::cout << "x: " << x << "\ty: " << y << "\tz: " << z << "\tr: " << radius;
+
+    // hitAngle, cellAngle, modAngle
+    //
+    double modDeltaAngle = 2.0 * TMath::Pi() / 24;             // 24 modules in a ring
+    double cellDeltaAngle = 2.0 * TMath::Pi() / (24*12);       // 24 modules * 12 cells/module = number of cells in a ring
+    double hitAngle=9999;
+    // This is the angle w.r.t. the y-axis. In Ideal2RealCal I used the angle w.r.t. the z-axis!
+    if (z!=0) {
+        if (z<0) hitAngle = 2 * atan( -z / ( y + sqrt( y*y + z*z)));
+        if (z>0) hitAngle = 2 * atan( -z / ( y + sqrt( y*y + z*z))) + 2 * TMath::Pi();
+    }
+    else if (z==0) {
+        if (y<0) hitAngle = TMath::Pi();
+        if (y>0) hitAngle = 0;
+        if (y==0) return false;
+    }
+    double cellAngle = int(hitAngle / cellDeltaAngle) * cellDeltaAngle + cellDeltaAngle/2;
+    double modAngle = int((hitAngle + 0.5 * modDeltaAngle) / modDeltaAngle) * modDeltaAngle;
+
+    // Coordinates rotation and volume finding
+    TString str = "";
+    double rotated_z = z * cos(-modAngle) - y * sin(-modAngle);
+    double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
+    if ( (rotated_y > kloe_int_R_f) && (rotated_y < kloe_int_R_f + 2 * ec_dzf) && (abs(x) < lCalBarrel / 2) && (abs(rotated_z) < abs(rotated_y * tan(modDeltaAngle / 2))) ) str = "volECAL";        // ECAL barrel
+    else if ( (rotated_y < ec_rf) && (abs(x) > kloe_int_dx_f) && (abs(x) < kloe_int_dx_f + 2 * ec_dzf) )      str = "endvolECAL";     // ECAL endcaps
+    else if ( (rotated_y < ec_rf) && (abs(x) < kloe_int_dx_f) )                                                                str = "tracker";        // tracker
+    else                                                                                                                                        str = "outside";        // outside
+ 
+   if (debug) std::cout << "\tVol: " << str;
+
+    // modID, planeID, cellID, d1, d2
+    //
+    double cellD = 0;
+    if (str=="volECAL") {
+        // modID
+        modID = int((hitAngle + 0.5 * modDeltaAngle) / modDeltaAngle) % 24;
+        // planeID
+        planeID = int((rotated_y - kloe_int_R_f) / 44);
+        if (planeID > 4) planeID = 4;
+        // cellID
+        cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) % 12;   // TODO: check ordering of cells (clockwise or anticlockwise?)
+        // d1 distance from right end (x>0)
+        d1 = lCalBarrel / 2 - x;
+        // d2 distance from left end (x<0)
+        d2 = lCalBarrel / 2 + x;
+        // cellCoord
+        cellD = kloe_int_R_f + dzlay[0] / 2;
+        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += dzlay[planeindex-1] / 2 + dzlay[planeindex] / 2;
+        cellCoordBarrel[modID][planeID][cellID][0] = 0;
+        cellCoordBarrel[modID][planeID][cellID][2] = + cellD * sin(-modAngle) - cellD * tan(cellAngle - modAngle) * cos(-modAngle);
+        cellCoordBarrel[modID][planeID][cellID][1] = + cellD * cos(-modAngle) + cellD * tan(cellAngle - modAngle) * sin(-modAngle);
+    } else if (str=="endvolECAL") {
+
+        // modID
+        if (x<0)        modID = 40;
+        else if (x>0)   modID = 30;
+        // planeID
+        planeID = int((abs(x) - kloe_int_dx_f) / 44);         // TODO: check width and units
+        if (planeID > 4) planeID = 4;
+        // cellID
+        cellID = int((z + ec_rf) / 44);
+ // d1 distance from top (y>0)
+        d1 =  sqrt(ec_rf * ec_rf - z * z) - y;
+        // d2 distance from bottom (y<0)
+        d2 =  sqrt(ec_rf * ec_rf - z * z) + y;
+        // cellCoord
+        cellD = TMath::Sign(1.0, x) * (kloe_int_dx_f + dzlay[0] / 2);
+        for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += TMath::Sign(1.0, x) * (dzlay[planeindex-1] / 2 + dzlay[planeindex] / 2);
+        cellCoordEndcap[int(modID/10)][planeID][cellID][0] = cellD;
+        cellCoordEndcap[int(modID/10)][planeID][cellID][1] = 0;
+        cellCoordEndcap[int(modID/10)][planeID][cellID][2] = 44 / 2 + cellID * 44 - ec_rf;
+    } else if (str=="tracker" || str=="outside") {
+        if (debug) std::cout << std::endl;
+        return false;
+    }
+    if (debug) std::cout << "\tmod " << modID << "\tplane: " << planeID << "\tcell: " << cellID << "\td1: " << d1 << "\td2: " << d2 << std::endl;
+
+    return true;
+}
+
+
+
+
+
+
 void SimulatePE(TG4Event* ev, TGeoManager* g,
                 std::map<int, std::vector<double> >& time_pe,
                 std::map<int, std::vector<int> >& id_hit,
@@ -199,8 +321,8 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
        it != ev->SegmentDetectors.end(); ++it) {
     if (it->first == "EMCalSci") {
       for (unsigned int j = 0; j < it->second.size(); j++) {
-        if (ProcessHit(g, it->second[j], modID, planeID, cellID, d1, d2, t0,
-                       de) == true) {
+	
+        if ((g!=NULL && (ProcessHit(g, it->second[j], modID, planeID, cellID, d1, d2, t0, de) == true)) || (g==NULL && (ProcessHitFluka(it->second[j], modID, planeID, cellID, d1, d2, t0, de) == true)))  {
           double en1 = de * Attenuation(d1, planeID);
           double en2 = de * Attenuation(d2, planeID);
 
@@ -235,7 +357,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
           }
         }
       }
-    
+    }  
   }
 }
 
@@ -323,7 +445,7 @@ void CollectSignal(TGeoManager* geo,
       c->pe_time2 = time_pe[it->first];
       c->hindex2 = id_hit[it->first];
     }
-    CellPosition(geo, c->mod, c->lay, c->cel, c->x, c->y, c->z);
+    CellPosition(geo, c->mod, c->lay, c->cel, c->x, c->y, c->z);  //ok per fluka e geant4
   }
 
   for (std::map<int, cell>::iterator it = map_cell.begin();
@@ -345,6 +467,7 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
   if (debug) {
     std::cout << "SimulatePE" << std::endl;
   }
+ 
   SimulatePE(ev, geo, time_pe, id_hit, L);
   if (debug) {
     std::cout << "TimeAndSignal" << std::endl;
@@ -356,8 +479,7 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
   CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell);
 }
 
-void Cluster(TG4Event* ev, TGeoManager* geo,
-             std::map<std::string, std::vector<hit> >& cluster_map)
+void Cluster(TG4Event* ev, TGeoManager* geo,int NHits, Int_t DetType[10000], Float_t xPos[10000], Float_t yPos[10000], Float_t zPos[10000],std::map<std::string, std::vector<hit> >& cluster_map)
 {
   cluster_map.clear();
 
@@ -368,7 +490,24 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
-    std::string sttname = geo->FindNode(x, y, z)->GetName();
+    std::string sttname= "NULL"; 
+    if(flukatype==false) sttname = geo->FindNode(x, y, z)->GetName();
+    else {
+        bool found=false;
+        for(int k=0; k<NHits; k++){
+                if(abs(x-xPos[k])<1 && abs(y-yPos[k])<1 && abs(z-zPos[k])<1) {   //1 mm
+                        if(DetType[k]==0) std::cout<<"ERROR: this is not a point of stt "<<std::endl;
+                        else if(DetType[k]==1) sttname="Horizontal";
+                        else if(DetType[k]==2) sttname="Vertical";
+                        else if(DetType[k]==3) sttname="Vertical";
+                        else std::cout<<"ERROR: this point is not in standard detector!! DetType "<<DetType[k]<<std::endl;
+                        found=true;
+                        break;
+                        }
+                }
+
+        if(found==false)  {std::cout<<"ERROR: Point not FOUND!! "<<std::endl; exit(1); }
+    }
 
     hit h;
     h.det = sttname;
@@ -430,14 +569,29 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
   }
 }
 
-void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
+void DigitizeStt(TG4Event* ev, TGeoManager* geo, int NHits, Int_t DetType[10000], Float_t xPos[10000], Float_t yPos[10000], Float_t zPos[10000], std::vector<digit>& digit_vec)
 {
   std::map<std::string, std::vector<hit> > cluster_map;
   digit_vec.clear();
 
-  Cluster(ev, geo, cluster_map);
+  Cluster(ev, geo, NHits, DetType, xPos, yPos, zPos, cluster_map);
   Cluster2Digit(cluster_map, digit_vec);
 }
+/*
+void DigitizeFlukaStt(TG4Event* ev, int NHits, Int_t DetType[10000], Float_t xPos[10000], Float_t yPos[10000], Float_t zPos[10000],
+                std::vector<digit>& digit_vec)
+{
+    std::map<std::string, std::vector<hit> > cluster_map;
+    digit_vec.clear();
+
+    ClusterFluka(ev, NHits, DetType, xPos, yPos, zPos, cluster_map);
+    Cluster2Digit(cluster_map, digit_vec);
+}
+*/
+
+
+
+
 
 void Digitize(const char* finname, const char* foutname)
 {
@@ -445,16 +599,57 @@ void Digitize(const char* finname, const char* foutname)
   // t->Add(finname);
   // TFile f(t->GetListOfFiles()->At(0)->GetTitle());
   TFile f(finname, "READ");
-  TTree* t = (TTree*)f.Get("EDepSimEvents");
-  TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
-  TTree* gRooTracker = (TTree*)f.Get("DetSimPassThru/gRooTracker");
-  TTree* InputKinem = (TTree*)f.Get("DetSimPassThru/InputKinem");
-  TTree* InputFiles = (TTree*)f.Get("DetSimPassThru/InputFiles");
 
-  init(geo);
+  if(TString(finname).Contains("fluka2edep") == true) {
+    flukatype=true; //dobbiamo leggere GeneratorName ..cambiare quando fatto
+  }
+  if(flukatype==true)  std::cout<<"This is a FLUKA SIMULATION"<<std::endl;
+  else std::cout<<"This is a standard Geant4-edepsim SIMULATION"<<std::endl;
+
+  TTree* t = (TTree*) f.Get("EDepSimEvents");
 
   TG4Event* ev = new TG4Event;
-  t->SetBranchAddress("Event", &ev);
+  t->SetBranchAddress("Event",&ev);
+
+
+  TGeoManager* geo = 0;
+  TTree* gRooTracker = 0;
+  TTree* InputKinem = 0;
+  TTree* InputFiles = 0;
+
+  TTree* MapTree;
+
+  Int_t EvtNum;
+  Int_t NHits;
+  Float_t xHits[100000];
+  Float_t yHits[100000];
+  Float_t zHits[100000];
+  Int_t DetType[100000];
+
+  if(flukatype==false){
+   geo = (TGeoManager*)f.Get("EDepSimGeometry");
+   gRooTracker = (TTree*) f.Get("DetSimPassThru/gRooTracker");   //FIXME dobbiamo metterlo anche nei file di FLUKA...togliere da questo if quando fatto
+   InputKinem = (TTree*)f.Get("DetSimPassThru/InputKinem");
+   InputFiles = (TTree*)f.Get("DetSimPassThru/InputFiles");
+
+    }else{
+   
+   
+   MapTree=(TTree*)f.Get("MapTree");                     //geometry loaded for fluka file
+   if(MapTree->GetEntries()<1) {std::cout<<"MapTree Empty"<<std::endl; }
+
+        //vector<float> xPos;
+        //vector<float> yPos;
+     MapTree->SetBranchAddress("EvtNum", &EvtNum);
+     MapTree->SetBranchAddress("NHits", &NHits);
+     MapTree->SetBranchAddress("xHits", xHits);
+     MapTree->SetBranchAddress("yHits", yHits);
+     MapTree->SetBranchAddress("zHits", zHits);
+     MapTree->SetBranchAddress("DetType", DetType);
+     t->AddFriend(MapTree);
+  }
+  if(debug) std::cout<<"Inizializzo la geometria"<<std::endl;
+  init(geo);  // vale sia per geant che per fluka 
 
   std::vector<digit> digit_vec;
   std::vector<cell> vec_cell;
@@ -476,7 +671,7 @@ void Digitize(const char* finname, const char* foutname)
               << "%]" << std::flush;
 
     DigitizeCal(ev, geo, vec_cell);
-    DigitizeStt(ev, geo, digit_vec);
+    DigitizeStt(ev, geo, NHits, DetType, xHits, yHits, zHits, digit_vec);
 
     tout.Fill();
   }
@@ -485,7 +680,7 @@ void Digitize(const char* finname, const char* foutname)
 
   fout.cd();
   tout.Write();
-  geo->Write();
+  if(flukatype==false) geo->Write();
   t->CloneTree()->Write();
   if (gRooTracker) gRooTracker->CloneTree()->Write();
   if (InputKinem) InputKinem->CloneTree()->Write();
