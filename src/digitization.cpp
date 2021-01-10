@@ -134,7 +134,6 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   t = 0.5 * (hit.Start.T() + hit.Stop.T());
   de = hit.EnergyDeposit;
 
-
 /////
   TGeoNode* node = g->FindNode(x, y, z);
 
@@ -172,6 +171,13 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   }
   // end cap modules
   else if (isEndCap(str)) {
+    if(debug) {
+      TLorentzVector gPos(x, y, z, 0);
+      TLorentzVector lPos = GlobalToLocalCoordinates(gPos);
+
+      std::cout<<"coord locali "<<lPos.X()<<" "<<lPos.Y()<<" "<<lPos.Z()<<std::endl;
+      std::cout<<"coord globali"<<gPos.X()<<" "<<gPos.Y()<<" "<<gPos.Z()<<std::endl;
+    }
 
     EndCapModuleAndLayer(str, str2, modID, planeID);
 
@@ -184,11 +190,13 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
       std::cout << "\t[modID,planeID,cellID] " << modID << " " << planeID << " "
                 << cellID << std::endl;
     }
-
+        std::cout << "\tmod " << modID << "\tplane: " << planeID << "\tcell: " << cellID << "\td1: " << d1 << "\td2: " << d2 << std::endl;
     return true;
   } else {
     return false;
   }
+
+
 }
 
 
@@ -222,7 +230,7 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
     y = localPos.Y();
     z = localPos.Z();
     double radius = sqrt(y*y + z*z);
-    if (debug) std::cout << "x: " << x << "\ty: " << y << "\tz: " << z << "\tr: " << radius;
+    if (debug) std::cout << "coord locali x: " << x << "\ty: " << y << "\tz: " << z << "\tr: " << radius<<std::endl;
 
     // hitAngle, cellAngle, modAngle
     //
@@ -263,8 +271,7 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         planeID = int((rotated_y - kloe_int_R_f) / 44);
         if (planeID > 4) planeID = 4;
         // cellID
-        cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) % 12;   // TODO: check ordering of cells (clockwise or anticlockwise?)
-        // d1 distance from right end (x>0)
+        cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) % 12;   // dal punto centrale in alto in senso antiorario        // d1 distance from right end (x>0)
         d1 = lCalBarrel / 2 - x;
         // d2 distance from left end (x<0)
         d2 = lCalBarrel / 2 + x;
@@ -275,16 +282,18 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         cellCoordBarrel[modID][planeID][cellID][2] = + cellD * sin(-modAngle) - cellD * tan(cellAngle - modAngle) * cos(-modAngle);
         cellCoordBarrel[modID][planeID][cellID][1] = + cellD * cos(-modAngle) + cellD * tan(cellAngle - modAngle) * sin(-modAngle);
     } else if (str=="endvolECAL") {
-
+      
+        if(debug) std::cout << "coord ENDCAP locali x: " << x << "\ty: " << y << "\tz: " << z << "\tr: " << radius;
         // modID
         if (x<0)        modID = 40;
         else if (x>0)   modID = 30;
         // planeID
-        planeID = int((abs(x) - kloe_int_dx_f) / 44);         // TODO: check width and units
+        planeID = int((abs(x) - kloe_int_dx_f) / 44);         
         if (planeID > 4) planeID = 4;
         // cellID
-        cellID = int((z + ec_rf) / 44);
- // d1 distance from top (y>0)
+        if(modID == 40)  cellID = int((z + ec_rf) / 44);   //crescono all'aumentare di z
+        else cellID =int((ec_rf - z )/44);                  //decrescosno all'aumentare di z
+        // d1 distance from top (y>0)
         d1 =  sqrt(ec_rf * ec_rf - z * z) - y;
         // d2 distance from bottom (y<0)
         d2 =  sqrt(ec_rf * ec_rf - z * z) + y;
@@ -293,17 +302,15 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID,
         for (int planeindex=1; planeindex<planeID+1; planeindex++) cellD += TMath::Sign(1.0, x) * (dzlay[planeindex-1] / 2 + dzlay[planeindex] / 2);
         cellCoordEndcap[int(modID/10)][planeID][cellID][0] = cellD;
         cellCoordEndcap[int(modID/10)][planeID][cellID][1] = 0;
-        cellCoordEndcap[int(modID/10)][planeID][cellID][2] = 44 / 2 + cellID * 44 - ec_rf;
-    } else if (str=="tracker" || str=="outside") {
+        if(modID == 40) cellCoordEndcap[int(modID/10)][planeID][cellID][2] = 44 / 2 + cellID * 44 - ec_rf;  //crescono all'aumentare di cellID
+        else cellCoordEndcap[int(modID/10)][planeID][cellID][2] = 44 / 2 - (cellID) * 44 + ec_rf;   //crescono al diminuire di cellID 
+       
+   } else if (str=="tracker" || str=="outside") {
         if (debug) std::cout << std::endl;
         return false;
     }
-    if (debug) std::cout << "\tmod " << modID << "\tplane: " << planeID << "\tcell: " << cellID << "\td1: " << d1 << "\td2: " << d2 << std::endl;
-
     return true;
 }
-
-
 
 
 
