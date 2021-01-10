@@ -190,7 +190,6 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
       std::cout << "\t[modID,planeID,cellID] " << modID << " " << planeID << " "
                 << cellID << std::endl;
     }
-        std::cout << "\tmod " << modID << "\tplane: " << planeID << "\tcell: " << cellID << "\td1: " << d1 << "\td2: " << d2 << std::endl;
     return true;
   } else {
     return false;
