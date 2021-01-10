@@ -49,7 +49,7 @@ static const double xmax_f=292.85;
 static const double dz_f=115.0;
 
 
-static const double ec_rf=1980.0;
+static const double ec_rf=2000.0; //ad essere precisi nella realtà è 1980
 static const double ec_dzf=115.0;
 static const double lCalBarrel = 4300;
 
