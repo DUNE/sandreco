@@ -9,9 +9,9 @@
 
 namespace kloe_simu
 {
-const bool debug =false;
+const bool debug = true;
 
-bool flukatype=false;  //for FLUKA
+bool flukatype = false;  // for FLUKA
 
 const double mm_to_m = 1E-3;
 const double m_to_mm = 1000.;
@@ -41,16 +41,13 @@ const int nLay = 5;
 const int nCel = 12;
 const int nCel_ec = 90;
 
+// ecal dimension for fluka
+static const double xmin_f = 262.55;
+static const double xmax_f = 292.85;
+static const double dz_f = 115.0;
 
-
-//ecal dimension for fluka
-static const double xmin_f=262.55;
-static const double xmax_f=292.85;
-static const double dz_f=115.0;
-
-
-static const double ec_rf=2000.0; //ad essere precisi nella realtà è 1980
-static const double ec_dzf=115.0;
+static const double ec_rf = 2000.0;  // ad essere precisi nella realtà è 1980
+static const double ec_dzf = 115.0;
 static const double lCalBarrel = 4300;
 
 double kloe_int_R_f = 2000.;
@@ -67,8 +64,6 @@ double cxlay[nLay][nCel];
 
 double ec_r;
 double ec_dz;
-
-
 
 ////////////////////////////////////////////////////////////////////////
 // geometry v0
@@ -105,8 +100,6 @@ const char* name_internal_volume = "volSTTFULL_PV";
 const double tscin = 3.08;
 const double tscex = 0.588;
 const double vlfb = 5.85;
-
-
 
 /*
 // da qui in poi non ci sono più nella master
@@ -214,7 +207,6 @@ double TfromTDC(double t1, double t2, double L);
 double XfromTDC(double t1, double t2);
 double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
 void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e);
-
 }
 
 #endif
