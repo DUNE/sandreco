@@ -52,9 +52,9 @@ target_link_libraries(Analyze Struct Utils ROOT::EG)
 add_executable(Display src/display.cpp)
 target_link_libraries(Display Struct Utils)
 
-# Creates FasctCheck executable.
-add_executable(FasctCheck src/fastcheck.cpp)
-target_link_libraries(FasctCheck Struct Utils)
+# Creates FastCheck executable.
+add_executable(FastCheck src/fastcheck.cpp)
+target_link_libraries(FastCheck Struct Utils)
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
@@ -63,7 +63,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-install(TARGETS Utils Struct Digitize Reconstruct Analyze Display FasctCheck
+install(TARGETS Utils Struct Digitize Reconstruct Analyze Display FastCheck
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
         ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
