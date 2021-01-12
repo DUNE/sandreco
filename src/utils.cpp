@@ -228,8 +228,8 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
       // right x > 0 : c->mod = 30
       // left  x < 0 : c->mod = 40
   {
-    dummyLoc[0] =
-        kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) - kloe_simu::ec_r;
+    dummyLoc[0] = 2 * kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) -
+                  kloe_simu::ec_r;
     dummyLoc[1] = 0.;
     dummyLoc[2] = kloe_simu::czlay[lay];
 
