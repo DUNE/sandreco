@@ -26,3 +26,4 @@ lib/*
 bin
 lib
 scripts
+.vscode/*
