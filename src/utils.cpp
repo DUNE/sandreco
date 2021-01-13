@@ -88,7 +88,7 @@ void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
                           std::map<double, int>& stX,
                           std::map<int, TVector2>& stPos)
 {
-  int ic = (pid % 2 == 0) ? 2 : 1;
+  int ic = (pid % 2 == 0) ? 1 : 0;
 
   for (int i = 0; i < nod->GetNdaughters(); i++) {
     TString name = nod->GetDaughter(i)->GetName();
