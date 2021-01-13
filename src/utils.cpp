@@ -12,6 +12,177 @@
 
 #include <iostream>
 
+bool kloe_simu::isST(TString name)
+{
+  return name.Contains(*kloe_simu::rST);
+}
+
+bool kloe_simu::isSTPlane(TString name)
+{
+  return name.Contains(*kloe_simu::rSTplane);
+}
+
+int kloe_simu::getSTId(TString name)
+{
+  int id = -999;
+
+  TObjArray* obj = name.Tokenize("_");
+
+  if (obj->GetEntries() != 10 && obj->GetEntries() != 9) {
+    std::cout << "Error: tokenizing " << name.Data() << std::endl;
+  } else {
+    TString sid = ((TObjString*)obj->At(obj->GetEntries() - 1))->GetString();
+
+    id = sid.Atoi();
+  }
+  delete obj;
+
+  return id;
+}
+
+int kloe_simu::getPlaneID(TString name)
+{
+  int mod = 0;
+  int type = 0;
+
+  TObjArray* obj = name.Tokenize("_");
+
+  //    Type,                        Plane,
+  // Tube,                                          Gas
+  //   TrMod,       _TrMod_80_hor_vol_PV_0,
+  // _TrMod_80_hor_ST_stGas_Xe19_vol_PV_0,
+  // _TrMod_80_hor_ST_stGas_Xe19_air_lv_PV_0
+  // C3H6Mod,   _C3H6Mod_1_ST_hor_vol_PV_0,
+  // _C3H6Mod_1_ST_hor_ST_stGas_Xe19_vol_PV_0,
+  // _C3H6Mod_1_ST_hor_ST_stGas_Xe19_air_lv_PV_0
+  //    CMod,      _CMod_4_ST_hor_vol_PV_0,
+  // _CMod_4_ST_hor_ST_stGas_Ar19_vol_PV_110,
+  // _CMod_4_ST_hor_ST_stGas_Ar19_air_lv_PV_0
+
+  if (obj->GetEntries() != 7 && obj->GetEntries() != 6 &&
+      obj->GetEntries() != 11 && obj->GetEntries() != 10) {
+    std::cout << "Error: tokenizing " << name.Data() << std::endl;
+  } else {
+    int ipos = (obj->GetEntries() == 10 || obj->GetEntries() == 6) ? 2 : 3;
+    TString stype = ((TObjString*)obj->At(ipos))->GetString();
+    TString smod = ((TObjString*)obj->At(1))->GetString();
+
+    mod = smod.Atoi();
+
+    if (stype.Contains("hor2"))
+      type = 4;
+    else if (stype.Contains("ver"))
+      type = 1;
+    else if (stype.Contains("hor"))
+      type = 2;
+    else
+      std::cout << "Error evaluating type for: " << name.Data() << std::endl;
+  }
+
+  delete obj;
+
+  return type + 10 * mod;
+}
+
+void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
+                          std::map<double, int>& stX,
+                          std::map<int, TVector2>& stPos)
+{
+  int ic = (pid % 2 == 0) ? 2 : 1;
+
+  for (int i = 0; i < nod->GetNdaughters(); i++) {
+    TString name = nod->GetDaughter(i)->GetName();
+
+    if (!isST(name))
+      std::cout << "Error: expected ST but not -> " << name.Data() << std::endl;
+
+    TGeoMatrix* thismat = nod->GetDaughter(i)->GetMatrix();
+    TGeoHMatrix mymat = mat * (*thismat);
+
+    int id = getSTId(name);
+
+    TVector2 v;
+    v.SetX(mymat.GetTranslation()[2]);
+    v.SetY(mymat.GetTranslation()[ic]);
+
+    stX[v.Y()] = id;
+    stPos[id] = v;
+  }
+}
+
+void kloe_simu::getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
+                               std::map<int, std::map<double, int> >& stX,
+                               std::map<int, std::map<int, TVector2> >& stPos)
+{
+  TString name = nod->GetName();
+  TGeoMatrix* thismat = nod->GetMatrix();
+  TGeoHMatrix mymat = mat * (*thismat);
+
+  int pid = 0;
+  double x = 0;
+  double z = 0;
+
+  if (isSTPlane(name)) {
+    pid = getPlaneID(name);
+
+    std::map<double, int> mstX;
+    std::map<int, TVector2> mstPos;
+
+    getSTinfo(nod, mymat, pid, mstX, mstPos);
+
+    stX[pid] = mstX;
+    stPos[pid] = mstPos;
+  } else {
+
+    for (int i = 0; i < nod->GetNdaughters(); i++) {
+      getSTPlaneinfo(nod->GetDaughter(i), mymat, stX, stPos);
+    }
+  }
+}
+
+int kloe_simu::getSTUniqID(TGeoManager* g, double x, double y, double z)
+{
+  TString sttname = g->FindNode(x, y, z)->GetName();
+
+  int sid = -999;
+  int pid = getPlaneID(sttname);
+
+  if (pid == 0) return -999;
+
+  double xt = 0.;
+
+  if (pid % 2 == 1)
+    xt = x;
+  else
+    xt = y;
+
+  std::map<double, int>::iterator it = kloe_simu::stX.at(pid).lower_bound(xt);
+
+  if (it == kloe_simu::stX.at(pid).begin()) {
+    sid = kloe_simu::stX.at(pid).begin()->second;
+  } else if (it == kloe_simu::stX.at(pid).end()) {
+    sid = kloe_simu::stX.at(pid).rbegin()->second;
+  } else {
+    TVector2 v1 = kloe_simu::stPos.at(pid).at(it->second);
+    TVector2 v2 = kloe_simu::stPos.at(pid).at(std::prev(it)->second);
+
+    TVector2 v(z, xt);
+
+    if ((v - v1).Mod() > (v - v2).Mod()) {
+      if ((v - v2).Mod() > 5)
+        std::cout << "Error: distance grater than ST radius" << std::endl;
+
+      sid = std::prev(it)->second;
+    } else {
+      if ((v - v1).Mod() > 5)
+        std::cout << "Error: distance grater than ST radius" << std::endl;
+
+      sid = it->second;
+    }
+  }
+  return sid * 1000 + pid;
+}
+
 bool kloe_simu::isCluBigger(const std::vector<digit>& v1,
                             const std::vector<digit>& v2)
 {
@@ -185,26 +356,24 @@ bool kloe_simu::CheckAndProcessPath(TString& str2)
 {
   // ENDCAP ==> something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_18/volECALActiveSlab_21_PV_0"
-  // BARREL ==> ìsomething like:
+  // BARREL ==> ï¿½something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0/endvolECALActiveSlab_0_PV_0"
-  
+
   TObjArray* obj = str2.Tokenize("/");
   TString str;
 
   // BARREL => ECAL_lv_PV_18
   // ENDCAP => ECAL_end_lv_PV_0
-  
-  for(int i = 0; i < obj->GetEntries(); i++)
-  {
+
+  for (int i = 0; i < obj->GetEntries(); i++) {
     str = ((TObjString*)obj->At(i))->GetString();
-    if(str.Contains("ECAL_"))
-    {
+    if (str.Contains("ECAL_")) {
       str2 = str;
       delete obj;
       return true;
     }
   }
-  
+
   delete obj;
   return false;
 }
@@ -292,6 +461,14 @@ void kloe_simu::init(TGeoManager* geo)
 
   kloe_simu::ec_r = ec->GetRmax();
   kloe_simu::ec_dz = ec->GetDz();
+
+  TGeoHMatrix mat = *gGeoIdentity;
+
+  rST = new TPRegexp(rST_string);
+  rSTplane = new TPRegexp(rSTplane_string);
+
+  getSTPlaneinfo(gGeoManager->GetTopVolume()->GetNode(0), mat, kloe_simu::stX,
+                 kloe_simu::stPos);
 }
 
 int kloe_simu::EncodeID(int mod, int lay, int cel)

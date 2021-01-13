@@ -36,8 +36,8 @@ void reset(track& tr)
   tr.ret_cr = -1;
   tr.chi2_cr = 0.;
   tr.digits.clear();
-  //tr.clX.clear();
-  //tr.clY.clear();
+  // tr.clX.clear();
+  // tr.clY.clear();
 }
 
 void evalUV(double& u, double& v, double zv, double yv, double z, double y)
@@ -1516,7 +1516,8 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   for (int i = 0; i < v->GetNdaughters(); i++) {
     TString name = v->GetNode(i)->GetName();
 
-    if (name.Contains("C3H6Mod") || name.Contains("CMod") || name.Contains("TrMod")) {
+    if (name.Contains("C3H6Mod") || name.Contains("CMod") ||
+        name.Contains("TrMod")) {
       TString path = path_prefix + name;
       g->cd(path.Data());
       g->LocalToMaster(origin, master);
@@ -1542,9 +1543,9 @@ void Reconstruct(const char* fIn)
   TTree* tTrueMC = (TTree*)f.Get("EDepSimEvents");
   TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
 
-  //std::vector<double> sampling;
+  // std::vector<double> sampling;
 
-  //DetermineModulesPosition(geo, sampling);
+  // DetermineModulesPosition(geo, sampling);
 
   tDigit->AddFriend(tTrueMC);
 
@@ -1567,13 +1568,13 @@ void Reconstruct(const char* fIn)
   tout.Branch("cluster", "std::vector<cluster>", &vec_cl);
 
   const int nev = t->GetEntries();
-  //const double epsilon = 0.5;
-  //const double tol_phi = 0.1;
-  //const double tol_x = 100.;
-  //const int tol_mod = 4;
-  //const int mindigtr = 3;
-  //const double dn_tol = 1.E7;
-  //const double dz_tol = 1.E7;
+  // const double epsilon = 0.5;
+  // const double tol_phi = 0.1;
+  // const double tol_x = 100.;
+  // const int tol_mod = 4;
+  // const int mindigtr = 3;
+  // const double dn_tol = 1.E7;
+  // const double dz_tol = 1.E7;
 
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -1587,21 +1588,21 @@ void Reconstruct(const char* fIn)
     vec_tr.clear();
     vec_cl.clear();
 
-    //double xvtx_reco, yvtx_reco, zvtx_reco;
-    //int VtxType;
+    // double xvtx_reco, yvtx_reco, zvtx_reco;
+    // int VtxType;
 
-    //std::vector<digit> clustersY;
-    //std::vector<digit> clustersX;
+    // std::vector<digit> clustersY;
+    // std::vector<digit> clustersX;
 
-    //VertexFind(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, *vec_digi, sampling,
+    // VertexFind(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, *vec_digi, sampling,
     //           epsilon);
 
     TrackFind(ev, vec_digi, vec_tr);
-    //TrackFind(vec_tr, *vec_digi, sampling, xvtx_reco, yvtx_reco, zvtx_reco,
+    // TrackFind(vec_tr, *vec_digi, sampling, xvtx_reco, yvtx_reco, zvtx_reco,
     //          tol_phi, tol_x, tol_mod, mindigtr, dn_tol, dz_tol);
-    
+
     TrackFit(vec_tr);
-    //TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
+    // TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
 
     // PreCluster(vec_cell, vec_cl);
     // Filter(vec_cl);

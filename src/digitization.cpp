@@ -357,7 +357,7 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
 }
 
 void Cluster(TG4Event* ev, TGeoManager* geo,
-             std::map<std::string, std::vector<hit> >& cluster_map)
+             std::map<int, std::vector<hit> >& cluster_map)
 {
   cluster_map.clear();
 
@@ -369,6 +369,8 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
     std::string sttname = geo->FindNode(x, y, z)->GetName();
+
+    int stid = getSTUniqID(geo, x, y, z);
 
     hit h;
     h.det = sttname;
@@ -384,18 +386,14 @@ void Cluster(TG4Event* ev, TGeoManager* geo,
     h.pid = hseg.PrimaryId;
     h.index = j;
 
-    std::string cluster_name(sttname);
-    cluster_name += "_" + std::to_string(hseg.PrimaryId);
-
-    cluster_map[cluster_name].push_back(h);
+    cluster_map[stid].push_back(h);
   }
 }
 
-void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
+void Cluster2Digit(std::map<int, std::vector<hit> >& cluster_map,
                    std::vector<digit>& digit_vec)
 {
-  for (std::map<std::string, std::vector<hit> >::iterator it =
-           cluster_map.begin();
+  for (std::map<int, std::vector<hit> >::iterator it = cluster_map.begin();
        it != cluster_map.end(); ++it) {
     digit d;
     d.de = 0;
@@ -411,15 +409,12 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
     d.hor = (d.det.find("hor") != std::string::npos) ? false : true;
 
     std::sort(it->second.begin(), it->second.end(), isHitBefore);
-    
-    if(d.hor)
-    {
+
+    if (d.hor) {
       d.x = 0.0;
       d.y = 0.5 * (it->second.front().y1 + it->second.back().y2) +
             r.Gaus(0., res_x);
-    }
-    else
-    {
+    } else {
       d.x = 0.5 * (it->second.front().x1 + it->second.back().x2) +
             r.Gaus(0., res_x);
       d.y = 0.0;
@@ -435,7 +430,7 @@ void Cluster2Digit(std::map<std::string, std::vector<hit> >& cluster_map,
 
 void DigitizeStt(TG4Event* ev, TGeoManager* geo, std::vector<digit>& digit_vec)
 {
-  std::map<std::string, std::vector<hit> > cluster_map;
+  std::map<int, std::vector<hit> > cluster_map;
   digit_vec.clear();
 
   Cluster(ev, geo, cluster_map);

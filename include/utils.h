@@ -1,6 +1,8 @@
 #include <TString.h>
 #include <TGeoManager.h>
 #include <TGeoNode.h>
+#include <TPRegexp.h>
+#include <TVector2.h>
 
 #include "struct.h"
 
@@ -60,7 +62,6 @@ const char* path_endcapR_template =
     "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 //////////////////////////////////////////////////////////////////////////
 
-
 /*
 ////////////////////////////////////////////////////////////////////////
 // geometry v1
@@ -80,6 +81,26 @@ const char* path_internal_volume =
     "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "volSTTFULL_PV_0/";
 const char* name_internal_volume = "volSTTFULL_PV";
+
+//      Type,                        Plane,
+// Tube,                                          Gas
+//     TrMod,       _TrMod_80_hor_vol_PV_0,
+// _TrMod_80_hor_ST_stGas_Xe19_vol_PV_0, _TrMod_80_hor_ST_stGas_Xe19_air_lv_PV_0
+//   C3H6Mod,   _C3H6Mod_1_ST_hor_vol_PV_0,
+// _C3H6Mod_1_ST_hor_ST_stGas_Xe19_vol_PV_0,
+// _C3H6Mod_1_ST_hor_ST_stGas_Xe19_air_lv_PV_0
+//      CMod,      _CMod_4_ST_hor_vol_PV_0,
+// _CMod_4_ST_hor_ST_stGas_Ar19_vol_PV_110,
+// _CMod_4_ST_hor_ST_stGas_Ar19_air_lv_PV_0
+
+const char* rST_string =
+    "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
+    "0-9]+)";
+const char* rSTplane_string =
+    "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
+
+TPRegexp* rST;
+TPRegexp* rSTplane;
 
 const double tscin = 3.08;
 const double tscex = 0.588;
@@ -112,6 +133,10 @@ const double c = k * 1E3;  // mm/ns
 const double emk = 1.;
 const double hadk = 1.;
 
+// STT position
+std::map<int, std::map<double, int> > stX;
+std::map<int, std::map<int, TVector2> > stPos;
+
 bool isCluBigger(const std::vector<digit>& v1, const std::vector<digit>& v2);
 bool isDigUpstream(const digit& d1, const digit& d2);
 bool isHitBefore(hit h1, hit h2);
@@ -142,6 +167,17 @@ double TfromTDC(double t1, double t2, double L);
 double XfromTDC(double t1, double t2);
 double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
 void CellXYZTE(cell c, double& x, double& y, double& z, double& t, double& e);
+
+bool isST(TString name);
+bool isSTPlane(TString name);
+int getSTId(TString name);
+int getPlaneID(TString name);
+void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
+               std::map<double, int>& stX, std::map<int, TVector2>& stPos);
+void getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
+                    std::map<int, std::map<double, int> >& stX,
+                    std::map<int, std::map<int, TVector2> >& stPos);
+int getSTUniqID(TGeoManager* g, double x, double y, double z);
 }
 
 #endif

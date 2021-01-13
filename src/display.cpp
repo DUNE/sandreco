@@ -587,9 +587,9 @@ void show(int index, bool showtrj = true, bool showfit = true,
       if (vec_tr->at(i).ret_cr == 0 && vec_tr->at(i).ret_ln == 0) {
         cev->cd(1);
 
-        //double minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
+        // double minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
         //                       vec_tr->at(i).clY.front().z);
-        //double maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
+        // double maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
         //                       vec_tr->at(i).clY.back().z);
 
         double minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
@@ -613,8 +613,8 @@ void show(int index, bool showtrj = true, bool showfit = true,
 
         cev->cd(2);
 
-        //double x0 = vec_tr->at(i).clX.front().x;
-        //double z0 = vec_tr->at(i).clX.front().z;
+        // double x0 = vec_tr->at(i).clX.front().x;
+        // double z0 = vec_tr->at(i).clX.front().z;
 
         double x0 = vec_tr->at(i).digits.front().x;
         double z0 = vec_tr->at(i).digits.front().z;
@@ -631,9 +631,9 @@ void show(int index, bool showtrj = true, bool showfit = true,
         double phi0 =
             TMath::ATan2(yexp - vec_tr->at(i).yc, z0 - vec_tr->at(i).zc);
 
-        //minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
+        // minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
         //                vec_tr->at(i).clX.front().z);
-        //maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
+        // maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
         //                vec_tr->at(i).clX.back().z);
 
         minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
