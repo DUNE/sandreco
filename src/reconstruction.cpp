@@ -849,6 +849,7 @@ void TrackFit(std::vector<track>& vec_tr)
     if (y_h[0] - vec_tr[j].yc < 0) quadrant *= -1;
 
     int signy = quadrant > 0 ? 1 : -1;
+    vec_tr[j].ysig = signy;
 
     // int signy = getSignY(z_h, y_h, vec_tr[j]);
 
