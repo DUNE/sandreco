@@ -32,7 +32,7 @@
 
 using namespace kloe_simu;
 
-TRandom3 r(0);
+TRandom3 r(1234);
 
 double Attenuation(double d, int planeID)
 {
@@ -131,10 +131,6 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   double y = 0.5 * (hit.Start.Y() + hit.Stop.Y());
   double z = 0.5 * (hit.Start.Z() + hit.Stop.Z());
 
-  x = 1700;
-  y = -2384;
-  z = 23500;
-
   t = 0.5 * (hit.Start.T() + hit.Stop.T());
   de = hit.EnergyDeposit;
 
@@ -176,7 +172,6 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   else if (isEndCap(str)) {
 
     if (debug) {
-      std::cout << "Ci sono " << std::endl;
       TLorentzVector gPos(x, y, z, 0);
       TLorentzVector lPos = GlobalToLocalCoordinates(gPos);
 
