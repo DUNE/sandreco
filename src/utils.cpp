@@ -241,6 +241,16 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
       // right x > 0 : c->mod = 30
       // left  x < 0 : c->mod = 40
   {
+
+     if (kloe_simu::flukatype == false){
+
+	dummyLoc[0] = 2 * kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) -
+                  kloe_simu::ec_r;
+    	dummyLoc[1] = 0.;
+    	dummyLoc[2] = kloe_simu::czlay[lay];
+ 
+/*
+<<<<<<< HEAD
     if (kloe_simu::flukatype == false) {
       dummyLoc[0] =
           kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) - kloe_simu::ec_r;
@@ -257,11 +267,25 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
       dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
       dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
     }
+
     if (mod == 30 && kloe_simu::flukatype == false) {
-      geo->cd(kloe_simu::path_endcapR_template);
-    } else if (mod == 40 && kloe_simu::flukatype == false) {
-      geo->cd(kloe_simu::path_endcapL_template);
+=======
+*/
+     } else {
+      // Local coordinates calculation
+      dummyLoc[0] = kloe_simu::cellCoordEndcap[int(mod / 10)][lay][cel][0];
+      dummyLoc[1] = kloe_simu::cellCoordEndcap[int(mod / 10)][lay][cel][1];
+      dummyLoc[2] = kloe_simu::cellCoordEndcap[int(mod / 10)][lay][cel][2];
+
+      // Transformation to global coordinates
+      dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
+      dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
+      dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
     }
+
+     if (mod == 30) geo->cd(kloe_simu::path_endcapR_template);
+     else if (mod == 40 )  geo->cd(kloe_simu::path_endcapL_template);
+   
   }
 
   if (kloe_simu::flukatype == false) geo->LocalToMaster(dummyLoc, dummyMas);
