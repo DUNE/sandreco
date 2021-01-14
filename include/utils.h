@@ -65,6 +65,7 @@ double cxlay[nLay][nCel];
 double ec_r;
 double ec_dz;
 
+/*
 ////////////////////////////////////////////////////////////////////////
 // geometry v0
 const char* path_barrel_template =
@@ -77,8 +78,8 @@ const char* path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 //////////////////////////////////////////////////////////////////////////
+*/
 
-/*
 ////////////////////////////////////////////////////////////////////////
 // geometry v1
 const char* path_barrel_template =
@@ -91,7 +92,7 @@ const char* path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 //////////////////////////////////////////////////////////////////////////
-*/
+
 const char* path_internal_volume =
     "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/volSTTFULL_PV_0/";

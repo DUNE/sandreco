@@ -32,7 +32,7 @@
 
 using namespace kloe_simu;
 
-TRandom3 r(1234);
+TRandom3 r(0);
 
 double Attenuation(double d, int planeID)
 {
