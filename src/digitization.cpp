@@ -437,7 +437,7 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
     d.det = it->second[0].det;
     d.did = did;
     d.de = 0;
-    d.hor = (type == 2);
+    d.hor = (type % 2 == 0);
     d.t0 = kloe_simu::t0[pla];
 
     if (d.hor == true) {

@@ -81,14 +81,14 @@ const char* path_endcapR_template =
 
 const char* path_internal_volume =
     "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-    "MagIntVol_volume_PV_0/volSTTFULL_PV_0/";
-const char* name_internal_volume = "volSTTFULL_PV";
+    "MagIntVol_volume_PV_0/volSTTLAR_PV_0/";
+const char* name_internal_volume = "volSTTLAR_PV";
 
 const char* rST_string =
-    "(sttmod|frontST)([0-9]+)_(ST|vol)_(hor|ver)_ST_stGas_([a-zA-Z]{2})19_vol_"
-    "PV_([0-9]+)";
+    "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
+    "0-9]+)";
 const char* rSTplane_string =
-    "(sttmod|frontST)([0-9]+)_(ST|vol)_(hor|ver)_vol_PV_0";
+    "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
 
 TPRegexp* rST;
 TPRegexp* rSTplane;

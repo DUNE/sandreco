@@ -73,7 +73,7 @@ std::map<int, gcell> calocell;
 
 const char* path_intreg =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-    "MagIntVol_volume_PV_0/volSTTFULL_PV_0";
+    "MagIntVol_volume_PV_0/volSTTLAR_PV_0";
 
 const char* path_barrel_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
@@ -115,7 +115,7 @@ void init(const char* mcfile, const char* ifile)
 
   tEdep->SetBranchAddress("Event", &ev);
   if (tDigit) tDigit->SetBranchAddress("dg_cell", &vec_cell);
-  if (tDigit) tDigit->SetBranchAddress("Stt", &vec_digi);
+  if (tDigit) tDigit->SetBranchAddress("dg_tube", &vec_digi);
   if (tReco) tReco->SetBranchAddress("track", &vec_tr);
   if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);
   if (tEvent) tEvent->SetBranchAddress("event", &evt);

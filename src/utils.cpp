@@ -70,10 +70,10 @@ int kloe_simu::getSTId(TString name)
 
   TObjArray* obj = name.Tokenize("_");
 
-  if (obj->GetEntries() != 9) {
+  if (obj->GetEntries() != 10 && obj->GetEntries() != 9) {
     std::cout << "Error: tokenizing " << name.Data() << std::endl;
   } else {
-    TString sid = ((TObjString*)obj->At(8))->GetString();
+    TString sid = ((TObjString*)obj->At(obj->GetEntries() - 1))->GetString();
 
     id = sid.Atoi();
   }
@@ -90,33 +90,24 @@ int kloe_simu::getPlaneID(TString name)
 
   TObjArray* obj = name.Tokenize("_");
 
-  if (obj->GetEntries() != 6 && obj->GetEntries() != 10 &&
-      obj->GetEntries() != 9) {
+  if (obj->GetEntries() != 7 && obj->GetEntries() != 6 &&
+      obj->GetEntries() != 11 && obj->GetEntries() != 10) {
     std::cout << "Error: tokenizing " << name.Data() << std::endl;
   } else {
-    TString stype = ((TObjString*)obj->At(2))->GetString();
-    TString smod = ((TObjString*)obj->At(0))->GetString();
+    int ipos = (obj->GetEntries() == 10 || obj->GetEntries() == 6) ? 2 : 3;
+    TString stype = ((TObjString*)obj->At(ipos))->GetString();
+    TString smod = ((TObjString*)obj->At(1))->GetString();
 
-    TObjArray* oarr;
+    mod = smod.Atoi();
 
-    if (smod.Contains("frontST")) {
-      oarr = smod.Tokenize("frontST");
-      mod = 90 + ((TObjString*)oarr->At(0))->GetString().Atoi();
-    } else if (smod.Contains("sttmod")) {
-      oarr = smod.Tokenize("sttmod");
-      mod = ((TObjString*)oarr->At(0))->GetString().Atoi();
-    } else
-      std::cout << "Error evaluating module id for: " << name.Data()
-                << std::endl;
-
-    if (stype.Contains("ver"))
+    if (stype.Contains("hor2"))
+      type = 4;
+    else if (stype.Contains("ver"))
       type = 1;
     else if (stype.Contains("hor"))
       type = 2;
     else
       std::cout << "Error evaluating type for: " << name.Data() << std::endl;
-
-    delete oarr;
   }
 
   delete obj;
@@ -133,7 +124,7 @@ void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
   int type;
   int mod;
   decodePlaneID(pid, mod, type);
-  int ic = type - 1;
+  int ic = 1 - (type % 2);
 
   if (ic != 0 && ic != 1)
     std::cout << "Error: ic expected 0 or 1 -> " << ic << std::endl;
@@ -457,7 +448,7 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
       // left  x < 0 : c->mod = 40
   {
     dummyLoc[0] =
-        kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) - kloe_simu::ec_r;
+        2 * kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) - kloe_simu::ec_r;
     dummyLoc[1] = 0.;
     dummyLoc[2] = kloe_simu::czlay[lay];
 
