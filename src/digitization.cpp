@@ -732,9 +732,6 @@ void Digitize(const char* finname, const char* foutname)
   t->SetBranchAddress("Event", &ev);
 
   TGeoManager* geo = 0;
-  TTree* gRooTracker = 0;
-  TTree* InputKinem = 0;
-  TTree* InputFiles = 0;
 
   TTree* MapTree;
 
@@ -747,16 +744,7 @@ void Digitize(const char* finname, const char* foutname)
 
   if (flukatype == false) {
     geo = (TGeoManager*)f.Get("EDepSimGeometry");
-    gRooTracker =
-        (TTree*)f.Get("DetSimPassThru/gRooTracker");  // FIXME dobbiamo metterlo
-                                                      // anche nei file di
-                                                      // FLUKA...togliere da
-                                                      // questo if quando fatto
-    InputKinem = (TTree*)f.Get("DetSimPassThru/InputKinem");
-    InputFiles = (TTree*)f.Get("DetSimPassThru/InputFiles");
-
   } else {
-
     MapTree = (TTree*)f.Get("MapTree");  // geometry loaded for fluka file
     if (MapTree->GetEntries() < 1) {
       std::cout << "MapTree Empty" << std::endl;
@@ -807,10 +795,6 @@ void Digitize(const char* finname, const char* foutname)
   fout.cd();
   tout.Write();
   if (flukatype == false) geo->Write();
-  t->CloneTree()->Write();
-  if (gRooTracker) gRooTracker->CloneTree()->Write();
-  if (InputKinem) InputKinem->CloneTree()->Write();
-  if (InputFiles) InputFiles->CloneTree()->Write();
   fout.Close();
 
   f.Close();
