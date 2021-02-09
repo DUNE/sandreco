@@ -375,8 +375,8 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
                                       d1, d2, t0, de) == true)) ||
             (g == NULL && (ProcessHitFluka(it->second[j], modID, planeID,
                                            cellID, d1, d2, t0, de) == true))) {
-          double en1 = de * Attenuation(d1, planeID);
-          double en2 = de * Attenuation(d2, planeID);
+          double en1 = de * AttenuationFactor(d1, planeID);
+          double en2 = de * AttenuationFactor(d2, planeID);
 
           double ave_pe1 = E2PE(en1);
           double ave_pe2 = E2PE(en2);
