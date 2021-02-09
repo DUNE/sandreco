@@ -15,6 +15,8 @@ namespace kloe_simu
 {
 const bool debug = false;
 
+bool flukatype = false;  // for FLUKA
+
 const double mm_to_m = 1E-3;
 const double m_to_mm = 1000.;
 
@@ -42,6 +44,22 @@ const int nMod = 24;
 const int nLay = 5;
 const int nCel = 12;
 const int nCel_ec = 90;
+
+// ecal dimension for fluka
+static const double xmin_f = 262.55;
+static const double xmax_f = 292.85;
+static const double dz_f = 115.0;
+
+static const double ec_rf = 2000.0;  // ad essere precisi nella realtà è 1980
+static const double ec_dzf = 115.0;
+static const double lCalBarrel = 4300;
+
+double kloe_int_R_f = 2000.;
+double kloe_int_dx_f = 1690.;
+
+// coordinates of the cells for FLUKA
+double cellCoordBarrel[nMod][nLay][nCel][3];
+double cellCoordEndcap[5][nLay][90][3];
 
 // thickness of the layers in mm
 double dzlay[nLay] = {44., 44., 44., 44., 54.};
@@ -96,6 +114,55 @@ TPRegexp* rSTplane;
 const double tscin = 3.08;
 const double tscex = 0.588;
 const double vlfb = 5.85;
+
+/*
+// da qui in poi non ci sono più nella master
+//
+
+
+namespace ns_Draw
+{
+const bool debug = false;
+
+static const int nMod = 24;
+static const int nLay = 5;
+static const int nCel = 12;
+static const int nLay_ec = 5;
+static const int nCel_ec = 90;
+
+static const int nTotCells = nMod * nLay * nCel;
+static const int nCellModule = nLay * nCel;
+
+static const double dt = 500;
+
+double centerKLOE[3];
+double CellLocalX[nCellModule][4];
+double CellLocalZ[nCellModule][4];
+
+int palette = 87;
+
+bool initialized = false;
+
+double dwx = 2500.;
+double dwy = 2500.;
+double dwz = 2500.;
+
+double kloe_int_R = 2000.;
+double kloe_int_dx = 1690.;
+
+TChain* t = 0;
+TG4Event* ev = new TG4Event;
+TGeoManager* geo = 0;
+TCanvas* cev = 0;
+TCanvas* cpr = 0;
+
+std::vector<cell>* vec_cell;
+std::vector<digit>* vec_digi;
+std::vector<track>* vec_tr;
+std::vector<cluster>* vec_cl;
+std::map<int, gcell> calocell;
+=======
+*/
 
 // photoelectron/counts = 0.25
 const double pe2ADC = 1 / .25;

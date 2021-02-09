@@ -149,6 +149,7 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   t = 0.5 * (hit.Start.T() + hit.Stop.T());
   de = hit.EnergyDeposit;
 
+  /////
   TGeoNode* node = g->FindNode(x, y, z);
 
   if (node == 0) return false;
@@ -161,6 +162,7 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   }
 
   if (CheckAndProcessPath(str2) == false) return false;
+  //////
 
   // barrel modules
   if (isBarrel(str)) {
@@ -698,6 +700,18 @@ void DigitizeStt(TG4Event* ev, TGeoManager* geo, int NHits,
   CollectHits(ev, geo, NHits, DetType, xPos, yPos, zPos, hits2Tube);
   Hits2Digit(hits2Tube, digit_vec);
 }
+/*
+void DigitizeFlukaStt(TG4Event* ev, int NHits, Int_t DetType[10000], Float_t
+xPos[10000], Float_t yPos[10000], Float_t zPos[10000],
+                std::vector<digit>& digit_vec)
+{
+    std::map<std::string, std::vector<hit> > cluster_map;
+    digit_vec.clear();
+
+    ClusterFluka(ev, NHits, DetType, xPos, yPos, zPos, cluster_map);
+    Cluster2Digit(cluster_map, digit_vec);
+}
+*/
 
 // digitize event
 void Digitize(const char* finname, const char* foutname)
