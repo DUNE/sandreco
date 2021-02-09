@@ -12,6 +12,7 @@
 #include <TRandom3.h>
 
 #include <iostream>
+#include "transf.h"
 
 // value of parameter of segment (y1,z1,y2,z2)
 // corresponding to minimal distance to point (y,z)
@@ -437,29 +438,54 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
   double dummyMas[3];
 
   if (mod < 24) {
-    dummyLoc[0] = kloe_simu::cxlay[lay][cel];
-    dummyLoc[1] = 0.;
-    dummyLoc[2] = kloe_simu::czlay[lay];
 
-    geo->cd(TString::Format(kloe_simu::path_barrel_template, mod).Data());
+    if (kloe_simu::flukatype == false) {
+      dummyLoc[0] = kloe_simu::cxlay[lay][cel];
+      dummyLoc[1] = 0.;
+      dummyLoc[2] = kloe_simu::czlay[lay];
 
+      geo->cd(TString::Format(kloe_simu::path_barrel_template, mod).Data());
+    } else {
+      // Local coordinates calculation
+      dummyLoc[0] = kloe_simu::cellCoordBarrel[mod][lay][cel][0];
+      dummyLoc[1] = kloe_simu::cellCoordBarrel[mod][lay][cel][1];
+      dummyLoc[2] = kloe_simu::cellCoordBarrel[mod][lay][cel][2];
+
+      // Transformation to global coordinates
+      dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
+      dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
+      dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
+    }
   } else if (mod == 30 || mod == 40)
       // right x > 0 : c->mod = 30
       // left  x < 0 : c->mod = 40
   {
-    dummyLoc[0] =
-        2 * kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) - kloe_simu::ec_r;
-    dummyLoc[1] = 0.;
-    dummyLoc[2] = kloe_simu::czlay[lay];
 
-    if (mod == 30) {
-      geo->cd(kloe_simu::path_endcapR_template);
-    } else if (mod == 40) {
-      geo->cd(kloe_simu::path_endcapL_template);
+     if (kloe_simu::flukatype == false){
+
+	dummyLoc[0] = 2 * kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) -
+                  kloe_simu::ec_r;
+    	dummyLoc[1] = 0.;
+    	dummyLoc[2] = kloe_simu::czlay[lay];
+ 
+     if (mod == 30) geo->cd(kloe_simu::path_endcapR_template);
+     else if (mod == 40 )  geo->cd(kloe_simu::path_endcapL_template);
+ 
+     } else {
+      // Local coordinates calculation
+      dummyLoc[0] = kloe_simu::cellCoordEndcap[int(mod / 10)][lay][cel][0];
+      dummyLoc[1] = kloe_simu::cellCoordEndcap[int(mod / 10)][lay][cel][1];
+      dummyLoc[2] = kloe_simu::cellCoordEndcap[int(mod / 10)][lay][cel][2];
+
+      // Transformation to global coordinates
+      dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
+      dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
+      dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
     }
+
   }
 
-  geo->LocalToMaster(dummyLoc, dummyMas);
+  if (kloe_simu::flukatype == false) geo->LocalToMaster(dummyLoc, dummyMas);
 
   x = dummyMas[0];
   y = dummyMas[1];
@@ -471,15 +497,40 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
 // - find straw tube center
 void kloe_simu::init(TGeoManager* geo)
 {
-  TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
-
   // https://root.cern.ch/root/htmldoc/guides/users-guide/Geometry.html#shapes
   // GetDx1() half length in x at -Dz
   // GetDx2() half length in x at +Dz
   // Dx1 < Dx2 => -Dz corresponds to minor width => internal side
-  double xmin = mod->GetDx1();
-  double xmax = mod->GetDx2();
-  double dz = mod->GetDz();
+  double xmin;
+  double xmax;
+  double dz;
+
+  if (kloe_simu::flukatype == false) {
+    TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
+    xmin = mod->GetDx1();
+    xmax = mod->GetDx2();
+    dz = mod->GetDz();
+
+    if ((abs(xmin - kloe_simu::xmin_f) > 0.2) ||
+        (abs(xmax - kloe_simu::xmax_f) > 0.2) ||
+        (abs(dz - kloe_simu::dz_f) > 0.2)) {
+      std::cout << "ERROR ON ECAL GEOMETRY: xmin= " << xmin
+                << " instead of what is expected in Fluka" << kloe_simu::xmin_f
+                << std::endl;
+      std::cout << "ERROR ON ECAL GEOMETRY: xmax= " << xmax
+                << " instead of what is expected in Fluka" << kloe_simu::xmax_f
+                << std::endl;
+      std::cout << "ERROR ON ECAL GEOMETRY: dz= " << dz
+                << " instead of what is expected in Fluka" << kloe_simu::dz_f
+                << std::endl;
+      // exit(1);
+    }
+
+  } else {
+    xmin = kloe_simu::xmin_f;
+    xmax = kloe_simu::xmax_f;
+    dz = kloe_simu::dz_f;
+  }
 
   double m = 0.5 * (xmax - xmin) / dz;
   double q = 0.5 * (xmax + xmin);
@@ -508,34 +559,46 @@ void kloe_simu::init(TGeoManager* geo)
     }
   }
 
-  TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
+if (kloe_simu::flukatype == false) {
+    TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
+    kloe_simu::ec_r = ec->GetRmax();  // Maximum radius = 2000
+    kloe_simu::ec_dz = ec->GetDz();   // half of thickness = 115
 
-  kloe_simu::ec_r = ec->GetRmax();
-  kloe_simu::ec_dz = ec->GetDz();
+    TGeoHMatrix mat = *gGeoIdentity;
 
-  TGeoHMatrix mat = *gGeoIdentity;
+    kloe_simu::rST = new TPRegexp(rST_string);
+    kloe_simu::rSTplane = new TPRegexp(rSTplane_string);
 
-  kloe_simu::rST = new TPRegexp(rST_string);
-  kloe_simu::rSTplane = new TPRegexp(rSTplane_string);
+    getSTPlaneinfo(gGeoManager->GetTopVolume()->GetNode(0), mat, kloe_simu::stX,
+                  kloe_simu::stL, kloe_simu::stPos);
 
-  getSTPlaneinfo(gGeoManager->GetTopVolume()->GetNode(0), mat, kloe_simu::stX,
-                 kloe_simu::stL, kloe_simu::stPos);
-
-  for (std::map<int, std::map<int, TVector2> >::iterator it =
-           kloe_simu::stPos.begin();
-       it != kloe_simu::stPos.end(); it++) {
-    int mod_id = it->first;
-    for (std::map<int, TVector2>::iterator ite = it->second.begin();
-         ite != it->second.end(); ite++) {
-      int tub_id = ite->first;
-      int id = encodeSTID(mod_id, tub_id);
-      tubePos[id] = ite->second;
+    for (std::map<int, std::map<int, TVector2> >::iterator it =
+            kloe_simu::stPos.begin();
+        it != kloe_simu::stPos.end(); it++) {
+      int mod_id = it->first;
+      for (std::map<int, TVector2>::iterator ite = it->second.begin();
+          ite != it->second.end(); ite++) {
+        int tub_id = ite->first;
+        int id = encodeSTID(mod_id, tub_id);
+        tubePos[id] = ite->second;
+      }
     }
-  }
 
-  geo->cd(kloe_simu::path_internal_volume);
-  double master[3];
-  geo->LocalToMaster(kloe_simu::stt_center, master);
+    geo->cd(kloe_simu::path_internal_volume);
+    double master[3];
+    geo->LocalToMaster(kloe_simu::stt_center, master);
+    
+    if (abs(kloe_simu::ec_r - kloe_simu::ec_rf) > 0.2 ||
+        (abs(kloe_simu::ec_dz - kloe_simu::ec_dzf))) {
+      std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: R= " << kloe_simu::ec_r
+                << " instead of what is expected in Fluka" << kloe_simu::ec_rf
+                << std::endl;
+      std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: Thickness= "
+                << kloe_simu::ec_dz << " instead of what is expected in Fluka"
+                << kloe_simu::ec_dzf << std::endl;
+      //  exit(1);
+    }
+  } 
 }
 
 // evaluated t0 for each tube assuming the beam bucket that
