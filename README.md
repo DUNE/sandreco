@@ -6,6 +6,7 @@ Build
 
 ```
 $ mkdir build
+$ mdir install
 $ cd build
 $ cmake -DCMAKE_INSTALL_PREFIX=<install-dir> <source-dir>
 $ make
@@ -15,7 +16,7 @@ $ make install
 Before running application
 - To have dictionaties of the structs loaded at run time:
 ```
-$ source setup.sh
+$ source install/setup.sh
 ```
 
 Using with ROOT

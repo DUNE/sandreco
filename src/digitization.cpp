@@ -345,7 +345,8 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
 void SimulatePE(TG4Event* ev, TGeoManager* g,
                 std::map<int, std::vector<double> >& time_pe,
                 std::map<int, std::vector<int> >& id_hit,
-                std::map<int, double>& L)
+                std::map<int, double>& L,
+		std::map<int, double>& En)
 {
   int modID, planeID, cellID, id;
   double d1, d2, t0, de;
@@ -370,17 +371,19 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
           int pe2 = r.Poisson(ave_pe2);
 
           id = EncodeID(modID, planeID, cellID);
-
+	  En[id]=En[id]+de;		
+		
           if (debug) {
             std::cout << "cell ID: " << id << std::endl;
-            std::cout << "\t" << de << " " << en1 << " " << en2 << std::endl;
+            std::cout << "energia depositata " << de << " " << en1 << " " << en2 << std::endl;
             std::cout << "\t" << ave_pe1 << " " << ave_pe2 << std::endl;
             std::cout << "\t" << pe1 << " " << pe2 << std::endl;
-          }
+            std::cout << "energia nella cella "<<En[id]<<std::endl;  
+	}
 
           // cellend 1 -> x < 0 -> ID > 0 -> left
           // cellend 2 -> x > 0 -> ID < 0 -> right
-
+	  
           for (int i = 0; i < pe1; i++) {
             time_pe[id].push_back(petime(t0, d1));
             id_hit[id].push_back(j);
@@ -490,23 +493,61 @@ void CollectSignal(TGeoManager* geo,
        it != map_cell.end(); ++it) {
     vec_cell.push_back(it->second);
   }
+
+
+
 }
 
-void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
+
+void CollectMCInfo(std::map<int, double>& En,
+                   std::vector<cell_info>& vec_cell_info)
+{
+  std::map<int, cell_info> map_cell;
+  cell_info* c;
+
+  for (std::map<int, double>::iterator it = En.begin(); it != En.end();
+       ++it) {
+    int id = abs(it->first);
+
+    c = &(map_cell[id]);
+    
+    c->id = id;
+    DecodeID(c->id, c->mod, c->lay, c->cel);
+
+    c->En = En[it->first];
+  }
+
+  for (std::map<int, cell_info>::iterator it = map_cell.begin();
+       it != map_cell.end(); ++it) {
+    vec_cell_info.push_back(it->second);
+  }
+
+}
+
+
+
+
+
+
+
+void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell, std::vector<cell_info>& vec_cell_info )
 {
   std::map<int, std::vector<double> > time_pe;
   std::map<int, std::vector<int> > id_hit;
   std::map<int, double> adc;
   std::map<int, double> tdc;
   std::map<int, double> L;
+  std::map<int, double> En;
+
 
   vec_cell.clear();
+  vec_cell_info.clear();
 
   if (debug) {
     std::cout << "SimulatePE" << std::endl;
   }
 
-  SimulatePE(ev, geo, time_pe, id_hit, L);
+  SimulatePE(ev, geo, time_pe, id_hit, L, En);
   if (debug) {
     std::cout << "TimeAndSignal" << std::endl;
   }
@@ -515,6 +556,8 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
     std::cout << "CollectSignal" << std::endl;
   }
   CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell);
+	
+  CollectMCInfo(En, vec_cell_info);
 }
 
 void Cluster(TG4Event* ev, TGeoManager* geo, int NHits, Int_t DetType[10000],
@@ -710,11 +753,14 @@ void Digitize(const char* finname, const char* foutname)
 
   std::vector<digit> digit_vec;
   std::vector<cell> vec_cell;
+  std::vector<cell_info> vec_cell_info;  //for MC variables
 
   TFile fout(foutname, "RECREATE");
   TTree tout("tDigit", "Digitization");
   tout.Branch("cell", "std::vector<cell>", &vec_cell);
   tout.Branch("Stt", "std::vector<digit>", &digit_vec);
+  TTree tout2("tDigit_info", "Digitization_info");
+  tout2.Branch("cell_info", "std::vector<cell_info>", &vec_cell_info);
 
   const int nev = t->GetEntries();
 
@@ -727,16 +773,19 @@ void Digitize(const char* finname, const char* foutname)
     std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i) / nev * 100)
               << "%]" << std::flush;
 
-    DigitizeCal(ev, geo, vec_cell);
+    DigitizeCal(ev, geo, vec_cell, vec_cell_info);
     DigitizeStt(ev, geo, NHits, DetType, xHits, yHits, zHits, digit_vec);
 
     tout.Fill();
-  }
+    tout2.Fill();	  
+}
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
 
   fout.cd();
   tout.Write();
+  tout2.Write();
+
   if (flukatype == false) geo->Write();
   t->CloneTree()->Write();
   if (gRooTracker) gRooTracker->CloneTree()->Write();

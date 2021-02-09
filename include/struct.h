@@ -25,6 +25,16 @@ struct cell
   std::vector<int> hindex2;
 };
 
+struct cell_info
+{
+  int id;
+  double En;
+  int mod;
+  int lay;
+  int cel;
+};
+
+
 struct cluster
 {
   int tid;
@@ -160,6 +170,7 @@ struct gcell
 #pragma link C++ class std::map < int, std::vector < int >> +;
 #pragma link C++ class std::map < int, double > +;
 #pragma link C++ class std::vector < cell > +;
+#pragma link C++ class std::vector < cell_info > +;
 #pragma link C++ class std::map < std::string, std::vector < hit >> +;
 #pragma link C++ class std::vector < digit > +;
 #pragma link C++ class std::vector < track > +;
@@ -167,6 +178,7 @@ struct gcell
 #pragma link C++ class std::vector < particle > +;
 #pragma link C++ class digit + ;
 #pragma link C++ class cell + ;
+#pragma link C++ class cell_info + ;
 #pragma link C++ class cluster + ;
 #pragma link C++ class track + ;
 #pragma link C++ class particle + ;
