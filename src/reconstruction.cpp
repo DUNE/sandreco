@@ -1516,7 +1516,8 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   for (int i = 0; i < v->GetNdaughters(); i++) {
     TString name = v->GetNode(i)->GetName();
 
-    if (name.Contains("TrMod") || name.Contains("C3H6Mod") || name.Contains("CMod")) {
+    if (name.Contains("TrMod") || name.Contains("C3H6Mod") ||
+        name.Contains("CMod")) {
       TString path = path_prefix + name;
       g->cd(path.Data());
       g->LocalToMaster(origin, master);

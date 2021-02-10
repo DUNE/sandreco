@@ -536,8 +536,9 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<dg_cell>& vec_cell)
 }
 
 // Group hits into tube
-void CollectHits(TG4Event* ev, TGeoManager* geo, int NHits, Int_t DetType[10000],
-                 Float_t xPos[10000], Float_t yPos[10000], Float_t zPos[10000],
+void CollectHits(TG4Event* ev, TGeoManager* geo, int NHits,
+                 Int_t DetType[10000], Float_t xPos[10000], Float_t yPos[10000],
+                 Float_t zPos[10000],
                  std::map<int, std::vector<hit> >& hits2Tube)
 {
   hits2Tube.clear();
@@ -550,7 +551,7 @@ void CollectHits(TG4Event* ev, TGeoManager* geo, int NHits, Int_t DetType[10000]
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
     std::string sttname = "NULL";
-    int stid = -999; // should be implemented for FLUKA
+    int stid = -999;  // should be implemented for FLUKA
 
     if (flukatype == false) {
       sttname = geo->FindNode(x, y, z)->GetName();
@@ -727,7 +728,7 @@ void Digitize(const char* finname, const char* foutname)
     std::cout << "This is a standard Geant4-edepsim SIMULATION" << std::endl;
 
   TTree* t = (TTree*)f.Get("EDepSimEvents");
-  
+
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event", &ev);
 
