@@ -486,7 +486,7 @@ void CollectSignal(TGeoManager* geo,
 
     c->id = id;
     DecodeID(c->id, c->mod, c->lay, c->cel);
-    c->l = L[c->id];
+    c->l = L[it->first];
 
     if (it->first >= 0) {
       c->adc1 = adc[it->first];
