@@ -166,8 +166,8 @@ std::map<int, gcell> calocell;
 
 // photoelectron/counts = 0.25
 const double pe2ADC = 1 / .25;
-// ADC integration time = 400 ns
-const double int_time = 400.;
+// ADC integration time = 30 ns
+const double int_time = 30.;
 
 // https://www.sciencedirect.com/science/article/pii/S0168900201015029
 // threshold 3-4 p.e. at 2 m distance
