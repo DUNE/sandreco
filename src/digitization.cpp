@@ -75,8 +75,11 @@ double Attenuation(double d, int planeID)
 double E2PE(double E)
 {
   if (debug) std::cout << "E = " << E << " -> p.e. = " << e2p2* E << std::endl;
-
-  return e2p2 * E;
+ 
+  if (debug && flukatype==1) std::cout << "E = " << E << " -> p.e. = " << e2p2_fluka * E << std::endl;
+  
+  if(flukatype==1) return e2p2_fluka * E;
+  else return e2p2 * E;
 }
 
 double petime(double t0, double d)

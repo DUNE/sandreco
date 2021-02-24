@@ -35,6 +35,7 @@ const double atl2_34 = 3300.0;
 // corrected to 18.5 to have mean number of pe of 40
 // for mip crossing in the middle of barrel module
 const double e2p2 = 18.5;
+const double e2p2_fluka = 23;  //for fluka, for reproducing the same number of pe (40) for mip crossing in the middle of barrel module
 
 const int nMod = 24;
 const int nLay = 5;
