@@ -166,8 +166,10 @@ std::map<int, gcell> calocell;
 
 // photoelectron/counts = 0.25
 const double pe2ADC = 1 / .25;
-// ADC integration time = 400 ns
-const double int_time = 400.;
+// ADC integration time = 30 ns
+const double int_time = 30.;
+// dead time
+const double dead_time = 50.;
 
 // https://www.sciencedirect.com/science/article/pii/S0168900201015029
 // threshold 3-4 p.e. at 2 m distance
@@ -206,6 +208,7 @@ std::map<int, std::map<int, TVector2> > stPos;
 std::map<int, TVector2> tubePos;
 std::map<int, double> t0;
 
+bool isPeBefore(const pe& p1, const pe& p2);
 bool isCluBigger(const std::vector<dg_tube>& v1,
                  const std::vector<dg_tube>& v2);
 bool isDigUpstream(const dg_tube& d1, const dg_tube& d2);

@@ -13,6 +13,7 @@
 #include <TRandom3.h>
 #include <TStyle.h>
 #include <TSystem.h>
+#include <TMath.h>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
@@ -358,8 +359,7 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
 }
 
 void SimulatePE(TG4Event* ev, TGeoManager* g,
-                std::map<int, std::vector<double> >& time_pe,
-                std::map<int, std::vector<int> >& id_hit,
+                std::map<int, std::vector<pe> >& photo_el,
                 std::map<int, double>& L)
 {
   int modID, planeID, cellID, id;
@@ -397,14 +397,18 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
           // cellend 2 -> x > 0 -> ID < 0 -> right
 
           for (int i = 0; i < pe1; i++) {
-            time_pe[id].push_back(petime(t0, d1));
-            id_hit[id].push_back(j);
+            pe this_pe;
+            this_pe.time = petime(t0, d1);
+            this_pe.h_index = j;
+            photo_el[id].push_back(this_pe);
             L[id] = d1 + d2;
           }
 
           for (int i = 0; i < pe2; i++) {
-            time_pe[-1 * id].push_back(petime(t0, d2));
-            id_hit[-1 * id].push_back(j);
+            pe this_pe;
+            this_pe.time = petime(t0, d2);
+            this_pe.h_index = j;
+            photo_el[-1 * id].push_back(this_pe);
             L[-1 * id] = d1 + d2;
           }
         }
@@ -414,8 +418,8 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
 }
 
 // from simulated pe produce adc e tdc of calo cell
-void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
-                   std::map<int, double>& adc, std::map<int, double>& tdc)
+void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
+                   std::map<int, dg_ps >& ps)
 {
   /*
     -  ADC - Proportional to NPHE
@@ -430,55 +434,67 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
   double int_start;
   int pe_count;
   int start_index;
+  int index;
 
-  for (std::map<int, std::vector<double> >::iterator it = time_pe.begin();
-       it != time_pe.end(); ++it) {
+  std::vector<pe> digit_pe;
+
+  for (std::map<int, std::vector<pe> >::iterator it = photo_el.begin();
+       it != photo_el.end(); ++it) {
     // order by arrival time
-    std::sort(it->second.begin(), it->second.end());
+    std::sort(it->second.begin(), it->second.end(), kloe_simu::isPeBefore);
 
-    int_start = it->second.front();
+    dg_ps pmt;
+    pmt.side = 2 * (it->first > 0) - 1;
+
+    digit_pe.clear();
+
+    int_start = it->second.front().time;
     pe_count = 0;
     start_index = 0;
-    int index = 0;
+    index = 0;
 
-    for (std::vector<double>::iterator pe_time = it->second.begin();
-         pe_time != it->second.end(); ++pe_time) {
+    for (std::vector<pe>::iterator this_pe = it->second.begin();
+         this_pe != it->second.end(); ++this_pe) {
       // integrate for int_time
-      if (*pe_time - int_start <= int_time) {
+      if (this_pe->time < int_start + int_time) {
         pe_count++;
-      }
-      // below threshold -> reset
-      else if (pe_count < pe_threshold) {
+        digit_pe.push_back(*this_pe);
+      } else if (this_pe->time > int_start + int_time + dead_time) {
+        // above threshold -> digit
+        if (pe_count > pe_threshold) {
+          pmt.adc.push_back(pe2ADC * pe_count);
+          index = int(costant_fraction * pe_count) + start_index;
+          pmt.tdc.push_back(it->second[index].time);
+          pmt.photo_el = digit_pe;
+        }
+        // get ready for next digiit
         pe_count = 1;
-        int_start = *pe_time;
-        start_index = pe_time - it->second.begin();
-      }
-      // above threshold -> stop integration and acquire
-      else {
-        break;
+        int_start = this_pe->time;
+        start_index = this_pe - it->second.begin();
       }
     }
 
-    if (pe_count >= pe_threshold) {
-      adc[it->first] = pe2ADC * pe_count;
+    if (pe_count > pe_threshold) {
+      pmt.adc.push_back(pe2ADC * pe_count);
       index = int(costant_fraction * pe_count) + start_index;
-      tdc[it->first] = it->second[index];
+      pmt.tdc.push_back(it->second[index].time);
+      pmt.photo_el = digit_pe;
     }
+
+    ps[it->first] = pmt;
   }
 }
 
 // construct calo digit and collect them in a vector
 void CollectSignal(TGeoManager* geo,
-                   std::map<int, std::vector<double> >& time_pe,
-                   std::map<int, double>& adc, std::map<int, double>& tdc,
+                   std::map<int, dg_ps>& ps,
                    std::map<int, double>& L,
-                   std::map<int, std::vector<int> >& id_hit,
                    std::vector<dg_cell>& vec_cell)
 {
   std::map<int, dg_cell> map_cell;
   dg_cell* c;
 
-  for (std::map<int, double>::iterator it = adc.begin(); it != adc.end();
+  for (std::map<int, dg_ps>::iterator it = ps.begin(); it != ps.end();
        ++it) {
     int id = abs(it->first);
 
@@ -486,18 +502,12 @@ void CollectSignal(TGeoManager* geo,
 
     c->id = id;
     DecodeID(c->id, c->mod, c->lay, c->cel);
-    c->l = L[c->id];
+    c->l = L[it->first];
 
     if (it->first >= 0) {
-      c->adc1 = adc[it->first];
-      c->tdc1 = tdc[it->first];
-      c->pe_time1 = time_pe[it->first];
-      c->hindex1 = id_hit[it->first];
+      c->ps1 = it->second;
     } else {
-      c->adc2 = adc[it->first];
-      c->tdc2 = tdc[it->first];
-      c->pe_time2 = time_pe[it->first];
-      c->hindex2 = id_hit[it->first];
+      c->ps2 = it->second;
     }
     CellPosition(geo, c->mod, c->lay, c->cel, c->x, c->y,
                  c->z);  // ok per fluka e geant4
@@ -512,10 +522,8 @@ void CollectSignal(TGeoManager* geo,
 // simulate calorimeter responce for whole event
 void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<dg_cell>& vec_cell)
 {
-  std::map<int, std::vector<double> > time_pe;
-  std::map<int, std::vector<int> > id_hit;
-  std::map<int, double> adc;
-  std::map<int, double> tdc;
+  std::map<int, std::vector<pe> > photo_el;
+  std::map<int, dg_ps> ps;
   std::map<int, double> L;
 
   vec_cell.clear();
@@ -524,20 +532,21 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<dg_cell>& vec_cell)
     std::cout << "SimulatePE" << std::endl;
   }
 
-  SimulatePE(ev, geo, time_pe, id_hit, L);
+  SimulatePE(ev, geo, photo_el, L);
   if (debug) {
     std::cout << "TimeAndSignal" << std::endl;
   }
-  TimeAndSignal(time_pe, adc, tdc);
+  TimeAndSignal(photo_el, ps);
   if (debug) {
     std::cout << "CollectSignal" << std::endl;
   }
-  CollectSignal(geo, time_pe, adc, tdc, L, id_hit, vec_cell);
+  CollectSignal(geo, ps, L, vec_cell);
 }
 
 // Group hits into tube
-void CollectHits(TG4Event* ev, TGeoManager* geo, int NHits, Int_t DetType[10000],
-                 Float_t xPos[10000], Float_t yPos[10000], Float_t zPos[10000],
+void CollectHits(TG4Event* ev, TGeoManager* geo, int NHits,
+                 Int_t DetType[10000], Float_t xPos[10000], Float_t yPos[10000],
+                 Float_t zPos[10000],
                  std::map<int, std::vector<hit> >& hits2Tube)
 {
   hits2Tube.clear();
@@ -550,7 +559,7 @@ void CollectHits(TG4Event* ev, TGeoManager* geo, int NHits, Int_t DetType[10000]
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
     std::string sttname = "NULL";
-    int stid = -999; // should be implemented for FLUKA
+    int stid = -999;  // should be implemented for FLUKA
 
     if (flukatype == false) {
       sttname = geo->FindNode(x, y, z)->GetName();
@@ -727,7 +736,7 @@ void Digitize(const char* finname, const char* foutname)
     std::cout << "This is a standard Geant4-edepsim SIMULATION" << std::endl;
 
   TTree* t = (TTree*)f.Get("EDepSimEvents");
-  
+
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event", &ev);
 
@@ -798,6 +807,13 @@ void Digitize(const char* finname, const char* foutname)
   fout.Close();
 
   f.Close();
+
+  kloe_simu::stL.clear();
+  kloe_simu::stX.clear();
+  kloe_simu::stPos.clear();
+  kloe_simu::t0.clear();
+  kloe_simu::tubePos.clear();
+
 }
 
 void help_digit()

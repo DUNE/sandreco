@@ -14,6 +14,12 @@
 #include <iostream>
 #include "transf.h"
 
+
+bool kloe_simu::isPeBefore(const pe& p1, const pe& p2)
+{
+  return p1.time < p2.time;
+} 
+
 // value of parameter of segment (y1,z1,y2,z2)
 // corresponding to minimal distance to point (y,z)
 double kloe_simu::getT(double y1, double y2, double y, double z1, double z2,
@@ -254,12 +260,13 @@ bool kloe_simu::isDigBefore(dg_tube d1, dg_tube d2)
 
 bool kloe_simu::isCellBefore(dg_cell c1, dg_cell c2)
 {
-  if (c1.adc1 == 0 || c1.adc2 == 0)
+  if (c1.ps1.adc.size() == 0 || c1.ps2.adc.size() == 0)
     return false;
-  else if (c2.adc1 == 0 || c2.adc2 == 0)
+  else if (c2.ps1.adc.size() == 0 || c2.ps2.adc.size() == 0)
     return true;
   else
-    return ((c1.tdc1 + c1.tdc2) < (c2.tdc1 + c2.tdc2));
+    return ((c1.ps1.tdc.at(0) + c1.ps2.tdc.at(0)) <
+            (c2.ps1.tdc.at(0) + c2.ps2.tdc.at(0)));
 }
 
 bool kloe_simu::isAfter(particle p1, particle p2)
@@ -461,17 +468,19 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
       // left  x < 0 : c->mod = 40
   {
 
-     if (kloe_simu::flukatype == false){
+    if (kloe_simu::flukatype == false) {
 
-	dummyLoc[0] = 2 * kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) -
-                  kloe_simu::ec_r;
-    	dummyLoc[1] = 0.;
-    	dummyLoc[2] = kloe_simu::czlay[lay];
- 
-     if (mod == 30) geo->cd(kloe_simu::path_endcapR_template);
-     else if (mod == 40 )  geo->cd(kloe_simu::path_endcapL_template);
- 
-     } else {
+      dummyLoc[0] = 2 * kloe_simu::ec_r / kloe_simu::nCel_ec * (0.5 + cel) -
+                    kloe_simu::ec_r;
+      dummyLoc[1] = 0.;
+      dummyLoc[2] = kloe_simu::czlay[lay];
+
+      if (mod == 30)
+        geo->cd(kloe_simu::path_endcapR_template);
+      else if (mod == 40)
+        geo->cd(kloe_simu::path_endcapL_template);
+
+    } else {
       // Local coordinates calculation
       dummyLoc[0] = kloe_simu::cellCoordEndcap[int(mod / 10)][lay][cel][0];
       dummyLoc[1] = kloe_simu::cellCoordEndcap[int(mod / 10)][lay][cel][1];
@@ -482,7 +491,6 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
       dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
       dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
     }
-
   }
 
   if (kloe_simu::flukatype == false) geo->LocalToMaster(dummyLoc, dummyMas);
@@ -559,7 +567,7 @@ void kloe_simu::init(TGeoManager* geo)
     }
   }
 
-if (kloe_simu::flukatype == false) {
+  if (kloe_simu::flukatype == false) {
     TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
     kloe_simu::ec_r = ec->GetRmax();  // Maximum radius = 2000
     kloe_simu::ec_dz = ec->GetDz();   // half of thickness = 115
@@ -570,14 +578,14 @@ if (kloe_simu::flukatype == false) {
     kloe_simu::rSTplane = new TPRegexp(rSTplane_string);
 
     getSTPlaneinfo(gGeoManager->GetTopVolume()->GetNode(0), mat, kloe_simu::stX,
-                  kloe_simu::stL, kloe_simu::stPos);
+                   kloe_simu::stL, kloe_simu::stPos);
 
     for (std::map<int, std::map<int, TVector2> >::iterator it =
-            kloe_simu::stPos.begin();
-        it != kloe_simu::stPos.end(); it++) {
+             kloe_simu::stPos.begin();
+         it != kloe_simu::stPos.end(); it++) {
       int mod_id = it->first;
       for (std::map<int, TVector2>::iterator ite = it->second.begin();
-          ite != it->second.end(); ite++) {
+           ite != it->second.end(); ite++) {
         int tub_id = ite->first;
         int id = encodeSTID(mod_id, tub_id);
         tubePos[id] = ite->second;
@@ -587,7 +595,7 @@ if (kloe_simu::flukatype == false) {
     geo->cd(kloe_simu::path_internal_volume);
     double master[3];
     geo->LocalToMaster(kloe_simu::stt_center, master);
-    
+
     if (abs(kloe_simu::ec_r - kloe_simu::ec_rf) > 0.2 ||
         (abs(kloe_simu::ec_dz - kloe_simu::ec_dzf))) {
       std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: R= " << kloe_simu::ec_r
@@ -598,7 +606,7 @@ if (kloe_simu::flukatype == false) {
                 << kloe_simu::ec_dzf << std::endl;
       //  exit(1);
     }
-  } 
+  }
 }
 
 // evaluated t0 for each tube assuming the beam bucket that
@@ -744,15 +752,15 @@ void kloe_simu::CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
 {
   if (c.id < 25000)  // Barrel
   {
-    x = c.x + XfromTDC(c.tdc1, c.tdc2);
+    x = c.x + XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
     y = c.y;
   } else {
     x = c.x;
-    y = c.y - XfromTDC(c.tdc1, c.tdc2);
+    y = c.y - XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
   }
-  double d1 = 0.5 * c.l + XfromTDC(c.tdc1, c.tdc2);
-  double d2 = 0.5 * c.l - XfromTDC(c.tdc1, c.tdc2);
+  double d1 = 0.5 * c.l + XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
+  double d2 = 0.5 * c.l - XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
   z = c.z;
-  t = TfromTDC(c.tdc1, c.tdc2, c.l);
-  e = EfromADC(c.adc1, c.adc2, d1, d2, c.lay);
+  t = TfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0), c.l);
+  e = EfromADC(c.ps1.adc.at(0), c.ps2.adc.at(0), d1, d2, c.lay);
 }

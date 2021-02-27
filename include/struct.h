@@ -1,12 +1,18 @@
 // File struct.h
 #include <vector>
 #include <map>
+#include <string>
 
 #ifndef STRUCT_H
 #define STRUCT_H
 
-struct hit
+struct pe
 {
+  double time;
+  int h_index;
+};
+
+struct hit {
   std::string det;
   int did;
   double x1;
@@ -22,6 +28,14 @@ struct hit
   int index;
 };
 
+struct dg_ps
+{
+  int side;
+  std::vector<double> adc;
+  std::vector<double> tdc;
+  std::vector<pe> photo_el;
+};
+
 struct dg_cell
 {
   int id;
@@ -29,17 +43,11 @@ struct dg_cell
   double y;
   double x;
   double l;
-  double adc1;
-  double tdc1;
-  double adc2;
-  double tdc2;
   int mod;
   int lay;
   int cel;
-  std::vector<double> pe_time1;
-  std::vector<int> hindex1;
-  std::vector<double> pe_time2;
-  std::vector<int> hindex2;
+  dg_ps ps1;
+  dg_ps ps2;
 };
 
 struct dg_tube
@@ -163,12 +171,15 @@ struct gcell
 #pragma link C++ class std::map < int, std::vector < double >> +;
 #pragma link C++ class std::map < int, std::vector < int >> +;
 #pragma link C++ class std::map < int, double > +;
+#pragma link C++ class std::vector < dg_ps > +;
 #pragma link C++ class std::vector < dg_cell > +;
 #pragma link C++ class std::map < std::string, std::vector < hit >> +;
 #pragma link C++ class std::vector < dg_tube > +;
 #pragma link C++ class std::vector < track > +;
 #pragma link C++ class std::vector < cluster > +;
 #pragma link C++ class std::vector < particle > +;
+#pragma link C++ class pe + ;
+#pragma link C++ class dg_ps + ;
 #pragma link C++ class dg_tube + ;
 #pragma link C++ class dg_cell + ;
 #pragma link C++ class cluster + ;
