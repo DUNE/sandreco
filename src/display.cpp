@@ -553,10 +553,10 @@ void show(int index, bool showtrj = true, bool showfit = true,
     for (unsigned int i = 0; i < vec_cl->at(j).cells.size(); i++) {
       int id = vec_cl->at(j).cells.at(i).id;
 
-      calocell[id].adc = vec_cl->at(j).cells.at(i).adc1;
-      calocell[id].tdc = vec_cl->at(j).cells.at(i).tdc1;
-      calocell[-id].adc = vec_cl->at(j).cells.at(i).adc2;
-      calocell[-id].tdc = vec_cl->at(j).cells.at(i).tdc2;
+      calocell[id].adc = vec_cl->at(j).cells.at(i).ps1.adc.at(0);
+      calocell[id].tdc = vec_cl->at(j).cells.at(i).ps1.tdc.at(0);
+      calocell[-id].adc = vec_cl->at(j).cells.at(i).ps2.adc.at(0);
+      calocell[-id].tdc = vec_cl->at(j).cells.at(i).ps2.tdc.at(0);
 
       if (showdig) {
         TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);

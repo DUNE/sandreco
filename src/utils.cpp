@@ -14,6 +14,12 @@
 #include <iostream>
 #include "transf.h"
 
+
+bool kloe_simu::isPeBefore(const pe& p1, const pe& p2)
+{
+  return p1.time < p2.time;
+} 
+
 // value of parameter of segment (y1,z1,y2,z2)
 // corresponding to minimal distance to point (y,z)
 double kloe_simu::getT(double y1, double y2, double y, double z1, double z2,
@@ -254,12 +260,13 @@ bool kloe_simu::isDigBefore(dg_tube d1, dg_tube d2)
 
 bool kloe_simu::isCellBefore(dg_cell c1, dg_cell c2)
 {
-  if (c1.adc1 == 0 || c1.adc2 == 0)
+  if (c1.ps1.adc.size() == 0 || c1.ps2.adc.size() == 0)
     return false;
-  else if (c2.adc1 == 0 || c2.adc2 == 0)
+  else if (c2.ps1.adc.size() == 0 || c2.ps2.adc.size() == 0)
     return true;
   else
-    return ((c1.tdc1 + c1.tdc2) < (c2.tdc1 + c2.tdc2));
+    return ((c1.ps1.tdc.at(0) + c1.ps2.tdc.at(0)) <
+            (c2.ps1.tdc.at(0) + c2.ps2.tdc.at(0)));
 }
 
 bool kloe_simu::isAfter(particle p1, particle p2)
@@ -745,15 +752,15 @@ void kloe_simu::CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
 {
   if (c.id < 25000)  // Barrel
   {
-    x = c.x + XfromTDC(c.tdc1, c.tdc2);
+    x = c.x + XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
     y = c.y;
   } else {
     x = c.x;
-    y = c.y - XfromTDC(c.tdc1, c.tdc2);
+    y = c.y - XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
   }
-  double d1 = 0.5 * c.l + XfromTDC(c.tdc1, c.tdc2);
-  double d2 = 0.5 * c.l - XfromTDC(c.tdc1, c.tdc2);
+  double d1 = 0.5 * c.l + XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
+  double d2 = 0.5 * c.l - XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
   z = c.z;
-  t = TfromTDC(c.tdc1, c.tdc2, c.l);
-  e = EfromADC(c.adc1, c.adc2, d1, d2, c.lay);
+  t = TfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0), c.l);
+  e = EfromADC(c.ps1.adc.at(0), c.ps2.adc.at(0), d1, d2, c.lay);
 }
