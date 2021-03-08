@@ -9,7 +9,7 @@
 #include "TFile.h"
 #include "TTree.h"
 
-#include "struct22.h"
+#include "struct2.h"
 #include "utils.h"
 
 using namespace std;
@@ -48,8 +48,9 @@ struct cluster2
 
 */
 
-void Preclustering(std::string input)
+void Preclustering(std::vector<dg_cell>* vec_cell_tree, std::vector<cluster2>& vec_clust)
 {
+   /*
     const char* finname = input.c_str();
     TFile f(finname, "READ");
 
@@ -69,21 +70,38 @@ void Preclustering(std::string input)
     TLeaf* cell_adc2 = (TLeaf*)t->GetLeaf("dg_cell.adc2");
     TLeaf* cell_tdc2 = (TLeaf*)t->GetLeaf("dg_cell.tdc2");
    
-    Double_t x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0, x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, t2_weighted = 0, Etot = 0, E2tot, EvEtot = 0, d1, d2;
-
+   
     //loop over events
     for (int i = 0; i <5; i++) {
-        std::vector<cluster2> vec_clust;
+        std::vector<cluster2> vec_clust; //This must be changed in reconstruct.cpp! 
         int pc = 0;
         t->GetEntry(i);
-        int lentry = cell_id->GetLen();
+
+*/
+	Double_t x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0, x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, t2_weighted = 0, Etot = 0, E2tot, EvEtot = 0, d1, d2;
+	std::vector<int> *cell_id, *cell_lay;
+	std::vector<double> *cell_x, *cell_y, *cell_z, *cell_l, *cell_adc1, *cell_tdc1, *cell_adc2, *cell_tdc2;
+	for(unsigned int j; j < vec_cell_tree->size(); j++){
+            cell_id->push_back(vec_cell_tree->at(j).id);
+            cell_x->push_back(vec_cell_tree->at(j).x);
+            cell_y->push_back(vec_cell_tree->at(j).y);
+            cell_z->push_back(vec_cell_tree->at(j).z);
+            cell_l->push_back(vec_cell_tree->at(j).l);
+            cell_adc1->push_back(vec_cell_tree->at(j).adc1);
+            cell_tdc1->push_back(vec_cell_tree->at(j).tdc1);
+            cell_adc2->push_back(vec_cell_tree->at(j).adc2);
+            cell_tdc2->push_back(vec_cell_tree->at(j).tdc2);
+            cell_lay->push_back(vec_cell_tree->at(j).lay);
+        }
+	int pc = 0;
+        int lentry = cell_id->size();
         int digits[lentry];
         std::vector<int> checked_array;
         int n_cluster = 0;
         int cluster[lentry];
         // Loop over event digits
         for (int j = 0; j < lentry; j++) {
-            digits[j] = cell_id->GetValue(j);
+            digits[j] = cell_id->at(j);
             //cout << digits[j] << " ";
         }
         //cout << endl;
@@ -114,14 +132,14 @@ void Preclustering(std::string input)
             std::vector<int> vec_cellid;
             for (std::vector<int>::const_iterator it = vec_cell.begin(); it != vec_cell.end(); it++) {
                 //std::cout << *it << ' ';    
-                vec_cellid.push_back(cell_id->GetValue(*it));
-                if (cell_tdc1->GetValue(*it) == 0 || cell_tdc2->GetValue(*it) == 0) {
+                vec_cellid.push_back(cell_id->at(*it));
+                if (cell_tdc1->at(*it) == 0 || cell_tdc2->at(*it) == 0) {
                     continue;
                 }   
                 else {
-                    d1 = DfromADC(cell_tdc1->GetValue(*it), cell_tdc2->GetValue(*it));
+                    d1 = DfromADC(cell_tdc1->at(*it), cell_tdc2->at(*it));
                     //cout << d1 << " ";
-                    if (cell_tdc1->GetValue(*it) <= cell_tdc2->GetValue(*it)) {
+                    if (cell_tdc1->at(*it) <= cell_tdc2->at(*it)) {
                         d2 = 0.5 * (4300 - d1);
                         d1 = 0.5 * (4300 + d1);
                     }
@@ -129,16 +147,16 @@ void Preclustering(std::string input)
                         d2 = 0.5 * (4300 - d1);
                         d1 = 0.5 * (4300 + d1);
                     }
-                    double cell_E = kloe_simu::EfromADC(cell_adc1->GetValue(*it), cell_adc2->GetValue(*it), d1, d2, cell_lay->GetValue(*it));
-                    double cell_T = kloe_simu::TfromTDC(cell_tdc1->GetValue(*it), cell_tdc2->GetValue(*it), cell_l->GetValue(*it));
+                    double cell_E = kloe_simu::EfromADC(cell_adc1->at(*it), cell_adc2->at(*it), d1, d2, cell_lay->at(*it));
+                    double cell_T = kloe_simu::TfromTDC(cell_tdc1->at(*it), cell_tdc2->at(*it), cell_l->at(*it));
                     t_weighted = t_weighted + cell_T * cell_E;
                     t2_weighted = t2_weighted + cell_T * cell_T * cell_E;
-                    x_weighted = x_weighted + (cell_x->GetValue(*it) * cell_E);
-                    x2_weighted = x2_weighted + (cell_x->GetValue(*it) * cell_x->GetValue(*it) * cell_E);
-                    y_weighted = y_weighted + (cell_y->GetValue(*it) * cell_E);
-                    y2_weighted = y2_weighted + (cell_y->GetValue(*it) * cell_y->GetValue(*it) * cell_E);
-                    z_weighted = z_weighted + (cell_z->GetValue(*it) * cell_E);
-                    z2_weighted = z2_weighted + (cell_z->GetValue(*it) * cell_z->GetValue(*it) * cell_E);
+                    x_weighted = x_weighted + (cell_x->at(*it) * cell_E);
+                    x2_weighted = x2_weighted + (cell_x->at(*it) * cell_x->at(*it) * cell_E);
+                    y_weighted = y_weighted + (cell_y->at(*it) * cell_E);
+                    y2_weighted = y2_weighted + (cell_y->at(*it) * cell_y->at(*it) * cell_E);
+                    z_weighted = z_weighted + (cell_z->at(*it) * cell_E);
+                    z2_weighted = z2_weighted + (cell_z->at(*it) * cell_z->at(*it) * cell_E);
                     Etot = Etot + cell_E;
                     E2tot = E2tot + cell_E * cell_E;
                 }
@@ -213,7 +231,7 @@ void Preclustering(std::string input)
         // Una qualche funzione che prende vec_clust e fa il merging
         // Una qualche funzione che prende il vec_clust merged e sputa fuori sx sy sz
         cout << "////" << endl;
-    }
+   
 //    out << "777" << endl;
 }
 
@@ -387,8 +405,9 @@ double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2,
 double DfromADC(double ta, double tb) {
     return 0.5 * (ta - tb) / kloe_simu::vlfb * kloe_simu::m_to_mm;
 }
-
+/*
 int main(){
     Preclustering("../Output_Test2.reco.root");
     return 0;
 }
+*/
