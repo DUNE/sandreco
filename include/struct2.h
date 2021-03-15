@@ -91,11 +91,6 @@ struct cluster2
   std::vector<dg_cell> cells;
 };
 
-struct cluster3
-{
-  std::vector<int> cells;
-};
-
 struct track
 {
   int tid;
