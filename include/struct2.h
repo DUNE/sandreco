@@ -88,7 +88,7 @@ struct cluster2
   double vary;
   double varz;
   double vart;
-  std::vector<int> cells;
+  std::vector<dg_cell> cells;
 };
 
 struct cluster3
