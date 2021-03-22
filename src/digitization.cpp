@@ -239,7 +239,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
   }
 }
 
-void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
+void TimeAndSignal(std::map<int, std::vector<double> >& time_pe, std::map<int, std::vector<int> > id_hit, 
                    std::map<int, double>& adc, std::map<int, double>& tdc)
 {
   /*
@@ -258,8 +258,30 @@ void TimeAndSignal(std::map<int, std::vector<double> >& time_pe,
 
   for (std::map<int, std::vector<double> >::iterator it = time_pe.begin();
        it != time_pe.end(); ++it) {
+
+///////////////////////////////////////
+    std::vector<int>& vidhit = id_hit.at(it->first);
+    std::vector<double>& vpetime = it->second;
+
+    std::vector<std::pair<double, int>> pairs;
+
+    for (unsigned int i = 0; i < vpetime.size(); i++)
+    {
+      pairs.push_back(std::make_pair(vpetime.at(i),vidhit.at(i)));
+    }
+
     // order by arrival time
-    std::sort(it->second.begin(), it->second.end());
+    std::sort(pairs.begin(), pairs.end(),
+              [](std::pair<double, int> p1, std::pair<double, int> p2) {
+                return p1.first < p2.first;
+              });
+
+    for (unsigned int i = 0; i < pairs.size(); i++) 
+    {
+      vpetime[i] = pairs.at(i).first;
+      vidhit[i] = pairs.at(i).second;
+    }
+///////////////////////////////////////
 
     int_start = it->second.front();
     pe_count = 0;
@@ -349,7 +371,7 @@ void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<cell>& vec_cell)
   if (debug) {
     std::cout << "TimeAndSignal" << std::endl;
   }
-  TimeAndSignal(time_pe, adc, tdc);
+  TimeAndSignal(time_pe, id_hit, adc, tdc);
   if (debug) {
     std::cout << "CollectSignal" << std::endl;
   }
