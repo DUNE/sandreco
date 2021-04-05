@@ -24,6 +24,7 @@ std::pair<int, int> Next(std::vector<int>, int[], int);
 void TrackFit(std::vector<cluster2>);
 std::vector<cluster2> Merge(std::vector<cluster2>);
 cluster2 Calc_variables(std::vector<dg_cell>);
+std::vector<cluster2> Split(cluster2 original_clust);
 
 double TfromTDC(double t1, double t2, double L);
 double AttenuationFactor(double d, int planeID);
@@ -467,6 +468,70 @@ std::pair<int, int> Next(std::vector<int> already_checked, int digits[], int siz
         }
     }
     return std::make_pair(next, entry);
+}
+
+std::vector<cluster2> Split(cluster2 original_clust)
+{   std::vector<cluster2> vec_cluster;
+    if(original_clust.vart > 5){
+        std::vector <dg_cell> all_cells, q1_cells, q2_cells, q3_cells, q4_cells;
+        all_cells = original_clust.cells;
+        double tA, tB, EAtot = 0, EBtot = 0, EA, EB;
+        for(int j=0; j<all_cells.size(); j++){
+        EA = all_cells.at(j).adc1;
+        EB = all_cells.at(j).adc2;
+        EAtot = EAtot + EA;
+        EBtot = EBtot + EB;
+        double d1 = DfromADC(all_cells.at(j).tdc1, all_cells.at(j).tdc2);
+        double d2;
+        if (all_cells.at(j).tdc1 <= all_cells.at(j).tdc2) {
+            d1 = 0.5 * (all_cells.at(j).l - d1);
+            d2 = 0.5 * (all_cells.at(j).l + d1);
+        }
+        else {
+            d2 = 0.5 * (all_cells.at(j).l - d1);
+            d1 = 0.5 * (all_cells.at(j).l + d1);
+        }
+        tA = tA + (all_cells.at(j).tdc1 - kloe_simu::vlfb *d1/ kloe_simu::m_to_mm) * EA;
+        tB = tB + (all_cells.at(j).tdc2 - kloe_simu::vlfb *d2/ kloe_simu::m_to_mm) * EB;
+        }
+        tA = tA/EAtot;
+        tB = tB/EAtot;
+        
+        for(unsigned int i =0; i < all_cells.size(); i++){
+           
+                double t_difA = all_cells.at(i).tdc1 - tA;
+                double t_difB = all_cells.at(i).tdc2 - tB;
+                if (t_difA > 0){
+                  if(t_difB > 0){q1_cells.push_back(all_cells.at(i));}
+                  else{q2_cells.push_back(all_cells.at(i));}
+                }
+                else{
+                  if(t_difB > 0){q3_cells.push_back(all_cells.at(i));}
+                  else{q4_cells.push_back(all_cells.at(i));}
+                }
+          
+        }
+        if(q1_cells.size() != 0){
+            cluster2 clus = Calc_variables(q1_cells);
+            vec_cluster.push_back(clus);
+        }
+        if(q2_cells.size() != 0){
+            cluster2 clus = Calc_variables(q2_cells);
+            vec_cluster.push_back(clus);
+        }
+        if(q3_cells.size() != 0){
+            cluster2 clus = Calc_variables(q3_cells);
+            vec_cluster.push_back(clus);
+        }
+        if(q4_cells.size() != 0){
+            cluster2 clus = Calc_variables(q4_cells);
+            vec_cluster.push_back(clus);
+        }
+        return vec_cluster;
+    }
+    else{  
+           vec_cluster.push_back(original_clust);
+           return vec_cluster;}
 }
 
 double kloe_simu::AttenuationFactor(double d, int planeID)
