@@ -24,7 +24,7 @@ std::pair<int, int> Next(std::vector<int>, int[], int);
 void TrackFit(std::vector<cluster2>);
 std::vector<cluster2> Merge(std::vector<cluster2>);
 cluster2 Calc_variables(std::vector<dg_cell>);
-std::vector<cluster2> Split(cluster2 original_clust);
+std::vector<cluster2> Split(std::vector<cluster2>);
 
 double TfromTDC(double t1, double t2, double L);
 double AttenuationFactor(double d, int planeID);
@@ -470,35 +470,48 @@ std::pair<int, int> Next(std::vector<int> already_checked, int digits[], int siz
     return std::make_pair(next, entry);
 }
 
-std::vector<cluster2> Split(cluster2 original_clust)
-{   std::vector<cluster2> vec_cluster;
-    if(original_clust.vart > 5){
-        std::vector <dg_cell> all_cells, q1_cells, q2_cells, q3_cells, q4_cells;
-        all_cells = original_clust.cells;
-        double tA, tB, EAtot = 0, EBtot = 0, EA, EB;
-        for(int j=0; j<all_cells.size(); j++){
-        EA = all_cells.at(j).adc1;
-        EB = all_cells.at(j).adc2;
-        EAtot = EAtot + EA;
-        EBtot = EBtot + EB;
-        double d1 = DfromADC(all_cells.at(j).tdc1, all_cells.at(j).tdc2);
-        double d2;
-        if (all_cells.at(j).tdc1 <= all_cells.at(j).tdc2) {
-            d1 = 0.5 * (all_cells.at(j).l - d1);
-            d2 = 0.5 * (all_cells.at(j).l + d1);
-        }
-        else {
-            d2 = 0.5 * (all_cells.at(j).l - d1);
-            d1 = 0.5 * (all_cells.at(j).l + d1);
-        }
-        tA = tA + (all_cells.at(j).tdc1 - kloe_simu::vlfb *d1/ kloe_simu::m_to_mm) * EA;
-        tB = tB + (all_cells.at(j).tdc2 - kloe_simu::vlfb *d2/ kloe_simu::m_to_mm) * EB;
+std::vector<cluster2> Split(std::vector<cluster2> original_clu_vec){
+    std::vector<cluster2> clu_vec;
+    std::vector <dg_cell> all_cells;
+    for(int k=0; k < original_clu_vec.size(); k++){
+        double tA = 0, tB = 0, tA2 = 0, tB2 = 0;
+        double EA, EB, EAtot = 0, EBtot = 0, EA2tot = 0, EB2tot = 0;
+        double tRMS_A, tRMS_B, dist;
+        all_cells = original_clu_vec.at(k).cells;
+        for(int j=0; j < all_cells.size(); j++){
+            EA = all_cells.at(j).adc1;
+            EB = all_cells.at(j).adc2;
+            EAtot += EA;
+            EA2tot += EA * EA;
+            EBtot += EB;
+            EB2tot += EB * EB;
+            double d1 = DfromADC(all_cells.at(j).tdc1, all_cells.at(j).tdc2);
+            double d2;
+            if (all_cells.at(j).tdc1 <= all_cells.at(j).tdc2) {
+                d1 = 0.5 * (all_cells.at(j).l - d1);
+                d2 = 0.5 * (all_cells.at(j).l + d1);
+            }
+            else {
+                d2 = 0.5 * (all_cells.at(j).l - d1);
+                d1 = 0.5 * (all_cells.at(j).l + d1);
+            }
+            tA += (all_cells.at(j).tdc1 - kloe_simu::vlfb *d1/ kloe_simu::m_to_mm) * EA;
+            tA2 += std::pow( all_cells.at(j).tdc1 - kloe_simu::vlfb *d1/ kloe_simu::m_to_mm, 2) * EA;
+            tB += (all_cells.at(j).tdc2 - kloe_simu::vlfb *d2/ kloe_simu::m_to_mm) * EB;
+            tB2 += std::pow(all_cells.at(j).tdc2 - kloe_simu::vlfb *d2/ kloe_simu::m_to_mm, 2) * EB;
         }
         tA = tA/EAtot;
+        tA2 = tA2/EAtot;
         tB = tB/EAtot;
+        tB2 = tB2/EBtot;
+        tRMS_A = (tA2 - tA*tA) * (EA2tot - EAtot*EAtot)/EA2tot;
+        tRMS_B = (tB2 - tB*tB) * (EB2tot - EBtot*EBtot)/EB2tot;
+        dist = std::sqrt(tRMS_A * tRMS_A + tRMS_B * tRMS_B);
         
-        for(unsigned int i =0; i < all_cells.size(); i++){
-           
+        
+        if(dist > 5){
+            std::vector <dg_cell> q1_cells, q2_cells, q3_cells, q4_cells;        
+            for(unsigned int i =0; i < all_cells.size(); i++){     
                 double t_difA = all_cells.at(i).tdc1 - tA;
                 double t_difB = all_cells.at(i).tdc2 - tB;
                 if (t_difA > 0){
@@ -508,30 +521,36 @@ std::vector<cluster2> Split(cluster2 original_clust)
                 else{
                   if(t_difB > 0){q3_cells.push_back(all_cells.at(i));}
                   else{q4_cells.push_back(all_cells.at(i));}
-                }
-          
+                }          
+            }
+            if(q1_cells.size() != 0){
+                cluster2 clus = Calc_variables(q1_cells);
+                clu_vec.push_back(clus);
+            }
+            if(q2_cells.size() != 0){
+                cluster2 clus = Calc_variables(q2_cells);
+                clu_vec.push_back(clus);
+            }
+            if(q3_cells.size() != 0){
+                cluster2 clus = Calc_variables(q3_cells);
+                clu_vec.push_back(clus);
+            }
+            if(q4_cells.size() != 0){
+                cluster2 clus = Calc_variables(q4_cells);
+                clu_vec.push_back(clus);
+            }
+            q1_cells.clear();
+            q2_cells.clear();
+            q3_cells.clear();
+            q4_cells.clear();            
         }
-        if(q1_cells.size() != 0){
-            cluster2 clus = Calc_variables(q1_cells);
-            vec_cluster.push_back(clus);
+        else{  
+           clu_vec.push_back(original_clu_vec.at(k));  
         }
-        if(q2_cells.size() != 0){
-            cluster2 clus = Calc_variables(q2_cells);
-            vec_cluster.push_back(clus);
-        }
-        if(q3_cells.size() != 0){
-            cluster2 clus = Calc_variables(q3_cells);
-            vec_cluster.push_back(clus);
-        }
-        if(q4_cells.size() != 0){
-            cluster2 clus = Calc_variables(q4_cells);
-            vec_cluster.push_back(clus);
-        }
-        return vec_cluster;
+        all_cells.clear();        
     }
-    else{  
-           vec_cluster.push_back(original_clust);
-           return vec_cluster;}
+    original_clu_vec.clear();
+    return clu_vec;
 }
 
 double kloe_simu::AttenuationFactor(double d, int planeID)
