@@ -14,6 +14,27 @@
 #include <iostream>
 #include "transf.h"
 
+namespace kloe_simu
+{
+  double cellCoordBarrel[nMod][nLay][nCel][3];
+  double cellCoordEndcap[5][nLay][90][3];
+
+  double czlay[nLay];
+  double cxlay[nLay][nCel];
+  double ec_r;
+  double ec_dz;
+
+  double stt_center[3];
+
+  TPRegexp* rST;
+  TPRegexp* rSTplane;
+
+  std::map<int, std::map<double, int> > stX;
+  std::map<int, double> stL;
+  std::map<int, std::map<int, TVector2> > stPos;
+  std::map<int, TVector2> tubePos;
+  std::map<int, double> t0;
+} 
 
 bool kloe_simu::isPeBefore(const pe& p1, const pe& p2)
 {

@@ -46,39 +46,39 @@ const int nCel = 12;
 const int nCel_ec = 90;
 
 // ecal dimension for fluka
-static const double xmin_f = 262.55;
-static const double xmax_f = 292.85;
-static const double dz_f = 115.0;
+const double xmin_f = 262.55;
+const double xmax_f = 292.85;
+const double dz_f = 115.0;
 
-static const double ec_rf = 2000.0;  // ad essere precisi nella realtà è 1980
-static const double ec_dzf = 115.0;
-static const double lCalBarrel = 4300;
+const double ec_rf = 2000.0;  // ad essere precisi nella realtà è 1980
+const double ec_dzf = 115.0;
+const double lCalBarrel = 4300;
 
-double kloe_int_R_f = 2000.;
-double kloe_int_dx_f = 1690.;
+const double kloe_int_R_f = 2000.;
+const double kloe_int_dx_f = 1690.;
 
 // coordinates of the cells for FLUKA
-double cellCoordBarrel[nMod][nLay][nCel][3];
-double cellCoordEndcap[5][nLay][90][3];
+extern double cellCoordBarrel[nMod][nLay][nCel][3];
+extern double cellCoordEndcap[5][nLay][90][3];
 
 // thickness of the layers in mm
-double dzlay[nLay] = {44., 44., 44., 44., 54.};
-double czlay[nLay];
-double cxlay[nLay][nCel];
+const double dzlay[nLay] = {44., 44., 44., 44., 54.};
+extern double czlay[nLay];
+extern double cxlay[nLay][nCel];
 
-double ec_r;
-double ec_dz;
+extern double ec_r;
+extern double ec_dz;
 
 /*
 ////////////////////////////////////////////////////////////////////////
 // geometry v0
-const char* path_barrel_template =
+const char* const path_barrel_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
-const char* path_endcapL_template =
+const char* const path_endcapL_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
-const char* path_endcapR_template =
+const char* const path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 //////////////////////////////////////////////////////////////////////////
@@ -86,30 +86,30 @@ const char* path_endcapR_template =
 
 ////////////////////////////////////////////////////////////////////////
 // geometry v1
-const char* path_barrel_template =
+const char* const path_barrel_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
-const char* path_endcapL_template =
+const char* const path_endcapL_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
-const char* path_endcapR_template =
+const char* const path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 //////////////////////////////////////////////////////////////////////////
 
-const char* path_internal_volume =
+const char* const path_internal_volume =
     "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
     "MagIntVol_volume_PV_0/volSTTLAR_PV_0/";
-const char* name_internal_volume = "volSTTLAR_PV";
+const char* const name_internal_volume = "volSTTLAR_PV";
 
-const char* rST_string =
+const char* const rST_string =
     "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
     "0-9]+)";
-const char* rSTplane_string =
+const char* const rSTplane_string =
     "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
 
-TPRegexp* rST;
-TPRegexp* rSTplane;
+extern TPRegexp* rST;
+extern TPRegexp* rSTplane;
 
 const double tscin = 3.08;
 const double tscex = 0.588;
@@ -194,7 +194,7 @@ const double emk = 1.;
 const double hadk = 1.;
 
 // STT
-double stt_center[3];
+extern double stt_center[3];
 const double stt_int_time = 400.;     // ns
 const double bucket_rms = 1.;         // ns
 const double wire_radius = 0.02;      // mm
@@ -202,11 +202,11 @@ const double v_drift = 0.05;          // mm/ns
 const double v_signal_inwire = 200.;  // mm/ns
 const double tm_stt_smearing = 3.5;   // ns
 
-std::map<int, std::map<double, int> > stX;
-std::map<int, double> stL;
-std::map<int, std::map<int, TVector2> > stPos;
-std::map<int, TVector2> tubePos;
-std::map<int, double> t0;
+extern std::map<int, std::map<double, int> > stX;
+extern std::map<int, double> stL;
+extern std::map<int, std::map<int, TVector2> > stPos;
+extern std::map<int, TVector2> tubePos;
+extern std::map<int, double> t0;
 
 bool isPeBefore(const pe& p1, const pe& p2);
 bool isCluBigger(const std::vector<dg_tube>& v1,
