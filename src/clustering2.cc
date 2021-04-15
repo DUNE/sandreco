@@ -100,12 +100,12 @@ std::pair<std::vector<cluster2>, std::vector<cluster2>> Preclustering(std::vecto
     cout << endl;
     //cout << "--------------------------" << endl;
     //Track Fit
+    TrackFit(vec_clust);
     std::vector<cluster2> Og_clus = vec_clust;
-    //vec_clust = RecoverIncomplete(vec_clust, incomplete_cells);
+    vec_clust = RecoverIncomplete(vec_clust, incomplete_cells);
     for (int cl = 0; cl < vec_clust.size(); cl++) {
         //Clust_info(vec_clust.at(cl));
     }
-    TrackFit(vec_clust);
     return std::make_pair(vec_clust, Og_clus);
 }
 
@@ -116,8 +116,8 @@ int Testing(std::string input) {
     int TotHits = t->GetEntries();
     std::vector<dg_cell>* cell = new std::vector<dg_cell>;
     std::vector<cluster2> clust, og_clust;
-    TH1F* ClusterEnergy = new TH1F("ClusterEnergy", "Total Energy reconstructed in the ECal", 100, 0., 1500.);
-    TH1F* Og_ClusterEnergy = new TH1F("ClusterEnergy", "Total Energy reconstructed-corrected in the ECal", 100, 0., 1500.);
+    TH1F* ClusterEnergy = new TH1F("ClusterEnergy", "Total Energy reconstructed in the ECal", 100, 0., 3000.);
+    TH1F* Og_ClusterEnergy = new TH1F("ClusterEnergy", "Total Energy reconstructed-corrected in the ECal", 100, 0., 3000.);
     TH1F* Xdistri = new TH1F("Xdistribution", "X distribution", 100, -2150., 2150.);
     t->SetBranchAddress("dg_cell", &cell);
     for (int i = 0; i < TotHits; i++) {
@@ -159,33 +159,40 @@ std::vector<cluster2> RecoverIncomplete(std::vector<cluster2> clus, std::vector<
         for (int j = 0; j < clus.size(); j++) {
             double rec_en = 0;
             double clus_phi = atan((clus.at(j).z - 23910.00) / (clus.at(j).y + 2384.73)) * 180 / 3.14159265358979323846;
-            if (abs(cell_phi - clus_phi) < 3) {
-                //cout << "Aggiungere la cella " << incomplete_cells.at(i).id << " al cluster " << j << endl;
-                double DpmA = 215;
-                double DpmB = 215;
+            if (abs(cell_phi - clus_phi) < 3 || abs(clus_phi)!=90) {
+                cout << "Aggiungere la cella " << incomplete_cells.at(i).id << " al cluster " << j << endl;
+                double DpmA = clus.at(j).x/10+215;
+                double DpmB = -clus.at(j).x/10+215;
+                cout << "DpmA " << DpmA << " DpmB  " << DpmB << endl;
                 double AttA = 0.75 * exp(-DpmA / 450) + 0.35 * exp(-DpmA / 50);
                 double AttB = 0.75 * exp(-DpmB / 450) + 0.35 * exp(-DpmB / 50);
                 double Scala = 0.75 * exp(-215 / 450) + 0.35 * exp(-215 / 50);
                 AttA = Scala * 0.9 / (AttA * 0.96);
                 AttB = Scala * 0.9 / (AttB * 0.96);
+                cout << "AttA " << AttA << " AttB " << AttB << endl;
+                cout << "Cluster [Y,Z]= [" << clus.at(j).y << "," << clus.at(j).z << "] vs Cell [Y,Z]= [" << incomplete_cells.at(i).y << ", " << incomplete_cells.at(i).z << "]" << endl;
+                cout << "Cluster Energy Pre: " << clus.at(j).e << endl;
                 if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).adc2) {
-                    rec_en = (incomplete_cells.at(i).adc1 * AttA + incomplete_cells.at(i).adc2 * AttB) / 0.290;
-                    //cout << "EA e EB > 0, rec_En " << rec_en << endl;
+                    double Ea = incomplete_cells.at(i).adc1;
+                    double Eb = incomplete_cells.at(i).adc2;
+                    rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, incomplete_cells.at(i).lay);
+                    cout << "EA e EB > 0, rec_En " << rec_en << endl;
                     clus.at(j).e = clus.at(j).e + rec_en;
                     clus.at(j).cells.push_back(incomplete_cells.at(i));
                 }
                 else if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).tdc1) {
                     rec_en = incomplete_cells.at(i).adc1 * AttA/0.145;
-                    //cout << "EA > 0, rec_En " << rec_en << endl;
+                    cout << "EA > 0, rec_En " << rec_en << endl;
                     clus.at(j).e = clus.at(j).e + rec_en;
                     clus.at(j).cells.push_back(incomplete_cells.at(i));
                 }
                 else if (incomplete_cells.at(i).adc2 != 0 && incomplete_cells.at(i).tdc2) {
                     rec_en = incomplete_cells.at(i).adc2 * AttB / 0.145;
-                    //cout << "EB > 0, rec_En " << rec_en << endl;
+                    cout << "EB > 0, rec_En " << rec_en << endl;
                     clus.at(j).e = clus.at(j).e + rec_en;
                     clus.at(j).cells.push_back(incomplete_cells.at(i));
                 }
+                cout << "Cluster Energy Post: " << clus.at(j).e << endl;
                 continue;
             }
         }
