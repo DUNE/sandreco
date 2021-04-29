@@ -260,8 +260,10 @@ void Clust_info(cluster clus) {
     cout << "=O=O=O=O=O=O=O=O=O=O=O=O=O" << endl;
     cout << "New cluster: Energy " << clus.e << " MeV" << endl;
     cout << "Coordinate centroide: " << clus.x << " [X] " << clus.y << " [Y] " << clus.z << " [z] e tempo di arrivo medio " << clus.t << " ns" << endl;
+    cout << "Varianza: " << clus.varx << " [X] " << clus.vary << " [Y] " << clus.varz << " [z]"<< endl;
+
     double phi = atan((clus.z - 23910.00)/ (clus.y + 2384.73)) * 180 / 3.14159265358979323846;
-    cout << "Angolo azimutale: " << phi << endl;
+    //cout << "Angolo azimutale: " << phi << endl;
     cout << "Composto dalle seguenti celle: ";
     for (int i = 0; i < clus.cells.size(); i++) {
         cout << clus.cells.at(i).id << " ";
@@ -732,9 +734,6 @@ cluster Calc_variables(std::vector<dg_cell> cells)
         d1 = 0.5 * cells[j].l + d;
         d2 = 0.5 * cells[j].l - d;
         double cell_E = kloe_simu::EfromADC(cells[j].adc1, cells[j].adc2, d1, d2, cells[j].lay);
-        if (cell_E > 100000) {
-            cout << "Ecco il baco: adc1: " << cells[j].tdc1 << " adc2: " << cells[j].tdc2 << " d1: "<<d1<<" d2: "<<d2<<" d "<<d<<endl;
-        }
         double cell_T = kloe_simu::TfromTDC(cells[j].tdc1, cells[j].tdc2, cells[j].l);
         if (cells[j].mod > 25) {
             d3 = cells[j].y - d;
@@ -761,20 +760,29 @@ cluster Calc_variables(std::vector<dg_cell> cells)
         E2tot = E2tot + cell_E * cell_E;
     }
     x_weighted = x_weighted / Etot;
+    x2_weighted = x2_weighted / Etot;
     y_weighted = y_weighted / Etot;
+    y2_weighted = y2_weighted / Etot;
     z_weighted = z_weighted / Etot;
+    z2_weighted = z2_weighted / Etot;
     t_weighted = t_weighted / Etot;
     if (x_weighted > -0.000001 && x_weighted < 0.000001) x_weighted = 0;
     if (y_weighted > -0.000001 && y_weighted < 0.000001) y_weighted = 0;
     if (z_weighted > -0.000001 && z_weighted < 0.000001) z_weighted = 0;
-    double dx, dy, dz, ta, tb;
-    double neff = -1;
+    double dx, dy, dz;
+    //double neff = -1;
+    double neff = Etot * Etot / E2tot;
     double dum = neff / (neff - 1);
-    if (neff == 1 && cells.size() == 1) {
+    if (cells.size() == 1) {
         dx = 0;
         dy = 0;
         dz = 0;
     }
+    /*if (neff == 1) {
+        dx = 0;
+        dy = 0;
+        dz = 0;
+    }*/
     else {
         if (x2_weighted - x_weighted * x_weighted < 0) {
             dx = 0;
