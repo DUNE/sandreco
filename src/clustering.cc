@@ -37,13 +37,16 @@ double DfromADC(double, double);
 std::vector<cluster> Preclustering(std::vector<dg_cell> *vec_cellraw) {
     int dg_size=vec_cellraw->size();
     int dg_idvec[dg_size],i_id=0;
-    std::vector<dg_cell> incomplete_cells, complete_cells;
+    std::vector<dg_cell> incomplete_cells, complete_cells, weird_cells;
     std::vector<cluster> vec_clust;
     //Create vector of complete and incomplete cells
     for (int i = 0; i < vec_cellraw->size(); i++) {
         if (vec_cellraw->at(i).adc1 == 0 || vec_cellraw->at(i).adc2 == 0 || vec_cellraw->at(i).tdc1 == 0 || vec_cellraw->at(i).tdc1 == 0) {
             //Incomplete cell
             incomplete_cells.push_back(vec_cellraw->at(i));
+        }
+        if (abs(vec_cellraw->at(i).tdc1 - vec_cellraw->at(i).tdc2) > 30) {
+            weird_cells.push_back(vec_cellraw->at(i));
         }
         else {
             //Complete cell
@@ -92,16 +95,10 @@ std::vector<cluster> Preclustering(std::vector<dg_cell> *vec_cellraw) {
     vec_clust = Split(vec_clust);
     //MERGE
     vec_clust = Merge(vec_clust);
-    //for (int cl = 0; cl < vec_clust.size(); cl++) {
-    //    Clust_info(vec_clust.at(cl));
-    //}
     //Track Fit
     vec_clust=TrackFit(vec_clust);
     //std::vector<cluster> Og_clus = vec_clust;
     vec_clust = RecoverIncomplete(vec_clust, incomplete_cells);
-    for (int cl = 0; cl < vec_clust.size(); cl++) {
-        Clust_info(vec_clust.at(cl));
-    }
     return vec_clust;
 }
 
@@ -735,6 +732,9 @@ cluster Calc_variables(std::vector<dg_cell> cells)
         d1 = 0.5 * cells[j].l + d;
         d2 = 0.5 * cells[j].l - d;
         double cell_E = kloe_simu::EfromADC(cells[j].adc1, cells[j].adc2, d1, d2, cells[j].lay);
+        if (cell_E > 100000) {
+            cout << "Ecco il baco: adc1: " << cells[j].tdc1 << " adc2: " << cells[j].tdc2 << " d1: "<<d1<<" d2: "<<d2<<" d "<<d<<endl;
+        }
         double cell_T = kloe_simu::TfromTDC(cells[j].tdc1, cells[j].tdc2, cells[j].l);
         if (cells[j].mod > 25) {
             d3 = cells[j].y - d;
