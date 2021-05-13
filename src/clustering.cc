@@ -32,6 +32,7 @@ cluster Calc_variables(std::vector<dg_cell>);
 double TfromTDC(double t1, double t2, double L);
 double AttenuationFactor(double d, int planeID);
 double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
+double EfromADCsingle(double adc, double f);
 double DfromADC(double, double);
 
 std::vector<cluster> Preclustering(std::vector<dg_cell> *vec_cellraw) {
@@ -109,8 +110,6 @@ int Testing(std::string input) {
     int TotHits = t->GetEntries();
     std::vector<dg_cell>* cell = new std::vector<dg_cell>;
     std::vector<cluster> f_clust, og_clust;
-    TH1F* ClusterEnergy = new TH1F("ClusterEnergy", "Total Energy reconstructed in the ECal;Energy [MeV];Entries/bins", 100, 0., 1500.);
-    TH1F* Xdistri = new TH1F("Xdistribution", "X distribution", 100, -2150., 2150.);
     TString output = input;
     output.ReplaceAll(".root", ".Clusters.root");
     TFile fout(output, "RECREATE");
@@ -122,14 +121,6 @@ int Testing(std::string input) {
         cout << "Entry " << i << endl;
         t->GetEntry(i);
         std::vector<cluster> clust=Preclustering(cell);
-        double CluEn = 0, Og_CluEn=0, Xdis=0;
-        for (int j = 0; j < clust.size(); j++) {
-            CluEn = CluEn + clust.at(j).e;
-            Xdis = Xdis + clust.at(j).x *clust.at(j).e;
-        }
-        Xdis = Xdis / CluEn;
-        ClusterEnergy->Fill(CluEn);
-        Xdistri->Fill(Xdis);
         f_clust = clust;
         tout.Fill();
         clust.clear();
@@ -139,12 +130,6 @@ int Testing(std::string input) {
     fout.cd();
     tout.Write();
     fout.Close();
-    ClusterEnergy->SetDirectory(gROOT);
-    Xdistri->SetDirectory(gROOT);
-    //ClusterEnergy->SetFillColor(kBlue);
-    ClusterEnergy->SetLineColorAlpha(kBlue, 1);
-    ClusterEnergy->Draw();
-    //Xdistri->Draw();
     return 0;
 }
 
@@ -155,7 +140,6 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus, std::vector<dg
         if (incomplete_cells.at(i).mod == 40) isbarrel = 2;
         double cell_phi = atan((incomplete_cells.at(i).z - 23910.00) / (incomplete_cells.at(i).y + 2384.73)) * 180 / 3.14159265358979323846;
         double cell_theta = atan((incomplete_cells.at(i).z - 23910.00) / (incomplete_cells.at(i).x + 2384.73)) * 180 / 3.14159265358979323846;
-        //if (isbarrel != 0) cout << "ANGOLO Theta: " << cell_theta << " su EC " << isbarrel << endl;
         int minentry = 0;
         int found = 0;
         for (int j = 0; j < clus.size(); j++) {
@@ -185,72 +169,56 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus, std::vector<dg
         }
         if (found == 1 && isbarrel == 0) {
             double rec_en = 0;
-            //cout << "Aggiungere la cella " << incomplete_cells.at(i).id << " al cluster " << minentry << endl;
             double DpmA = clus.at(minentry).x / 10 + 215;
             double DpmB = -clus.at(minentry).x / 10 + 215;
-            //cout << "DpmA " << DpmA << " DpmB  " << DpmB << endl;
-            //cout << "Cluster [Y,Z]= [" << clus.at(minentry).y << "," << clus.at(minentry).z << "] vs Cell [Y,Z]= [" << incomplete_cells.at(i).y << ", " << incomplete_cells.at(i).z << "]" << endl;
-            //cout << "Cluster Energy Pre: " << clus.at(minentry).e << endl;
             if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).adc2 != 0) {
                 double Ea = incomplete_cells.at(i).adc1;
                 double Eb = incomplete_cells.at(i).adc2;
                 rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, incomplete_cells.at(i).lay);
-                //cout << "EA e EB > 0, rec_En " << rec_en << endl;
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
             else if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).tdc1) {
                 int laycell = incomplete_cells.at(i).lay;
                 double f = kloe_simu::AttenuationFactor(DpmA, laycell);
-                rec_en = incomplete_cells.at(i).adc1 / f * kloe_simu::adc2MeV;
-                //cout << "EA > 0, rec_En " << rec_en << " adc visti: " << incomplete_cells.at(i).adc1 << endl;
+                rec_en = EfromADCsingle(incomplete_cells.at(i).adc1, f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
             else if (incomplete_cells.at(i).adc2 != 0 && incomplete_cells.at(i).tdc2) {
                 int laycell = incomplete_cells.at(i).lay;
                 double f = kloe_simu::AttenuationFactor(DpmB, laycell);
-                rec_en = incomplete_cells.at(i).adc2 / f * kloe_simu::adc2MeV;
-                //cout << "EB > 0, rec_En " << rec_en << " adc visti: " << incomplete_cells.at(i).adc2 << endl;
+                rec_en = EfromADCsingle(incomplete_cells.at(i).adc2, f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
-            //cout << "Cluster Energy Post: " << clus.at(minentry).e << endl;
         }
         if (found == 1 && isbarrel != 0) {
             double rec_en = 0;
-            //cout << "Aggiungere la cella " << incomplete_cells.at(i).id << " al cluster " << minentry << endl;
             double ecl = incomplete_cells.at(i).l;
             double DpmA = clus.at(minentry).z / 10 + ecl/20;
             double DpmB = -clus.at(minentry).z / 10 + ecl / 20;
-            //cout << "DpmA " << DpmA << " DpmB  " << DpmB << endl;
-            //cout << "Cluster [X,Z]= [" << clus.at(minentry).x << "," << clus.at(minentry).z << "] vs Cell [X,Z]= [" << incomplete_cells.at(i).x << ", " << incomplete_cells.at(i).z << "]" << endl;
-            //cout << "Cluster Energy Pre: " << clus.at(minentry).e << endl;
             if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).adc2 != 0) {
                 double Ea = incomplete_cells.at(i).adc1;
                 double Eb = incomplete_cells.at(i).adc2;
                 rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, incomplete_cells.at(i).lay);
-            //    cout << "EA e EB > 0, rec_En " << rec_en << endl;
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
             else if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).tdc1) {
                 int laycell = incomplete_cells.at(i).lay;
                 double f = kloe_simu::AttenuationFactor(DpmA, laycell);
-                rec_en = incomplete_cells.at(i).adc1 / f * kloe_simu::adc2MeV;
-                //cout << "EA > 0, rec_En " << rec_en << " adc visti: " << incomplete_cells.at(i).adc1 << endl;
+                rec_en = EfromADCsingle(incomplete_cells.at(i).adc1, f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
             else if (incomplete_cells.at(i).adc2 != 0 && incomplete_cells.at(i).tdc2) {
                 int laycell = incomplete_cells.at(i).lay;
                 double f = kloe_simu::AttenuationFactor(DpmB, laycell);
-                rec_en = incomplete_cells.at(i).adc2 / f * kloe_simu::adc2MeV;
-                //cout << "EB > 0, rec_En " << rec_en << " adc visti: " << incomplete_cells.at(i).adc2 << endl;
+                rec_en = EfromADCsingle(incomplete_cells.at(i).adc2, f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
-            //cout << "Cluster Energy Post: " << clus.at(minentry).e << endl;
         }
     }
     return clus;
@@ -263,7 +231,6 @@ void Clust_info(cluster clus) {
     cout << "Varianza: " << clus.varx << " [X] " << clus.vary << " [Y] " << clus.varz << " [z]"<< endl;
 
     double phi = atan((clus.z - 23910.00)/ (clus.y + 2384.73)) * 180 / 3.14159265358979323846;
-    //cout << "Angolo azimutale: " << phi << endl;
     cout << "Composto dalle seguenti celle: ";
     for (int i = 0; i < clus.cells.size(); i++) {
         cout << clus.cells.at(i).id << " ";
@@ -275,9 +242,7 @@ void Clust_info(cluster clus) {
 std::vector<cluster> Split(std::vector<cluster> original_clu_vec) {
     std::vector<cluster> clu_vec;
     std::vector <dg_cell> all_cells;
-    //cout << "Presplit size: " << original_clu_vec.size() << endl;
     for (int k = 0; k < original_clu_vec.size(); k++) {
-        //cout << "Cluster " << k << " con " << original_clu_vec.at(k).cells.size() << " celle ed energia " << original_clu_vec.at(k).e << endl;
         int splitted = 0;
         double tA = 0, tB = 0, tA2 = 0, tB2 = 0;
         double EA, EB, EAtot = 0, EBtot = 0, EA2tot = 0, EB2tot = 0;
@@ -295,16 +260,6 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec) {
             d1 = 0.5 * all_cells[j].l + d;
             d2 = 0.5 * all_cells[j].l - d;
             double cell_E = kloe_simu::EfromADC(all_cells[j].adc1, all_cells[j].adc2, d1, d2, all_cells[j].lay);
-            //double d1 = DfromADC(all_cells.at(j).tdc1, all_cells.at(j).tdc2);
-            //double d2;
-            //if (all_cells.at(j).tdc1 <= all_cells.at(j).tdc2) {
-            //    d1 = 0.5 * (all_cells.at(j).l - d1);
-            //    d2 = 0.5 * (all_cells.at(j).l + d1);
-           // }
-            //else {
-             //   d2 = 0.5 * (all_cells.at(j).l - d1);
-             //   d1 = 0.5 * (all_cells.at(j).l + d1);
-            //}
             tA += (all_cells.at(j).tdc1 - kloe_simu::vlfb * d1 / kloe_simu::m_to_mm) * EA;
             tA2 += std::pow(all_cells.at(j).tdc1 - kloe_simu::vlfb * d1 / kloe_simu::m_to_mm, 2) * EA;
             tB += (all_cells.at(j).tdc2 - kloe_simu::vlfb * d2 / kloe_simu::m_to_mm) * EB;
@@ -332,34 +287,25 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec) {
                 }
             }
             if (q1_cells.size() != 0) {
-                //cout << "Splitting su quadrante 1" << endl;
                 cluster clus = Calc_variables(q1_cells);
-                //cout << "SPLIT: Cluster con " << clus.cells.size() << " celle ed energia " << clus.e << endl;
                 clu_vec.push_back(clus);
                 splitted++;
             }
             if (q2_cells.size() != 0) {
-                //cout << "Splitting su quadrante 2" << endl;
                 cluster clus = Calc_variables(q2_cells);
-                //cout << "SPLIT: Cluster con " << clus.cells.size() << " celle ed energia " << clus.e << endl;
                 clu_vec.push_back(clus);
                 splitted++;
             }
             if (q3_cells.size() != 0) {
-                //cout << "Splitting su quadrante 3" << endl;
                 cluster clus = Calc_variables(q3_cells);
-                //cout << "SPLIT: Cluster con " << clus.cells.size() << " celle ed energia " << clus.e << endl;
                 clu_vec.push_back(clus);
                 splitted++;
             }
             if (q4_cells.size() != 0) {
-                //cout << "Splitting su quadrante 4" << endl;
                 cluster clus = Calc_variables(q4_cells);
-                //cout << "SPLIT: Cluster con " << clus.cells.size() << " celle ed energia " << clus.e << endl;
                 clu_vec.push_back(clus);
                 splitted++;
             }
-            //if (splitted >2) cout << "We got " << splitted << " splits." << endl;
             q1_cells.clear();
             q2_cells.clear();
             q3_cells.clear();
@@ -367,12 +313,10 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec) {
         }
         else {
             clu_vec.push_back(original_clu_vec.at(k));
-            //cout << "// Cluster con " << original_clu_vec.at(k).cells.size() << " celle ed energia " << original_clu_vec.at(k).e << endl;
         }
         all_cells.clear();
     }
     original_clu_vec.clear();
-    //cout << "Post-Split size: " << clu_vec.size() << endl;
     return clu_vec;
 }
 
@@ -418,14 +362,10 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster) {
                     endcap = true;
                 }
                 if (endcap == true) {
-                    //siamo sull'endcap
                     double Dz_ec = abs(yi - yj);
                     D = sqrt((xi - xj) * (xi - xj) + (zi - zj) * (zi - zj));
                     if (Dz_ec < 30 && D < 40) {
-                        //Unisce il cluster j ad i
-                        //cout << "Unire il cluster j ad i .2 endcap" << endl;
                         std::vector<dg_cell> vec_cells_j = Og_cluster.at(j).cells;
-                        //loop su vec_cells_j e push_back su clust_cells
                         for (int k = 0; k < vec_cells_j.size(); k++) {
                             clust.cells.push_back(vec_cells_j.at(k));
                         }
@@ -437,10 +377,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster) {
                     double Dz_bar = abs(xi - xj);
                     D = sqrt((zi - zj) * (zi - zj) + (yi - yj) * (yi - yj));
                     if (Dz_bar < 30 && D < 40) {
-                        //Unisce il cluster j ad i
-                        //cout << "Unire il cluster j ad i .3 barrel" << endl;
                         std::vector<dg_cell> vec_cells_j = Og_cluster.at(j).cells;
-                        //loop su vec_cells_j e push_back su clust_cells
                         for (int k = 0; k < vec_cells_j.size(); k++) {
                             clust.cells.push_back(vec_cells_j.at(k));
                         }
@@ -452,7 +389,6 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster) {
         }
         mgd_cluster.push_back(clust);
     }
-    //cout << "Post-Merge size: " << mgd_cluster.size() << endl;
     return mgd_cluster;
 }
 
@@ -463,23 +399,18 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
         std::vector<dg_cell> cell_vec_0, cell_vec_1, cell_vec_2, cell_vec_3, cell_vec_4;
         for (int j = 0; j < clu_vec.at(i).cells.size(); j++) {
             if (clu_vec.at(i).cells.at(j).lay == 0) {
-                //aggiungere la cella al layer 0
                 cell_vec_0.push_back(clu_vec.at(i).cells.at(j));
             }
             else if (clu_vec.at(i).cells.at(j).lay == 1) {
-                //aggiungere la cella al layer 1
                 cell_vec_1.push_back(clu_vec.at(i).cells.at(j));
             }
             else if (clu_vec.at(i).cells.at(j).lay == 2) {
-                //aggiungere la cella al layer 2
                 cell_vec_2.push_back(clu_vec.at(i).cells.at(j));
             }
             else if (clu_vec.at(i).cells.at(j).lay == 3) {
-                //aggiungere la cella al layer 3
                 cell_vec_3.push_back(clu_vec.at(i).cells.at(j));
             }
             else if (clu_vec.at(i).cells.at(j).lay == 4) {
-                //aggiungere la cella al layer 4
                 cell_vec_4.push_back(clu_vec.at(i).cells.at(j));
             }
         }
@@ -501,9 +432,6 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
             lay_cross++;
             if (lay_cross == 1) {
                 first_lay = 1;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
-                //cout << Lay0.x << " " << Lay0.y << " " << Lay0.z << endl;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
             }
             yx[lay_cross-1] = Lay0.x;
             wx[lay_cross - 1] = 0.6;
@@ -528,9 +456,6 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
             wz[lay_cross - 1] = 0.6;
             if (lay_cross == 1) {
                 first_lay = 2;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
-                //cout << Lay1.x << " " << Lay1.y << " " << Lay1.z << endl;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
             }
             if (isBarrel == false) {
                 wz[lay_cross - 1] = wx[lay_cross - 1];
@@ -550,9 +475,6 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
             wz[lay_cross - 1] = 0.6;
             if (lay_cross == 1) {
                 first_lay = 3;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
-                //cout << Lay2.x << " " << Lay2.y << " " << Lay2.z << endl;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
             }
             if (isBarrel == false) {
                 wz[lay_cross - 1] = wx[lay_cross - 1];
@@ -573,9 +495,6 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
             wz[lay_cross - 1] = 0.6;
             if (lay_cross == 1) {
                 first_lay = 4;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
-                //cout << Lay3.x << " " << Lay3.y << " " << Lay3.z << endl;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
             }
             if (isBarrel == false) {
                 wz[lay_cross - 1] = wx[lay_cross - 1];
@@ -597,9 +516,6 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
             wz[lay_cross - 1] = 0.6;
             if (lay_cross == 1) {
                 first_lay = 5;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
-                //cout << Lay4.x << " " << Lay4.y << " " << Lay4.z << endl;
-                //cout << "/=/=/=/=/=/=/=/=/=/=" << endl;
             }
             if (isBarrel == false) {
                 wz[lay_cross - 1] = wx[lay_cross - 1];
@@ -618,7 +534,6 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
         D = D - 0.5 * xl[lay_cross];
         int Q = 0, L=0;
         for (int k = first_lay; k <= 5; k++) {
-            //cout << "Layer " << k - 1 << " Energy " << LayE[k - 1] <<" Xpos "<<yx[L]<< " Ypos " << yy[L] << " Zpos " << yz[L] << endl;
             if (Q == 0 && (LayE[k - 1] >= 0.05 * clu_vec.at(i).e)) {
                 Q = k;
             }
@@ -631,18 +546,14 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
                 E1 = E1 + LayE[k_i - 1];
             }
             double Rk = E2 / E1;
-            //cout << "Parte dal layer: " << first_lay - 1 << " che vede " << LayE[Q - 1] << " MeV su " << clu_vec.at(i).e << " MeV. Energia residua: " << E2 << " MeV" << endl;
-            //cout << "Rk=" << Rk << endl;
             double B = 3;
             if (clu_vec.at(i).e > 16.5) B = 1.5 / log(clu_vec.at(i).e / 10);
             double Zmin = 0;
             double Zapx = 0.5 * B * xl[Q - 1];
             double Zmax = B * xl[Q - 1];
-            //cout << "Provvisorio: Zapx=" << Zapx <<" B="<<B<<" and xl="<<xl[Q-1]<<endl;
             double R1;
             for (int j = 0; j < 4; j++) {
                 R1 = exp(-Zapx) * (1 + Zapx);
-             //   cout << "R1=" << R1 <<" Zapx="<<Zapx<< endl;
                 if (R1 > Rk) {
                     Zmin = Zapx;
                     Zapx = 0.5 * (Zmax + Zmin);
@@ -652,22 +563,16 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
                     Zapx = 0.5 * (Zmax + Zmin);
                 }
             }
-            //cout << "R1=" << R1 << " Zapx=" << Zapx << endl;
             Zapx = -Zapx / B;
             for (int j = 0; j < Q; j++) {
                 Zapx = Zapx + xl[j];
-             //   cout << Zapx << " " << xl[j] << endl;
             }
             for (int j = 0; j < lay_cross; j++) {
                 X[j] = X[j] - Zapx;
-            //    cout << "Zapx: " << X[j] << endl;
             }
             std::tuple<double, double, double, double> fit_varx = fit_ls(lay_cross, X, yx, wx);
-            //cout <<"Ax="<< get<0>(fit_varx) << " Bx=" << get<1>(fit_varx)<< " dAx=" << get<2>(fit_varx)<<" dBx=" << get<3>(fit_varx)<< endl;
             std::tuple<double, double, double, double> fit_vary = fit_ls(lay_cross, X, yy, wy);
-            //cout << "Ay=" << get<0>(fit_vary) << " By=" << get<1>(fit_vary) << " dAy=" << get<2>(fit_vary) << " dBy=" << get<3>(fit_vary) << endl;
             std::tuple<double, double, double, double> fit_varz = fit_ls(lay_cross, X, yz, wz);
-            //cout << "Az=" << get<0>(fit_varz) << " Bz=" << get<1>(fit_varz) << " dAz=" << get<2>(fit_varz) << " dBz=" << get<3>(fit_varz) << endl;
             double trktot = sqrt(get<1>(fit_varx) * get<1>(fit_varx) + get<1>(fit_vary) * get<1>(fit_vary) + get<1>(fit_varz) * get<1>(fit_varz));
             ctrk[0] = get<1>(fit_varx) / trktot;
             ctrk[1] = get<1>(fit_vary) / trktot;
@@ -681,17 +586,15 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec) {
             eapx[0] = get<2>(fit_varx);
             eapx[1] = get<2>(fit_vary);
             eapx[2] = get<2>(fit_varz);
-            cout << "Apx: [" << apx[0] << "; " << apx[1] << "; " << apx[2] << "] " << " e direzione vettore: [" << ctrk[0] << "; " << ctrk[1] << "; " << ctrk[2] << "] " << endl;
+            //cout << "Apx: [" << apx[0] << "; " << apx[1] << "; " << apx[2] << "] " << " e direzione vettore: [" << ctrk[0] << "; " << ctrk[1] << "; " << ctrk[2] << "] " << endl;
         }
         if (lay_cross == 1) {
-            cout << "apx(x)=" << yx[0] << " apx(y)=" << yy[0] << " apx(z)=" << yz[0] << endl;
-            cout << "e_apx(x)=" << sqrt(1/wx[0]) << " e_apx(y)=" << sqrt(1 / wy[0]) << " e_apx(z)=" << sqrt(1 / wz[0]) << endl;
-            //cout << "Parte dal layer: " << Q - 1 << " che vede " << LayE[Q - 1] << " MeV su " << clu_vec.at(i).e << endl;
+            //cout << "apx(x)=" << yx[0] << " apx(y)=" << yy[0] << " apx(z)=" << yz[0] << endl;
+            //cout << "e_apx(x)=" << sqrt(1/wx[0]) << " e_apx(y)=" << sqrt(1 / wy[0]) << " e_apx(z)=" << sqrt(1 / wz[0]) << endl;
             apx[0] = yx[0];
             apx[1] = yy[0];
             apx[2] = yz[0];
         }
-        //else cout << "Parte dal layer: " << Q - 1 << " che vede " << LayE[Q - 1] << " MeV su " << clu_vec.at(i).e << endl;
         clu_vec.at(i).x = apx[0];
         clu_vec.at(i).y = apx[1];
         clu_vec.at(i).z = apx[2];
@@ -750,10 +653,6 @@ cluster Calc_variables(std::vector<dg_cell> cells)
             y2_weighted = y2_weighted + (cells[j].y * cells[j].y * cell_E);
         }
         t_weighted = t_weighted + cell_T * cell_E;
-        //x_weighted = x_weighted + (cells[j].x * cell_E);
-        //x2_weighted = x2_weighted + (cells[j].x * cells[j].x * cell_E);
-        //y_weighted = y_weighted + (cells[j].y * cell_E);
-        //y2_weighted = y2_weighted + (cells[j].y * cells[j].y * cell_E);
         z_weighted = z_weighted + (cells[j].z * cell_E);
         z2_weighted = z2_weighted + (cells[j].z * cells[j].z * cell_E);
         Etot = Etot + cell_E;
@@ -770,7 +669,6 @@ cluster Calc_variables(std::vector<dg_cell> cells)
     if (y_weighted > -0.000001 && y_weighted < 0.000001) y_weighted = 0;
     if (z_weighted > -0.000001 && z_weighted < 0.000001) z_weighted = 0;
     double dx, dy, dz;
-    //double neff = -1;
     double neff = Etot * Etot / E2tot;
     double dum = neff / (neff - 1);
     if (cells.size() == 1) {
@@ -778,11 +676,6 @@ cluster Calc_variables(std::vector<dg_cell> cells)
         dy = 0;
         dz = 0;
     }
-    /*if (neff == 1) {
-        dx = 0;
-        dy = 0;
-        dz = 0;
-    }*/
     else {
         if (x2_weighted - x_weighted * x_weighted < 0) {
             dx = 0;
@@ -916,7 +809,6 @@ std::pair<int, int> Next(std::vector<int> already_checked, int digits[], int siz
         else {
             next = digits[i];
             entry = i;
-            //cout << i << endl;
             break;
         }
     }
@@ -975,7 +867,14 @@ double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2,
     double f1 = AttenuationFactor(d1, planeID);
     double f2 = AttenuationFactor(d2, planeID);
 
-    return 0.5 * (adc1 / f1 + adc2 / f2) * kloe_simu::adc2MeV;
+    double const attpassratio = 0.187;
+    return 0.5 * (adc1 / f1 + adc2 / f2) / (attpassratio * kloe_simu::pe2ADC * kloe_simu::e2p2);
+}
+
+double EfromADCsingle(double adc, double f)
+{
+    double const attpassratio = 0.187;
+    return adc / (f * attpassratio * kloe_simu::pe2ADC * kloe_simu::e2p2);
 }
 
 double DfromADC(double ta, double tb) {
