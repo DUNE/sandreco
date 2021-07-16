@@ -35,18 +35,28 @@ double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
 double EfromADCsingle(double adc, double f);
 double DfromADC(double, double);
 
+
+// PROMEMORIA PER FRANCESCO: RICORDATI DI CORREGGERE LE BROKEN CELLS
 std::vector<cluster> Preclustering(std::vector<dg_cell> *vec_cellraw) {
     int dg_size=vec_cellraw->size();
     int dg_idvec[dg_size],i_id=0;
-    std::vector<dg_cell> incomplete_cells, complete_cells, weird_cells;
+    std::vector<dg_cell> incomplete_cells, complete_cells, broken_cells, weird_cells;
     std::vector<cluster> vec_clust;
     //Create vector of complete and incomplete cells
-    for (int i = 0; i < vec_cellraw->size(); i++) {
-        if (vec_cellraw->at(i).adc1 == 0 || vec_cellraw->at(i).adc2 == 0 || vec_cellraw->at(i).tdc1 == 0 || vec_cellraw->at(i).tdc1 == 0) {
+    for (int i = 0; i < dg_size; i++) {
+        if (vec_cellraw->at(i).ps1.adc.size() == 0 && vec_cellraw->at(i).ps2.adc.size() == 0) continue;
+        if (vec_cellraw->at(i).ps1.adc.size() == 0 || vec_cellraw->at(i).ps2.adc.size() == 0) {
+           // cout << "broken" << endl;
+            broken_cells.push_back(vec_cellraw->at(i));
+            continue;
+        }
+        if ((vec_cellraw->at(i).ps1.adc.at(0) == 0 || vec_cellraw->at(i).ps2.adc.at(0) == 0 || vec_cellraw->at(i).ps1.tdc.at(0) == 0 || vec_cellraw->at(i).ps2.tdc.at(0) == 0)) {
+            cout << "incomplete" << endl;
             //Incomplete cell
             incomplete_cells.push_back(vec_cellraw->at(i));
         }
-        if (abs(vec_cellraw->at(i).tdc1 - vec_cellraw->at(i).tdc2) > 30) {
+        if (abs(vec_cellraw->at(i).ps1.tdc.at(0) - vec_cellraw->at(i).ps2.tdc.at(0)) > 30) {
+            cout << "incomplete time" << endl;
             weird_cells.push_back(vec_cellraw->at(i));
         }
         else {
@@ -103,7 +113,7 @@ std::vector<cluster> Preclustering(std::vector<dg_cell> *vec_cellraw) {
     return vec_clust;
 }
 
-int Testing(std::string input) {
+int Clusterize(std::string input) {
     const char* finname = input.c_str();
     TFile f(finname, "READ");
     TTree* t = (TTree*)f.Get("tDigit");
@@ -171,24 +181,24 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus, std::vector<dg
             double rec_en = 0;
             double DpmA = clus.at(minentry).x / 10 + 215;
             double DpmB = -clus.at(minentry).x / 10 + 215;
-            if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).adc2 != 0) {
-                double Ea = incomplete_cells.at(i).adc1;
-                double Eb = incomplete_cells.at(i).adc2;
+            if (incomplete_cells.at(i).ps1.adc.at(0) != 0 && incomplete_cells.at(i).ps2.adc.at(0) != 0) {
+                double Ea = incomplete_cells.at(i).ps1.adc.at(0);
+                double Eb = incomplete_cells.at(i).ps2.adc.at(0);
                 rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, incomplete_cells.at(i).lay);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
-            else if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).tdc1) {
+            else if (incomplete_cells.at(i).ps1.adc.at(0) != 0 && incomplete_cells.at(i).ps1.tdc.at(0) != 0) {
                 int laycell = incomplete_cells.at(i).lay;
                 double f = kloe_simu::AttenuationFactor(DpmA, laycell);
-                rec_en = EfromADCsingle(incomplete_cells.at(i).adc1, f);
+                rec_en = EfromADCsingle(incomplete_cells.at(i).ps1.adc.at(0), f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
-            else if (incomplete_cells.at(i).adc2 != 0 && incomplete_cells.at(i).tdc2) {
+            else if (incomplete_cells.at(i).ps2.adc.at(0) != 0 && incomplete_cells.at(i).ps2.tdc.at(0) != 0) {
                 int laycell = incomplete_cells.at(i).lay;
                 double f = kloe_simu::AttenuationFactor(DpmB, laycell);
-                rec_en = EfromADCsingle(incomplete_cells.at(i).adc2, f);
+                rec_en = EfromADCsingle(incomplete_cells.at(i).ps2.adc.at(0), f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
@@ -198,24 +208,24 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus, std::vector<dg
             double ecl = incomplete_cells.at(i).l;
             double DpmA = clus.at(minentry).z / 10 + ecl/20;
             double DpmB = -clus.at(minentry).z / 10 + ecl / 20;
-            if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).adc2 != 0) {
-                double Ea = incomplete_cells.at(i).adc1;
-                double Eb = incomplete_cells.at(i).adc2;
+            if (incomplete_cells.at(i).ps1.adc.at(0) != 0 && incomplete_cells.at(i).ps2.adc.at(0) != 0) {
+                double Ea = incomplete_cells.at(i).ps1.adc.at(0);
+                double Eb = incomplete_cells.at(i).ps2.adc.at(0);
                 rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, incomplete_cells.at(i).lay);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
-            else if (incomplete_cells.at(i).adc1 != 0 && incomplete_cells.at(i).tdc1) {
+            else if (incomplete_cells.at(i).ps1.adc.at(0) != 0 && incomplete_cells.at(i).ps1.tdc.at(0) != 0) {
                 int laycell = incomplete_cells.at(i).lay;
                 double f = kloe_simu::AttenuationFactor(DpmA, laycell);
-                rec_en = EfromADCsingle(incomplete_cells.at(i).adc1, f);
+                rec_en = EfromADCsingle(incomplete_cells.at(i).ps1.adc.at(0), f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
-            else if (incomplete_cells.at(i).adc2 != 0 && incomplete_cells.at(i).tdc2) {
+            else if (incomplete_cells.at(i).ps2.adc.at(0) != 0 && incomplete_cells.at(i).ps2.adc.at(0) != 0) {
                 int laycell = incomplete_cells.at(i).lay;
                 double f = kloe_simu::AttenuationFactor(DpmB, laycell);
-                rec_en = EfromADCsingle(incomplete_cells.at(i).adc2, f);
+                rec_en = EfromADCsingle(incomplete_cells.at(i).ps2.adc.at(0), f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(incomplete_cells.at(i));
             }
@@ -249,21 +259,21 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec) {
         double tRMS_A, tRMS_B, dist;
         all_cells = original_clu_vec.at(k).cells;
         for (int j = 0; j < all_cells.size(); j++) {
-            EA = all_cells.at(j).adc1;
-            EB = all_cells.at(j).adc2;
+            EA = all_cells.at(j).ps1.adc.at(0);
+            EB = all_cells.at(j).ps2.adc.at(0);
             EAtot += EA;
             EA2tot += EA * EA;
             EBtot += EB;
             EB2tot += EB * EB;
-            double d = DfromADC(all_cells[j].tdc1, all_cells[j].tdc2);
+            double d = DfromADC(all_cells[j].ps1.tdc.at(0), all_cells[j].ps2.adc.at(0));
             double d1, d2, d3;
             d1 = 0.5 * all_cells[j].l + d;
             d2 = 0.5 * all_cells[j].l - d;
-            double cell_E = kloe_simu::EfromADC(all_cells[j].adc1, all_cells[j].adc2, d1, d2, all_cells[j].lay);
-            tA += (all_cells.at(j).tdc1 - kloe_simu::vlfb * d1 / kloe_simu::m_to_mm) * EA;
-            tA2 += std::pow(all_cells.at(j).tdc1 - kloe_simu::vlfb * d1 / kloe_simu::m_to_mm, 2) * EA;
-            tB += (all_cells.at(j).tdc2 - kloe_simu::vlfb * d2 / kloe_simu::m_to_mm) * EB;
-            tB2 += std::pow(all_cells.at(j).tdc2 - kloe_simu::vlfb * d2 / kloe_simu::m_to_mm, 2) * EB;
+            double cell_E = kloe_simu::EfromADC(all_cells[j].ps1.adc.at(0), all_cells[j].ps2.adc.at(0), d1, d2, all_cells[j].lay);
+            tA += (all_cells.at(j).ps1.tdc.at(0) - kloe_simu::vlfb * d1 / kloe_simu::m_to_mm) * EA;
+            tA2 += std::pow(all_cells.at(j).ps1.tdc.at(0) - kloe_simu::vlfb * d1 / kloe_simu::m_to_mm, 2) * EA;
+            tB += (all_cells.at(j).ps2.tdc.at(0) - kloe_simu::vlfb * d2 / kloe_simu::m_to_mm) * EB;
+            tB2 += std::pow(all_cells.at(j).ps2.adc.at(0) - kloe_simu::vlfb * d2 / kloe_simu::m_to_mm, 2) * EB;
         }
         tA = tA / EAtot;
         tA2 = tA2 / EAtot;
@@ -275,8 +285,8 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec) {
         if (dist > 5) {
             std::vector <dg_cell> q1_cells, q2_cells, q3_cells, q4_cells;
             for (unsigned int i = 0; i < all_cells.size(); i++) {
-                double t_difA = all_cells.at(i).tdc1 - tA;
-                double t_difB = all_cells.at(i).tdc2 - tB;
+                double t_difA = all_cells.at(i).ps1.tdc.at(0) - tA;
+                double t_difB = all_cells.at(i).ps2.tdc.at(0) - tB;
                 if (t_difA > 0) {
                     if (t_difB > 0) { q1_cells.push_back(all_cells.at(i)); }
                     else { q2_cells.push_back(all_cells.at(i)); }
@@ -632,12 +642,12 @@ cluster Calc_variables(std::vector<dg_cell> cells)
 {
     double x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0, x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, Etot = 0, E2tot, EvEtot = 0, EA, EAtot=0, EB, EBtot=0, TA=0, TB=0;
     for (int j=0; j < cells.size(); j++) {
-        double d = DfromADC(cells[j].tdc1, cells[j].tdc2);
+        double d = DfromADC(cells[j].ps1.tdc.at(0), cells[j].ps2.tdc.at(0));
         double d1,d2, d3;
         d1 = 0.5 * cells[j].l + d;
         d2 = 0.5 * cells[j].l - d;
-        double cell_E = kloe_simu::EfromADC(cells[j].adc1, cells[j].adc2, d1, d2, cells[j].lay);
-        double cell_T = kloe_simu::TfromTDC(cells[j].tdc1, cells[j].tdc2, cells[j].l);
+        double cell_E = kloe_simu::EfromADC(cells[j].ps1.adc.at(0), cells[j].ps2.adc.at(0), d1, d2, cells[j].lay);
+        double cell_T = kloe_simu::TfromTDC(cells[j].ps1.tdc.at(0), cells[j].ps2.tdc.at(0), cells[j].l);
         if (cells[j].mod > 25) {
             d3 = cells[j].y - d;
             y_weighted = y_weighted - (d3 * cell_E);
