@@ -35,9 +35,8 @@ void reset(track& tr)
   tr.chi2_ln = 0.;
   tr.ret_cr = -1;
   tr.chi2_cr = 0.;
-  tr.digits.clear();
-  //tr.clX.clear();
-  //tr.clY.clear();
+  tr.clX.clear();
+  tr.clY.clear();
 }
 
 void evalUV(double& u, double& v, double zv, double yv, double z, double y)
@@ -55,8 +54,8 @@ void evalPhi(double& phi, double u, double v)
   phi = TMath::ATan2(v, u);
 }
 
-void findNearDigPhi(int& idx, double exp_phi, std::vector<digit>& vd, double zv,
-                    double yv)
+void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_tube>& vd,
+                    double zv, double yv)
 {
   double dphi = 1E3;
 
@@ -72,7 +71,7 @@ void findNearDigPhi(int& idx, double exp_phi, std::vector<digit>& vd, double zv,
   }
 }
 
-bool findNearDigX(int& idx, double exp_x, std::vector<digit>& vd, double xvtx)
+bool findNearDigX(int& idx, double exp_x, std::vector<dg_tube>& vd, double xvtx)
 {
   double dx = 10000.;
 
@@ -98,6 +97,7 @@ bool findNearDigX(int& idx, double exp_x, std::vector<digit>& vd, double xvtx)
   return found;
 }
 
+/*
 bool ishitok(TG4Event* ev, int trackid, TG4HitSegment hit, double postol = 5.,
              double angtol = 0.3)
 {
@@ -223,7 +223,7 @@ void GetRho(const std::vector<double>& z_v, const std::vector<double>& y_v,
 
 void FillPositionInfo(track& tr, int signy, double cos, double sin)
 {
-  digit d = tr.digits.front();
+  dg_tube d = tr.digits.front();
   tr.z0 = d.z;
   tr.t0 = d.t;
   if (d.hor == true) {
@@ -236,6 +236,7 @@ void FillPositionInfo(track& tr, int signy, double cos, double sin)
     tr.y0 = tr.yc + signy * dy;
   }
 }
+*/
 
 int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y,
               double& xc, double& yc, double& r, double& errr, double& chi2)
@@ -398,6 +399,7 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
   return 0;
 }
 
+/*
 void fillInfoCircFit(int n, const std::vector<double>& z,
                      const std::vector<double>& y, track& tr)
 {
@@ -410,7 +412,7 @@ void fillInfoCircFit(int n, const std::vector<double>& z,
   tr.h = EvalDirection(z, y, tr.zc, tr.yc);
 }
 
-void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi,
+void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
                std::vector<track>& vec_tr)
 {
   vec_tr.clear();
@@ -449,10 +451,10 @@ void TrackFind(TG4Event* ev, std::vector<digit>* vec_digi,
     vec_tr.push_back(tr);
   }
 }
+*/
 
-/*
-void fillLayers(std::map<int, std::vector<digit> >& m, std::vector<digit>& d,
-                TH1D& hdummy, int hor)
+void fillLayers(std::map<int, std::vector<dg_tube> >& m,
+                std::vector<dg_tube>& d, TH1D& hdummy, int hor)
 {
   for (unsigned int k = 0; k < d.size(); k++) {
     if (d.at(k).hor == hor)
@@ -460,8 +462,8 @@ void fillLayers(std::map<int, std::vector<digit> >& m, std::vector<digit>& d,
   }
 }
 
-void findTracksY(std::map<int, std::vector<digit> >& mdY,
-                 std::vector<std::vector<digit> >& clustersY, TH1D& hdummy,
+void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
+                 std::vector<std::vector<dg_tube> >& clustersY, TH1D& hdummy,
                  double xvtx_reco, double yvtx_reco, double zvtx_reco,
                  double phi_tol = 0.1, double dlay_tol = 5)
 {
@@ -472,13 +474,13 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
 
   double u, v, phi, dphi;
 
-  digit current_digit;
+  dg_tube current_digit;
 
   // loop on modules
   while (mdY.size() != 0) {
     // get most downstream module
-    std::map<int, std::vector<digit> >::iterator ite = mdY.begin();
-    std::vector<digit>* layer = &(ite->second);
+    std::map<int, std::vector<dg_tube> >::iterator ite = mdY.begin();
+    std::vector<dg_tube>* layer = &(ite->second);
 
     // loop on digits in the module
     while (layer->size() != 0) {
@@ -486,7 +488,7 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
       current_digit = layer->front();
 
       // create cluster and insert first digit
-      std::vector<digit> clY;
+      std::vector<dg_tube> clY;
       clY.push_back(std::move(current_digit));
 
       // remove the current digit from the module
@@ -496,7 +498,7 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
       prev_mod = ite->first;
 
       // get iterator to the next module
-      std::map<int, std::vector<digit> >::iterator nite = std::next(ite);
+      std::map<int, std::vector<dg_tube> >::iterator nite = std::next(ite);
 
       // reset parameters
       evalUV(u, v, zvtx_reco, yvtx_reco, current_digit.z, current_digit.y);
@@ -511,7 +513,7 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
         // check if module are downstream the reco vtx
         if (hdummy.GetXaxis()->GetBinUpEdge(-1 * nite->first) > zvtx_reco) {
           // get next layer
-          std::vector<digit>* nlayer = &(nite->second);
+          std::vector<dg_tube>* nlayer = &(nite->second);
 
           // evaluate the distance (in number of modules) between this module
           // and the previous one
@@ -554,7 +556,7 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
 
               // remove module if it is empty
               if (nlayer->size() == 0) {
-                std::map<int, std::vector<digit> >::iterator dummy =
+                std::map<int, std::vector<dg_tube> >::iterator dummy =
                     std::next(nite);
                 mdY.erase(nite);
                 nite = dummy;
@@ -574,8 +576,8 @@ void findTracksY(std::map<int, std::vector<digit> >& mdY,
   }
 }
 
-void findTracksX(std::map<int, std::vector<digit> >& mdX,
-                 std::vector<std::vector<digit> >& clustersX, TH1D& hdummy,
+void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
+                 std::vector<std::vector<dg_tube> >& clustersX, TH1D& hdummy,
                  double xvtx_reco, double yvtx_reco, double zvtx_reco,
                  double x_tol = 100, double dlay_tol = 5)
 {
@@ -584,13 +586,13 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
 
   double prev_x, dx;
 
-  digit current_digit;
+  dg_tube current_digit;
 
   // loop on modules from downstream to upstream
   while (mdX.size() != 0) {
     // get most downstream module
-    std::map<int, std::vector<digit> >::iterator ite = mdX.begin();
-    std::vector<digit>* layer = &(ite->second);
+    std::map<int, std::vector<dg_tube> >::iterator ite = mdX.begin();
+    std::vector<dg_tube>* layer = &(ite->second);
 
     // loop on digits in the module
     while (layer->size() != 0) {
@@ -598,7 +600,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
       current_digit = layer->front();
 
       // create cluster and insert first digit
-      std::vector<digit> clX;
+      std::vector<dg_tube> clX;
       clX.push_back(std::move(current_digit));
 
       // remove the current digit from the module
@@ -608,7 +610,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
       prev_mod = ite->first;
 
       // get iterator to the next module
-      std::map<int, std::vector<digit> >::iterator nite = std::next(ite);
+      std::map<int, std::vector<dg_tube> >::iterator nite = std::next(ite);
 
       // reset parameters
       prev_x = current_digit.x;
@@ -619,7 +621,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
         // check if module are downstream the reco vtx
         if (hdummy.GetXaxis()->GetBinUpEdge(-1 * nite->first) > zvtx_reco) {
           // get next layer
-          std::vector<digit>* nlayer = &(nite->second);
+          std::vector<dg_tube>* nlayer = &(nite->second);
 
           // evaluate the distance (in number of modules) between this module
           // and the previous one
@@ -649,7 +651,7 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
 
                 // remove module if it is empty
                 if (nlayer->size() == 0) {
-                  std::map<int, std::vector<digit> >::iterator dummy =
+                  std::map<int, std::vector<dg_tube> >::iterator dummy =
                       std::next(nite);
                   mdX.erase(nite);
                   nite = dummy;
@@ -670,20 +672,20 @@ void findTracksX(std::map<int, std::vector<digit> >& mdX,
   }
 }
 
-void mergeXYTracks(std::vector<std::vector<digit> >& clustersX,
-                   std::vector<std::vector<digit> >& clustersY,
+void mergeXYTracks(std::vector<std::vector<dg_tube> >& clustersX,
+                   std::vector<std::vector<dg_tube> >& clustersY,
                    std::vector<track>& tr3D, double dn_tol, double dz_tol)
 {
   double dzend;
   int index = 0;
 
   // loop on Y clusters
-  for (int jj = 0; jj < clustersY.size(); jj++) {
+  for (unsigned int jj = 0; jj < clustersY.size(); jj++) {
     // resent downstream z residual
     dzend = 10000.;
 
     // loop on X clusters
-    for (int kk = 0; kk < clustersX.size(); kk++) {
+    for (unsigned int kk = 0; kk < clustersX.size(); kk++) {
       // evaluate the percentege difference in number of digits: abs(dn)/mn
       double dn = int(clustersY.at(jj).size()) - int(clustersX.at(kk).size());
       double mn = 0.5 * (clustersY.at(jj).size() + clustersX.at(kk).size());
@@ -719,23 +721,23 @@ void mergeXYTracks(std::vector<std::vector<digit> >& clustersX,
   }
 }
 
-void TrackFind(std::vector<track>& tracks, std::vector<digit> digits,
+void TrackFind(std::vector<track>& tracks, std::vector<dg_tube> digits,
                std::vector<double>& binning, double xvtx_reco, double yvtx_reco,
                double zvtx_reco, double tol_phi, double tol_x, int tol_mod,
-               int mindigtr, const double dn_tol, const double dz_tol)
+               unsigned int mindigtr, const double dn_tol, const double dz_tol)
 {
   TH1D hdummy("hdummy", "hdummy;Z (mm); multipliciy", binning.size() - 1,
               binning.data());
-  std::vector<std::vector<digit> > clustersY;
-  std::vector<std::vector<digit> > clustersX;
+  std::vector<std::vector<dg_tube> > clustersY;
+  std::vector<std::vector<dg_tube> > clustersX;
 
   // track finding with clustering in arctg(v/u) VS z
-  std::map<int, std::vector<digit> > mdY;
+  std::map<int, std::vector<dg_tube> > mdY;
   fillLayers(mdY, digits, hdummy, 1);
   clustersY.clear();
 
   // find track on XZ view
-  std::map<int, std::vector<digit> > mdX;
+  std::map<int, std::vector<dg_tube> > mdX;
   fillLayers(mdX, digits, hdummy, 0);
   clustersX.clear();
 
@@ -772,11 +774,11 @@ void TrackFind(std::vector<track>& tracks, std::vector<digit> digits,
   std::sort(clustersX.begin(), clustersX.end(), isCluBigger);
 
   // order digits: upstream first
-  for (int jj = 0; jj < clustersX.size(); jj++) {
+  for (unsigned int jj = 0; jj < clustersX.size(); jj++) {
     std::sort(clustersX.at(jj).begin(), clustersX.at(jj).end(), isDigUpstream);
   }
 
-  for (int jj = 0; jj < clustersY.size(); jj++) {
+  for (unsigned int jj = 0; jj < clustersY.size(); jj++) {
     std::sort(clustersY.at(jj).begin(), clustersY.at(jj).end(), isDigUpstream);
   }
 
@@ -785,8 +787,8 @@ void TrackFind(std::vector<track>& tracks, std::vector<digit> digits,
   // tolerance dz: 20 cm
   mergeXYTracks(clustersX, clustersY, tracks, dn_tol, dz_tol);
 }
-*/
 
+/*
 void TrackFit(std::vector<track>& vec_tr)
 {
 
@@ -882,9 +884,8 @@ void TrackFit(std::vector<track>& vec_tr)
     // " " << vec_tr[j].zc << " " << dz << " " << y_v[0] << std::endl;
     //}
   }
-}
+}*/
 
-/*
 void fitCircle(std::vector<track>& tr3D, TH1D& hdummy)
 {
 
@@ -1002,7 +1003,7 @@ void fillPosAndTime(std::vector<track>& tracks)
     if (tracks.at(i).clY.front().z < tracks.at(i).clX.front().z) {
       tracks.at(i).y0 = tracks.at(i).clY.front().y;
       tracks.at(i).z0 = tracks.at(i).clY.front().z;
-      tracks.at(i).t0 = tracks.at(i).clY.front().t;
+      tracks.at(i).t0 = tracks.at(i).clY.front().tdc;
 
       double cos =
           tracks.at(i).h * (tracks.at(i).y0 - tracks.at(i).yc) / tracks.at(i).r;
@@ -1019,7 +1020,7 @@ void fillPosAndTime(std::vector<track>& tracks)
     } else {
       tracks.at(i).x0 = tracks.at(i).clX.front().x;
       tracks.at(i).z0 = tracks.at(i).clX.front().z;
-      tracks.at(i).t0 = tracks.at(i).clX.front().t;
+      tracks.at(i).t0 = tracks.at(i).clX.front().tdc;
 
       double dy2 = tracks.at(i).r * tracks.at(i).r -
                    (tracks.at(i).z0 - tracks.at(i).zc) *
@@ -1046,9 +1047,8 @@ void TrackFit(std::vector<track>& tracks, std::vector<double>& binning,
   // track position
   fillPosAndTime(tracks);
 }
-*/
 
-bool IsContiguous(const cell& c1, const cell& c2)
+bool IsContiguous(const dg_cell& c1, const dg_cell& c2)
 {
   if (c1.mod == c2.mod) {
     if (TMath::Abs(c1.lay - c2.lay) <= 1) {
@@ -1066,7 +1066,7 @@ bool IsContiguous(const cell& c1, const cell& c2)
   return false;
 }
 
-bool IsContiguous(cluster cl, const cell& c)
+bool IsContiguous(cluster cl, const dg_cell& c)
 {
   for (unsigned int i = 0; i < cl.cells.size(); i++) {
     if (IsContiguous(cl.cells.at(i), c)) {
@@ -1076,14 +1076,14 @@ bool IsContiguous(cluster cl, const cell& c)
   return false;
 }
 
-void PreCluster(std::vector<cell>* vec_cell, std::vector<cluster>& vec_precl)
+void PreCluster(std::vector<dg_cell>* vec_cell, std::vector<cluster>& vec_precl)
 {
   vec_precl.clear();
 
-  std::vector<cell> vec_tmpcell(*vec_cell);
+  std::vector<dg_cell> vec_tmpcell(*vec_cell);
 
   while (vec_tmpcell.size() != 0) {
-    cell c = vec_tmpcell.front();
+    dg_cell c = vec_tmpcell.front();
 
     // std::cout << vec_tmpcell.size() << std::endl;
 
@@ -1112,8 +1112,8 @@ void Filter(std::vector<cluster>& vec_cl)
 {
   for (unsigned int i = 0; i < vec_cl.size(); i++) {
     for (unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++) {
-      if (vec_cl.at(i).cells.at(k).adc1 == 0. ||
-          vec_cl.at(i).cells.at(k).adc2 == 0.) {
+      if (vec_cl.at(i).cells.at(k).ps1.adc.at(0) == 0. ||
+          vec_cl.at(i).cells.at(k).ps2.adc.at(0) == 0.) {
         vec_cl.at(i).cells.erase(vec_cl.at(i).cells.begin() + k);
       }
     }
@@ -1196,29 +1196,29 @@ void Merge(std::vector<cluster>& vec_cl)
     double zouter = -999.;
     double dir = 0.;
 
-    for (int i = 0; i < 5; i++) {
-      if (elayer[i] != 0.) {
-        xv[i] /= elayer[i];
-        yv[i] /= elayer[i];
-        zv[i] /= elayer[i];
-        tv[i] /= elayer[i];
+    for (int ii = 0; ii < 5; ii++) {
+      if (elayer[ii] != 0.) {
+        xv[ii] /= elayer[ii];
+        yv[ii] /= elayer[ii];
+        zv[ii] /= elayer[ii];
+        tv[ii] /= elayer[ii];
 
         if (tinner < 0) {
-          tinner = tv[i];
-          zinner = zv[i];
+          tinner = tv[ii];
+          zinner = zv[ii];
         }
 
-        touter = tv[i];
-        zouter = zv[i];
+        touter = tv[ii];
+        zouter = zv[ii];
 
-        sx += xv[i];
-        sy += yv[i];
-        sz += zv[i];
-        sxz += xv[i] * zv[i];
-        syz += yv[i] * zv[i];
-        sx2 += xv[i] * xv[i];
-        sy2 += yv[i] * yv[i];
-        sz2 += zv[i] * zv[i];
+        sx += xv[ii];
+        sy += yv[ii];
+        sz += zv[ii];
+        sxz += xv[ii] * zv[ii];
+        syz += yv[ii] * zv[ii];
+        sx2 += xv[ii] * xv[ii];
+        sy2 += yv[ii] * yv[ii];
+        sz2 += zv[ii] * zv[ii];
 
         nlayer++;
       }
@@ -1249,7 +1249,7 @@ bool value_comparer(std::map<int, int>::value_type& i1,
   return i1.second < i2.second;
 }
 
-void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell,
+void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
                         std::vector<cluster>& vec_cl)
 {
   const double cell_max_dt = 30.;  // ns -> dt > 30. ns is unphysical
@@ -1261,15 +1261,15 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell,
     // find particle corresponding to more p.e.
     hit_pid.clear();
 
-    for (unsigned int j = 0; j < vec_cell->at(i).hindex1.size(); j++) {
+    for (unsigned int j = 0; j < vec_cell->at(i).ps1.photo_el.size(); j++) {
       hit_pid[ev->SegmentDetectors["EMCalSci"]
-                  .at(vec_cell->at(i).hindex1.at(j))
+                  .at(vec_cell->at(i).ps1.photo_el.at(j).h_index)
                   .PrimaryId]++;
     }
 
-    for (unsigned int j = 0; j < vec_cell->at(i).hindex2.size(); j++) {
+    for (unsigned int j = 0; j < vec_cell->at(i).ps2.photo_el.size(); j++) {
       hit_pid[ev->SegmentDetectors["EMCalSci"]
-                  .at(vec_cell->at(i).hindex2.at(j))
+                  .at(vec_cell->at(i).ps2.photo_el.at(j).h_index)
                   .PrimaryId]++;
     }
 
@@ -1291,8 +1291,8 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell,
       if (pid[j] == unique_pid[i]) {
         // good cell should have signal on both side and a tdc different less
         // than 30 ns (5.85 ns/m * 4 m)
-        if (vec_cell->at(j).adc1 == 0 || vec_cell->at(j).adc2 == 0 ||
-            std::abs(vec_cell->at(j).tdc1 - vec_cell->at(j).tdc2) > cell_max_dt)
+        if (vec_cell->at(j).ps1.adc.size() == 0 || vec_cell->at(j).ps2.adc.size() == 0 ||
+            std::abs(vec_cell->at(j).ps1.tdc.at(0) - vec_cell->at(j).ps2.tdc.at(0)) > cell_max_dt)
           continue;
 
         cl.cells.push_back(vec_cell->at(j));
@@ -1302,7 +1302,7 @@ void PidBasedClustering(TG4Event* ev, std::vector<cell>* vec_cell,
   }
 }
 
-void MeanAndRMS(std::vector<digit>& digits, TH1D& hmeanX, TH1D& hrmsX,
+void MeanAndRMS(std::vector<dg_tube>& digits, TH1D& hmeanX, TH1D& hrmsX,
                 TH1I& hnX, TH1D& hmeanY, TH1D& hrmsY, TH1I& hnY)
 {
 
@@ -1321,7 +1321,7 @@ void MeanAndRMS(std::vector<digit>& digits, TH1D& hmeanX, TH1D& hrmsX,
     }
   }
 
-  for (unsigned int j = 0; j < hmeanX.GetNbinsX(); j++) {
+  for (int j = 0; j < hmeanX.GetNbinsX(); j++) {
     mean = -1;
     rms = -1;
     n = hnX.GetBinContent(j + 1);
@@ -1388,7 +1388,7 @@ void filterDigitsModule(std::map<int, double>& yd, std::vector<int>& toremove,
   }
 }
 
-void filterDigits(std::vector<digit>& digits, TH1D& hdummy,
+void filterDigits(std::vector<dg_tube>& digits, TH1D& hdummy,
                   const double epsilon)
 {
   std::map<int, std::map<int, double> > dy;
@@ -1463,7 +1463,7 @@ void vtxfinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
 }
 
 void VertexFind(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
-                int& VtxType, std::vector<digit> digits,
+                int& VtxType, std::vector<dg_tube> digits,
                 std::vector<double>& binning, double epsilon)
 {
   TH1D hrmsX("hrmsX", "rmsX;Z (mm); rmsX (mm)", binning.size() - 1,
@@ -1516,7 +1516,8 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   for (int i = 0; i < v->GetNdaughters(); i++) {
     TString name = v->GetNode(i)->GetName();
 
-    if (name.Contains("C3H6Mod") || name.Contains("CMod") || name.Contains("TrMod")) {
+    if (name.Contains("TrMod") || name.Contains("C3H6Mod") ||
+        name.Contains("CMod")) {
       TString path = path_prefix + name;
       g->cd(path.Data());
       g->LocalToMaster(origin, master);
@@ -1535,16 +1536,17 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   binning.push_back(last_z);
 }
 
-void Reconstruct(const char* fIn)
+void Reconstruct(const char* fMc, const char* fIn)
 {
+  TFile ftrue(fMc, "READ");
   TFile f(fIn, "UPDATE");
   TTree* tDigit = (TTree*)f.Get("tDigit");
-  TTree* tTrueMC = (TTree*)f.Get("EDepSimEvents");
+  TTree* tTrueMC = (TTree*)ftrue.Get("EDepSimEvents");
   TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
 
-  //std::vector<double> sampling;
+  std::vector<double> sampling;
 
-  //DetermineModulesPosition(geo, sampling);
+  DetermineModulesPosition(geo, sampling);
 
   tDigit->AddFriend(tTrueMC);
 
@@ -1553,11 +1555,11 @@ void Reconstruct(const char* fIn)
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event", &ev);
 
-  std::vector<digit>* vec_digi = new std::vector<digit>;
-  std::vector<cell>* vec_cell = new std::vector<cell>;
+  std::vector<dg_tube>* vec_digi = new std::vector<dg_tube>;
+  std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
 
-  t->SetBranchAddress("Stt", &vec_digi);
-  t->SetBranchAddress("cell", &vec_cell);
+  t->SetBranchAddress("dg_tube", &vec_digi);
+  t->SetBranchAddress("dg_cell", &vec_cell);
 
   std::vector<track> vec_tr;
   std::vector<cluster> vec_cl;
@@ -1567,13 +1569,13 @@ void Reconstruct(const char* fIn)
   tout.Branch("cluster", "std::vector<cluster>", &vec_cl);
 
   const int nev = t->GetEntries();
-  //const double epsilon = 0.5;
-  //const double tol_phi = 0.1;
-  //const double tol_x = 100.;
-  //const int tol_mod = 4;
-  //const int mindigtr = 3;
-  //const double dn_tol = 1.E7;
-  //const double dz_tol = 1.E7;
+  const double epsilon = 0.5;
+  const double tol_phi = 0.1;
+  const double tol_x = 100.;
+  const int tol_mod = 4;
+  const int mindigtr = 3;
+  const double dn_tol = 1.E7;
+  const double dz_tol = 1.E7;
 
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
@@ -1587,21 +1589,20 @@ void Reconstruct(const char* fIn)
     vec_tr.clear();
     vec_cl.clear();
 
-    //double xvtx_reco, yvtx_reco, zvtx_reco;
-    //int VtxType;
+    double xvtx_reco, yvtx_reco, zvtx_reco;
+    int VtxType;
 
-    //std::vector<digit> clustersY;
-    //std::vector<digit> clustersX;
+    std::vector<dg_tube> clustersY;
+    std::vector<dg_tube> clustersX;
 
-    //VertexFind(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, *vec_digi, sampling,
-    //           epsilon);
+    VertexFind(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, *vec_digi, sampling,
+               epsilon);
 
-    TrackFind(ev, vec_digi, vec_tr);
-    //TrackFind(vec_tr, *vec_digi, sampling, xvtx_reco, yvtx_reco, zvtx_reco,
-    //          tol_phi, tol_x, tol_mod, mindigtr, dn_tol, dz_tol);
-    
-    TrackFit(vec_tr);
-    //TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
+    // TrackFind(ev, vec_digi, vec_tr);
+    TrackFind(vec_tr, *vec_digi, sampling, xvtx_reco, yvtx_reco, zvtx_reco,
+              tol_phi, tol_x, tol_mod, mindigtr, dn_tol, dz_tol);
+    // TrackFit(vec_tr);
+    TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
 
     // PreCluster(vec_cell, vec_cl);
     // Filter(vec_cl);
@@ -1624,17 +1625,18 @@ void Reconstruct(const char* fIn)
   f.cd();
   tout.Write("", TObject::kOverwrite);
   f.Close();
+  ftrue.Close();
 }
 
 void help_reco()
 {
-  std::cout << "Reconstruct <input file>" << std::endl;
+  std::cout << "Reconstruct <MC file> <digit file>" << std::endl;
 }
 
 int main(int argc, char* argv[])
 {
-  if (argc != 2)
+  if (argc != 3)
     help_reco();
   else
-    Reconstruct(argv[1]);
+    Reconstruct(argv[1], argv[2]);
 }

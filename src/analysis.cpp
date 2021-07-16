@@ -735,12 +735,13 @@ void EvalNuEnergy(event& ev)
   }
 }
 
-void Analyze(const char* fIn)
+void Analyze(const char* fMc, const char* fIn)
 {
+  TFile ftrue(fMc, "READ");
   TFile f(fIn, "UPDATE");
   TTree* tReco = (TTree*)f.Get("tReco");
-  TTree* tTrueMC = (TTree*)f.Get("EDepSimEvents");
-  TTree* gRooTracker = (TTree*)f.Get("gRooTracker");
+  TTree* tTrueMC = (TTree*)ftrue.Get("EDepSimEvents");
+  TTree* gRooTracker = (TTree*)ftrue.Get("DetSimPassThru/gRooTracker");
   TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
 
   tReco->AddFriend(tTrueMC);
@@ -842,6 +843,7 @@ void Analyze(const char* fIn)
   f.cd();
   tout.Write("", TObject::kOverwrite);
   f.Close();
+  ftrue.Close();
 
   vec_tr->clear();
   vec_cl->clear();
@@ -851,13 +853,13 @@ void Analyze(const char* fIn)
 
 void help_ana()
 {
-  std::cout << "Analyze <input file>" << std::endl;
+  std::cout << "Analyze <MC file> <reco file>" << std::endl;
 }
 
 int main(int argc, char* argv[])
 {
-  if (argc != 2)
+  if (argc != 3)
     help_ana();
   else
-    Analyze(argv[1]);
+    Analyze(argv[1], argv[2]);
 }

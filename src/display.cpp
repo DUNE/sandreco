@@ -57,6 +57,7 @@ double kloe_int_R = 2000.;
 double kloe_int_dx = 1690.;
 
 TFile* f = 0;
+TFile* fmc = 0;
 TTree* t = 0;
 TG4Event* ev = new TG4Event;
 event* evt = new event;
@@ -64,27 +65,27 @@ TGeoManager* geo = 0;
 TCanvas* cev = 0;
 TCanvas* cpr = 0;
 
-std::vector<cell>* vec_cell = new std::vector<cell>;
-std::vector<digit>* vec_digi = new std::vector<digit>;
+std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
+std::vector<dg_tube>* vec_digi = new std::vector<dg_tube>;
 std::vector<track>* vec_tr = new std::vector<track>;
 std::vector<cluster>* vec_cl = new std::vector<cluster>;
 std::map<int, gcell> calocell;
 
 const char* path_intreg =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/"
-    "volSTTFULL_PV_0";
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/volSTTLAR_PV_0";
 
 const char* path_barrel_template =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/"
-    "kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
 
 const char* path_endcapR_template =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/"
-    "kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 
 const char* path_endcapL_template =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/MagIntVol_volume_PV_0/"
-    "kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
 
 const char* barrel_mod_vol_name = "ECAL_lv_PV";
 const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
@@ -92,16 +93,18 @@ const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
 
 using namespace display;
 
-void init(const char* ifile)
+void init(const char* mcfile, const char* ifile)
 {
   gStyle->SetPalette(palette);
 
+  fmc = new TFile(mcfile);
   f = new TFile(ifile);
   TTree* tEvent = reinterpret_cast<TTree*>(f->Get("tEvent"));
   TTree* tReco = reinterpret_cast<TTree*>(f->Get("tReco"));
   TTree* tDigit = reinterpret_cast<TTree*>(f->Get("tDigit"));
-  TTree* tEdep = reinterpret_cast<TTree*>(f->Get("EDepSimEvents"));
-  TTree* tGenie = reinterpret_cast<TTree*>(f->Get("gRooTracker"));
+  TTree* tEdep = reinterpret_cast<TTree*>(fmc->Get("EDepSimEvents"));
+  TTree* tGenie =
+      reinterpret_cast<TTree*>(fmc->Get("DetSimPassThru/gRooTracker"));
 
   if (!tEdep) return;
 
@@ -111,8 +114,8 @@ void init(const char* ifile)
   if (tGenie) tEdep->AddFriend(tGenie);
 
   tEdep->SetBranchAddress("Event", &ev);
-  if (tDigit) tDigit->SetBranchAddress("cell", &vec_cell);
-  if (tDigit) tDigit->SetBranchAddress("Stt", &vec_digi);
+  if (tDigit) tDigit->SetBranchAddress("dg_cell", &vec_cell);
+  if (tDigit) tDigit->SetBranchAddress("dg_tube", &vec_digi);
   if (tReco) tReco->SetBranchAddress("track", &vec_tr);
   if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);
   if (tEvent) tEvent->SetBranchAddress("event", &evt);
@@ -229,10 +232,10 @@ void init(const char* ifile)
                     << " " << local_index << " " << nMod << " " << nLay << " "
                     << nCel << std::endl;
 
-        for (int m = 0; m < 4; m++) {
-          dummyLoc[0] = CellLocalX[local_index][m];
+        for (int mm = 0; mm < 4; mm++) {
+          dummyLoc[0] = CellLocalX[local_index][mm];
           dummyLoc[1] = 0.;
-          dummyLoc[2] = CellLocalZ[local_index][m];
+          dummyLoc[2] = CellLocalZ[local_index][mm];
 
           geo->LocalToMaster(dummyLoc, dummyMas);
 
@@ -243,11 +246,11 @@ void init(const char* ifile)
                       << dummyMas[2] << std::endl;
           }
 
-          calocell[id].Y[m] = dummyMas[1];
-          calocell[id].Z[m] = dummyMas[2];
+          calocell[id].Y[mm] = dummyMas[1];
+          calocell[id].Z[mm] = dummyMas[2];
 
-          CellMasterY[local_index][m] = dummyMas[1];
-          CellMasterZ[local_index][m] = dummyMas[2];
+          CellMasterY[local_index][mm] = dummyMas[1];
+          CellMasterZ[local_index][mm] = dummyMas[2];
         }
 
         if (debug) {
@@ -298,19 +301,19 @@ void init(const char* ifile)
       dummyLoc_ec[3][1] = 0.;
       dummyLoc_ec[3][2] = zlevel[j];
 
-      for (int m = 0; m < 4; m++) {
-        geo->LocalToMaster(dummyLoc_ec[m], dummyMas);
+      for (int mm = 0; mm < 4; mm++) {
+        geo->LocalToMaster(dummyLoc_ec[mm], dummyMas);
 
         if (debug) {
-          std::cout << "local : " << dummyLoc_ec[m][0] << " "
-                    << dummyLoc_ec[m][1] << " " << dummyLoc_ec[m][2]
+          std::cout << "local : " << dummyLoc_ec[mm][0] << " "
+                    << dummyLoc_ec[mm][1] << " " << dummyLoc_ec[mm][2]
                     << std::endl;
           std::cout << "master: " << dummyMas[0] << " " << dummyMas[1] << " "
                     << dummyMas[2] << std::endl;
         }
 
-        calocell[id].Y[m] = dummyMas[0];
-        calocell[id].Z[m] = dummyMas[2];
+        calocell[id].Y[mm] = dummyMas[0];
+        calocell[id].Z[mm] = dummyMas[2];
       }
       if (debug) {
         TGraph* gr1 = new TGraph(4, calocell[id].Z, calocell[id].Y);
@@ -342,19 +345,19 @@ void init(const char* ifile)
       dummyLoc_ec[3][1] = 0.;
       dummyLoc_ec[3][2] = zlevel[j];
 
-      for (int m = 0; m < 4; m++) {
-        geo->LocalToMaster(dummyLoc_ec[m], dummyMas);
+      for (int mm = 0; mm < 4; mm++) {
+        geo->LocalToMaster(dummyLoc_ec[mm], dummyMas);
 
         if (debug) {
-          std::cout << "local : " << dummyLoc_ec[m][0] << " "
-                    << dummyLoc_ec[m][1] << " " << dummyLoc_ec[m][2]
+          std::cout << "local : " << dummyLoc_ec[mm][0] << " "
+                    << dummyLoc_ec[mm][1] << " " << dummyLoc_ec[mm][2]
                     << std::endl;
           std::cout << "master: " << dummyMas[0] << " " << dummyMas[1] << " "
                     << dummyMas[2] << std::endl;
         }
 
-        calocell[id].Y[m] = dummyMas[0];
-        calocell[id].Z[m] = dummyMas[2];
+        calocell[id].Y[mm] = dummyMas[0];
+        calocell[id].Z[mm] = dummyMas[2];
       }
       if (debug) {
         TGraph* gr1 = new TGraph(4, calocell[id].Z, calocell[id].Y);
@@ -550,10 +553,10 @@ void show(int index, bool showtrj = true, bool showfit = true,
     for (unsigned int i = 0; i < vec_cl->at(j).cells.size(); i++) {
       int id = vec_cl->at(j).cells.at(i).id;
 
-      calocell[id].adc = vec_cl->at(j).cells.at(i).adc1;
-      calocell[id].tdc = vec_cl->at(j).cells.at(i).tdc1;
-      calocell[-id].adc = vec_cl->at(j).cells.at(i).adc2;
-      calocell[-id].tdc = vec_cl->at(j).cells.at(i).tdc2;
+      calocell[id].adc = vec_cl->at(j).cells.at(i).ps1.adc.at(0);
+      calocell[id].tdc = vec_cl->at(j).cells.at(i).ps1.tdc.at(0);
+      calocell[-id].adc = vec_cl->at(j).cells.at(i).ps2.adc.at(0);
+      calocell[-id].tdc = vec_cl->at(j).cells.at(i).ps2.tdc.at(0);
 
       if (showdig) {
         TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);
@@ -587,15 +590,10 @@ void show(int index, bool showtrj = true, bool showfit = true,
       if (vec_tr->at(i).ret_cr == 0 && vec_tr->at(i).ret_ln == 0) {
         cev->cd(1);
 
-        //double minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
-        //                       vec_tr->at(i).clY.front().z);
-        //double maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
-        //                       vec_tr->at(i).clY.back().z);
-
         double minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
-                               vec_tr->at(i).digits.front().z);
+                               vec_tr->at(i).clY.front().z);
         double maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
-                               vec_tr->at(i).digits.back().z);
+                               vec_tr->at(i).clY.back().z);
 
         TF1* ffy = new TF1("", "[0]+[1]*TMath::Sqrt([2]*[2]-(x-[3])*(x-[3]))",
                            minz, maxz);
@@ -613,11 +611,8 @@ void show(int index, bool showtrj = true, bool showfit = true,
 
         cev->cd(2);
 
-        //double x0 = vec_tr->at(i).clX.front().x;
-        //double z0 = vec_tr->at(i).clX.front().z;
-
-        double x0 = vec_tr->at(i).digits.front().x;
-        double z0 = vec_tr->at(i).digits.front().z;
+        double x0 = vec_tr->at(i).clX.front().x;
+        double z0 = vec_tr->at(i).clX.front().z;
 
         double radq;
         if (abs(z0 - vec_tr->at(i).zc) > vec_tr->at(i).r)
@@ -631,15 +626,10 @@ void show(int index, bool showtrj = true, bool showfit = true,
         double phi0 =
             TMath::ATan2(yexp - vec_tr->at(i).yc, z0 - vec_tr->at(i).zc);
 
-        //minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
-        //                vec_tr->at(i).clX.front().z);
-        //maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
-        //                vec_tr->at(i).clX.back().z);
-
         minz = std::max(vec_tr->at(i).zc - vec_tr->at(i).r,
-                        vec_tr->at(i).digits.front().z);
+                        vec_tr->at(i).clX.front().z);
         maxz = std::min(vec_tr->at(i).zc + vec_tr->at(i).r,
-                        vec_tr->at(i).digits.back().z);
+                        vec_tr->at(i).clX.back().z);
 
         TF1* ffx = new TF1("",
                            "[0] - "
@@ -1328,33 +1318,36 @@ int main(int argc, char* argv[])
 
   int evid = 0;
   TString fname;
+  TString fmc;
   TString tmp;
 
-  if (argc < 3) {
-    std::cout << "Display <event number> <input file> [show trajectories] "
-                 "[show fits] [show digits]" << std::endl;
+  if (argc < 4) {
+    std::cout
+        << "Display <event number> <MC file> <input file> [show trajectories] "
+           "[show fits] [show digits]" << std::endl;
     return 1;
   } else {
     evid = atoi(argv[1]);
-    fname = argv[2];
-
-    if (argc > 3) {
-      tmp = argv[3];
-      if (tmp.CompareTo("false") == 0) showtrj = false;
-    }
+    fmc = argv[2];
+    fname = argv[3];
 
     if (argc > 4) {
       tmp = argv[4];
-      if (tmp.CompareTo("false") == 0) showfit = false;
+      if (tmp.CompareTo("false") == 0) showtrj = false;
     }
 
     if (argc > 5) {
       tmp = argv[5];
+      if (tmp.CompareTo("false") == 0) showfit = false;
+    }
+
+    if (argc > 6) {
+      tmp = argv[6];
       if (tmp.CompareTo("false") == 0) showdig = false;
     }
   }
 
-  init(fname.Data());
+  init(fmc.Data(), fname.Data());
 
   show(evid, showtrj, showfit, showdig);
 
