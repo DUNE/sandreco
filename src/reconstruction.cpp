@@ -1112,8 +1112,8 @@ void Filter(std::vector<cluster>& vec_cl)
 {
   for (unsigned int i = 0; i < vec_cl.size(); i++) {
     for (unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++) {
-      if (vec_cl.at(i).cells.at(k).ps1.adc.at(0) == 0. ||
-          vec_cl.at(i).cells.at(k).ps2.adc.at(0) == 0.) {
+      if (vec_cl.at(i).cells.at(k).ps1.at(0).adc == 0. ||
+          vec_cl.at(i).cells.at(k).ps2.at(0).adc == 0.) {
         vec_cl.at(i).cells.erase(vec_cl.at(i).cells.begin() + k);
       }
     }
@@ -1261,17 +1261,19 @@ void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
     // find particle corresponding to more p.e.
     hit_pid.clear();
 
-    for (unsigned int j = 0; j < vec_cell->at(i).ps1.photo_el.size(); j++) {
-      hit_pid[ev->SegmentDetectors["EMCalSci"]
-                  .at(vec_cell->at(i).ps1.photo_el.at(j).h_index)
-                  .PrimaryId]++;
-    }
+    if(vec_cell->at(i).ps1.size() > 0)
+      for (unsigned int j = 0; j < vec_cell->at(i).ps1.at(0).photo_el.size(); j++) {
+        hit_pid[ev->SegmentDetectors["EMCalSci"]
+                    .at(vec_cell->at(i).ps1.at(0).photo_el.at(j).h_index)
+                    .PrimaryId]++;
+      }
 
-    for (unsigned int j = 0; j < vec_cell->at(i).ps2.photo_el.size(); j++) {
-      hit_pid[ev->SegmentDetectors["EMCalSci"]
-                  .at(vec_cell->at(i).ps2.photo_el.at(j).h_index)
-                  .PrimaryId]++;
-    }
+    if(vec_cell->at(i).ps2.size() > 0)
+      for (unsigned int j = 0; j < vec_cell->at(i).ps2.at(0).photo_el.size(); j++) {
+        hit_pid[ev->SegmentDetectors["EMCalSci"]
+                    .at(vec_cell->at(i).ps2.at(0).photo_el.at(j).h_index)
+                    .PrimaryId]++;
+      }
 
     pid[i] =
         std::max_element(hit_pid.begin(), hit_pid.end(), value_comparer)->first;
@@ -1291,8 +1293,8 @@ void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
       if (pid[j] == unique_pid[i]) {
         // good cell should have signal on both side and a tdc different less
         // than 30 ns (5.85 ns/m * 4 m)
-        if (vec_cell->at(j).ps1.adc.size() == 0 || vec_cell->at(j).ps2.adc.size() == 0 ||
-            std::abs(vec_cell->at(j).ps1.tdc.at(0) - vec_cell->at(j).ps2.tdc.at(0)) > cell_max_dt)
+        if (vec_cell->at(j).ps1.size() == 0 || vec_cell->at(j).ps2.size() == 0 ||
+            std::abs(vec_cell->at(j).ps1.at(0).tdc - vec_cell->at(j).ps2.at(0).tdc) > cell_max_dt)
           continue;
 
         cl.cells.push_back(vec_cell->at(j));

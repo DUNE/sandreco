@@ -81,8 +81,11 @@ double Attenuation(double d, int planeID)
 double E2PE(double E)
 {
   if (debug) std::cout << "E = " << E << " -> p.e. = " << e2p2* E << std::endl;
-
-  return e2p2 * E;
+ 
+  if (debug && flukatype==1) std::cout << "E = " << E << " -> p.e. = " << e2p2_fluka * E << std::endl;
+  
+  if(flukatype==1) return e2p2_fluka * E;
+  else return e2p2 * E;
 }
 
 // simulate pe arrival time to pmt
@@ -419,7 +422,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
 
 // from simulated pe produce adc e tdc of calo cell
 void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
-                   std::map<int, dg_ps >& ps)
+                   std::map<int, std::vector<dg_ps> >& map_pmt)
 {
   /*
     -  ADC - Proportional to NPHE
@@ -436,17 +439,16 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
   int start_index;
   int index;
 
-  std::vector<pe> digit_pe;
+  std::vector<pe> photo_el_digit;
 
   for (std::map<int, std::vector<pe> >::iterator it = photo_el.begin();
        it != photo_el.end(); ++it) {
     // order by arrival time
     std::sort(it->second.begin(), it->second.end(), kloe_simu::isPeBefore);
 
-    dg_ps pmt;
-    pmt.side = 2 * (it->first > 0) - 1;
+    auto side = 2 * (it->first > 0) - 1;
 
-    digit_pe.clear();
+    photo_el_digit.clear();
 
     int_start = it->second.front().time;
     pe_count = 0;
@@ -458,43 +460,48 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
       // integrate for int_time
       if (this_pe->time < int_start + int_time) {
         pe_count++;
-        digit_pe.push_back(*this_pe);
+        photo_el_digit.push_back(*this_pe);
       } else if (this_pe->time > int_start + int_time + dead_time) {
         // above threshold -> digit
         if (pe_count > pe_threshold) {
-          pmt.adc.push_back(pe2ADC * pe_count);
+          dg_ps signal;
+          signal.side = side;
+          signal.adc = pe2ADC * pe_count;
           index = int(costant_fraction * pe_count) + start_index;
-          pmt.tdc.push_back(it->second[index].time);
-          pmt.photo_el = digit_pe;
+          signal.tdc = it->second[index].time;
+          signal.photo_el = photo_el_digit;
+          map_pmt[it->first].push_back(signal);
         }
         // get ready for next digiit
         pe_count = 1;
+        photo_el_digit.clear();
         int_start = this_pe->time;
         start_index = this_pe - it->second.begin();
       }
     }
 
     if (pe_count > pe_threshold) {
-      pmt.adc.push_back(pe2ADC * pe_count);
+      dg_ps signal;
+      signal.side = side;
+      signal.adc = pe2ADC * pe_count;
       index = int(costant_fraction * pe_count) + start_index;
-      pmt.tdc.push_back(it->second[index].time);
-      pmt.photo_el = digit_pe;
+      signal.tdc = it->second[index].time;
+      signal.photo_el = photo_el_digit;
+      map_pmt[it->first].push_back(signal);
     }
-
-    ps[it->first] = pmt;
   }
 }
 
 // construct calo digit and collect them in a vector
 void CollectSignal(TGeoManager* geo,
-                   std::map<int, dg_ps>& ps,
+                   std::map<int, std::vector<dg_ps> >& ps,
                    std::map<int, double>& L,
                    std::vector<dg_cell>& vec_cell)
 {
   std::map<int, dg_cell> map_cell;
   dg_cell* c;
 
-  for (std::map<int, dg_ps>::iterator it = ps.begin(); it != ps.end();
+  for (std::map<int, std::vector<dg_ps> >::iterator it = ps.begin(); it != ps.end();
        ++it) {
     int id = abs(it->first);
 
@@ -523,7 +530,7 @@ void CollectSignal(TGeoManager* geo,
 void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<dg_cell>& vec_cell)
 {
   std::map<int, std::vector<pe> > photo_el;
-  std::map<int, dg_ps> ps;
+  std::map<int, std::vector<dg_ps> > ps;
   std::map<int, double> L;
 
   vec_cell.clear();
