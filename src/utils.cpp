@@ -281,13 +281,13 @@ bool kloe_simu::isDigBefore(dg_tube d1, dg_tube d2)
 
 bool kloe_simu::isCellBefore(dg_cell c1, dg_cell c2)
 {
-  if (c1.ps1.adc.size() == 0 || c1.ps2.adc.size() == 0)
+  if (c1.ps1.size() == 0 || c1.ps2.size() == 0)
     return false;
-  else if (c2.ps1.adc.size() == 0 || c2.ps2.adc.size() == 0)
+  else if (c2.ps1.size() == 0 || c2.ps2.size() == 0)
     return true;
   else
-    return ((c1.ps1.tdc.at(0) + c1.ps2.tdc.at(0)) <
-            (c2.ps1.tdc.at(0) + c2.ps2.tdc.at(0)));
+    return ((c1.ps1.at(0).tdc + c1.ps2.at(0).tdc) <
+            (c2.ps1.at(0).tdc + c2.ps2.at(0).tdc));
 }
 
 bool kloe_simu::isAfter(particle p1, particle p2)
@@ -773,15 +773,15 @@ void kloe_simu::CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
 {
   if (c.id < 25000)  // Barrel
   {
-    x = c.x + XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
+    x = c.x + XfromTDC(c.ps1.at(0).tdc, c.ps2.at(0).tdc);
     y = c.y;
   } else {
     x = c.x;
-    y = c.y - XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
+    y = c.y - XfromTDC(c.ps1.at(0).tdc, c.ps2.at(0).tdc);
   }
-  double d1 = 0.5 * c.l + XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
-  double d2 = 0.5 * c.l - XfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0));
+  double d1 = 0.5 * c.l + XfromTDC(c.ps1.at(0).tdc, c.ps2.at(0).tdc);
+  double d2 = 0.5 * c.l - XfromTDC(c.ps1.at(0).tdc, c.ps2.at(0).tdc);
   z = c.z;
-  t = TfromTDC(c.ps1.tdc.at(0), c.ps2.tdc.at(0), c.l);
-  e = EfromADC(c.ps1.adc.at(0), c.ps2.adc.at(0), d1, d2, c.lay);
+  t = TfromTDC(c.ps1.at(0).tdc, c.ps2.at(0).tdc, c.l);
+  e = EfromADC(c.ps1.at(0).adc, c.ps2.at(0).adc, d1, d2, c.lay);
 }

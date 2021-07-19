@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
   TCut endcap_module = "dg_cell.mod > 24";
   TCut up_barrel_module = "dg_cell.mod==0";
   TCut left_endcap_module = "dg_cell.mod==30";
-  TCut cellOK = "dg_cell.ps1.@adc.size()>0&&dg_cell.ps2.@adc.size()>0";
+  TCut cellOK = "dg_cell.@ps1.size()>0&&dg_cell.@ps2.size()>0";
   TCut trackRecoOK = "track.ret_ln==0&&track.ret_cr==0";
   TCut EnuRecoOK = "Enureco>0.";
   TCut PrimaryPart = "particles.primary==1";
@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
     c.SaveAs(fout.Data());
     c.SetLogz(false);
 
-    tDigit->Draw("(dg_cell.ps2.@adc.size()>0):(dg_cell.ps1.@adc.size()>0)>>htemp(2,-0.5,1.5,2,-0.5,1.5)", "",
+    tDigit->Draw("(dg_cell.@ps2.size()>0):(dg_cell.@ps1.size()>0)>>htemp(2,-0.5,1.5,2,-0.5,1.5)", "",
                  "colztext");
     h2 = (TH2D*)gROOT->FindObject("htemp");
     h2->SetStats(false);
@@ -187,10 +187,10 @@ int main(int argc, char* argv[])
           "cells; log_{10}(#p.e.)");
     print(c, fout, tDigit, "TMath::Log10(dg_cell.ps2.@photo_el.size())", "", "",
           "cells; log_{10}(#p.e.)");
-    print(c, fout, tDigit, "TMath::Log10(dg_cell.ps1.photo_el.time)", "", "",
-          "cells; log_{10}(p.e. time1/ns)");
-    print(c, fout, tDigit, "TMath::Log10(dg_cell.ps2.photo_el.time)", "", "",
-          "cells; log_{10}(p.e. time2/ns)");
+//     print(c, fout, tDigit, "TMath::Log10(dg_cell.ps1.photo_el.time)", "", "",
+//           "cells; log_{10}(p.e. time1/ns)");
+//     print(c, fout, tDigit, "TMath::Log10(dg_cell.ps2.photo_el.time)", "", "",
+//           "cells; log_{10}(p.e. time2/ns)");
     c.SetLogy(false);
 
     n = tDigit->Draw("dg_tube.y:dg_tube.x", "dg_tube.hor", "goff", 1000);
