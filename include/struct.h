@@ -28,11 +28,12 @@ struct hit {
   int index;
 };
 
+// photo-signal
 struct dg_ps
 {
   int side;
-  std::vector<double> adc;
-  std::vector<double> tdc;
+  double adc;
+  double tdc;
   std::vector<pe> photo_el;
 };
 
@@ -45,9 +46,9 @@ struct dg_cell
   double l;
   int mod;
   int lay;
-  int cel;
-  dg_ps ps1;
-  dg_ps ps2;
+  int cel;  
+  std::vector<dg_ps> ps1;
+  std::vector<dg_ps> ps2;
 };
 
 struct dg_tube
@@ -171,6 +172,7 @@ struct gcell
 #pragma link C++ class std::map < int, std::vector < double >> +;
 #pragma link C++ class std::map < int, std::vector < int >> +;
 #pragma link C++ class std::map < int, double > +;
+#pragma link C++ class std::vector < pe > +;
 #pragma link C++ class std::vector < dg_ps > +;
 #pragma link C++ class std::vector < dg_cell > +;
 #pragma link C++ class std::map < std::string, std::vector < hit >> +;
