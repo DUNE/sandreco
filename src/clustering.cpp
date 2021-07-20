@@ -48,11 +48,12 @@ std::vector<cluster> Preclustering(std::vector<dg_cell>* vec_cellraw)
   // Create vector of complete and incomplete cells
   for (auto const& cell : *vec_cellraw) {
     // for (int i = 0; i < dg_size; i++) {
-    if (cell.ps1.adc.size() == 0 && cell.ps2.adc.size() == 0) continue;
-    if (cell.ps1.adc.size() == 0 || cell.ps2.adc.size() == 0) {
+      if (cell.ps1.size() == 0 && cell.ps2.size() == 0) {
+          continue;
+      } else if (cell.ps1.size() == 0 || cell.ps2.size() == 0) {
       // cout << "broken" << endl;
-      broken_cells.push_back(cell);
-    } /*
+          broken_cells.push_back(cell);
+     } /*
      if ((cell.ps1.adc.at(0) == 0 || cell.ps2.adc.at(0) == 0 ||
      cell.ps1.tdc.at(0) == 0 || cell.ps2.tdc.at(0) == 0)) {
          cout << "incomplete" << endl;
@@ -63,7 +64,7 @@ std::vector<cluster> Preclustering(std::vector<dg_cell>* vec_cellraw)
          cout << "incomplete time" << endl;
          weird_cells.push_back(cell);
      }*/
-    else {
+    else  {
       // Complete cell
       complete_cells.push_back(cell);
       dg_idvec[i_id] = cell.id;
@@ -201,24 +202,22 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
       double rec_en = 0;
       double DpmA = clus.at(minentry).x / 10 + 215;
       double DpmB = -clus.at(minentry).x / 10 + 215;
-      if (brok_cells.ps1.adc.size() != 0 && brok_cells.ps2.adc.size() != 0) {
-        double Ea = brok_cells.ps1.adc.at(0);
-        double Eb = brok_cells.ps2.adc.at(0);
+      if (brok_cells.ps1.size() != 0 && brok_cells.ps2.size() != 0) {
+        double Ea = brok_cells.ps1.at(0).adc;
+        double Eb = brok_cells.ps2.at(0).adc;
         rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
         clus.at(minentry).cells.push_back(brok_cells);
-      } else if (brok_cells.ps1.adc.size() != 0 &&
-                 brok_cells.ps1.tdc.size() != 0) {
+      } else if (brok_cells.ps1.size()!=0) {
         int laycell = brok_cells.lay;
         double f = kloe_simu::AttenuationFactor(DpmA, laycell);
-        rec_en = EfromADCsingle(brok_cells.ps1.adc.at(0), f);
+        rec_en = EfromADCsingle(brok_cells.ps1.at(0).adc, f);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
         clus.at(minentry).cells.push_back(brok_cells);
-      } else if (brok_cells.ps2.adc.size() != 0 &&
-                 brok_cells.ps2.tdc.size() != 0) {
+      } else if (brok_cells.ps2.size() != 0) {
         int laycell = brok_cells.lay;
         double f = kloe_simu::AttenuationFactor(DpmB, laycell);
-        rec_en = EfromADCsingle(brok_cells.ps2.adc.at(0), f);
+        rec_en = EfromADCsingle(brok_cells.ps2.at(0).adc, f);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
         clus.at(minentry).cells.push_back(brok_cells);
       }
@@ -228,24 +227,22 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
       double ecl = brok_cells.l;
       double DpmA = clus.at(minentry).z / 10 + ecl / 20;
       double DpmB = -clus.at(minentry).z / 10 + ecl / 20;
-      if (brok_cells.ps1.adc.size() != 0 && brok_cells.ps2.adc.size() != 0) {
-        double Ea = brok_cells.ps1.adc.at(0);
-        double Eb = brok_cells.ps2.adc.at(0);
+      if (brok_cells.ps1.size() != 0 && brok_cells.ps2.size() != 0) {
+        double Ea = brok_cells.ps1.at(0).adc;
+        double Eb = brok_cells.ps2.at(0).adc;
         rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
         clus.at(minentry).cells.push_back(brok_cells);
-      } else if (brok_cells.ps1.adc.size() != 0 &&
-                 brok_cells.ps1.tdc.size() != 0) {
+      } else if (brok_cells.ps1.size() != 0) {
         int laycell = brok_cells.lay;
         double f = kloe_simu::AttenuationFactor(DpmA, laycell);
-        rec_en = EfromADCsingle(brok_cells.ps1.adc.at(0), f);
+        rec_en = EfromADCsingle(brok_cells.ps1.at(0).adc, f);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
         clus.at(minentry).cells.push_back(brok_cells);
-      } else if (brok_cells.ps2.adc.size() != 0 &&
-                 brok_cells.ps2.adc.size() != 0) {
+      } else if (brok_cells.ps2.size() != 0) {
         int laycell = brok_cells.lay;
         double f = kloe_simu::AttenuationFactor(DpmB, laycell);
-        rec_en = EfromADCsingle(brok_cells.ps2.adc.at(0), f);
+        rec_en = EfromADCsingle(brok_cells.ps2.at(0).adc, f);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
         clus.at(minentry).cells.push_back(brok_cells);
       }
@@ -283,31 +280,31 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec)
     double tRMS_A, tRMS_B, dist;
     all_cells = clus.cells;
     for (int j = 0; j < all_cells.size(); j++) {
-      EA = all_cells.at(j).ps1.adc.at(0);
-      EB = all_cells.at(j).ps2.adc.at(0);
+      EA = all_cells.at(j).ps1.at(0).adc;
+      EB = all_cells.at(j).ps2.at(0).adc;
       EAtot += EA;
       EA2tot += EA * EA;
       EBtot += EB;
       EB2tot += EB * EB;
       double d =
-          DfromADC(all_cells[j].ps1.tdc.at(0), all_cells[j].ps2.adc.at(0));
+          DfromADC(all_cells[j].ps1.at(0).tdc, all_cells[j].ps2.at(0).adc);
       double d1, d2, d3;
       d1 = 0.5 * all_cells[j].l + d;
       d2 = 0.5 * all_cells[j].l - d;
-      double cell_E = kloe_simu::EfromADC(all_cells[j].ps1.adc.at(0),
-                                          all_cells[j].ps2.adc.at(0), d1, d2,
+      double cell_E = kloe_simu::EfromADC(all_cells[j].ps1.at(0).adc,
+                                          all_cells[j].ps2.at(0).adc, d1, d2,
                                           all_cells[j].lay);
-      tA += (all_cells.at(j).ps1.tdc.at(0) -
+      tA += (all_cells.at(j).ps1.at(0).tdc -
              kloe_simu::vlfb * d1 / kloe_simu::m_to_mm) *
             EA;
-      tA2 += std::pow(all_cells.at(j).ps1.tdc.at(0) -
+      tA2 += std::pow(all_cells.at(j).ps1.at(0).tdc -
                           kloe_simu::vlfb * d1 / kloe_simu::m_to_mm,
                       2) *
              EA;
-      tB += (all_cells.at(j).ps2.tdc.at(0) -
+      tB += (all_cells.at(j).ps2.at(0).tdc -
              kloe_simu::vlfb * d2 / kloe_simu::m_to_mm) *
             EB;
-      tB2 += std::pow(all_cells.at(j).ps2.adc.at(0) -
+      tB2 += std::pow(all_cells.at(j).ps2.at(0).adc -
                           kloe_simu::vlfb * d2 / kloe_simu::m_to_mm,
                       2) *
              EB;
@@ -322,8 +319,8 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec)
     if (dist > 5) {
       std::vector<dg_cell> q1_cells, q2_cells, q3_cells, q4_cells;
       for (auto const& a_cells : all_cells) {
-        double t_difA = a_cells.ps1.tdc.at(0) - tA;
-        double t_difB = a_cells.ps2.tdc.at(0) - tB;
+        double t_difA = a_cells.ps1.at(0).tdc - tA;
+        double t_difB = a_cells.ps2.at(0).tdc - tB;
         if (t_difA > 0) {
           if (t_difB > 0) {
             q1_cells.push_back(a_cells);
@@ -711,14 +708,14 @@ cluster Calc_variables(std::vector<dg_cell> cells)
          x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, Etot = 0, E2tot,
          EvEtot = 0, EA, EAtot = 0, EB, EBtot = 0, TA = 0, TB = 0;
   for (auto const& cell : cells) {
-    double d = DfromADC(cell.ps1.tdc.at(0), cell.ps2.tdc.at(0));
+    double d = DfromADC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
     double d1, d2, d3;
     d1 = 0.5 * cell.l + d;
     d2 = 0.5 * cell.l - d;
-    double cell_E = kloe_simu::EfromADC(cell.ps1.adc.at(0), cell.ps2.adc.at(0),
+    double cell_E = kloe_simu::EfromADC(cell.ps1.at(0).adc, cell.ps2.at(0).adc,
                                         d1, d2, cell.lay);
     double cell_T =
-        kloe_simu::TfromTDC(cell.ps1.tdc.at(0), cell.ps2.tdc.at(0), cell.l);
+        kloe_simu::TfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell.l);
     if (cell.mod > 25) {
       d3 = cell.y - d;
       y_weighted = y_weighted - (d3 * cell_E);
