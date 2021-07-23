@@ -9,6 +9,7 @@
 #include <TCanvas.h>
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
+#include <TObjString.h>
 #include <TRandom3.h>
 
 #include <iostream>
