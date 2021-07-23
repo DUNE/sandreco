@@ -71,7 +71,9 @@ install(TARGETS Utils Struct Digitize Reconstruct Analyze Display FastCheck
 install(
    DIRECTORY "${CMAKE_BINARY_DIR}/."
    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-   FILES_MATCHING PATTERN "*.pcm"
+   FILES_MATCHING 
+   PATTERN "*.pcm"
+   PATTERN "*.rootmap"
    PATTERN "lib" EXCLUDE
    PATTERN "bin" EXCLUDE
    PATTERN "CMakeFiles" EXCLUDE)
