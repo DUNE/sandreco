@@ -1,15 +1,15 @@
 #include <TChain.h>
-#include <TFile.h>
-#include <TGeoManager.h>
 #include <TDirectoryFile.h>
-#include <TH1D.h>
+#include <TFile.h>
 #include <TGeoBBox.h>
+#include <TGeoManager.h>
+#include <TH1D.h>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
 
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 
 #include "struct.h"
 #include "utils.h"
@@ -49,10 +49,7 @@ void evalUV(double& u, double& v, double zv, double yv, double z, double y)
   v /= d;
 }
 
-void evalPhi(double& phi, double u, double v)
-{
-  phi = TMath::ATan2(v, u);
-}
+void evalPhi(double& phi, double u, double v) { phi = TMath::ATan2(v, u); }
 
 void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_tube>& vd,
                     double zv, double yv)
@@ -1261,15 +1258,17 @@ void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
     // find particle corresponding to more p.e.
     hit_pid.clear();
 
-    if(vec_cell->at(i).ps1.size() > 0)
-      for (unsigned int j = 0; j < vec_cell->at(i).ps1.at(0).photo_el.size(); j++) {
+    if (vec_cell->at(i).ps1.size() > 0)
+      for (unsigned int j = 0; j < vec_cell->at(i).ps1.at(0).photo_el.size();
+           j++) {
         hit_pid[ev->SegmentDetectors["EMCalSci"]
                     .at(vec_cell->at(i).ps1.at(0).photo_el.at(j).h_index)
                     .PrimaryId]++;
       }
 
-    if(vec_cell->at(i).ps2.size() > 0)
-      for (unsigned int j = 0; j < vec_cell->at(i).ps2.at(0).photo_el.size(); j++) {
+    if (vec_cell->at(i).ps2.size() > 0)
+      for (unsigned int j = 0; j < vec_cell->at(i).ps2.at(0).photo_el.size();
+           j++) {
         hit_pid[ev->SegmentDetectors["EMCalSci"]
                     .at(vec_cell->at(i).ps2.at(0).photo_el.at(j).h_index)
                     .PrimaryId]++;
@@ -1293,8 +1292,10 @@ void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
       if (pid[j] == unique_pid[i]) {
         // good cell should have signal on both side and a tdc different less
         // than 30 ns (5.85 ns/m * 4 m)
-        if (vec_cell->at(j).ps1.size() == 0 || vec_cell->at(j).ps2.size() == 0 ||
-            std::abs(vec_cell->at(j).ps1.at(0).tdc - vec_cell->at(j).ps2.at(0).tdc) > cell_max_dt)
+        if (vec_cell->at(j).ps1.size() == 0 ||
+            vec_cell->at(j).ps2.size() == 0 ||
+            std::abs(vec_cell->at(j).ps1.at(0).tdc -
+                     vec_cell->at(j).ps2.at(0).tdc) > cell_max_dt)
           continue;
 
         cl.cells.push_back(vec_cell->at(j));
@@ -1538,8 +1539,14 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   binning.push_back(last_z);
 }
 
-void Reconstruct(const char* fMc, const char* fIn)
+enum class STT_Mode { fast, full };
+enum class ECAL_Mode { fast };
+
+void Reconstruct(const char* fMc, const char* fIn, STT_Mode stt_mode,
+                 ECAL_Mode ecal_mode)
 {
+  std::cout <<"Reconstruct\ninput: " << fMc <<"\noutput: " << fIn << '\n';
+
   TFile ftrue(fMc, "READ");
   TFile f(fIn, "UPDATE");
   TTree* tDigit = (TTree*)f.Get("tDigit");
@@ -1597,19 +1604,28 @@ void Reconstruct(const char* fMc, const char* fIn)
     std::vector<dg_tube> clustersY;
     std::vector<dg_tube> clustersX;
 
-    VertexFind(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, *vec_digi, sampling,
-               epsilon);
+    switch (stt_mode) {
+      case STT_Mode::fast:
+        // TrackFind(ev, vec_digi, vec_tr);
+        // TrackFit(vec_tr);
+        break;
+      case STT_Mode::full:
+        VertexFind(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, *vec_digi,
+                   sampling, epsilon);
+        TrackFind(vec_tr, *vec_digi, sampling, xvtx_reco, yvtx_reco, zvtx_reco,
+                  tol_phi, tol_x, tol_mod, mindigtr, dn_tol, dz_tol);
+        TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
+        break;
+    }
 
-    // TrackFind(ev, vec_digi, vec_tr);
-    TrackFind(vec_tr, *vec_digi, sampling, xvtx_reco, yvtx_reco, zvtx_reco,
-              tol_phi, tol_x, tol_mod, mindigtr, dn_tol, dz_tol);
-    // TrackFit(vec_tr);
-    TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
-
-    // PreCluster(vec_cell, vec_cl);
-    // Filter(vec_cl);
-    PidBasedClustering(ev, vec_cell, vec_cl);
-    Merge(vec_cl);
+    switch (ecal_mode) {
+      case ECAL_Mode::fast:
+        // PreCluster(vec_cell, vec_cl);
+        // Filter(vec_cl);
+        PidBasedClustering(ev, vec_cell, vec_cl);
+        Merge(vec_cl);
+        break;
+    }
     tout.Fill();
   }
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
@@ -1632,13 +1648,26 @@ void Reconstruct(const char* fMc, const char* fIn)
 
 void help_reco()
 {
-  std::cout << "Reconstruct <MC file> <digit file>" << std::endl;
+  std::cout
+      << "Reconstruct <input file (hits)> <output file(digits)> [stt_mode]\n";
+  std::cout << "    - stt_mode: 'stt_mode::full' (default) \n";
+  std::cout << "                'stt_mode::fast' \n";
 }
 
 int main(int argc, char* argv[])
 {
-  if (argc != 3)
+  // boost::program_options wuold be great here....
+
+  if (argc < 3 || argc > 5) {
     help_reco();
-  else
-    Reconstruct(argv[1], argv[2]);
+    return -1;
+  }
+
+  auto stt_mode = STT_Mode::full;
+  if (argc > 3 && strcmp(argv[3], "stt_mode::fast") == 0) {
+    stt_mode = STT_Mode::fast;
+  }
+
+  Reconstruct(argv[1], argv[2], stt_mode, ECAL_Mode::fast);
+  return 0;
 }
