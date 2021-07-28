@@ -1545,7 +1545,7 @@ enum class ECAL_Mode { fast };
 void Reconstruct(const char* fMc, const char* fIn, STT_Mode stt_mode,
                  ECAL_Mode ecal_mode)
 {
-  std::cout <<"Reconstruct\ninput: " << fMc <<"\noutput: " << fIn << '\n';
+  std::cout << "Reconstruct\ninput: " << fMc << "\noutput: " << fIn << '\n';
 
   TFile ftrue(fMc, "READ");
   TFile f(fIn, "UPDATE");

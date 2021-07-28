@@ -1,46 +1,46 @@
-#include "struct.h"
 #include "utils.h"
+#include "struct.h"
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
 
+#include <TCanvas.h>
 #include <TChain.h>
 #include <TGeoManager.h>
-#include <TCanvas.h>
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
 #include <TObjString.h>
 #include <TRandom3.h>
 
-#include <iostream>
 #include "transf.h"
+#include <iostream>
 
 namespace kloe_simu
 {
-  double cellCoordBarrel[nMod][nLay][nCel][3];
-  double cellCoordEndcap[5][nLay][90][3];
+double cellCoordBarrel[nMod][nLay][nCel][3];
+double cellCoordEndcap[5][nLay][90][3];
 
-  double czlay[nLay];
-  double cxlay[nLay][nCel];
-  double ec_r;
-  double ec_dz;
+double czlay[nLay];
+double cxlay[nLay][nCel];
+double ec_r;
+double ec_dz;
 
-  double stt_center[3];
+double stt_center[3];
 
-  TPRegexp* rST;
-  TPRegexp* rSTplane;
+TPRegexp* rST;
+TPRegexp* rSTplane;
 
-  std::map<int, std::map<double, int> > stX;
-  std::map<int, double> stL;
-  std::map<int, std::map<int, TVector2> > stPos;
-  std::map<int, TVector2> tubePos;
-  std::map<int, double> t0;
-} 
+std::map<int, std::map<double, int> > stX;
+std::map<int, double> stL;
+std::map<int, std::map<int, TVector2> > stPos;
+std::map<int, TVector2> tubePos;
+std::map<int, double> t0;
+}  // namespace kloe_simu
 
 bool kloe_simu::isPeBefore(const pe& p1, const pe& p2)
 {
   return p1.time < p2.time;
-} 
+}
 
 // value of parameter of segment (y1,z1,y2,z2)
 // corresponding to minimal distance to point (y,z)
@@ -82,10 +82,7 @@ void kloe_simu::decodePlaneID(int id, int& moduleid, int& type)
   type = id % 10;
 }
 
-bool kloe_simu::isST(TString name)
-{
-  return name.Contains(*kloe_simu::rST);
-}
+bool kloe_simu::isST(TString name) { return name.Contains(*kloe_simu::rST); }
 
 bool kloe_simu::isSTPlane(TString name)
 {
@@ -270,15 +267,9 @@ bool kloe_simu::isDigUpstream(const dg_tube& d1, const dg_tube& d2)
   return d1.z < d2.z;
 }
 
-bool kloe_simu::isHitBefore(hit h1, hit h2)
-{
-  return h1.t1 < h2.t1;
-}
+bool kloe_simu::isHitBefore(hit h1, hit h2) { return h1.t1 < h2.t1; }
 
-bool kloe_simu::isDigBefore(dg_tube d1, dg_tube d2)
-{
-  return d1.tdc < d2.tdc;
-}
+bool kloe_simu::isDigBefore(dg_tube d1, dg_tube d2) { return d1.tdc < d2.tdc; }
 
 bool kloe_simu::isCellBefore(dg_cell c1, dg_cell c2)
 {
@@ -291,10 +282,7 @@ bool kloe_simu::isCellBefore(dg_cell c1, dg_cell c2)
             (c2.ps1.at(0).tdc + c2.ps2.at(0).tdc));
 }
 
-bool kloe_simu::isAfter(particle p1, particle p2)
-{
-  return p1.tid > p2.tid;
-}
+bool kloe_simu::isAfter(particle p1, particle p2) { return p1.tid > p2.tid; }
 
 bool kloe_simu::isBarrel(TString& str)
 {
@@ -486,8 +474,8 @@ void kloe_simu::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
       dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
     }
   } else if (mod == 30 || mod == 40)
-      // right x > 0 : c->mod = 30
-      // left  x < 0 : c->mod = 40
+  // right x > 0 : c->mod = 30
+  // left  x < 0 : c->mod = 40
   {
 
     if (kloe_simu::flukatype == false) {
@@ -737,8 +725,9 @@ double kloe_simu::AttenuationFactor(double d, int planeID)
     std::cout << "\talt1 = " << kloe_simu::atl1 << std::endl;
     std::cout << "\talt2 = " << atl2 << std::endl;
     std::cout << "\tatt  = "
-              << kloe_simu::p1* TMath::Exp(-d / kloe_simu::atl1) +
-                     (1. - kloe_simu::p1) * TMath::Exp(-d / atl2) << std::endl;
+              << kloe_simu::p1 * TMath::Exp(-d / kloe_simu::atl1) +
+                     (1. - kloe_simu::p1) * TMath::Exp(-d / atl2)
+              << std::endl;
   }
 
   return kloe_simu::p1 * TMath::Exp(-d / kloe_simu::atl1) +
