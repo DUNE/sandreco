@@ -1,8 +1,8 @@
 #include <TChain.h>
-#include <TFile.h>
 #include <TDatabasePDG.h>
-#include <TParticlePDG.h>
 #include <TDirectoryFile.h>
+#include <TFile.h>
+#include <TParticlePDG.h>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
@@ -10,9 +10,9 @@
 #include "struct.h"
 #include "utils.h"
 
+#include <iomanip>
 #include <iostream>
 #include <string>
-#include <iomanip>
 
 using namespace kloe_simu;
 
@@ -851,10 +851,7 @@ void Analyze(const char* fMc, const char* fIn)
   delete vec_cl;
 }
 
-void help_ana()
-{
-  std::cout << "Analyze <MC file> <reco file>" << std::endl;
-}
+void help_ana() { std::cout << "Analyze <MC file> <reco file>" << std::endl; }
 
 int main(int argc, char* argv[])
 {

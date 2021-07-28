@@ -1,13 +1,12 @@
 // File struct.h
-#include <vector>
 #include <map>
 #include <string>
+#include <vector>
 
 #ifndef STRUCT_H
 #define STRUCT_H
 
-struct pe
-{
+struct pe {
   double time;
   int h_index;
 };
@@ -29,16 +28,14 @@ struct hit {
 };
 
 // photo-signal
-struct dg_ps
-{
+struct dg_ps {
   int side;
   double adc;
   double tdc;
   std::vector<pe> photo_el;
 };
 
-struct dg_cell
-{
+struct dg_cell {
   int id;
   double z;
   double y;
@@ -46,13 +43,12 @@ struct dg_cell
   double l;
   int mod;
   int lay;
-  int cel;  
+  int cel;
   std::vector<dg_ps> ps1;
   std::vector<dg_ps> ps2;
 };
 
-struct dg_tube
-{
+struct dg_tube {
   std::string det;
   int did;
   double x;
@@ -66,8 +62,7 @@ struct dg_tube
   std::vector<int> hindex;
 };
 
-struct cluster
-{
+struct cluster {
   int tid;
   double x;
   double y;
@@ -83,8 +78,7 @@ struct cluster
   std::vector<dg_cell> cells;
 };
 
-struct track
-{
+struct track {
   int tid;
   double yc;
   double zc;
@@ -105,8 +99,7 @@ struct track
   std::vector<dg_tube> clY;
 };
 
-struct particle
-{
+struct particle {
   int primary;
   int pdg;
   int tid;
@@ -142,8 +135,7 @@ struct particle
   std::vector<particle> daughters;
 };
 
-struct event
-{
+struct event {
   double x;
   double y;
   double z;
@@ -159,8 +151,7 @@ struct event
   std::vector<particle> particles;
 };
 
-struct gcell
-{
+struct gcell {
   int id;
   double Z[4];
   double Y[4];
@@ -169,17 +160,17 @@ struct gcell
 };
 
 #ifdef __MAKECINT__
-#pragma link C++ class std::map < int, std::vector < double >> +;
-#pragma link C++ class std::map < int, std::vector < int >> +;
-#pragma link C++ class std::map < int, double > +;
-#pragma link C++ class std::vector < pe > +;
-#pragma link C++ class std::vector < dg_ps > +;
-#pragma link C++ class std::vector < dg_cell > +;
-#pragma link C++ class std::map < std::string, std::vector < hit >> +;
-#pragma link C++ class std::vector < dg_tube > +;
-#pragma link C++ class std::vector < track > +;
-#pragma link C++ class std::vector < cluster > +;
-#pragma link C++ class std::vector < particle > +;
+#pragma link C++ class std::map < int, std::vector < double>> + ;
+#pragma link C++ class std::map < int, std::vector < int>> + ;
+#pragma link C++ class std::map < int, double> + ;
+#pragma link C++ class std::vector < pe> + ;
+#pragma link C++ class std::vector < dg_ps> + ;
+#pragma link C++ class std::vector < dg_cell> + ;
+#pragma link C++ class std::map < std::string, std::vector < hit>> + ;
+#pragma link C++ class std::vector < dg_tube> + ;
+#pragma link C++ class std::vector < track> + ;
+#pragma link C++ class std::vector < cluster> + ;
+#pragma link C++ class std::vector < particle> + ;
 #pragma link C++ class pe + ;
 #pragma link C++ class dg_ps + ;
 #pragma link C++ class dg_tube + ;

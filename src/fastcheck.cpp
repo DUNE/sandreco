@@ -1,12 +1,12 @@
-#include <TROOT.h>
 #include <TCanvas.h>
+#include <TCut.h>
+#include <TFile.h>
+#include <TGraph.h>
 #include <TH1D.h>
 #include <TH2D.h>
-#include <TTree.h>
-#include <TFile.h>
+#include <TROOT.h>
 #include <TString.h>
-#include <TGraph.h>
-#include <TCut.h>
+#include <TTree.h>
 
 #include <iostream>
 
@@ -137,7 +137,9 @@ int main(int argc, char* argv[])
     c.SetLogy(false);
 
     c.SetLogz(true);
-    tDigit->Draw("dg_cell.ps2.adc:dg_cell.ps1.adc>>htemp(200,0,2000,200,0,2000)", "", "colz");
+    tDigit->Draw(
+        "dg_cell.ps2.adc:dg_cell.ps1.adc>>htemp(200,0,2000,200,0,2000)", "",
+        "colz");
     h2 = (TH2D*)gROOT->FindObject("htemp");
     h2->SetStats(false);
     h2->SetTitle("cells; adc1; adc2");
@@ -145,8 +147,10 @@ int main(int argc, char* argv[])
     c.SaveAs(fout.Data());
     c.SetLogz(false);
 
-    tDigit->Draw("(dg_cell.@ps2.size()>0):(dg_cell.@ps1.size()>0)>>htemp(2,-0.5,1.5,2,-0.5,1.5)", "",
-                 "colztext");
+    tDigit->Draw(
+        "(dg_cell.@ps2.size()>0):(dg_cell.@ps1.size()>0)>>htemp(2,-0.5,1.5,2,-"
+        "0.5,1.5)",
+        "", "colztext");
     h2 = (TH2D*)gROOT->FindObject("htemp");
     h2->SetStats(false);
     h2->SetTitle("cells; adc1>0; adc2>0");
@@ -158,14 +162,18 @@ int main(int argc, char* argv[])
           "OK cells; log_{10}(tdc1/ns)");
     print(c, fout, tDigit, "TMath::Log10(dg_cell.ps2.tdc[0])", "", "",
           "OK cells; log_{10}(tdc2/ns)");
-    print(c, fout, tDigit, "TMath::Log10(abs(dg_cell.ps1.tdc[0]-dg_cell.ps2.tdc[0]))", "",
-          "", "OK cells; log_{10}(|tdc1-tdc2|/ns)");
-    print(c, fout, tDigit, "TMath::Log10(abs(dg_cell.ps1.tdc[0]+dg_cell.ps2.tdc[0]))", "", "",
+    print(c, fout, tDigit,
+          "TMath::Log10(abs(dg_cell.ps1.tdc[0]-dg_cell.ps2.tdc[0]))", "", "",
+          "OK cells; log_{10}(|tdc1-tdc2|/ns)");
+    print(c, fout, tDigit,
+          "TMath::Log10(abs(dg_cell.ps1.tdc[0]+dg_cell.ps2.tdc[0]))", "", "",
           "OK cells; log_{10}((tdc1+tdc2)/ns)");
     c.SetLogy(false);
 
     c.SetLogz(true);
-    tDigit->Draw("dg_cell.ps2.adc[0]:dg_cell.ps1.adc[0]>>htemp(100,0,5000,100,0,5000)", cellOK, "colz");
+    tDigit->Draw(
+        "dg_cell.ps2.adc[0]:dg_cell.ps1.adc[0]>>htemp(100,0,5000,100,0,5000)",
+        cellOK, "colz");
     h2 = (TH2D*)gROOT->FindObject("htemp");
     h2->SetStats(false);
     h2->SetTitle("cells; adc1; adc2");
@@ -174,7 +182,9 @@ int main(int argc, char* argv[])
     c.SetLogz(false);
 
     c.SetLogz(true);
-    tDigit->Draw("dg_cell.ps2.tdc[0]:dg_cell.ps1.tdc[0]>>htemp(100,0,100,100,0,100)", cellOK, "colz");
+    tDigit->Draw(
+        "dg_cell.ps2.tdc[0]:dg_cell.ps1.tdc[0]>>htemp(100,0,100,100,0,100)",
+        cellOK, "colz");
     h2 = (TH2D*)gROOT->FindObject("htemp");
     h2->SetStats(false);
     h2->SetTitle("cells; tdc1 (ns); tdc2 (ns)");
@@ -187,10 +197,12 @@ int main(int argc, char* argv[])
           "cells; log_{10}(#p.e.)");
     print(c, fout, tDigit, "TMath::Log10(dg_cell.ps2.@photo_el.size())", "", "",
           "cells; log_{10}(#p.e.)");
-//     print(c, fout, tDigit, "TMath::Log10(dg_cell.ps1.photo_el.time)", "", "",
-//           "cells; log_{10}(p.e. time1/ns)");
-//     print(c, fout, tDigit, "TMath::Log10(dg_cell.ps2.photo_el.time)", "", "",
-//           "cells; log_{10}(p.e. time2/ns)");
+    //     print(c, fout, tDigit, "TMath::Log10(dg_cell.ps1.photo_el.time)", "",
+    //     "",
+    //           "cells; log_{10}(p.e. time1/ns)");
+    //     print(c, fout, tDigit, "TMath::Log10(dg_cell.ps2.photo_el.time)", "",
+    //     "",
+    //           "cells; log_{10}(p.e. time2/ns)");
     c.SetLogy(false);
 
     n = tDigit->Draw("dg_tube.y:dg_tube.x", "dg_tube.hor", "goff", 1000);

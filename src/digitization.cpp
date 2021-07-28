@@ -1,31 +1,31 @@
-#include <TGeoManager.h>
-#include <TString.h>
-#include <TGeoNode.h>
-#include <TObjArray.h>
-#include <TObjString.h>
-#include <TGeoTrd2.h>
-#include <TGeoTube.h>
+#include <TCanvas.h>
 #include <TChain.h>
 #include <TFile.h>
-#include <TCanvas.h>
+#include <TGeoManager.h>
+#include <TGeoNode.h>
+#include <TGeoTrd2.h>
+#include <TGeoTube.h>
 #include <TH1I.h>
 #include <TH2D.h>
+#include <TMath.h>
+#include <TObjArray.h>
+#include <TObjString.h>
 #include <TRandom3.h>
+#include <TString.h>
 #include <TStyle.h>
 #include <TSystem.h>
-#include <TMath.h>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
 
-#include <vector>
-#include <map>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
+#include <map>
+#include <vector>
 
 #include "struct.h"
-#include "utils.h"
 #include "transf.h"
+#include "utils.h"
 
 // Energy MeV
 // Distance mm
@@ -80,12 +80,15 @@ double Attenuation(double d, int planeID)
 // into the mean number of pe
 double E2PE(double E)
 {
-  if (debug) std::cout << "E = " << E << " -> p.e. = " << e2p2* E << std::endl;
- 
-  if (debug && flukatype==1) std::cout << "E = " << E << " -> p.e. = " << e2p2_fluka * E << std::endl;
-  
-  if(flukatype==1) return e2p2_fluka * E;
-  else return e2p2 * E;
+  if (debug) std::cout << "E = " << E << " -> p.e. = " << e2p2 * E << std::endl;
+
+  if (debug && flukatype == 1)
+    std::cout << "E = " << E << " -> p.e. = " << e2p2_fluka * E << std::endl;
+
+  if (flukatype == 1)
+    return e2p2_fluka * E;
+  else
+    return e2p2 * E;
 }
 
 // simulate pe arrival time to pmt
@@ -117,7 +120,7 @@ C                      + 1ns  uncertainty
     std::cout << "time : " << time << std::endl;
     std::cout << "t0   : " << t0 << std::endl;
     std::cout << "scint: " << tdec << std::endl;
-    std::cout << "prop : " << vlfb* d* mm_to_m << std::endl;
+    std::cout << "prop : " << vlfb * d * mm_to_m << std::endl;
   }
 
   return time;
@@ -352,7 +355,7 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
           44 / 2 + cellID * 44 - ec_rf;  // crescono all'aumentare di cellID
     else
       cellCoordEndcap[int(modID / 10)][planeID][cellID][2] =
-          44 / 2 - (cellID) * 44 + ec_rf;  // crescono al diminuire di cellID
+          44 / 2 - (cellID)*44 + ec_rf;  // crescono al diminuire di cellID
 
   } else if (str == "tracker" || str == "outside") {
     if (debug) std::cout << std::endl;
@@ -493,16 +496,14 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
 }
 
 // construct calo digit and collect them in a vector
-void CollectSignal(TGeoManager* geo,
-                   std::map<int, std::vector<dg_ps> >& ps,
-                   std::map<int, double>& L,
-                   std::vector<dg_cell>& vec_cell)
+void CollectSignal(TGeoManager* geo, std::map<int, std::vector<dg_ps> >& ps,
+                   std::map<int, double>& L, std::vector<dg_cell>& vec_cell)
 {
   std::map<int, dg_cell> map_cell;
   dg_cell* c;
 
-  for (std::map<int, std::vector<dg_ps> >::iterator it = ps.begin(); it != ps.end();
-       ++it) {
+  for (std::map<int, std::vector<dg_ps> >::iterator it = ps.begin();
+       it != ps.end(); ++it) {
     int id = abs(it->first);
 
     c = &(map_cell[id]);
@@ -820,7 +821,6 @@ void Digitize(const char* finname, const char* foutname)
   kloe_simu::stPos.clear();
   kloe_simu::t0.clear();
   kloe_simu::tubePos.clear();
-
 }
 
 void help_digit()

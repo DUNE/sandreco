@@ -1,15 +1,15 @@
 #include <TChain.h>
-#include <TFile.h>
-#include <TGeoManager.h>
 #include <TDirectoryFile.h>
-#include <TH1D.h>
+#include <TFile.h>
 #include <TGeoBBox.h>
+#include <TGeoManager.h>
+#include <TH1D.h>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
 
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 
 #include "struct.h"
 #include "utils.h"
@@ -49,10 +49,7 @@ void evalUV(double& u, double& v, double zv, double yv, double z, double y)
   v /= d;
 }
 
-void evalPhi(double& phi, double u, double v)
-{
-  phi = TMath::ATan2(v, u);
-}
+void evalPhi(double& phi, double u, double v) { phi = TMath::ATan2(v, u); }
 
 void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_tube>& vd,
                     double zv, double yv)
@@ -1261,15 +1258,17 @@ void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
     // find particle corresponding to more p.e.
     hit_pid.clear();
 
-    if(vec_cell->at(i).ps1.size() > 0)
-      for (unsigned int j = 0; j < vec_cell->at(i).ps1.at(0).photo_el.size(); j++) {
+    if (vec_cell->at(i).ps1.size() > 0)
+      for (unsigned int j = 0; j < vec_cell->at(i).ps1.at(0).photo_el.size();
+           j++) {
         hit_pid[ev->SegmentDetectors["EMCalSci"]
                     .at(vec_cell->at(i).ps1.at(0).photo_el.at(j).h_index)
                     .PrimaryId]++;
       }
 
-    if(vec_cell->at(i).ps2.size() > 0)
-      for (unsigned int j = 0; j < vec_cell->at(i).ps2.at(0).photo_el.size(); j++) {
+    if (vec_cell->at(i).ps2.size() > 0)
+      for (unsigned int j = 0; j < vec_cell->at(i).ps2.at(0).photo_el.size();
+           j++) {
         hit_pid[ev->SegmentDetectors["EMCalSci"]
                     .at(vec_cell->at(i).ps2.at(0).photo_el.at(j).h_index)
                     .PrimaryId]++;
@@ -1293,8 +1292,10 @@ void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
       if (pid[j] == unique_pid[i]) {
         // good cell should have signal on both side and a tdc different less
         // than 30 ns (5.85 ns/m * 4 m)
-        if (vec_cell->at(j).ps1.size() == 0 || vec_cell->at(j).ps2.size() == 0 ||
-            std::abs(vec_cell->at(j).ps1.at(0).tdc - vec_cell->at(j).ps2.at(0).tdc) > cell_max_dt)
+        if (vec_cell->at(j).ps1.size() == 0 ||
+            vec_cell->at(j).ps2.size() == 0 ||
+            std::abs(vec_cell->at(j).ps1.at(0).tdc -
+                     vec_cell->at(j).ps2.at(0).tdc) > cell_max_dt)
           continue;
 
         cl.cells.push_back(vec_cell->at(j));
