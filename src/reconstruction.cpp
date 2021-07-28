@@ -1542,16 +1542,26 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
 enum class STT_Mode { fast, full };
 enum class ECAL_Mode { fast };
 
-void Reconstruct(const char* fMc, const char* fIn, STT_Mode stt_mode,
+void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
+                 std::string const& fname_out, STT_Mode stt_mode,
                  ECAL_Mode ecal_mode)
 {
-  std::cout << "Reconstruct\ninput: " << fMc << "\noutput: " << fIn << '\n';
+  std::cout << "Reconstruct\ninput hits: " << fname_hits
+            << "\ninput digits: " << fname_digits
+            << "\noutput (update): " << fname_out << '\n';
 
-  TFile ftrue(fMc, "READ");
-  TFile f(fIn, "UPDATE");
-  TTree* tDigit = (TTree*)f.Get("tDigit");
-  TTree* tTrueMC = (TTree*)ftrue.Get("EDepSimEvents");
-  TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
+  TFile f_hits(fname_hits.data(), "READ");
+  TFile f_digits(fname_digits.data(), "READ");
+  TFile f_out(fname_out.data(), "UPDATE");
+
+  if (f_hits.IsZombie() || f_digits.IsZombie() || f_out.IsZombie()) {
+    std::cout << "Error in opening file\n";
+    exit(1);
+  }
+
+  TTree* tTrueMC = (TTree*)f_hits.Get("EDepSimEvents");
+  TGeoManager* geo = (TGeoManager*)f_hits.Get("EDepSimGeometry");
+  TTree* tDigit = (TTree*)f_digits.Get("tDigit");
 
   std::vector<double> sampling;
 
@@ -1640,10 +1650,9 @@ void Reconstruct(const char* fMc, const char* fIn, STT_Mode stt_mode,
   delete vec_digi;
   delete vec_cell;
 
-  f.cd();
+  f_out.cd();
   tout.Write("", TObject::kOverwrite);
-  f.Close();
-  ftrue.Close();
+  f_out.Close();
 }
 
 void help_reco()
@@ -1668,6 +1677,6 @@ int main(int argc, char* argv[])
     stt_mode = STT_Mode::fast;
   }
 
-  Reconstruct(argv[1], argv[2], stt_mode, ECAL_Mode::fast);
+  Reconstruct(argv[1], argv[2], argv[2], stt_mode, ECAL_Mode::fast);
   return 0;
 }
