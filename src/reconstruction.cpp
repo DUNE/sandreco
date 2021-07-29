@@ -94,7 +94,6 @@ bool findNearDigX(int& idx, double exp_x, std::vector<dg_tube>& vd, double xvtx)
   return found;
 }
 
-/*
 bool ishitok(TG4Event* ev, int trackid, TG4HitSegment hit, double postol = 5.,
              double angtol = 0.3)
 {
@@ -153,7 +152,7 @@ int EvalDirection(const std::vector<double>& z, const std::vector<double>& y,
   // clockwise direction (as seen from positive x) is positive
   return cross_prod >= 0 ? 1 : -1;
 }
-
+/*
 int getSignY(const std::vector<double>& z_h, std::vector<double>& y_h,
              const track& tr)
 {
@@ -171,7 +170,7 @@ int getSignY(const std::vector<double>& z_h, std::vector<double>& y_h,
 
   return dy > 0. ? +1 : -1;
 }
-
+*/
 void getVertCoord(const std::vector<double>& z_v, std::vector<double>& y_v,
                   int sign, const track& tr)
 {
@@ -220,9 +219,10 @@ void GetRho(const std::vector<double>& z_v, const std::vector<double>& y_v,
 
 void FillPositionInfo(track& tr, int signy, double cos, double sin)
 {
-  dg_tube d = tr.digits.front();
+  dg_tube d = (isDigBefore(tr.clX.front(), tr.clY.front()) ? tr.clX.front()
+                                                           : tr.clY.front());
   tr.z0 = d.z;
-  tr.t0 = d.t;
+  tr.t0 = d.tdc;
   if (d.hor == true) {
     tr.y0 = d.y;
     tr.x0 = tr.a + tr.b * (tr.z0 * cos + tr.y0 * sin);
@@ -233,7 +233,6 @@ void FillPositionInfo(track& tr, int signy, double cos, double sin)
     tr.y0 = tr.yc + signy * dy;
   }
 }
-*/
 
 int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y,
               double& xc, double& yc, double& r, double& errr, double& chi2)
@@ -396,7 +395,6 @@ int fitLinear(int n, const std::vector<double>& x, const std::vector<double>& y,
   return 0;
 }
 
-/*
 void fillInfoCircFit(int n, const std::vector<double>& z,
                      const std::vector<double>& y, track& tr)
 {
@@ -436,19 +434,23 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
         //{
         // if(ishitok(ev, hseg->PrimaryId, hseg))
         if (ishitok(ev, tr.tid, hseg)) {
-          tr.digits.push_back(vec_digi->at(k));
+          if (vec_digi->at(k).hor == 0) {
+            tr.clX.push_back(vec_digi->at(k));
+          } else {
+            tr.clY.push_back(vec_digi->at(k));
+          }
           break;
         }
         //}
       }
     }
 
-    std::sort(tr.digits.begin(), tr.digits.end(), isDigBefore);
+    std::sort(tr.clX.begin(), tr.clX.end(), isDigBefore);
+    std::sort(tr.clY.begin(), tr.clY.end(), isDigBefore);
 
     vec_tr.push_back(tr);
   }
 }
-*/
 
 void fillLayers(std::map<int, std::vector<dg_tube> >& m,
                 std::vector<dg_tube>& d, TH1D& hdummy, int hor)
@@ -785,7 +787,6 @@ void TrackFind(std::vector<track>& tracks, std::vector<dg_tube> digits,
   mergeXYTracks(clustersX, clustersY, tracks, dn_tol, dz_tol);
 }
 
-/*
 void TrackFit(std::vector<track>& vec_tr)
 {
 
@@ -796,7 +797,8 @@ void TrackFit(std::vector<track>& vec_tr)
   std::vector<double> z_v;
   std::vector<double> rho;
 
-  for (unsigned int j = 0; j < vec_tr.size(); j++) {
+  for (auto& tr : vec_tr) {
+
     y_h.clear();
     z_h.clear();
     x_v.clear();
@@ -804,14 +806,14 @@ void TrackFit(std::vector<track>& vec_tr)
     z_v.clear();
     rho.clear();
 
-    for (unsigned int k = 0; k < vec_tr[j].digits.size(); k++) {
-      if (vec_tr[j].digits.at(k).hor) {
-        y_h.push_back(vec_tr[j].digits.at(k).y);
-        z_h.push_back(vec_tr[j].digits.at(k).z);
-      } else {
-        x_v.push_back(vec_tr[j].digits.at(k).x);
-        z_v.push_back(vec_tr[j].digits.at(k).z);
-      }
+    for (auto const& d : tr.clX) {
+      x_v.push_back(d.x);
+      z_v.push_back(d.z);
+    }
+
+    for (auto const& d : tr.clX) {
+      y_h.push_back(d.y);
+      z_h.push_back(d.z);
     }
 
     double chi2_cir, chi2_lin;
@@ -825,63 +827,62 @@ void TrackFit(std::vector<track>& vec_tr)
     // std::cout << n_h << " " << n_v << std::endl;
 
     if (n_h <= 2) {
-      vec_tr[j].ret_cr = -2;
+      tr.ret_cr = -2;
       continue;
     }
 
-    fillInfoCircFit(n_h, z_h, y_h, vec_tr[j]);
+    fillInfoCircFit(n_h, z_h, y_h, tr);
 
-    if (vec_tr[j].ret_cr != 0) continue;
+    if (tr.ret_cr != 0) continue;
 
     if (n_v <= 2) {
-      vec_tr[j].ret_ln = -2;
+      tr.ret_ln = -2;
       continue;
     }
 
     int quadrant;
 
-    if (z_h[0] - vec_tr[j].zc >= 0)
+    if (z_h[0] - tr.zc >= 0)
       quadrant = 1;
     else
       quadrant = 2;
 
-    if (y_h[0] - vec_tr[j].yc < 0) quadrant *= -1;
+    if (y_h[0] - tr.yc < 0) quadrant *= -1;
 
     int signy = quadrant > 0 ? 1 : -1;
 
-    // int signy = getSignY(z_h, y_h, vec_tr[j]);
+    // int signy = getSignY(z_h, y_h, tr);
 
-    getVertCoord(z_v, y_v, signy, vec_tr[j]);
+    getVertCoord(z_v, y_v, signy, tr);
 
     if (y_v.size() <= 2) {
-      vec_tr[j].ret_ln = -3;
+      tr.ret_ln = -3;
       continue;
     }
 
-    double cos = vec_tr[j].h * (y_v[0] - vec_tr[j].yc) / vec_tr[j].r;
-    double sin = -vec_tr[j].h * (z_v[0] - vec_tr[j].zc) / vec_tr[j].r;
+    double cos = tr.h * (y_v[0] - tr.yc) / tr.r;
+    double sin = -tr.h * (z_v[0] - tr.zc) / tr.r;
 
-    GetRho(z_v, y_v, rho, vec_tr[j], cos, sin);
+    GetRho(z_v, y_v, rho, tr, cos, sin);
 
-    vec_tr[j].ret_ln = fitLinear(y_v.size(), rho, x_v, vec_tr[j].a, vec_tr[j].b,
-                                 cov, vec_tr[j].chi2_ln);
+    tr.ret_ln = fitLinear(y_v.size(), rho, x_v, tr.a, tr.b, cov, tr.chi2_ln);
 
-    if (vec_tr[j].ret_ln != 0) continue;
+    if (tr.ret_ln != 0) continue;
 
-    // std::cout << vec_tr[j].tid << " " << vec_tr[j].a << " " << vec_tr[j].b <<
+    // std::cout << tr.tid << " " << tr.a << " " << tr.b <<
     // std::endl;
 
-    FillPositionInfo(vec_tr[j], signy, cos, sin);
+    FillPositionInfo(tr, signy, cos, sin);
 
-    // if(isnan(vec_tr[j].x0))
+    // if(isnan(tr.x0))
     //{
-    //  std::cout << vec_tr[j].a  << " " << vec_tr[j].b << " " << vec_tr[j].z0
-    // << " " << cos << " " << vec_tr[j].y0 << " " <<  sin << std::endl;
-    //  std::cout << vec_tr[j].yc << " " << vec_tr[j].h << " " << vec_tr[j].r <<
-    // " " << vec_tr[j].zc << " " << dz << " " << y_v[0] << std::endl;
+    //  std::cout << tr.a  << " " << tr.b << " " << tr.z0
+    // << " " << cos << " " << tr.y0 << " " <<  sin << std::endl;
+    //  std::cout << tr.yc << " " << tr.h << " " << tr.r <<
+    // " " << tr.zc << " " << dz << " " << y_v[0] << std::endl;
     //}
   }
-}*/
+}
 
 void fitCircle(std::vector<track>& tr3D, TH1D& hdummy)
 {
@@ -1624,8 +1625,8 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 
     switch (stt_mode) {
       case STT_Mode::fast:
-        // TrackFind(ev, vec_digi, vec_tr);
-        // TrackFit(vec_tr);
+        TrackFind(ev, vec_digi, vec_tr);
+        TrackFit(vec_tr);
         break;
       case STT_Mode::full:
         VertexFind(xvtx_reco, yvtx_reco, zvtx_reco, VtxType, *vec_digi,
