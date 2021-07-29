@@ -1563,6 +1563,14 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   TGeoManager* geo = (TGeoManager*)f_hits.Get("EDepSimGeometry");
   TTree* tDigit = (TTree*)f_digits.Get("tDigit");
 
+  if (tTrueMC == nullptr || geo == nullptr || tDigit == nullptr) {
+    std::cout << "Error in retrieving objects from root file: "
+              << (tTrueMC == nullptr ? "EDepSimEvents " : "")
+              << (geo == nullptr ? "EDepSimGeometry " : "")
+              << (tDigit == nullptr ? "tDigit " : "") << '\n';
+    exit(-1);
+  }
+
   std::vector<double> sampling;
 
   DetermineModulesPosition(geo, sampling);
