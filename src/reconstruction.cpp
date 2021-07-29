@@ -1667,7 +1667,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 void help_reco()
 {
   std::cout
-      << "Reconstruct <input file (hits)> <output file(digits)> [stt_mode]\n";
+      << "usage: Reconstruct hit_file digit_file output_file [stt_mode]\n";
   std::cout << "    - stt_mode: 'stt_mode::full' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
 }
@@ -1676,16 +1676,19 @@ int main(int argc, char* argv[])
 {
   // boost::program_options wuold be great here....
 
-  if (argc < 3 || argc > 5) {
+  if (argc < 4 || argc > 6) {
     help_reco();
     return -1;
   }
 
   auto stt_mode = STT_Mode::full;
-  if (argc > 3 && strcmp(argv[3], "stt_mode::fast") == 0) {
+  if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
     stt_mode = STT_Mode::fast;
+    std::cout << "STT_Mode: fast\n";
+  } else {
+    std::cout << "STT_Mode: full\n";
   }
 
-  Reconstruct(argv[1], argv[2], argv[2], stt_mode, ECAL_Mode::fast);
+  Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast);
   return 0;
 }
