@@ -1,7 +1,7 @@
-#include <TString.h>
 #include <TGeoManager.h>
 #include <TGeoNode.h>
 #include <TPRegexp.h>
+#include <TString.h>
 #include <TVector2.h>
 
 #include "struct.h"
@@ -39,7 +39,9 @@ const double atl2_34 = 3300.0;
 // corrected to 18.5 to have mean number of pe of 40
 // for mip crossing in the middle of barrel module
 const double e2p2 = 18.5;
-const double e2p2_fluka = 23;  //for fluka, for reproducing the same number of pe (40) for mip crossing in the middle of barrel module
+const double e2p2_fluka =
+    23;  // for fluka, for reproducing the same number of pe (40) for mip
+         // crossing in the middle of barrel module
 
 const int nMod = 24;
 const int nLay = 5;
@@ -261,6 +263,6 @@ int encodePlaneID(int moduleid, int type);
 void decodePlaneID(int id, int& moduleid, int& type);
 double getT(double y1, double y2, double y, double z1, double z2, double z);
 void initT0(TG4Event* ev);
-}
+}  // namespace kloe_simu
 
 #endif

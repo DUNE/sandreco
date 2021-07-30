@@ -1,24 +1,24 @@
+#include <TApplication.h>
+#include <TArrow.h>
+#include <TBox.h>
+#include <TCanvas.h>
+#include <TChain.h>
+#include <TEllipse.h>
+#include <TF1.h>
 #include <TFile.h>
-#include <TTree.h>
 #include <TGeoManager.h>
 #include <TGeoTrd2.h>
-#include <TGraph.h>
-#include <TCanvas.h>
-#include <TStyle.h>
-#include <TLine.h>
-#include <TChain.h>
-#include <TMarker.h>
-#include <TEllipse.h>
-#include <TBox.h>
 #include <TGeoTube.h>
-#include <TArrow.h>
+#include <TGraph.h>
+#include <TLine.h>
+#include <TMarker.h>
 #include <TROOT.h>
-#include <TApplication.h>
-#include <TF1.h>
+#include <TStyle.h>
+#include <TTree.h>
 
-#include <stdlib.h>
 #include <iostream>
 #include <map>
+#include <stdlib.h>
 
 #include "../include/struct.h"
 #include "../include/utils.h"
@@ -89,7 +89,7 @@ const char* path_endcapL_template =
 
 const char* barrel_mod_vol_name = "ECAL_lv_PV";
 const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
-}
+}  // namespace display
 
 using namespace display;
 
@@ -530,8 +530,7 @@ void show(int index, bool showtrj = true, bool showfit = true,
 
         // pion+/pion-
         case 211:
-        case -211:
-          ;
+        case -211:;
           tr_zy->SetLineColor(kCyan);
           tr_zx->SetLineColor(kCyan);
           break;
@@ -708,9 +707,9 @@ void showPri(int index)
 
   TLorentzVector vpos = ev->Primaries.at(0).GetPosition();
 
-  cpr->cd(1)
-      ->DrawFrame(-1 + vpos.X(), -1 + vpos.Y(), 1 + vpos.X(), 1 + vpos.Y(),
-                  TString::Format("XY (front) [Event: %d]", index).Data());
+  cpr->cd(1)->DrawFrame(
+      -1 + vpos.X(), -1 + vpos.Y(), 1 + vpos.X(), 1 + vpos.Y(),
+      TString::Format("XY (front) [Event: %d]", index).Data());
   cpr->cd(2)->DrawFrame(-1 + vpos.Z(), -1 + vpos.Y(), 1 + vpos.Z(),
                         1 + vpos.Y(),
                         TString::Format("ZY (side) [Event: %d]", index).Data());
@@ -726,7 +725,8 @@ void showPri(int index)
 
   std::cout << "TRUE "
                "==============================================================="
-               "====" << std::endl;
+               "===="
+            << std::endl;
 
   std::cout << std::setw(10) << "PDG"
             << " |" << std::setw(10) << "ID"
@@ -737,7 +737,8 @@ void showPri(int index)
             << " |" << std::endl;
 
   std::cout << "==============================================================="
-               "=========" << std::endl;
+               "========="
+            << std::endl;
 
   for (unsigned int i = 0; i < ev->Primaries.at(0).Particles.size(); i++) {
     TVector3 mom;
@@ -770,7 +771,8 @@ void showPri(int index)
               << std::endl;
   }
   std::cout << "==============================================================="
-               "=========" << std::endl;
+               "========="
+            << std::endl;
 
   cpr->cd(1);
   for (unsigned int i = 0; i < pmom.size(); i++) {
@@ -818,8 +820,7 @@ void showPri(int index)
 
       // pion+/pion-
       case 211:
-      case -211:
-        ;
+      case -211:;
         par->SetLineColor(kCyan);
         par->SetFillColor(kCyan);
         break;
@@ -880,8 +881,7 @@ void showPri(int index)
 
       // pion+/pion-
       case 211:
-      case -211:
-        ;
+      case -211:;
         par->SetLineColor(kCyan);
         par->SetFillColor(kCyan);
         break;
@@ -942,8 +942,7 @@ void showPri(int index)
 
       // pion+/pion-
       case 211:
-      case -211:
-        ;
+      case -211:;
         par->SetLineColor(kCyan);
         par->SetFillColor(kCyan);
         break;
@@ -989,7 +988,8 @@ void showPri(int index)
 
     std::cout << "RECO "
                  "============================================================="
-                 "======" << std::endl;
+                 "======"
+              << std::endl;
 
     std::cout << std::setw(10) << "PDG"
               << " |" << std::setw(10) << "ID"
@@ -1000,7 +1000,8 @@ void showPri(int index)
               << " |" << std::endl;
 
     std::cout << "============================================================="
-                 "===========" << std::endl;
+                 "==========="
+              << std::endl;
 
     for (unsigned int i = 0; i < evt->particles.size(); i++) {
       if (evt->particles.at(i).primary == 1 &&
@@ -1054,7 +1055,8 @@ void showPri(int index)
       }
     }
     std::cout << "============================================================="
-                 "===========" << std::endl;
+                 "==========="
+              << std::endl;
 
     double frac = 0.5;
     double dx = std::max<double>(10., xmax - xmin);
@@ -1069,20 +1071,20 @@ void showPri(int index)
     double yc = 0.5 * (ymax + ymin);
     double zc = 0.5 * (zmax + zmin);
 
-    cpr->cd(4)
-        ->DrawFrame(xc - (1. + frac) * dXYmax, yc - (1. + frac) * dXYmax,
-                    xc + (1. + frac) * dXYmax, yc + (1. + frac) * dXYmax,
-                    TString::Format("XY (front) [Event: %d]", index).Data());
+    cpr->cd(4)->DrawFrame(
+        xc - (1. + frac) * dXYmax, yc - (1. + frac) * dXYmax,
+        xc + (1. + frac) * dXYmax, yc + (1. + frac) * dXYmax,
+        TString::Format("XY (front) [Event: %d]", index).Data());
 
-    cpr->cd(5)
-        ->DrawFrame(zc - (1. + frac) * dYZmax, yc - (1. + frac) * dYZmax,
-                    zc + (1. + frac) * dYZmax, yc + (1. + frac) * dYZmax,
-                    TString::Format("ZY (side) [Event: %d]", index).Data());
+    cpr->cd(5)->DrawFrame(
+        zc - (1. + frac) * dYZmax, yc - (1. + frac) * dYZmax,
+        zc + (1. + frac) * dYZmax, yc + (1. + frac) * dYZmax,
+        TString::Format("ZY (side) [Event: %d]", index).Data());
 
-    cpr->cd(6)
-        ->DrawFrame(zc - (1. + frac) * dXZmax, xc - (1. + frac) * dXZmax,
-                    zc + (1. + frac) * dXZmax, xc + (1. + frac) * dXZmax,
-                    TString::Format("ZX (top) [Event: %d]", index).Data());
+    cpr->cd(6)->DrawFrame(
+        zc - (1. + frac) * dXZmax, xc - (1. + frac) * dXZmax,
+        zc + (1. + frac) * dXZmax, xc + (1. + frac) * dXZmax,
+        TString::Format("ZX (top) [Event: %d]", index).Data());
 
     cpr->cd(4);
     for (unsigned int i = 0; i < pmom_reco.size(); i++) {
@@ -1134,8 +1136,7 @@ void showPri(int index)
 
         // pion+/pion-
         case 211:
-        case -211:
-          ;
+        case -211:;
           par->SetLineColor(kCyan);
           par->SetFillColor(kCyan);
           break;
@@ -1200,8 +1201,7 @@ void showPri(int index)
 
         // pion+/pion-
         case 211:
-        case -211:
-          ;
+        case -211:;
           par->SetLineColor(kCyan);
           par->SetFillColor(kCyan);
           break;
@@ -1266,8 +1266,7 @@ void showPri(int index)
 
         // pion+/pion-
         case 211:
-        case -211:
-          ;
+        case -211:;
           par->SetLineColor(kCyan);
           par->SetFillColor(kCyan);
           break;
@@ -1324,7 +1323,8 @@ int main(int argc, char* argv[])
   if (argc < 4) {
     std::cout
         << "Display <event number> <MC file> <input file> [show trajectories] "
-           "[show fits] [show digits]" << std::endl;
+           "[show fits] [show digits]"
+        << std::endl;
     return 1;
   } else {
     evid = atoi(argv[1]);

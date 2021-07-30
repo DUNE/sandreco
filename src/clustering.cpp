@@ -1,17 +1,17 @@
-#include <vector>
-#include <utility>
-#include <string>
-#include <complex>
-#include <tuple>
-#include <iostream>
-#include <fstream>
-#include "TLeaf.h"
 #include "TFile.h"
+#include "TLeaf.h"
 #include "TTree.h"
+#include <complex>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
+#include "Linkdef.h"
 #include "struct.h"
 #include "utils.h"
-#include "Linkdef.h"
 
 using namespace std;
 
@@ -48,23 +48,23 @@ std::vector<cluster> Preclustering(std::vector<dg_cell>* vec_cellraw)
   // Create vector of complete and incomplete cells
   for (auto const& cell : *vec_cellraw) {
     // for (int i = 0; i < dg_size; i++) {
-      if (cell.ps1.size() == 0 && cell.ps2.size() == 0) {
-          continue;
-      } else if (cell.ps1.size() == 0 || cell.ps2.size() == 0) {
+    if (cell.ps1.size() == 0 && cell.ps2.size() == 0) {
+      continue;
+    } else if (cell.ps1.size() == 0 || cell.ps2.size() == 0) {
       // cout << "broken" << endl;
-          broken_cells.push_back(cell);
-     } /*
-     if ((cell.ps1.adc.at(0) == 0 || cell.ps2.adc.at(0) == 0 ||
-     cell.ps1.tdc.at(0) == 0 || cell.ps2.tdc.at(0) == 0)) {
-         cout << "incomplete" << endl;
-         //Incomplete cell
-         incomplete_cells.push_back(cell);
-     }
-     if (abs(cell.ps1.tdc.at(0) - cell.ps2.tdc.at(0)) > 30) {
-         cout << "incomplete time" << endl;
-         weird_cells.push_back(cell);
-     }*/
-    else  {
+      broken_cells.push_back(cell);
+    } /*
+    if ((cell.ps1.adc.at(0) == 0 || cell.ps2.adc.at(0) == 0 ||
+    cell.ps1.tdc.at(0) == 0 || cell.ps2.tdc.at(0) == 0)) {
+        cout << "incomplete" << endl;
+        //Incomplete cell
+        incomplete_cells.push_back(cell);
+    }
+    if (abs(cell.ps1.tdc.at(0) - cell.ps2.tdc.at(0)) > 30) {
+        cout << "incomplete time" << endl;
+        weird_cells.push_back(cell);
+    }*/
+    else {
       // Complete cell
       complete_cells.push_back(cell);
       dg_idvec[i_id] = cell.id;
@@ -208,7 +208,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
         rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
         clus.at(minentry).cells.push_back(brok_cells);
-      } else if (brok_cells.ps1.size()!=0) {
+      } else if (brok_cells.ps1.size() != 0) {
         int laycell = brok_cells.lay;
         double f = kloe_simu::AttenuationFactor(DpmA, laycell);
         rec_en = EfromADCsingle(brok_cells.ps1.at(0).adc, f);
