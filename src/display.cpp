@@ -16,11 +16,7 @@
 #include <TStyle.h>
 #include <TTree.h>
 
-<<<<<<< HEAD
-=======
-#include <stdlib.h>
 #include <iomanip>
->>>>>>> ac625e50fc7c5b6cb4e92f3fb560b9a02fcba64b
 #include <iostream>
 #include <map>
 #include <stdlib.h>
