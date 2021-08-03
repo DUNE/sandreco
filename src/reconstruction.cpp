@@ -811,7 +811,7 @@ void TrackFit(std::vector<track>& vec_tr)
       z_v.push_back(d.z);
     }
 
-    for (auto const& d : tr.clX) {
+    for (auto const& d : tr.clY) {
       y_h.push_back(d.y);
       z_h.push_back(d.z);
     }
