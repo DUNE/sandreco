@@ -38,7 +38,7 @@ double EfromADCsingle(double adc, double f);
 double DfromADC(double, double);
 
 // PROMEMORIA PER FRANCESCO: RICORDATI DI CORREGGERE LE BROKEN CELLS
-std::vector<cluster> Preclustering(std::vector<dg_cell>* vec_cellraw)
+std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 {
   int dg_size = vec_cellraw->size();
   int dg_idvec[dg_size], i_id = 0;
@@ -119,13 +119,13 @@ std::vector<cluster> Preclustering(std::vector<dg_cell>* vec_cellraw)
   return vec_clust;
 }
 
-int Clusterize(std::string const& input)
+int Clustering(std::string const& input)
 {
   gSystem->Load("libStruct.so");
   const char* finname = input.c_str();
   TFile f(finname, "READ");
   TTree* t = (TTree*)f.Get("tDigit");
-  int TotHits = t->GetEntries();
+  int nEvents = t->GetEntries();
   std::vector<dg_cell>* cell = new std::vector<dg_cell>;
   std::vector<cluster> f_clust, og_clust;
   TString output = input;
@@ -134,14 +134,14 @@ int Clusterize(std::string const& input)
   TTree tout("tCluster", "Clustering");
   tout.Branch("cluster", "std::vector<cluster>", &f_clust);
   t->SetBranchAddress("dg_cell", &cell);
-  for (int i = 0; i < TotHits; i++) {
+  for (int i = 0; i < nEvents; i++) {
     cout << "--------------" << endl;
     cout << "Entry " << i << endl;
     t->GetEntry(i);
-    std::vector<cluster> clust = Preclustering(cell);
-    // for (auto const& clu_info : clust) {
-    //    Clust_info(clu_info);
-    //}
+    std::vector<cluster> clust = Clusterize(std::move(cell));
+     for (auto const& clu_info : clust) {
+        Clust_info(clu_info);
+    }
     f_clust = clust;
     tout.Fill();
     clust.clear();
@@ -151,6 +151,7 @@ int Clusterize(std::string const& input)
   fout.cd();
   tout.Write();
   fout.Close();
+  delete cell;
   return 0;
 }
 

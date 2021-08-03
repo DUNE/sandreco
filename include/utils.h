@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #include <TGeoManager.h>
 #include <TGeoNode.h>
 #include <TPRegexp.h>
@@ -267,7 +266,6 @@ void initT0(TG4Event* ev);
 }  // namespace kloe_simu
 
 #endif
-=======
 #include <TGeoManager.h>
 #include <TGeoNode.h>
 #include <TPRegexp.h>
@@ -536,4 +534,3 @@ void initT0(TG4Event* ev);
 }  // namespace kloe_simu
 
 #endif
->>>>>>> 97a935740b279c0d02e757f514dd1a9d67cd7dd2
