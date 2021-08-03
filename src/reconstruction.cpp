@@ -407,15 +407,19 @@ void fillInfoCircFit(int n, const std::vector<double>& z,
   tr.h = EvalDirection(z, y, tr.zc, tr.yc);
 }
 
+enum class TrackFilter { all_tracks, only_primaries };
+
 void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
-               std::vector<track>& vec_tr)
+               std::vector<track>& vec_tr,
+               TrackFilter const track_filter = TrackFilter::all_tracks)
 {
   vec_tr.clear();
 
   // for(unsigned int j = 0; j < ev->Primaries[0].Particles.size(); j++)
   for (unsigned int j = 0; j < ev->Trajectories.size(); j++) {
     // exclude not primaries particles
-    if (ev->Trajectories.at(j).ParentId != -1) {
+    if (track_filter == TrackFilter::only_primaries &&
+        ev->Trajectories.at(j).ParentId != -1) {
       continue;
     }
 
@@ -1540,7 +1544,7 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   binning.push_back(last_z);
 }
 
-enum class STT_Mode { fast, full };
+enum class STT_Mode { fast_only_primaries, fast, full };
 enum class ECAL_Mode { fast };
 
 void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
@@ -1624,6 +1628,10 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
     std::vector<dg_tube> clustersX;
 
     switch (stt_mode) {
+      case STT_Mode::fast_only_primaries:
+        TrackFind(ev, vec_digi, vec_tr, TrackFilter::only_primaries);
+        TrackFit(vec_tr);
+        break;
       case STT_Mode::fast:
         TrackFind(ev, vec_digi, vec_tr);
         TrackFit(vec_tr);
@@ -1670,6 +1678,7 @@ void help_reco()
       << "usage: Reconstruct hit_file digit_file output_file [stt_mode]\n";
   std::cout << "    - stt_mode: 'stt_mode::full' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
+  std::cout << "                'stt_mode::fast_only_primaries' \n";
 }
 
 int main(int argc, char* argv[])
@@ -1682,7 +1691,10 @@ int main(int argc, char* argv[])
   }
 
   auto stt_mode = STT_Mode::full;
-  if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
+  if (argc > 4 && strcmp(argv[4], "stt_mode::fast_only_primaries") == 0) {
+    stt_mode = STT_Mode::fast_only_primaries;
+    std::cout << "STT_Mode: fast_only_primaries\n";
+  } else if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
     stt_mode = STT_Mode::fast;
     std::cout << "STT_Mode: fast\n";
   } else {
