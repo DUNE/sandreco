@@ -166,7 +166,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
         atan((brok_cells.z - 23910.00) / (brok_cells.y + 2384.73)) * 180 /
         TMath::Pi();
     double cell_theta =
-        atan((brok_cells.z - 23910.00) / (brok_cells.x + 2384.73)) * 180 /
+        atan((brok_cells.z - 23910.00) / (brok_cells.x)) * 180 /
         TMath::Pi();
     int minentry = 0;
     int found = 0;
@@ -176,7 +176,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
           atan((clus.at(j).z - 23910.00) / (clus.at(j).y + 2384.73)) * 180 /
           TMath::Pi();
       double clus_theta =
-          atan((clus.at(j).z - 23910.00) / (clus.at(j).x + 2384.73)) * 180 /
+          atan((clus.at(j).z - 23910.00) / (clus.at(j).x)) * 180 /
           TMath::Pi();
       double minphi = 999, mintheta = 999;
       int isbarrelc = 0;
@@ -719,8 +719,8 @@ cluster Calc_variables(std::vector<dg_cell> cells)
         kloe_simu::TfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell.l);
     if (cell.mod > 25) {
       d3 = cell.y - d;
-      y_weighted = y_weighted - (d3 * cell_E);
-      y2_weighted = y2_weighted - (d3 * d3 * cell_E);
+      y_weighted = y_weighted + (d3 * cell_E);
+      y2_weighted = y2_weighted + (d3 * d3 * cell_E);
       x_weighted = x_weighted + (cell.x * cell_E);
       x2_weighted = x2_weighted + (cell.x * cell.x * cell_E);
     } else {
