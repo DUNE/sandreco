@@ -37,13 +37,137 @@ double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
 double EfromADCsingle(double adc, double f);
 double DfromADC(double, double);
 
+
+std::vector<dg_cell> ProcessMultiHits(std::vector<dg_cell> og_cell) {
+    std::vector<dg_cell> complete_cells, incomplete_cells;
+    for (auto const& cell : og_cell) {
+        double delta = cell.l * kloe_simu::vlfb / kloe_simu::m_to_mm;
+        cout << delta << " -> "<<cell.l<< endl;
+        for (int i = 0; i < cell.ps1.size(); i++) {
+            int found = 0;
+            for (int j = 0; j < cell.ps2.size(); j++) {
+                if (abs(cell.ps1.at(i).tdc - cell.ps2.at(j).tdc)<delta) {
+                    dg_cell good_cell;
+                    good_cell.id = cell.id;
+                    good_cell.z = cell.z;
+                    good_cell.x = cell.x;
+                    good_cell.y = cell.y;
+                    good_cell.l = cell.l;
+                    good_cell.mod = cell.mod;
+                    good_cell.lay = cell.lay;
+                    good_cell.cel = cell.cel;
+                    good_cell.ps1.push_back(cell.ps1.at(i));
+                    good_cell.ps2.push_back(cell.ps2.at(j));
+                    complete_cells.push_back(good_cell);
+                    cout << " cell id " << good_cell.id << " [ " << good_cell.ps1.at(0).tdc << " " << good_cell.ps2.at(0).tdc << " ] " << endl;
+                    found++;
+                    break;
+                }
+            }
+            if (found == 0) {
+                //buttare in broken cells
+                dg_cell ps1bad_cell;
+                ps1bad_cell.id = cell.id;
+                ps1bad_cell.z = cell.z;
+                ps1bad_cell.x = cell.x;
+                ps1bad_cell.y = cell.y;
+                ps1bad_cell.l = cell.l;
+                ps1bad_cell.mod = cell.mod;
+                ps1bad_cell.lay = cell.lay;
+                ps1bad_cell.cel = cell.cel;
+                ps1bad_cell.ps1.push_back(cell.ps1.at(i));
+                incomplete_cells.push_back(ps1bad_cell);
+                cout <<" Brok cell id "<<ps1bad_cell.id<<" ( "<<ps1bad_cell.ps1.at(0).tdc <<" ) "<<endl;
+            }
+        }
+        for (int k = 0; k < cell.ps2.size(); k++) {
+            int found = 0;
+            for (int l = 0; l < cell.ps1.size(); l++) {
+                if (abs(cell.ps1.at(l).tdc - cell.ps2.at(k).tdc) < delta) {
+                    found++;
+                }
+            }
+            if (found == 0) {
+                //buttare in broken cells
+                dg_cell ps2bad_cell;
+                ps2bad_cell.id = cell.id;
+                ps2bad_cell.z = cell.z;
+                ps2bad_cell.x = cell.x;
+                ps2bad_cell.y = cell.y;
+                ps2bad_cell.l = cell.l;
+                ps2bad_cell.mod = cell.mod;
+                ps2bad_cell.lay = cell.lay;
+                ps2bad_cell.cel = cell.cel;
+                ps2bad_cell.ps2.push_back(cell.ps2.at(k));
+                incomplete_cells.push_back(ps2bad_cell);
+            }
+        }           
+    }
+    return complete_cells;
+}
+
+bool isNeighbour(int id, int c_id) {
+    // Middle of the module
+    if (c_id == id + 101 || c_id == id + 100 ||
+        c_id == id + 99 || c_id == id + 1 ||
+        c_id == id - 1 || c_id == id - 99 ||
+        c_id == id - 100 || c_id == id - 101) {
+        return true;
+    }
+    // Right edge of the module
+    else if (c_id == id - 889 || c_id == id - 989 ||
+        c_id == id - 1089) {
+        return true;
+    }
+    // Right edge of 0 module
+    else if ((c_id == id + 23111 || c_id == id + 23011 ||
+        c_id == id + 22911) && id<25000) {
+        return true;
+    }
+    // Left edge of the module
+    else if (c_id == id + 1089 || c_id == id + 989 ||
+        c_id == id + 889) {
+        return true;
+    }
+    // Left edge of the 23 module
+    else if ((c_id == id - 23011 || c_id == id - 22911 ||
+        c_id == id - 23111) && id < 25000) {
+        return true;
+    }
+    // Multiple hit on same cell
+    else if (c_id == id) {
+        return true;
+    }
+    else return false;
+}
+
+std::pair<std::vector <dg_cell>, std::vector <int>> GetNeighbours(std::vector<dg_cell> cells, int start, std::vector<int> checked, std::vector<dg_cell> neigh_chain) {
+    for (int i = start+1; i < cells.size(); i++) {
+        if (RepetitionCheck(checked, i) == true) continue;
+        bool check = isNeighbour(cells.at(start).id, cells.at(i).id);
+        if ( check == true) {
+            neigh_chain.push_back(cells.at(i));
+            checked.push_back(i);
+            std::pair<std::vector <dg_cell>, std::vector<int>> find_chain = GetNeighbours(cells, i, checked, neigh_chain);
+            neigh_chain = find_chain.first;
+            checked = find_chain.second;
+            /*
+            std::pair<vector<int>, vector<int>> check_cell =
+                FindNeighbours(digits, already_checked, size, id_check, vec_cell);
+            already_checked = check_cell.first;
+            vec_cell = check_cell.second; */
+        }
+    }
+    return std::make_pair(neigh_chain, checked);
+}
+
 // PROMEMORIA PER FRANCESCO: RICORDATI DI CORREGGERE LE BROKEN CELLS
 std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 {
   int dg_size = vec_cellraw->size();
   int dg_idvec[dg_size], i_id = 0;
   std::vector<dg_cell> incomplete_cells, complete_cells, broken_cells,
-      weird_cells;
+      weird_cells, multicomplete_cells;
   std::vector<cluster> vec_clust;
   // Create vector of complete and incomplete cells
   for (auto const& cell : *vec_cellraw) {
@@ -71,9 +195,33 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
       i_id++;
     }
   }
+  //Funzione che prende dentro complete_cells e cerca se ci sono celle complete con multiple hits.
+  //L'input deve essere vettore celle in cui la size di ps1/ps2 deve essere >= 1, l'output deve essere un vettore di celle in cui la size di ps1/ps2 è sempre 1.
+  //In aggiunta a questo ci deve essere un vettore di broken cells in cui si aggiungoino i multiple hits che non hanno un corrispettivo sull'altro ps.
+  multicomplete_cells=ProcessMultiHits(complete_cells);
+
   int cluster[i_id], n_cluster = 0;
+
   std::vector<int> checked_array;
   std::vector<int> vec_cell;
+
+  std::vector<int> chck;
+  for (int i = 0; i < multicomplete_cells.size(); i++) {
+      std::vector<dg_cell> v_cell;
+      if (i == 0) {
+          chck.push_back(i);
+      } else if (RepetitionCheck(chck, i) == true) continue;
+      v_cell.push_back(multicomplete_cells.at(i));
+      std::pair<std::vector <dg_cell>, std::vector<int>> Neighbours = GetNeighbours(multicomplete_cells, i, chck, v_cell);
+      v_cell = Neighbours.first;
+      chck = Neighbours.second;
+      
+      struct cluster Clust;
+      Clust = Calc_variables(v_cell);
+      vec_clust.push_back(Clust);
+      
+  }
+  /*
   for (int j = 0; j < complete_cells.size(); j++) {
     if (j == 0) {
       cluster[j] = dg_idvec[0];
@@ -107,7 +255,7 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
     clust = Calc_variables(cluster_cells);
     vec_clust.push_back(clust);
     vec_cell.clear();
-  }
+  }*/
   // SPLIT
   vec_clust = Split(vec_clust);
   // MERGE
