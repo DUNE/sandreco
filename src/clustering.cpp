@@ -15,21 +15,24 @@
 
 using namespace std;
 
-bool RepetitionCheck(std::vector<int>, int);
-
-std::pair<vector<int>, vector<int>> FindNeighbours(int[], std::vector<int>, int,
-                                                   int, std::vector<int>);
-
-std::pair<int, int> Next(std::vector<int>, int[], int);
 std::tuple<double, double, double, double> fit_ls(int, double[], double[],
                                                   double[]);
+
+std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
+    std::vector<dg_cell>, std::vector<dg_cell>);
+std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
+    std::vector<dg_cell>, int, std::vector<int>, std::vector<dg_cell>);
+
+std::vector<cluster> Clusterize(std::vector<dg_cell>*);
 std::vector<cluster> TrackFit(std::vector<cluster>);
-void Clust_info(cluster);
 std::vector<cluster> Merge(std::vector<cluster>);
 std::vector<cluster> Split(std::vector<cluster>);
 std::vector<cluster> RecoverIncomplete(std::vector<cluster>,
                                        std::vector<dg_cell>);
 cluster Calc_variables(std::vector<dg_cell>);
+
+bool RepetitionCheck(std::vector<int>, int);
+bool isNeighbour(int, int);
 
 double TfromTDC(double t1, double t2, double L);
 double AttenuationFactor(double d, int planeID);
@@ -37,235 +40,7 @@ double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
 double EfromADCsingle(double adc, double f);
 double DfromADC(double, double);
 
-
-std::vector<dg_cell> ProcessMultiHits(std::vector<dg_cell> og_cell) {
-    std::vector<dg_cell> complete_cells, incomplete_cells;
-    for (auto const& cell : og_cell) {
-        double delta = cell.l * kloe_simu::vlfb / kloe_simu::m_to_mm;
-        cout << delta << " -> "<<cell.l<< endl;
-        for (int i = 0; i < cell.ps1.size(); i++) {
-            int found = 0;
-            for (int j = 0; j < cell.ps2.size(); j++) {
-                if (abs(cell.ps1.at(i).tdc - cell.ps2.at(j).tdc)<delta) {
-                    dg_cell good_cell;
-                    good_cell.id = cell.id;
-                    good_cell.z = cell.z;
-                    good_cell.x = cell.x;
-                    good_cell.y = cell.y;
-                    good_cell.l = cell.l;
-                    good_cell.mod = cell.mod;
-                    good_cell.lay = cell.lay;
-                    good_cell.cel = cell.cel;
-                    good_cell.ps1.push_back(cell.ps1.at(i));
-                    good_cell.ps2.push_back(cell.ps2.at(j));
-                    complete_cells.push_back(good_cell);
-                    cout << " cell id " << good_cell.id << " [ " << good_cell.ps1.at(0).tdc << " " << good_cell.ps2.at(0).tdc << " ] " << endl;
-                    found++;
-                    break;
-                }
-            }
-            if (found == 0) {
-                //buttare in broken cells
-                dg_cell ps1bad_cell;
-                ps1bad_cell.id = cell.id;
-                ps1bad_cell.z = cell.z;
-                ps1bad_cell.x = cell.x;
-                ps1bad_cell.y = cell.y;
-                ps1bad_cell.l = cell.l;
-                ps1bad_cell.mod = cell.mod;
-                ps1bad_cell.lay = cell.lay;
-                ps1bad_cell.cel = cell.cel;
-                ps1bad_cell.ps1.push_back(cell.ps1.at(i));
-                incomplete_cells.push_back(ps1bad_cell);
-                cout <<" Brok cell id "<<ps1bad_cell.id<<" ( "<<ps1bad_cell.ps1.at(0).tdc <<" ) "<<endl;
-            }
-        }
-        for (int k = 0; k < cell.ps2.size(); k++) {
-            int found = 0;
-            for (int l = 0; l < cell.ps1.size(); l++) {
-                if (abs(cell.ps1.at(l).tdc - cell.ps2.at(k).tdc) < delta) {
-                    found++;
-                }
-            }
-            if (found == 0) {
-                //buttare in broken cells
-                dg_cell ps2bad_cell;
-                ps2bad_cell.id = cell.id;
-                ps2bad_cell.z = cell.z;
-                ps2bad_cell.x = cell.x;
-                ps2bad_cell.y = cell.y;
-                ps2bad_cell.l = cell.l;
-                ps2bad_cell.mod = cell.mod;
-                ps2bad_cell.lay = cell.lay;
-                ps2bad_cell.cel = cell.cel;
-                ps2bad_cell.ps2.push_back(cell.ps2.at(k));
-                incomplete_cells.push_back(ps2bad_cell);
-            }
-        }           
-    }
-    return complete_cells;
-}
-
-bool isNeighbour(int id, int c_id) {
-    // Middle of the module
-    if (c_id == id + 101 || c_id == id + 100 ||
-        c_id == id + 99 || c_id == id + 1 ||
-        c_id == id - 1 || c_id == id - 99 ||
-        c_id == id - 100 || c_id == id - 101) {
-        return true;
-    }
-    // Right edge of the module
-    else if (c_id == id - 889 || c_id == id - 989 ||
-        c_id == id - 1089) {
-        return true;
-    }
-    // Right edge of 0 module
-    else if ((c_id == id + 23111 || c_id == id + 23011 ||
-        c_id == id + 22911) && id<25000) {
-        return true;
-    }
-    // Left edge of the module
-    else if (c_id == id + 1089 || c_id == id + 989 ||
-        c_id == id + 889) {
-        return true;
-    }
-    // Left edge of the 23 module
-    else if ((c_id == id - 23011 || c_id == id - 22911 ||
-        c_id == id - 23111) && id < 25000) {
-        return true;
-    }
-    // Multiple hit on same cell
-    else if (c_id == id) {
-        return true;
-    }
-    else return false;
-}
-
-std::pair<std::vector <dg_cell>, std::vector <int>> GetNeighbours(std::vector<dg_cell> cells, int start, std::vector<int> checked, std::vector<dg_cell> neigh_chain) {
-    for (int i = start+1; i < cells.size(); i++) {
-        if (RepetitionCheck(checked, i) == true) continue;
-        bool check = isNeighbour(cells.at(start).id, cells.at(i).id);
-        if ( check == true) {
-            neigh_chain.push_back(cells.at(i));
-            checked.push_back(i);
-            std::pair<std::vector <dg_cell>, std::vector<int>> find_chain = GetNeighbours(cells, i, checked, neigh_chain);
-            neigh_chain = find_chain.first;
-            checked = find_chain.second;
-            /*
-            std::pair<vector<int>, vector<int>> check_cell =
-                FindNeighbours(digits, already_checked, size, id_check, vec_cell);
-            already_checked = check_cell.first;
-            vec_cell = check_cell.second; */
-        }
-    }
-    return std::make_pair(neigh_chain, checked);
-}
-
-// PROMEMORIA PER FRANCESCO: RICORDATI DI CORREGGERE LE BROKEN CELLS
-std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
-{
-  int dg_size = vec_cellraw->size();
-  int dg_idvec[dg_size], i_id = 0;
-  std::vector<dg_cell> incomplete_cells, complete_cells, broken_cells,
-      weird_cells, multicomplete_cells;
-  std::vector<cluster> vec_clust;
-  // Create vector of complete and incomplete cells
-  for (auto const& cell : *vec_cellraw) {
-    // for (int i = 0; i < dg_size; i++) {
-    if (cell.ps1.size() == 0 && cell.ps2.size() == 0) {
-      continue;
-    } else if (cell.ps1.size() == 0 || cell.ps2.size() == 0) {
-      // cout << "broken" << endl;
-      broken_cells.push_back(cell);
-    } /*
-    if ((cell.ps1.adc.at(0) == 0 || cell.ps2.adc.at(0) == 0 ||
-    cell.ps1.tdc.at(0) == 0 || cell.ps2.tdc.at(0) == 0)) {
-        cout << "incomplete" << endl;
-        //Incomplete cell
-        incomplete_cells.push_back(cell);
-    }
-    if (abs(cell.ps1.tdc.at(0) - cell.ps2.tdc.at(0)) > 30) {
-        cout << "incomplete time" << endl;
-        weird_cells.push_back(cell);
-    }*/
-    else {
-      // Complete cell
-      complete_cells.push_back(cell);
-      dg_idvec[i_id] = cell.id;
-      i_id++;
-    }
-  }
-  //Funzione che prende dentro complete_cells e cerca se ci sono celle complete con multiple hits.
-  //L'input deve essere vettore celle in cui la size di ps1/ps2 deve essere >= 1, l'output deve essere un vettore di celle in cui la size di ps1/ps2 è sempre 1.
-  //In aggiunta a questo ci deve essere un vettore di broken cells in cui si aggiungoino i multiple hits che non hanno un corrispettivo sull'altro ps.
-  multicomplete_cells=ProcessMultiHits(complete_cells);
-
-  int cluster[i_id], n_cluster = 0;
-
-  std::vector<int> checked_array;
-  std::vector<int> vec_cell;
-
-  std::vector<int> chck;
-  for (int i = 0; i < multicomplete_cells.size(); i++) {
-      std::vector<dg_cell> v_cell;
-      if (i == 0) {
-          chck.push_back(i);
-      } else if (RepetitionCheck(chck, i) == true) continue;
-      v_cell.push_back(multicomplete_cells.at(i));
-      std::pair<std::vector <dg_cell>, std::vector<int>> Neighbours = GetNeighbours(multicomplete_cells, i, chck, v_cell);
-      v_cell = Neighbours.first;
-      chck = Neighbours.second;
-      
-      struct cluster Clust;
-      Clust = Calc_variables(v_cell);
-      vec_clust.push_back(Clust);
-      
-  }
-  /*
-  for (int j = 0; j < complete_cells.size(); j++) {
-    if (j == 0) {
-      cluster[j] = dg_idvec[0];
-    } else {
-      std::pair<int, int> clu_nclu =
-          Next(checked_array, dg_idvec, complete_cells.size());
-      cluster[j] = clu_nclu.first;
-      if (cluster[j] == 0) {
-        break;
-      }
-      n_cluster = clu_nclu.second;
-    }
-    vec_cell.push_back(n_cluster);
-    checked_array.push_back(cluster[j]);
-    std::pair<vector<int>, vector<int>> check_cell =
-        FindNeighbours(dg_idvec, checked_array, i_id, cluster[j], vec_cell);
-    checked_array = check_cell.first;
-    vec_cell = check_cell.second;
-    std::vector<int> vec_cellid;
-    for (std::vector<int>::const_iterator it = vec_cell.begin();
-         it != vec_cell.end(); it++) {
-      vec_cellid.push_back(*it);
-    }
-    std::vector<dg_cell> cluster_cells;
-    for (int its = 0; its < vec_cellid.size(); its++) {
-      int cell = vec_cellid[its];
-      cluster_cells.push_back(complete_cells.at(cell));
-    }
-    vec_cellid.clear();
-    struct cluster clust;
-    clust = Calc_variables(cluster_cells);
-    vec_clust.push_back(clust);
-    vec_cell.clear();
-  }*/
-  // SPLIT
-  vec_clust = Split(vec_clust);
-  // MERGE
-  vec_clust = Merge(vec_clust);
-  // Track Fit
-  vec_clust = TrackFit(vec_clust);
-  // std::vector<cluster> Og_clus = vec_clust;
-  vec_clust = RecoverIncomplete(vec_clust, broken_cells);
-  return vec_clust;
-}
+void Clust_info(cluster);
 
 int Clustering(std::string const& input)
 {
@@ -287,8 +62,8 @@ int Clustering(std::string const& input)
     cout << "Entry " << i << endl;
     t->GetEntry(i);
     std::vector<cluster> clust = Clusterize(std::move(cell));
-     for (auto const& clu_info : clust) {
-        Clust_info(clu_info);
+    for (auto const& clu_info : clust) {
+      Clust_info(clu_info);
     }
     f_clust = clust;
     tout.Fill();
@@ -303,6 +78,139 @@ int Clustering(std::string const& input)
   return 0;
 }
 
+std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
+{
+  std::vector<dg_cell> complete_cells, broken_cells, multicomplete_cells;
+  std::vector<cluster> vec_clust;
+  // Create vector of complete and incomplete cells
+  for (auto const& cell : *vec_cellraw) {
+    if (cell.ps1.size() == 0 && cell.ps2.size() == 0) {
+      continue;
+    } else if (cell.ps1.size() == 0 || cell.ps2.size() == 0) {
+      // cout << "broken" << endl;
+      broken_cells.push_back(cell);
+    } else {
+      // Complete cell
+      complete_cells.push_back(cell);
+    }
+  }
+  // Funzione che prende dentro complete_cells e cerca se ci sono celle complete
+  // con multiple hits. L'input deve essere vettore celle in cui la size di
+  // ps1/ps2 deve essere >= 1, l'output deve essere un vettore di celle in cui la
+  // size di ps1/ps2 è sempre 1. In aggiunta a questo ci deve essere un vettore
+  // di broken cells in cui si aggiungoino i multiple hits che non hanno un
+  // corrispettivo sull'altro ps.
+
+  std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells =
+      ProcessMultiHits(complete_cells, broken_cells);
+  multicomplete_cells = processed_cells.first;
+  broken_cells = processed_cells.second;
+
+  std::vector<int> checked_array;
+  std::vector<int> vec_cell;
+
+  std::vector<int> chck;
+  for (int i = 0; i < multicomplete_cells.size(); i++) {
+    std::vector<dg_cell> v_cell;
+    if (i == 0) {
+      chck.push_back(i);
+    } else if (RepetitionCheck(chck, i) == true)
+      continue;
+    v_cell.push_back(multicomplete_cells.at(i));
+    std::pair<std::vector<dg_cell>, std::vector<int>> Neighbours =
+        GetNeighbours(multicomplete_cells, i, chck, v_cell);
+    v_cell = Neighbours.first;
+    chck = Neighbours.second;
+    struct cluster Clust;
+    Clust = Calc_variables(v_cell);
+    vec_clust.push_back(Clust);
+  }
+  // SPLIT
+  vec_clust = Split(vec_clust);
+  // MERGE
+  vec_clust = Merge(vec_clust);
+  // Track Fit
+  vec_clust = TrackFit(vec_clust);
+  // std::vector<cluster> Og_clus = vec_clust;
+  vec_clust = RecoverIncomplete(vec_clust, broken_cells);
+  return vec_clust;
+}
+
+std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
+    std::vector<dg_cell> og_cell, std::vector<dg_cell> incomplete_cells)
+{
+  std::vector<dg_cell> complete_cells;
+  for (auto const& cell : og_cell) {
+    double delta = cell.l * kloe_simu::vlfb / kloe_simu::m_to_mm;
+    // cout << delta << " -> "<<cell.l<< endl;
+    for (int i = 0; i < cell.ps1.size(); i++) {
+      int found = 0;
+      for (int j = 0; j < cell.ps2.size(); j++) {
+        if (abs(cell.ps1.at(i).tdc - cell.ps2.at(j).tdc) < delta) {
+          dg_cell good_cell;
+          good_cell.id = cell.id;
+          good_cell.z = cell.z;
+          good_cell.x = cell.x;
+          good_cell.y = cell.y;
+          good_cell.l = cell.l;
+          good_cell.mod = cell.mod;
+          good_cell.lay = cell.lay;
+          good_cell.cel = cell.cel;
+          good_cell.ps1.push_back(cell.ps1.at(i));
+          good_cell.ps2.push_back(cell.ps2.at(j));
+          complete_cells.push_back(good_cell);
+          // cout << " cell id " << good_cell.id << " [ " <<
+          // good_cell.ps1.at(0).tdc << " " << good_cell.ps2.at(0).tdc << " ] "
+          // << endl;
+          found++;
+          break;
+        }
+      }
+      if (found == 0) {
+        // buttare in broken cells
+        dg_cell ps1bad_cell;
+        ps1bad_cell.id = cell.id;
+        ps1bad_cell.z = cell.z;
+        ps1bad_cell.x = cell.x;
+        ps1bad_cell.y = cell.y;
+        ps1bad_cell.l = cell.l;
+        ps1bad_cell.mod = cell.mod;
+        ps1bad_cell.lay = cell.lay;
+        ps1bad_cell.cel = cell.cel;
+        ps1bad_cell.ps1.push_back(cell.ps1.at(i));
+        incomplete_cells.push_back(ps1bad_cell);
+        // cout <<" ps1 - Brok cell id "<<ps1bad_cell.id<<" (
+        // "<<ps1bad_cell.ps1.at(0).tdc <<" ) "<<endl;
+      }
+    }
+    for (int k = 0; k < cell.ps2.size(); k++) {
+      int found = 0;
+      for (int l = 0; l < cell.ps1.size(); l++) {
+        if (abs(cell.ps1.at(l).tdc - cell.ps2.at(k).tdc) < delta) {
+          found++;
+        }
+      }
+      if (found == 0) {
+        // buttare in broken cells
+        dg_cell ps2bad_cell;
+        ps2bad_cell.id = cell.id;
+        ps2bad_cell.z = cell.z;
+        ps2bad_cell.x = cell.x;
+        ps2bad_cell.y = cell.y;
+        ps2bad_cell.l = cell.l;
+        ps2bad_cell.mod = cell.mod;
+        ps2bad_cell.lay = cell.lay;
+        ps2bad_cell.cel = cell.cel;
+        ps2bad_cell.ps2.push_back(cell.ps2.at(k));
+        incomplete_cells.push_back(ps2bad_cell);
+        //  cout << " ps2 - Brok cell id " << ps2bad_cell.id << " ( " <<
+        //  ps2bad_cell.ps2.at(0).tdc << " ) " << endl;
+      }
+    }
+  }
+  return std::make_pair(complete_cells, incomplete_cells);
+}
+
 std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
                                        std::vector<dg_cell> incomplete_cells)
 {
@@ -314,8 +222,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
         atan((brok_cells.z - 23910.00) / (brok_cells.y + 2384.73)) * 180 /
         TMath::Pi();
     double cell_theta =
-        atan((brok_cells.z - 23910.00) / (brok_cells.x)) * 180 /
-        TMath::Pi();
+        atan((brok_cells.z - 23910.00) / (brok_cells.x)) * 180 / TMath::Pi();
     int minentry = 0;
     int found = 0;
     for (int j = 0; j < clus.size(); j++) {
@@ -324,8 +231,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
           atan((clus.at(j).z - 23910.00) / (clus.at(j).y + 2384.73)) * 180 /
           TMath::Pi();
       double clus_theta =
-          atan((clus.at(j).z - 23910.00) / (clus.at(j).x)) * 180 /
-          TMath::Pi();
+          atan((clus.at(j).z - 23910.00) / (clus.at(j).x)) * 180 / TMath::Pi();
       double minphi = 999, mintheta = 999;
       int isbarrelc = 0;
       if (clus.at(j).cells[0].mod == 30) isbarrelc = 1;
@@ -408,9 +314,6 @@ void Clust_info(cluster clus)
        << clus.z << " [z] e tempo di arrivo medio " << clus.t << " ns" << endl;
   cout << "Varianza: " << clus.varx << " [X] " << clus.vary << " [Y] "
        << clus.varz << " [z]" << endl;
-
-  double phi = atan((clus.z - 23910.00) / (clus.y + 2384.73)) * 180 /
-               3.14159265358979323846;
   cout << "Composto dalle seguenti celle: ";
   for (int i = 0; i < clus.cells.size(); i++) {
     cout << clus.cells.at(i).id << " ";
@@ -940,112 +843,56 @@ bool RepetitionCheck(std::vector<int> v, int check)
   }
 }
 
-std::pair<std::vector<int>, std::vector<int>> FindNeighbours(
-    int digits[], std::vector<int> already_checked, int size, int check,
-    std::vector<int> vec_cell)
+bool isNeighbour(int id, int c_id)
 {
-  for (int i = 0; i < size; i++) {
-    int id_check = digits[i];
-    if (id_check == check) {
-      continue;
-    }
-    // Middle of the module
-    else if (id_check == check + 101 || id_check == check + 100 ||
-             id_check == check + 99 || id_check == check + 1 ||
-             id_check == check - 1 || id_check == check - 99 ||
-             id_check == check - 100 || id_check == check - 101) {
-      bool RepCheck = RepetitionCheck(already_checked, id_check);
-      if (RepCheck == true) {
-        continue;
-      } else {
-        vec_cell.push_back(i);
-        already_checked.push_back(id_check);
-        std::pair<vector<int>, vector<int>> check_cell =
-            FindNeighbours(digits, already_checked, size, id_check, vec_cell);
-        already_checked = check_cell.first;
-        vec_cell = check_cell.second;
-      }
-    }
-    // Right edge of the module
-    else if (id_check == check - 889 || id_check == check - 989 ||
-             id_check == check - 1089) {
-      bool RepCheck = RepetitionCheck(already_checked, id_check);
-      if (RepCheck == true) {
-        continue;
-      } else {
-        vec_cell.push_back(i);
-        already_checked.push_back(id_check);
-        std::pair<vector<int>, vector<int>> check_cell =
-            FindNeighbours(digits, already_checked, size, id_check, vec_cell);
-        already_checked = check_cell.first;
-        vec_cell = check_cell.second;
-      }
-    }
-    // Right edge of 0 module
-    else if (id_check == check + 23111 || id_check == check + 23011 ||
-             id_check == check + 22911) {
-      bool RepCheck = RepetitionCheck(already_checked, id_check);
-      if (RepCheck == true) {
-        continue;
-      } else {
-        vec_cell.push_back(i);
-        already_checked.push_back(id_check);
-        std::pair<vector<int>, vector<int>> check_cell =
-            FindNeighbours(digits, already_checked, size, id_check, vec_cell);
-        already_checked = check_cell.first;
-        vec_cell = check_cell.second;
-      }
-    }
-    // Left edge of the module
-    else if (id_check == check + 1089 || id_check == check + 989 ||
-             id_check == check + 889) {
-      bool RepCheck = RepetitionCheck(already_checked, id_check);
-      if (RepCheck == true) {
-        continue;
-      } else {
-        vec_cell.push_back(i);
-        already_checked.push_back(id_check);
-        std::pair<vector<int>, vector<int>> check_cell =
-            FindNeighbours(digits, already_checked, size, id_check, vec_cell);
-        already_checked = check_cell.first;
-        vec_cell = check_cell.second;
-      }
-    }
-    // Left edge of the 23 module
-    else if (id_check == check - 23011 || id_check == check - 22911 ||
-             id_check == check - 23111) {
-      bool RepCheck = RepetitionCheck(already_checked, id_check);
-      if (RepCheck == true) {
-        continue;
-      } else {
-        vec_cell.push_back(i);
-        already_checked.push_back(id_check);
-        std::pair<vector<int>, vector<int>> check_cell =
-            FindNeighbours(digits, already_checked, size, id_check, vec_cell);
-        already_checked = check_cell.first;
-        vec_cell = check_cell.second;
-      }
-    }
+  // Middle of the module
+  if (c_id == id + 101 || c_id == id + 100 || c_id == id + 99 ||
+      c_id == id + 1 || c_id == id - 1 || c_id == id - 99 || c_id == id - 100 ||
+      c_id == id - 101) {
+    return true;
   }
-  return std::make_pair(already_checked, vec_cell);
+  // Right edge of the module
+  else if (c_id == id - 889 || c_id == id - 989 || c_id == id - 1089) {
+    return true;
+  }
+  // Right edge of 0 module
+  else if ((c_id == id + 23111 || c_id == id + 23011 || c_id == id + 22911) &&
+           id < 25000) {
+    return true;
+  }
+  // Left edge of the module
+  else if (c_id == id + 1089 || c_id == id + 989 || c_id == id + 889) {
+    return true;
+  }
+  // Left edge of the 23 module
+  else if ((c_id == id - 23011 || c_id == id - 22911 || c_id == id - 23111) &&
+           id < 25000) {
+    return true;
+  }
+  // Multiple hit on same cell
+  else if (c_id == id) {
+    return true;
+  } else
+    return false;
 }
 
-std::pair<int, int> Next(std::vector<int> already_checked, int digits[],
-                         int size)
+std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
+    std::vector<dg_cell> cells, int start, std::vector<int> checked,
+    std::vector<dg_cell> neigh_chain)
 {
-  int next = 0;
-  int entry = 0;
-  for (int i = 0; i < size; i++) {
-    bool RepCheck = RepetitionCheck(already_checked, digits[i]);
-    if (RepCheck == true) {
-      continue;
-    } else {
-      next = digits[i];
-      entry = i;
-      break;
+  for (int i = start + 1; i < cells.size(); i++) {
+    if (RepetitionCheck(checked, i) == true) continue;
+    bool check = isNeighbour(cells.at(start).id, cells.at(i).id);
+    if (check == true) {
+      neigh_chain.push_back(cells.at(i));
+      checked.push_back(i);
+      std::pair<std::vector<dg_cell>, std::vector<int>> find_chain =
+          GetNeighbours(cells, i, checked, neigh_chain);
+      neigh_chain = find_chain.first;
+      checked = find_chain.second;
     }
   }
-  return std::make_pair(next, entry);
+  return std::make_pair(neigh_chain, checked);
 }
 
 double kloe_simu::AttenuationFactor(double d, int planeID)
