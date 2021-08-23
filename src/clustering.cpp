@@ -44,7 +44,8 @@ void Clust_info(cluster);
 
 int Clustering(std::string const& input)
 {
-  //TH1F* ClusterEnergy = new TH1F("ClusterEnergy", "Total Energy reconstructed in the ECal;Energy [MeV];Entries/bins", 100, 0., 1500.);
+  // TH1F* ClusterEnergy = new TH1F("ClusterEnergy", "Total Energy reconstructed
+  // in the ECal;Energy [MeV];Entries/bins", 100, 0., 1500.);
 
   gSystem->Load("libStruct.so");
   const char* finname = input.c_str();
@@ -66,7 +67,7 @@ int Clustering(std::string const& input)
     std::vector<cluster> clust = Clusterize(std::move(cell));
     double CluEn = 0;
     for (auto const& clu_info : clust) {
-        //Clust_info(clu_info);
+      // Clust_info(clu_info);
     }
     f_clust = clust;
     tout.Fill();
@@ -99,10 +100,10 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
   }
   // Funzione che prende dentro complete_cells e cerca se ci sono celle complete
   // con multiple hits. L'input deve essere vettore celle in cui la size di
-  // ps1/ps2 deve essere >= 1, l'output deve essere un vettore di celle in cui la
-  // size di ps1/ps2 è sempre 1. In aggiunta a questo ci deve essere un vettore
-  // di broken cells in cui si aggiungoino i multiple hits che non hanno un
-  // corrispettivo sull'altro ps.
+  // ps1/ps2 deve essere >= 1, l'output deve essere un vettore di celle in cui
+  // la size di ps1/ps2 è sempre 1. In aggiunta a questo ci deve essere un
+  // vettore di broken cells in cui si aggiungoino i multiple hits che non hanno
+  // un corrispettivo sull'altro ps.
 
   std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells =
       ProcessMultiHits(complete_cells, broken_cells);
@@ -135,7 +136,7 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
   // Track Fit
   vec_clust = TrackFit(vec_clust);
   // Recover Incomplete cells
-  vec_clust = RecoverIncomplete(vec_clust, broken_cells); 
+  vec_clust = RecoverIncomplete(vec_clust, broken_cells);
   return vec_clust;
 }
 
@@ -217,52 +218,65 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
 std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
                                        std::vector<dg_cell> incomplete_cells)
 {
-    for (auto const& brok_cells : incomplete_cells) {
-        int isbarrel = 0;
-        if (brok_cells.mod == 30) isbarrel = 1;
-        if (brok_cells.mod == 40) isbarrel = 2;
-        double cell_phi =
-            atan((brok_cells.z - 23910.00) / (brok_cells.y + 2384.73)) * 180 /
-            TMath::Pi();
-        double cell_theta =
-            atan((brok_cells.z - 23910.00) / (brok_cells.x)) * 180 / TMath::Pi();
-        int minentry = 0;
-        int found = 0;
-        for (int j = 0; j < clus.size(); j++) {
-            double rec_en = 0;
-            double clus_phi =
-                atan((clus.at(j).z - 23910.00) / (clus.at(j).y + 2384.73)) * 180 /
-                TMath::Pi();
-           // if (isbarrel != 0) cout << "Cluster Phi: " << clus_phi << endl;
-            double clus_theta =
-                atan((clus.at(j).z - 23910.00) / (clus.at(j).x)) * 180 / TMath::Pi();
-            //if (isbarrel == 0) cout << "Cluster Theta: " << clus_theta << endl;
-            double minphi = 999, mintheta = 999;
-            int isbarrelc = 0;
-            if (clus.at(j).cells[0].mod == 30) isbarrelc = 1;
-            if (clus.at(j).cells[0].mod == 40) isbarrelc = 2;
-            if (abs(cell_phi - clus_phi) < 3 && (isbarrelc == isbarrel) && isbarrelc == 0) {
-                found = 1;
-                double dist = sqrt((brok_cells.z-clus.at(j).z)* (brok_cells.z - clus.at(j).z)+ (brok_cells.y - clus.at(j).y) * (brok_cells.y - clus.at(j).y));
-                if (abs(cell_phi - clus_phi) < minphi && dist<2000) {
-                    //cout << "Barrel found 1: Clus Theta/Phi " << clus_theta << " / " << clus_phi << " VS Cell Theta/Phi: " << cell_theta << " " << cell_phi << endl;
-                    //cout << " Cluster: " << clus.at(j).x << " " << clus.at(j).y << " " << clus.at(j).z << " VS Cell: " << brok_cells.x << " " << brok_cells.y << " " << brok_cells.z << "  ->  Clus-cell: " << clus.at(j).cells.at(0).id << " and cell id: " << brok_cells.id << " -> " << dist << endl;
-                    minphi = abs(cell_phi - clus_phi);
-                    minentry = j;
-                }
-                continue;
-            }
-            if (isbarrel == isbarrelc && isbarrel != 0) {
-                if (abs(cell_theta - clus_theta) < 3) {
-                    //cout << "EndCap found 1: Clus Theta/Phi " << clus_theta << " / " << clus_phi << " VS Cell Theta/Phi: " << cell_theta << " " << cell_phi << endl;
-                    //cout << " Cluster: " << clus.at(j).x << " " << clus.at(j).y << " " << clus.at(j).z << " VS Cell: " << brok_cells.x << " " << brok_cells.y << " " << brok_cells.z << "  ->  Clus-cell: " << clus.at(j).cells.at(0).id << "-" << clus.at(j).cells.at(0).mod << " and cell id: " << brok_cells.id << endl;
-                    found = 1;
-                    mintheta = abs(cell_theta - clus_theta);
-                    minentry = j;
-                }
-                continue;
-            }
+  for (auto const& brok_cells : incomplete_cells) {
+    int isbarrel = 0;
+    if (brok_cells.mod == 30) isbarrel = 1;
+    if (brok_cells.mod == 40) isbarrel = 2;
+    double cell_phi =
+        atan((brok_cells.z - 23910.00) / (brok_cells.y + 2384.73)) * 180 /
+        TMath::Pi();
+    double cell_theta =
+        atan((brok_cells.z - 23910.00) / (brok_cells.x)) * 180 / TMath::Pi();
+    int minentry = 0;
+    int found = 0;
+    for (int j = 0; j < clus.size(); j++) {
+      double rec_en = 0;
+      double clus_phi =
+          atan((clus.at(j).z - 23910.00) / (clus.at(j).y + 2384.73)) * 180 /
+          TMath::Pi();
+      // if (isbarrel != 0) cout << "Cluster Phi: " << clus_phi << endl;
+      double clus_theta =
+          atan((clus.at(j).z - 23910.00) / (clus.at(j).x)) * 180 / TMath::Pi();
+      // if (isbarrel == 0) cout << "Cluster Theta: " << clus_theta << endl;
+      double minphi = 999, mintheta = 999;
+      int isbarrelc = 0;
+      if (clus.at(j).cells[0].mod == 30) isbarrelc = 1;
+      if (clus.at(j).cells[0].mod == 40) isbarrelc = 2;
+      if (abs(cell_phi - clus_phi) < 3 && (isbarrelc == isbarrel) &&
+          isbarrelc == 0) {
+        found = 1;
+        double dist =
+            sqrt((brok_cells.z - clus.at(j).z) * (brok_cells.z - clus.at(j).z) +
+                 (brok_cells.y - clus.at(j).y) * (brok_cells.y - clus.at(j).y));
+        if (abs(cell_phi - clus_phi) < minphi && dist < 2000) {
+          // cout << "Barrel found 1: Clus Theta/Phi " << clus_theta << " / " <<
+          // clus_phi << " VS Cell Theta/Phi: " << cell_theta << " " << cell_phi
+          // << endl; cout << " Cluster: " << clus.at(j).x << " " << clus.at(j).y
+          // << " " << clus.at(j).z << " VS Cell: " << brok_cells.x << " " <<
+          // brok_cells.y << " " << brok_cells.z << "  ->  Clus-cell: " <<
+          // clus.at(j).cells.at(0).id << " and cell id: " << brok_cells.id << "
+          // -> " << dist << endl;
+          minphi = abs(cell_phi - clus_phi);
+          minentry = j;
         }
+        continue;
+      }
+      if (isbarrel == isbarrelc && isbarrel != 0) {
+        if (abs(cell_theta - clus_theta) < 3) {
+          // cout << "EndCap found 1: Clus Theta/Phi " << clus_theta << " / " <<
+          // clus_phi << " VS Cell Theta/Phi: " << cell_theta << " " << cell_phi
+          // << endl; cout << " Cluster: " << clus.at(j).x << " " << clus.at(j).y
+          // << " " << clus.at(j).z << " VS Cell: " << brok_cells.x << " " <<
+          // brok_cells.y << " " << brok_cells.z << "  ->  Clus-cell: " <<
+          // clus.at(j).cells.at(0).id << "-" << clus.at(j).cells.at(0).mod << "
+          // and cell id: " << brok_cells.id << endl;
+          found = 1;
+          mintheta = abs(cell_theta - clus_theta);
+          minentry = j;
+        }
+        continue;
+      }
+    }
     if (found == 1 && isbarrel == 0) {
       double rec_en = 0;
       double DpmA = clus.at(minentry).x / 10 + 215;
@@ -326,7 +340,9 @@ void Clust_info(cluster clus)
        << clus.varz << " [z]" << endl;
   cout << "Composto dalle seguenti celle: ";
   for (int i = 0; i < clus.cells.size(); i++) {
-      cout << "Cell: " << clus.cells.at(i).id << " X: " << clus.cells.at(i).x << " Y: " << clus.cells.at(i).y << " Z: " << clus.cells.at(i).z << endl;
+    cout << "Cell: " << clus.cells.at(i).id << " X: " << clus.cells.at(i).x
+         << " Y: " << clus.cells.at(i).y << " Z: " << clus.cells.at(i).z
+         << endl;
   }
   cout << endl;
 }
@@ -535,7 +551,7 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
     double yx[5] = {0, 0, 0, 0, 0}, yy[5] = {0, 0, 0, 0, 0},
            yz[5] = {0, 0, 0, 0, 0}, wx[5] = {0, 0, 0, 0, 0},
            wy[5] = {0, 0, 0, 0, 0}, wz[5] = {0, 0, 0, 0, 0};
-    double X[5] = {0, 0, 0, 0, 0}, D=0;
+    double X[5] = {0, 0, 0, 0, 0}, D = 0;
     if (clu_vec.at(i).cells[0].id > 25000) {
       isBarrel = false;
     }
@@ -550,13 +566,13 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
       yz[lay_cross - 1] = Lay0.z;
       wz[lay_cross - 1] = 0.6;
       wy[lay_cross - 1] = 0.6;
-      wx[lay_cross - 1] = 0.001 * Lay0.e; 
+      wx[lay_cross - 1] = 0.001 * Lay0.e;
       if (isBarrel == false) {
         wy[lay_cross - 1] = wx[lay_cross - 1];
         wx[lay_cross - 1] = 0.6;
       }
-      //D = D + xl[0];
-      //if (first_lay == 1) X[0] = 0.5 * xl[0];
+      // D = D + xl[0];
+      // if (first_lay == 1) X[0] = 0.5 * xl[0];
     }
     if (Lay1.e > 0) {
       lay_cross++;
@@ -573,10 +589,10 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
         wy[lay_cross - 1] = wx[lay_cross - 1];
         wx[lay_cross - 1] = 0.6;
       }
-      //D = D + xl[1];
-      //if (first_lay == 2)
+      // D = D + xl[1];
+      // if (first_lay == 2)
       //  X[0] = 0.5 * xl[1];
-     //else if (first_lay == 1)
+      // else if (first_lay == 1)
       //  X[1] = xl[0] + 0.5 * xl[1];
     }
     if (Lay2.e > 0) {
@@ -594,12 +610,12 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
         wy[lay_cross - 1] = wx[lay_cross - 1];
         wx[lay_cross - 1] = 0.6;
       }
-      //D = D + xl[2];
-      //if (first_lay == 3)
-       // X[0] = 0.5 * xl[2];
-      //else if (first_lay == 2)
-     //   X[1] = xl[1] + 0.5 * xl[2];
-     // else if (first_lay == 1)
+      // D = D + xl[2];
+      // if (first_lay == 3)
+      // X[0] = 0.5 * xl[2];
+      // else if (first_lay == 2)
+      //   X[1] = xl[1] + 0.5 * xl[2];
+      // else if (first_lay == 1)
       //  X[2] = 2 * xl[0] + 0.5 * xl[2];
     }
     if (Lay3.e > 0) {
@@ -617,14 +633,14 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
         wy[lay_cross - 1] = wx[lay_cross - 1];
         wx[lay_cross - 1] = 0.6;
       }
-     // D = D + xl[3];
-     // if (first_lay == 4)
+      // D = D + xl[3];
+      // if (first_lay == 4)
       //  X[0] = 0.5 * xl[3];
-      //else if (first_lay == 3)
+      // else if (first_lay == 3)
       //  X[1] = xl[2] + 0.5 * xl[3];
-      //else if (first_lay == 2)
+      // else if (first_lay == 2)
       //  X[2] = 2 * xl[0] + 0.5 * xl[3];
-      //else if (first_lay == 1)
+      // else if (first_lay == 1)
       //  X[3] = 3 * xl[0] + 0.5 * xl[3];
     }
     if (Lay4.e > 0) {
@@ -642,22 +658,22 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
         wy[lay_cross - 1] = wx[lay_cross - 1];
         wx[lay_cross - 1] = 0.6;
       }
-     // D = D + xl[4];
-     // if (first_lay == 5)
-     //   X[0] = 0.5 * xl[4];
-     // else if (first_lay == 4)
-     //   X[1] = xl[3] + 0.5 * xl[4];
-     // else if (first_lay == 3)
-     //   X[2] = 2 * xl[3] + 0.5 * xl[4];
-     // else if (first_lay == 2)
-     //   X[3] = 3 * xl[3] + 0.5 * xl[4];
+      // D = D + xl[4];
+      // if (first_lay == 5)
+      //   X[0] = 0.5 * xl[4];
+      // else if (first_lay == 4)
+      //   X[1] = xl[3] + 0.5 * xl[4];
+      // else if (first_lay == 3)
+      //   X[2] = 2 * xl[3] + 0.5 * xl[4];
+      // else if (first_lay == 2)
+      //   X[3] = 3 * xl[3] + 0.5 * xl[4];
       // else if (first_lay == 1)
-     //   X[4] = 4 * xl[3] + 0.5 * xl[4];
+      //   X[4] = 4 * xl[3] + 0.5 * xl[4];
     }
     if (lay_cross == 0) {
       continue;
     }
-    //D = D - 0.5 * xl[lay_cross];
+    // D = D - 0.5 * xl[lay_cross];
     int Q = 0, L = 0;
     for (int k = first_lay; k <= 5; k++) {
       if (Q == 0 && (LayE[k - 1] >= 0.05 * clu_vec.at(i).e)) {
@@ -677,7 +693,7 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
       double Zmin = 0;
       double Zapx = 0.5 * B * xl[Q - 1];
       double Zmax = B * xl[Q - 1];
-      double R1=0;
+      double R1 = 0;
       for (int j = 0; j < 4; j++) {
         R1 = exp(-Zapx) * (1 + Zapx);
         if (R1 > Rk) {
@@ -694,29 +710,25 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
       }
       double XFix[5] = {0, 0, 0, 0, 0};
       if (first_lay == 1) {
-          XFix[0] = 2.22;
-          XFix[1] = 6.66;
-          XFix[2] = 11.1;
-          XFix[3] = 15.54;
-          XFix[4] = 18.16;
-      }
-      else if (first_lay == 2) {
-          XFix[0] = 6.66;
-          XFix[1] = 11.1;
-          XFix[2] = 15.54;
-          XFix[3] = 18.16;
-      }
-      else if (first_lay == 3) {
-          XFix[0] = 11.1;
-          XFix[1] = 15.54;
-          XFix[2] = 18.16;
-      }
-      else if (first_lay == 4) {
-          XFix[0] = 15.54;
-          XFix[1] = 18.16;
-      }
-      else if (first_lay == 5) {
-          XFix[0] = 18.16;
+        XFix[0] = 2.22;
+        XFix[1] = 6.66;
+        XFix[2] = 11.1;
+        XFix[3] = 15.54;
+        XFix[4] = 18.16;
+      } else if (first_lay == 2) {
+        XFix[0] = 6.66;
+        XFix[1] = 11.1;
+        XFix[2] = 15.54;
+        XFix[3] = 18.16;
+      } else if (first_lay == 3) {
+        XFix[0] = 11.1;
+        XFix[1] = 15.54;
+        XFix[2] = 18.16;
+      } else if (first_lay == 4) {
+        XFix[0] = 15.54;
+        XFix[1] = 18.16;
+      } else if (first_lay == 5) {
+        XFix[0] = 18.16;
       }
       for (int j = 0; j < lay_cross; j++) {
         X[j] = XFix[j] - Zapx;
@@ -742,24 +754,23 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
       eapx[0] = get<2>(fit_varx);
       eapx[1] = get<2>(fit_vary);
       eapx[2] = get<2>(fit_varz);
-       //cout << "Apx: [" << apx[0] << "; " << apx[1] << "; " << apx[2] << "] "
-       //<< " e direzione vettore: [" << ctrk[0] << "; " << ctrk[1] << "; " <<
-       //ctrk[2] << "] " << endl;
+      // cout << "Apx: [" << apx[0] << "; " << apx[1] << "; " << apx[2] << "] "
+      //<< " e direzione vettore: [" << ctrk[0] << "; " << ctrk[1] << "; " <<
+      // ctrk[2] << "] " << endl;
     }
     if (lay_cross == 1) {
-       //cout << "apx(x)=" << yx[0] << " apx(y)=" << yy[0] << " apx(z)=" <<
-       //yz[0] << endl;
-       //cout << "e_apx(x)=" << sqrt(1/wx[0]) << " e_apx(y)=" << sqrt(1 / wy[0])
-       //<< " e_apx(z)=" << sqrt(1 / wz[0]) << endl;
+      // cout << "apx(x)=" << yx[0] << " apx(y)=" << yy[0] << " apx(z)=" <<
+      // yz[0] << endl;
+      // cout << "e_apx(x)=" << sqrt(1/wx[0]) << " e_apx(y)=" << sqrt(1 / wy[0])
+      //<< " e_apx(z)=" << sqrt(1 / wz[0]) << endl;
       apx[0] = yx[0];
       apx[1] = yy[0];
       apx[2] = yz[0];
     }
 
-    //DISCLAIMER: se vogliamo possiamo utilizzare l'apice del cluster, basta scommentare.
-    //clu_vec.at(i).x = apx[0];
-    //clu_vec.at(i).y = apx[1];
-    //clu_vec.at(i).z = apx[2];
+    // DISCLAIMER: se vogliamo possiamo utilizzare l'apice del cluster, basta
+    // scommentare. clu_vec.at(i).x = apx[0]; clu_vec.at(i).y = apx[1];
+    // clu_vec.at(i).z = apx[2];
 
     clu_vec.at(i).sx = ctrk[0];
     clu_vec.at(i).sy = ctrk[1];
