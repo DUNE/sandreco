@@ -17,6 +17,8 @@
 
 namespace kloe_simu
 {
+bool flukatype = false;
+
 double cellCoordBarrel[nMod][nLay][nCel][3];
 double cellCoordEndcap[5][nLay][90][3];
 

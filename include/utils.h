@@ -15,7 +15,7 @@ namespace kloe_simu
 {
 const bool debug = false;
 
-bool flukatype = false;  // for FLUKA
+extern bool flukatype;  // for FLUKA
 
 const double mm_to_m = 1E-3;
 const double m_to_mm = 1000.;
