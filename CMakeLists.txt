@@ -33,7 +33,7 @@ add_library(Struct SHARED G__Struct.cxx)
 target_link_libraries(Struct PUBLIC ROOT::RIO ROOT::Net)
 
 # Creates a libUtils shared library
-add_library(Utils SHARED src/utils.cpp)
+add_library(Utils SHARED src/utils.cpp src/transf.cpp)
 target_link_libraries(Utils PUBLIC ROOT::RIO ROOT::Net EDepSim::edepsim_io)
 
 # Creates Digitize executable.
