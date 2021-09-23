@@ -1,14 +1,9 @@
-// for transforming coordinates
-TLorentzVector LocalToGlobalCoordinates(TLorentzVector pos)
-{
-  TLorentzVector finalpos;
-  finalpos.SetXYZT(pos.X(), pos.Y() - 2384.73, pos.Z() + 23910, pos.T());
-  return finalpos;
-}
+#include <TLorentzVector.h>
 
-TLorentzVector GlobalToLocalCoordinates(TLorentzVector pos)
-{
-  TLorentzVector finalpos;
-  finalpos.SetXYZT(pos.X(), pos.Y() + 2384.73, pos.Z() - 23910, pos.T());
-  return finalpos;
-}
+#ifndef TRANSF_H
+#define TRANSF_H
+
+TLorentzVector LocalToGlobalCoordinates(TLorentzVector pos);
+TLorentzVector GlobalToLocalCoordinates(TLorentzVector pos);
+
+#endif
