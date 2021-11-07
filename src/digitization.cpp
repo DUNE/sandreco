@@ -594,7 +594,7 @@ void CollectHits(TG4Event* ev, TGeoManager* geo, int NHits,
           found = true;
           // STT module id put to k for fluka STT digit
           // ST id put to k for fluka STT digit
-          int planeid = kloe_simu::encodePlaneID(k, DetType[k]);
+          int planeid = kloe_simu::encodePlaneID(k, 0, DetType[k]);
           stid = kloe_simu::encodeSTID(planeid, k);
           break;
         }
@@ -638,11 +638,11 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
     double min_time_tub = 1E9;  // mm
     int did = it->first;
 
-    int mod, tub, type, pla;
+    int mod, tub, type, pla, plloc;
     double dwire = 0.;
 
     decodeSTID(did, pla, tub);
-    decodePlaneID(pla, mod, type);
+    decodePlaneID(pla, mod, plloc, type);
 
     TVector2 wire = tubePos[did];
 
