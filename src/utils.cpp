@@ -30,7 +30,9 @@ double ec_dz;
 double stt_center[3];
 
 TPRegexp* rST;
+TPRegexp* r2ST;
 TPRegexp* rSTplane;
+TPRegexp* rSTmod;
 
 std::map<int, std::map<double, int> > stX;
 std::map<int, double> stL;
@@ -64,23 +66,24 @@ double kloe_simu::getT(double y1, double y2, double y, double z1, double z2,
 
 int kloe_simu::encodeSTID(int planeid, int tubeid)
 {
-  return tubeid * 1000 + planeid;
+  return tubeid * 100000 + planeid;
 }
 
 void kloe_simu::decodeSTID(int id, int& planeid, int& tubeid)
 {
-  tubeid = id / 1000;
-  planeid = id % 1000;
+  tubeid = id / 100000;
+  planeid = id % 100000;  // global id
 }
 
-int kloe_simu::encodePlaneID(int moduleid, int type)
+int kloe_simu::encodePlaneID(int moduleid, int planelocid, int type)
 {
-  return moduleid * 10 + type;
+  return moduleid * 100 + planelocid * 10 + type;
 }
 
-void kloe_simu::decodePlaneID(int id, int& moduleid, int& type)
+void kloe_simu::decodePlaneID(int id, int& moduleid, int& planelodid, int& type)
 {
-  moduleid = id / 10;
+  moduleid = id / 100;
+  planelodid = (id - moduleid * 100) / 10;
   type = id % 10;
 }
 
@@ -92,55 +95,71 @@ bool kloe_simu::isSTPlane(TString name)
 }
 
 // get local id of tube
-int kloe_simu::getSTId(TString name)
-{
-  int id = -999;
+// int kloe_simu::getSTId(TString name)
+// {
+//   int id = -999;
 
-  TObjArray* obj = name.Tokenize("_");
+//   TObjArray* obj = name.Tokenize("_");
 
-  if (obj->GetEntries() != 10 && obj->GetEntries() != 9) {
-    std::cout << "Error: tokenizing " << name.Data() << std::endl;
-  } else {
-    TString sid = ((TObjString*)obj->At(obj->GetEntries() - 1))->GetString();
+//   if (obj->GetEntries() != 10 && obj->GetEntries() != 9) {
+//     std::cout << "Error: tokenizing " << name.Data() << std::endl;
+//   } else {
+//     TString sid = ((TObjString*)obj->At(obj->GetEntries() - 1))->GetString();
 
-    id = sid.Atoi();
-  }
-  delete obj;
+//     id = sid.Atoi();
+//   }
+//   delete obj;
 
-  return id;
-}
+//   return id;
+// }
 
 // get plane id
-int kloe_simu::getPlaneID(TString name)
+int kloe_simu::getPlaneID(TString path)
 {
-  int mod = 0;
-  int type = 0;
+  auto obja = kloe_simu::rSTplane->MatchS(path);
+  auto obja2 = kloe_simu::rSTmod->MatchS(path);
 
-  TObjArray* obj = name.Tokenize("_");
+  int mod = (reinterpret_cast<TObjString*>(obja->At(1)))->GetString().Atoi();
+  int icopy = (reinterpret_cast<TObjString*>(obja->At(5)))->GetString().Atoi();
+  int type =
+      ((reinterpret_cast<TObjString*>(obja->At(4)))->GetString().EqualTo("hh")
+           ? 2
+           : 1) +
+      2 * icopy;
+  int icopymod =
+      (reinterpret_cast<TObjString*>(obja2->At(3)))->GetString().Atoi();
 
-  if (obj->GetEntries() != 7 && obj->GetEntries() != 6 &&
-      obj->GetEntries() != 11 && obj->GetEntries() != 10) {
-    std::cout << "Error: tokenizing " << name.Data() << std::endl;
-  } else {
-    int ipos = (obj->GetEntries() == 10 || obj->GetEntries() == 6) ? 2 : 3;
-    TString stype = ((TObjString*)obj->At(ipos))->GetString();
-    TString smod = ((TObjString*)obj->At(1))->GetString();
+  delete obja;
+  delete obja2;
 
-    mod = smod.Atoi();
+  // int mod = obja;
+  // int type = 0;
 
-    if (stype.Contains("hor2"))
-      type = 4;
-    else if (stype.Contains("ver"))
-      type = 1;
-    else if (stype.Contains("hor"))
-      type = 2;
-    else
-      std::cout << "Error evaluating type for: " << name.Data() << std::endl;
-  }
+  // TObjArray* obj = name.Tokenize("_");
 
-  delete obj;
+  // if (obj->GetEntries() != 7 && obj->GetEntries() != 6 &&
+  //     obj->GetEntries() != 11 && obj->GetEntries() != 10) {
+  //   std::cout << "Error: tokenizing " << name.Data() << std::endl;
+  // } else {
+  //   int ipos = (obj->GetEntries() == 10 || obj->GetEntries() == 6) ? 2 : 3;
+  //   TString stype = ((TObjString*)obj->At(ipos))->GetString();
+  //   TString smod = ((TObjString*)obj->At(1))->GetString();
 
-  return encodePlaneID(mod, type);
+  //   mod = smod.Atoi();
+
+  //   if (stype.Contains("hor2"))
+  //     type = 4;
+  //   else if (stype.Contains("ver"))
+  //     type = 1;
+  //   else if (stype.Contains("hor"))
+  //     type = 2;
+  //   else
+  //     std::cout << "Error evaluating type for: " << name.Data() << std::endl;
+  // }
+
+  // delete obj;
+
+  return encodePlaneID(mod * 10 + icopymod, icopy, type);
 }
 
 // get position of the center of the tube for a plane
@@ -151,42 +170,66 @@ void kloe_simu::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
 {
   int type;
   int mod;
-  decodePlaneID(pid, mod, type);
+  int plloc;
+  decodePlaneID(pid, mod, plloc, type);
   int ic = 1 - (type % 2);
 
   if (ic != 0 && ic != 1)
     std::cout << "Error: ic expected 0 or 1 -> " << ic << std::endl;
 
   for (int i = 0; i < nod->GetNdaughters(); i++) {
-    TGeoNode* dau = nod->GetDaughter(i);
-    TGeoTube* tub = (TGeoTube*)dau->GetVolume()->GetShape();
-    double lenght = 2 * tub->GetDz();
-    TString name = dau->GetName();
+    auto n2straw = nod->GetDaughter(i);
+    auto obja = kloe_simu::r2ST->MatchS(n2straw->GetName());
 
-    if (!isST(name))
-      std::cout << "Error: expected ST but not -> " << name.Data() << std::endl;
+    int n2straw_id =
+        (reinterpret_cast<TObjString*>(obja->At(5)))->GetString().Atoi();
+    delete obja;
 
-    TGeoMatrix* thismat = nod->GetDaughter(i)->GetMatrix();
-    TGeoHMatrix mymat = mat * (*thismat);
+    TGeoMatrix* n2strawmat = n2straw->GetMatrix();
+    TGeoHMatrix n2strawhmat = mat * (*n2strawmat);
 
-    int id = getSTId(name);
+    for (int j = 0; j < n2straw->GetNdaughters(); j++) {
+      TGeoNode* dau = n2straw->GetDaughter(j);
+      TGeoTube* tub = (TGeoTube*)dau->GetVolume()->GetShape();
+      double lenght = 2 * tub->GetDz();
+      TString name = dau->GetName();
 
-    TVector2 v;
-    v.SetX(mymat.GetTranslation()[2]);
-    v.SetY(mymat.GetTranslation()[ic]);
+      if (!isST(name))
+        std::cout << "Error: expected ST but not -> " << name.Data()
+                  << std::endl;
 
-    stX[v.Y()] = id;
-    stL[id] = lenght;
-    stPos[id] = v;
+      TGeoMatrix* thismat = n2straw->GetDaughter(j)->GetMatrix();
+      TGeoHMatrix mymat = n2strawhmat * (*thismat);
+
+      auto obja2 = kloe_simu::rST->MatchS(name);
+
+      int tid =
+          (reinterpret_cast<TObjString*>(obja2->At(obja2->GetEntries() - 2)))
+              ->GetString()
+              .Atoi();
+      delete obja2;
+
+      int id = n2straw_id * 2 + tid;
+
+      TVector2 v;
+      v.SetX(mymat.GetTranslation()[2]);
+      v.SetY(mymat.GetTranslation()[ic]);
+
+      stX[v.Y()] = id;
+      stL[id] = lenght;
+      stPos[id] = v;
+    }
   }
 }
 
 // get position of the center of the tube for each plane
-void kloe_simu::getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
+void kloe_simu::getSTPlaneinfo(TGeoHMatrix mat,
                                std::map<int, std::map<double, int> >& stX,
                                std::map<int, double>& stL,
                                std::map<int, std::map<int, TVector2> >& stPos)
 {
+  TGeoNode* nod = gGeoManager->GetCurrentNode();
+  TString path = gGeoManager->GetPath();
   TString name = nod->GetName();
   TGeoMatrix* thismat = nod->GetMatrix();
   TGeoHMatrix mymat = mat * (*thismat);
@@ -196,7 +239,7 @@ void kloe_simu::getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
   double z = 0;
 
   if (isSTPlane(name)) {
-    pid = getPlaneID(name);
+    pid = getPlaneID(path);
 
     std::map<double, int> mstX;
     std::map<int, TVector2> mstPos;
@@ -205,10 +248,13 @@ void kloe_simu::getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
 
     stX[pid] = mstX;
     stPos[pid] = mstPos;
+
   } else {
 
     for (int i = 0; i < nod->GetNdaughters(); i++) {
-      getSTPlaneinfo(nod->GetDaughter(i), mymat, stX, stL, stPos);
+      gGeoManager->CdDown(i);
+      getSTPlaneinfo(mymat, stX, stL, stPos);
+      gGeoManager->CdUp();
     }
   }
 }
@@ -219,7 +265,7 @@ int kloe_simu::getSTUniqID(TGeoManager* g, double x, double y, double z)
   TString sttname = g->FindNode(x, y, z)->GetName();
 
   int sid = -999;
-  int pid = getPlaneID(sttname);
+  int pid = getPlaneID(gGeoManager->GetPath());
 
   if (pid == 0) return -999;
 
@@ -587,10 +633,13 @@ void kloe_simu::init(TGeoManager* geo)
     TGeoHMatrix mat = *gGeoIdentity;
 
     kloe_simu::rST = new TPRegexp(rST_string);
+    kloe_simu::r2ST = new TPRegexp(r2ST_string);
     kloe_simu::rSTplane = new TPRegexp(rSTplane_string);
+    kloe_simu::rSTmod = new TPRegexp(rSTmod_string);
 
-    getSTPlaneinfo(gGeoManager->GetTopVolume()->GetNode(0), mat, kloe_simu::stX,
-                   kloe_simu::stL, kloe_simu::stPos);
+    gGeoManager->CdDown(0);
+
+    getSTPlaneinfo(mat, kloe_simu::stX, kloe_simu::stL, kloe_simu::stPos);
 
     for (std::map<int, std::map<int, TVector2> >::iterator it =
              kloe_simu::stPos.begin();

@@ -102,17 +102,26 @@ const char* const path_endcapR_template =
 
 const char* const path_internal_volume =
     "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-    "MagIntVol_volume_PV_0/volSTTLAR_PV_0/";
-const char* const name_internal_volume = "volSTTLAR_PV";
+    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0";
+const char* const name_internal_volume = "sand_inner_volume_PV";
 
 const char* const rST_string =
-    "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
-    "0-9]+)";
+    "(horizontalST_(Ar|Xe)|STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_vv_ST)_PV_([0-9]+"
+    ")(/|)";
+// "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
+// "0-9]+)";
+const char* const r2ST_string =
+    "STT_([0-9]+)_(Trk|C3H6|C)Mod_(ST_|)(hh|vv)_2straw_PV_([0-9]+)(/|)";
 const char* const rSTplane_string =
-    "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
+    "STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_(hh|vv)_PV_([0-9]+)(/|)";
+// "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
+const char* const rSTmod_string =
+    "STT_([0-9]+)_(Trk|C3H6|C)Mod_PV_([0-9]+)(/|)";
 
 extern TPRegexp* rST;
+extern TPRegexp* r2ST;
 extern TPRegexp* rSTplane;
+extern TPRegexp* rSTmod;
 
 const double tscin = 3.08;
 const double tscex = 0.588;
@@ -247,20 +256,19 @@ void CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
 
 bool isST(TString name);
 bool isSTPlane(TString name);
-int getSTId(TString name);
+// int getSTId(TString name);
 int getPlaneID(TString name);
 void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
                std::map<double, int>& stX, std::map<int, double>& stL,
                std::map<int, TVector2>& stPos);
-void getSTPlaneinfo(TGeoNode* nod, TGeoHMatrix mat,
-                    std::map<int, std::map<double, int> >& stX,
+void getSTPlaneinfo(TGeoHMatrix mat, std::map<int, std::map<double, int> >& stX,
                     std::map<int, double>& stL,
                     std::map<int, std::map<int, TVector2> >& stPos);
 int getSTUniqID(TGeoManager* g, double x, double y, double z);
 int encodeSTID(int planeid, int tubeid);
 void decodeSTID(int id, int& planeid, int& tubeid);
-int encodePlaneID(int moduleid, int type);
-void decodePlaneID(int id, int& moduleid, int& type);
+int encodePlaneID(int moduleid, int planelocid, int type);
+void decodePlaneID(int id, int& moduleid, int& planelocid, int& type);
 double getT(double y1, double y2, double y, double z1, double z2, double z);
 void initT0(TG4Event* ev);
 }  // namespace kloe_simu
