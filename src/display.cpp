@@ -583,6 +583,19 @@ void show(int index, bool showtrj = true, bool showfit = true,
         m->Draw();
       }
     }
+
+    for (const auto& tr : *vec_tr) {
+      for (const auto& d : tr.clX) {
+        TMarker* m = new TMarker(d.z, d.x, 6);
+        cev->cd(2);
+        m->Draw();
+      }
+      for (const auto& d : tr.clY) {
+        TMarker* m = new TMarker(d.z, d.y, 6);
+        cev->cd(1);
+        m->Draw();
+      }
+    }
   }
 
   if (showfit) {
