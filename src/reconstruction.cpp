@@ -1732,15 +1732,15 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  auto stt_mode = STT_Mode::full;
-  if (argc > 4 && strcmp(argv[4], "stt_mode::fast_only_primaries") == 0) {
-    stt_mode = STT_Mode::fast_only_primaries;
-    std::cout << "STT_Mode: fast_only_primaries\n";
+  auto stt_mode = STT_Mode::fast_only_primaries;
+  if (argc > 4 && strcmp(argv[4], "stt_mode::full") == 0) {
+    stt_mode = STT_Mode::full;
+    std::cout << "STT_Mode: full\n";
   } else if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
     stt_mode = STT_Mode::fast;
     std::cout << "STT_Mode: fast\n";
   } else {
-    std::cout << "STT_Mode: full\n";
+    std::cout << "STT_Mode: fast_only_primaries\n";
   }
 
   Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast);
