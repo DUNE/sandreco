@@ -11,7 +11,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-namespace kloe_simu
+namespace sand_reco
 {
 const bool debug = false;
 
@@ -271,6 +271,6 @@ int encodePlaneID(int moduleid, int planelocid, int type);
 void decodePlaneID(int id, int& moduleid, int& planelocid, int& type);
 double getT(double y1, double y2, double y, double z1, double z2, double z);
 void initT0(TG4Event* ev);
-}  // namespace kloe_simu
+}  // namespace sand_reco
 
 #endif

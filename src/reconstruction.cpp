@@ -16,7 +16,7 @@
 #include "utils.h"
 #include <iomanip>
 
-using namespace kloe_simu;
+using namespace sand_reco;
 
 void reset(track& tr)
 {

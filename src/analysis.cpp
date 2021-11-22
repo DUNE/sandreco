@@ -14,7 +14,7 @@
 #include <iostream>
 #include <string>
 
-using namespace kloe_simu;
+using namespace sand_reco;
 
 TDatabasePDG db;
 
