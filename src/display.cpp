@@ -73,19 +73,19 @@ std::vector<cluster>* vec_cl = new std::vector<cluster>;
 std::map<int, gcell> calocell;
 
 const char* path_intreg =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
-    "MagIntVol_volume_PV_0/volSTTLAR_PV_0";
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0";
 
 const char* path_barrel_template =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
 
 const char* path_endcapR_template =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 
 const char* path_endcapL_template =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volKLOE_PV_0/"
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
 
 const char* barrel_mod_vol_name = "ECAL_lv_PV";
@@ -123,7 +123,7 @@ void init(const char* mcfile, const char* ifile)
 
   t = tEdep;
 
-  geo = reinterpret_cast<TGeoManager*>(f->Get("EDepSimGeometry"));
+  geo = reinterpret_cast<TGeoManager*>(fmc->Get("EDepSimGeometry"));
 
   if (!geo) return;
 
