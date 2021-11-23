@@ -1718,9 +1718,9 @@ void help_reco()
 {
   std::cout
       << "usage: Reconstruct hit_file digit_file output_file [stt_mode]\n";
-  std::cout << "    - stt_mode: 'stt_mode::full' (default) \n";
+  std::cout << "    - stt_mode: 'stt_mode::fast_only_primaries' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
-  std::cout << "                'stt_mode::fast_only_primaries' \n";
+  std::cout << "                'stt_mode::full' \n";
 }
 
 int main(int argc, char* argv[])
