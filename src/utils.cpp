@@ -119,6 +119,13 @@ int sand_reco::getPlaneID(TString path)
   auto obja = sand_reco::rSTplane->MatchS(path);
   auto obja2 = sand_reco::rSTmod->MatchS(path);
 
+  if(obja->GetEntries() == 0)
+  {
+    delete obja;
+    delete obja2;
+    return 0;
+  }
+
   int mod = (reinterpret_cast<TObjString*>(obja->At(1)))->GetString().Atoi();
   int icopy = (reinterpret_cast<TObjString*>(obja->At(5)))->GetString().Atoi();
   int type =
@@ -262,10 +269,8 @@ void sand_reco::getSTPlaneinfo(TGeoHMatrix mat,
 // get unique id of the tube corresponding to (x,y,z)
 int sand_reco::getSTUniqID(TGeoManager* g, double x, double y, double z)
 {
-  TString sttname = g->FindNode(x, y, z)->GetName();
-
   int sid = -999;
-  int pid = getPlaneID(gGeoManager->GetPath());
+  int pid = getPlaneID(g->GetPath());
 
   if (pid == 0) return -999;
 
