@@ -272,7 +272,7 @@ The edep-sim macro template is:
 The description of the data format can be found [here](https://github.com/DUNE-ND-SAND/sand-stt/wiki/Data-Model)
 
 
-# Development
+# Contribute
 
 - The code format can be find [here](https://github.com/DUNE-ND-SAND/sand-stt/wiki/Code-Formatting)
 - The developing scheme is described [HowToDevelop.pdf](https://baltig.infn.it/dune/sand-reco/-/wikis/uploads/8b897fb0ea753ef767b96312bdf9ccac/HowToDevelop.pdf)
