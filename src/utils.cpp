@@ -119,8 +119,7 @@ int sand_reco::getPlaneID(TString path)
   auto obja = sand_reco::rSTplane->MatchS(path);
   auto obja2 = sand_reco::rSTmod->MatchS(path);
 
-  if(obja->GetEntries() == 0)
-  {
+  if (obja->GetEntries() == 0) {
     delete obja;
     delete obja2;
     return 0;

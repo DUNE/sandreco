@@ -465,7 +465,8 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
         const TG4HitSegment& hseg =
             ev->SegmentDetectors["Straw"].at(vec_digi->at(k).hindex.at(m));
 
-        if (hseg.PrimaryId == tr.tid) vhits.push_back(hseg);
+        if (hseg.PrimaryId == tr.tid)
+          if (ishitok(ev, tr.tid, hseg)) vhits.push_back(hseg);
       }
 
       if (vhits.size() > 0u) {
