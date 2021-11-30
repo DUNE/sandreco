@@ -31,7 +31,7 @@
 // Distance mm
 // Time ns
 
-using namespace kloe_simu;
+using namespace sand_reco;
 
 TRandom3 r(0);
 
@@ -447,7 +447,7 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
   for (std::map<int, std::vector<pe> >::iterator it = photo_el.begin();
        it != photo_el.end(); ++it) {
     // order by arrival time
-    std::sort(it->second.begin(), it->second.end(), kloe_simu::isPeBefore);
+    std::sort(it->second.begin(), it->second.end(), sand_reco::isPeBefore);
 
     auto side = 2 * (it->first > 0) - 1;
 
@@ -594,8 +594,8 @@ void CollectHits(TG4Event* ev, TGeoManager* geo, int NHits,
           found = true;
           // STT module id put to k for fluka STT digit
           // ST id put to k for fluka STT digit
-          int planeid = kloe_simu::encodePlaneID(k, DetType[k]);
-          stid = kloe_simu::encodeSTID(planeid, k);
+          int planeid = sand_reco::encodePlaneID(k, 0, DetType[k]);
+          stid = sand_reco::encodeSTID(planeid, k);
           break;
         }
       }
@@ -638,11 +638,11 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
     double min_time_tub = 1E9;  // mm
     int did = it->first;
 
-    int mod, tub, type, pla;
+    int mod, tub, type, pla, plloc;
     double dwire = 0.;
 
     decodeSTID(did, pla, tub);
-    decodePlaneID(pla, mod, type);
+    decodePlaneID(pla, mod, plloc, type);
 
     TVector2 wire = tubePos[did];
 
@@ -651,18 +651,18 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
     d.did = did;
     d.de = 0;
     d.hor = (type % 2 == 0);
-    d.t0 = kloe_simu::t0[pla];
+    d.t0 = sand_reco::t0[pla];
 
     if (d.hor == true) {
-      d.x = kloe_simu::stt_center[0];
+      d.x = sand_reco::stt_center[0];
       d.y = wire.Y();
       d.z = wire.X();
-      dwire = d.x - 0.5 * kloe_simu::stL[did];
+      dwire = d.x - 0.5 * sand_reco::stL[did];
     } else {
       d.x = wire.Y();
-      d.y = kloe_simu::stt_center[1];
+      d.y = sand_reco::stt_center[1];
       d.z = wire.X();
-      dwire = d.y - 0.5 * kloe_simu::stL[did];
+      dwire = d.y - 0.5 * sand_reco::stL[did];
     }
 
     for (unsigned int i = 0; i < it->second.size(); i++) {
@@ -689,17 +689,17 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
       TVector2 min_dist_point(x, y);
       double min_dist_hit = (min_dist_point - wire).Mod();
       double min_time_hit =
-          t + (min_dist_hit - kloe_simu::wire_radius) / kloe_simu::v_drift +
-          dwire / kloe_simu::v_signal_inwire;
+          t + (min_dist_hit - sand_reco::wire_radius) / sand_reco::v_drift +
+          dwire / sand_reco::v_signal_inwire;
 
       if (min_time_hit < min_time_tub) min_time_tub = min_time_hit;
 
-      if (t - d.t0 < kloe_simu::stt_int_time) d.de += it->second[i].de;
+      if (t - d.t0 < sand_reco::stt_int_time) d.de += it->second[i].de;
 
       d.hindex.push_back(it->second[i].index);
     }
 
-    d.tdc = min_time_tub + r.Gaus(0, kloe_simu::tm_stt_smearing);
+    d.tdc = min_time_tub + r.Gaus(0, sand_reco::tm_stt_smearing);
     d.adc = d.de;
 
     digit_vec.push_back(d);
@@ -816,11 +816,11 @@ void Digitize(const char* finname, const char* foutname)
 
   f.Close();
 
-  kloe_simu::stL.clear();
-  kloe_simu::stX.clear();
-  kloe_simu::stPos.clear();
-  kloe_simu::t0.clear();
-  kloe_simu::tubePos.clear();
+  sand_reco::stL.clear();
+  sand_reco::stX.clear();
+  sand_reco::stPos.clear();
+  sand_reco::t0.clear();
+  sand_reco::tubePos.clear();
 }
 
 void help_digit()

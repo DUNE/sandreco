@@ -66,8 +66,12 @@ int main(int argc, char* argv[])
 
   std::cout << "tDigit histograms..." << std::flush;
 
+  bool pdf_init = false;
+
   if (tDigit) {
-    print(c, fout, tDigit, "dg_cell.mod", "", "", "cells; module id", -1);
+    print(c, fout, tDigit, "dg_cell.mod", "", "", "cells; module id",
+          (pdf_init == false) ? -1 : 0);
+    pdf_init = true;
     print(c, fout, tDigit, "dg_cell.lay", "", "", "cells; layer id");
     print(c, fout, tDigit, "dg_cell.cel", barrel_module, "",
           "barrel modules; cell id");
@@ -271,7 +275,10 @@ int main(int argc, char* argv[])
     h2->SetStats(false);
     h2->SetTitle("tracks;ret_cr;ret_ln");
     h2->Draw("colztext");
-    c.SaveAs(fout.Data());
+    auto fpdf = fout;
+    if (pdf_init == false) fpdf += "(";
+    c.SaveAs(fpdf.Data());
+    pdf_init = true;
 
     c.SetLogy(true);
     print(c, fout, tReco, "TMath::Log10(track.r)", trackRecoOK, "",
@@ -409,7 +416,10 @@ int main(int argc, char* argv[])
     g = new TGraph(n, tEvent->GetV2(), tEvent->GetV1());
     g->SetTitle("events; x (mm); y (mm)");
     g->Draw("ap");
-    c.SaveAs(fout.Data());
+    auto fpdf = fout;
+    if (pdf_init == false) fpdf += "(";
+    c.SaveAs(fpdf.Data());
+    pdf_init = true;
 
     n = tEvent->Draw("y:z", "", "goff");
     g = new TGraph(n, tEvent->GetV2(), tEvent->GetV1());

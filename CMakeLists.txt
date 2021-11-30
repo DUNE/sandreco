@@ -1,13 +1,13 @@
-# CMakeLists.txt for the "kloe-simu" package. It creates a library with a dictionary and a main program.
+# CMakeLists.txt for the "sand-reco" package. It creates a library with a dictionary and a main program.
 # If ROOT is not installed in a default system location you need to tell CMake where to find it.
 # Sourcing `thisroot.sh` already sets the required environment variables.
 # Otherwise, you'll have to tell the build system where to look for ROOT,
 # e.g. by passing `-DROOT_DIR="/path/to/root/installation` at cmake configuration time.
 
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(kloe-simu LANGUAGES CXX)
+project(sand-reco LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)

@@ -4,6 +4,7 @@
 #include <TGeoBBox.h>
 #include <TGeoManager.h>
 #include <TH1D.h>
+#include <TRandom3.h>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
@@ -15,7 +16,7 @@
 #include "utils.h"
 #include <iomanip>
 
-using namespace kloe_simu;
+using namespace sand_reco;
 
 void reset(track& tr)
 {
@@ -188,7 +189,7 @@ void getVertCoord(const std::vector<double>& z_v, std::vector<double>& y_v,
   y_v.push_back(tr.yc + sign * dy);
 
   for (unsigned int i = 1; i < z_v.size(); i++) {
-    if ((z_v[i] - z_v[i - 1]) * forward > 0.) {
+    if ((z_v[i] - z_v[i - 1]) * forward >= 0.) {
       dy_sq = tr.r * tr.r - (z_v[0] - tr.zc) * (z_v[0] - tr.zc);
 
       if (dy_sq < 0.) dy_sq = 0.;
@@ -232,6 +233,27 @@ void FillPositionInfo(track& tr, int signy, double cos, double sin)
     double dy = dy2 < 0. ? 0. : TMath::Sqrt(dy2);
     tr.y0 = tr.yc + signy * dy;
   }
+}
+
+int evalYSign(const std::vector<double>& ys, double yc)
+{
+  auto yres = 0.;
+
+  for (const auto y : ys) yres += y - yc;
+
+  if (yres > 0.)
+    return +1;
+  else
+    return -1;
+}
+
+int evalYSign(const track& tr)
+{
+  std::vector<double> ys;
+
+  for (const auto d : tr.clY) ys.push_back(d.y);
+
+  return evalYSign(ys, tr.yc);
 }
 
 int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y,
@@ -405,17 +427,22 @@ void fillInfoCircFit(int n, const std::vector<double>& z,
   if (tr.ret_cr != 0) return;
 
   tr.h = EvalDirection(z, y, tr.zc, tr.yc);
+  tr.ysig = evalYSign(y, tr.yc);
 }
 
+enum class TrackFilter { all_tracks, only_primaries };
+
 void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
-               std::vector<track>& vec_tr)
+               std::vector<track>& vec_tr,
+               TrackFilter const track_filter = TrackFilter::all_tracks)
 {
   vec_tr.clear();
 
   // for(unsigned int j = 0; j < ev->Primaries[0].Particles.size(); j++)
   for (unsigned int j = 0; j < ev->Trajectories.size(); j++) {
     // exclude not primaries particles
-    if (ev->Trajectories.at(j).ParentId != -1) {
+    if (track_filter == TrackFilter::only_primaries &&
+        ev->Trajectories.at(j).ParentId != -1) {
       continue;
     }
 
@@ -425,28 +452,51 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
 
     tr.tid = ev->Trajectories.at(j).TrackId;
 
+    TRandom3 rand(0);
+
+    std::map<double, dg_tube> time_ordered_XZdigit;
+    std::map<double, dg_tube> time_ordered_YZdigit;
+
     for (unsigned int k = 0; k < vec_digi->size(); k++) {
+
+      std::vector<TG4HitSegment> vhits;
+
       for (unsigned int m = 0; m < vec_digi->at(k).hindex.size(); m++) {
         const TG4HitSegment& hseg =
             ev->SegmentDetectors["Straw"].at(vec_digi->at(k).hindex.at(m));
 
-        // if(hseg.PrimaryId == tr.tid)
-        //{
-        // if(ishitok(ev, hseg->PrimaryId, hseg))
-        if (ishitok(ev, tr.tid, hseg)) {
-          if (vec_digi->at(k).hor == 0) {
-            tr.clX.push_back(vec_digi->at(k));
-          } else {
-            tr.clY.push_back(vec_digi->at(k));
-          }
-          break;
+        if (hseg.PrimaryId == tr.tid)
+          if (ishitok(ev, tr.tid, hseg)) vhits.push_back(hseg);
+      }
+
+      if (vhits.size() > 0u) {
+        std::sort(vhits.begin(), vhits.end(),
+                  [](const TG4HitSegment& h1, const TG4HitSegment& h2) {
+                    return (h1.GetStart().T() + h1.GetStop().T()) <
+                           (h2.GetStart().T() + h2.GetStop().T());
+                  });
+        auto& fdig = vhits.front().GetStart();
+        auto& ldig = vhits.back().GetStop();
+
+        auto t = 0.5 * (ldig.T() + fdig.T());
+        if (vec_digi->at(k).hor == 0) {
+          vec_digi->at(k).x = fdig.X() +
+                              (ldig.X() - fdig.X()) / (ldig.Z() - fdig.Z()) *
+                                  (vec_digi->at(k).z - fdig.Z()) +
+                              rand.Gaus(0, 0.2);
+          time_ordered_XZdigit[t] = vec_digi->at(k);
+        } else {
+          vec_digi->at(k).y = fdig.Y() +
+                              (ldig.Y() - fdig.Y()) / (ldig.Z() - fdig.Z()) *
+                                  (vec_digi->at(k).z - fdig.Z()) +
+                              rand.Gaus(0, 0.2);
+          time_ordered_YZdigit[t] = vec_digi->at(k);
         }
-        //}
       }
     }
 
-    std::sort(tr.clX.begin(), tr.clX.end(), isDigBefore);
-    std::sort(tr.clY.begin(), tr.clY.end(), isDigBefore);
+    for (const auto& p : time_ordered_XZdigit) tr.clX.push_back(p.second);
+    for (const auto& p : time_ordered_YZdigit) tr.clY.push_back(p.second);
 
     vec_tr.push_back(tr);
   }
@@ -939,10 +989,7 @@ void fitCircle(std::vector<track>& tr3D, TH1D& hdummy)
     if (prodVect != 0.) prodVect /= std::abs(prodVect);
     tr3D.at(nn).h = int(prodVect);
 
-    if (yres > 0)
-      tr3D.at(nn).ysig = +1;
-    else
-      tr3D.at(nn).ysig = -1;
+    tr3D.at(nn).ysig = evalYSign(tr3D.at(nn));
   }
 }
 
@@ -1540,7 +1587,7 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   binning.push_back(last_z);
 }
 
-enum class STT_Mode { fast, full };
+enum class STT_Mode { fast_only_primaries, fast, full };
 enum class ECAL_Mode { fast };
 
 void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
@@ -1624,6 +1671,10 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
     std::vector<dg_tube> clustersX;
 
     switch (stt_mode) {
+      case STT_Mode::fast_only_primaries:
+        TrackFind(ev, vec_digi, vec_tr, TrackFilter::only_primaries);
+        TrackFit(vec_tr);
+        break;
       case STT_Mode::fast:
         TrackFind(ev, vec_digi, vec_tr);
         TrackFit(vec_tr);
@@ -1668,8 +1719,9 @@ void help_reco()
 {
   std::cout
       << "usage: Reconstruct hit_file digit_file output_file [stt_mode]\n";
-  std::cout << "    - stt_mode: 'stt_mode::full' (default) \n";
+  std::cout << "    - stt_mode: 'stt_mode::fast_only_primaries' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
+  std::cout << "                'stt_mode::full' \n";
 }
 
 int main(int argc, char* argv[])
@@ -1681,12 +1733,15 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  auto stt_mode = STT_Mode::full;
-  if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
+  auto stt_mode = STT_Mode::fast_only_primaries;
+  if (argc > 4 && strcmp(argv[4], "stt_mode::full") == 0) {
+    stt_mode = STT_Mode::full;
+    std::cout << "STT_Mode: full\n";
+  } else if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
     stt_mode = STT_Mode::fast;
     std::cout << "STT_Mode: fast\n";
   } else {
-    std::cout << "STT_Mode: full\n";
+    std::cout << "STT_Mode: fast_only_primaries\n";
   }
 
   Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast);
