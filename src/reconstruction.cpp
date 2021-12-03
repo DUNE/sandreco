@@ -190,7 +190,7 @@ void getVertCoord(const std::vector<double>& z_v, std::vector<double>& y_v,
 
   for (unsigned int i = 1; i < z_v.size(); i++) {
     if ((z_v[i] - z_v[i - 1]) * forward >= 0.) {
-      dy_sq = tr.r * tr.r - (z_v[0] - tr.zc) * (z_v[0] - tr.zc);
+      dy_sq = tr.r * tr.r - (z_v[i] - tr.zc) * (z_v[i] - tr.zc);
 
       if (dy_sq < 0.) dy_sq = 0.;
 
