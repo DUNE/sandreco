@@ -11,7 +11,7 @@ build-job:
     - mkdir install
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=../install ../
-    - make\
+    - make
     - make install
 
   artifacts:
