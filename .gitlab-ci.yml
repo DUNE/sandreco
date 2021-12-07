@@ -13,10 +13,12 @@ build-job:
     - cmake -DCMAKE_INSTALL_PREFIX=../install ../
     - make
     - make install
+    - ls ../install
 
   artifacts:
     paths:
     - install/*.*
+    - install/*
 
 
 # test-job1:
