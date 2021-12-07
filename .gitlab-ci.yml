@@ -7,7 +7,17 @@ build-job:
     - echo "Hello, $GITLAB_USER_LOGIN!"
     - pwd
     - ls -la
-    - root -q
+    - mkdir build
+    - mkdir install
+    - cd build
+    - cmake -DCMAKE_INSTALL_PREFIX=../install ../
+    - make\
+    - make install
+
+  artifacts:
+    paths:
+    - install/*.*
+
 
 # test-job1:
 #   stage: test
