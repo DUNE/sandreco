@@ -376,7 +376,7 @@ void init(const char* mcfile, const char* ifile)
       }
     }
   }
-	std::cout << "GRAIN FAULT" << std::endl;
+  
   TGeoEltu *grain = 
 	(TGeoEltu*)geo->FindVolumeFast(GRAIN_vol_name)->GetShape();
 
@@ -384,9 +384,8 @@ void init(const char* mcfile, const char* ifile)
   GRAIN_dy = grain->GetRmax();
   GRAIN_dx = grain->GetDz();
 
-std::cout << "YES3 " << std::endl;
   geo->cd(path_GRAIN);
-std::cout << "YES2 " << std::endl;
+  
   dummyLoc[0] = 0.;
   dummyLoc[1] = 0.;
   dummyLoc[2] = 0.;
