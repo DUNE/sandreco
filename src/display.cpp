@@ -94,7 +94,10 @@ const char* path_endcapL_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
 
-const char* path_GRAIN = "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0";
+const char* path_GRAIN = "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
+    "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/"
+    "GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0";
 
 const char* barrel_mod_vol_name = "ECAL_lv_PV";
 const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
@@ -505,7 +508,7 @@ void show(int index, bool showtrj = true, bool showfit = true,
 
     TGraph* gr = new TGraph(4, it->second.Z, it->second.Y);
 
-    gr->SetFillColor(19);
+    gr->SetFillColor(17);
     if (it->first < 25000)
       cev->cd(1);
     else
