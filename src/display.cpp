@@ -9,6 +9,7 @@
 #include <TGeoManager.h>
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
+#include <TGeoEltu.h>
 #include <TGraph.h>
 #include <TLine.h>
 #include <TMarker.h>
@@ -45,10 +46,15 @@ static const double dt = 500;
 double centerKLOE[3];
 double CellLocalX[nCellModule][4];
 double CellLocalZ[nCellModule][4];
+double centerGRAIN[3];
 
 int palette = 87;
 
 bool initialized = false;
+
+double GRAIN_dx;
+double GRAIN_dy;
+double GRAIN_dz;
 
 double dwx = 2500.;
 double dwy = 2500.;
@@ -88,8 +94,15 @@ const char* path_endcapL_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
 
+const char* path_GRAIN = "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
+    "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/"
+    "GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0";
+
 const char* barrel_mod_vol_name = "ECAL_lv_PV";
 const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
+const char* GRAIN_vol_name = "GRAIN_LAr_lv_PV";
+
 }  // namespace display
 
 using namespace display;
@@ -366,6 +379,21 @@ void init(const char* mcfile, const char* ifile)
       }
     }
   }
+  
+  TGeoEltu *grain = 
+	(TGeoEltu*)geo->FindVolumeFast(GRAIN_vol_name)->GetShape();
+
+  GRAIN_dz = grain->GetRmin();
+  GRAIN_dy = grain->GetRmax();
+  GRAIN_dx = grain->GetDz();
+
+  geo->cd(path_GRAIN);
+  
+  dummyLoc[0] = 0.;
+  dummyLoc[1] = 0.;
+  dummyLoc[2] = 0.;
+
+  geo->LocalToMaster(dummyLoc,centerGRAIN);
 
   initialized = true;
 }
@@ -388,11 +416,11 @@ void show(int index, bool showtrj = true, bool showfit = true,
 
   cev->cd(1)->DrawFrame(centerKLOE[2] - dwz, centerKLOE[1] - dwy,
                         centerKLOE[2] + dwz, centerKLOE[1] + dwy,
-                        "ZY (side); (mm); (mm)");
+                        "ZY (side);[mm]; [mm]");
 
   cev->cd(2)->DrawFrame(centerKLOE[2] - dwz, centerKLOE[0] - dwx,
                         centerKLOE[2] + dwz, centerKLOE[0] + dwx,
-                        "XZ (top); (mm); (mm)");
+                        "XZ (top); [mm]; [mm]");
 
   cev->cd(2);
   TBox* kloe_int_xz =
@@ -400,6 +428,18 @@ void show(int index, bool showtrj = true, bool showfit = true,
                centerKLOE[2] + kloe_int_R, centerKLOE[0] + kloe_int_dx);
   kloe_int_xz->SetFillStyle(0);
   kloe_int_xz->Draw();
+
+  TBox* grain_xz = 
+      new TBox(centerGRAIN[2] - GRAIN_dz, centerGRAIN[0] - GRAIN_dx,
+               centerGRAIN[2] + GRAIN_dz, centerGRAIN[0] + GRAIN_dx);
+  grain_xz->SetFillStyle(0);
+  grain_xz->Draw();
+
+  cev->cd(1);
+  TEllipse* grain_zy = 
+      new TEllipse(centerGRAIN[2],centerGRAIN[1],GRAIN_dz,GRAIN_dy);
+  grain_zy->SetFillStyle(0);
+  grain_zy->Draw();
 
   t->GetEntry(index);
 
@@ -468,7 +508,7 @@ void show(int index, bool showtrj = true, bool showfit = true,
 
     TGraph* gr = new TGraph(4, it->second.Z, it->second.Y);
 
-    gr->SetFillColor(19);
+    gr->SetFillColor(17);
     if (it->first < 25000)
       cev->cd(1);
     else
