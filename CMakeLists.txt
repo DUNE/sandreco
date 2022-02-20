@@ -1,11 +1,11 @@
-# CMakeLists.txt for the "sand-reco" package. It creates a library with a dictionary and a main program.
+# CMakeLists.txt for the "SandReco" package. It creates a library with a dictionary and a main program.
 # If ROOT is not installed in a default system location you need to tell CMake where to find it.
 # Sourcing `thisroot.sh` already sets the required environment variables.
 # Otherwise, you'll have to tell the build system where to look for ROOT,
 # e.g. by passing `-DROOT_DIR="/path/to/root/installation` at cmake configuration time.
 
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(sand-reco LANGUAGES CXX)
+project(SandReco LANGUAGES CXX VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,10 +13,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
 
 # Locate the ROOT package and define a number of useful targets and variables.
-find_package(ROOT REQUIRED COMPONENTS RIO Net)
+find_package(ROOT REQUIRED)
 
 # Locate EDep-sim
-find_package(EDepSim)
+find_package(EDepSim REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -Wno-unused-parameter")
 
@@ -30,11 +30,17 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # Creates a libStruct shared library with a generated dictionary.
 add_library(Struct SHARED G__Struct.cxx)
-target_link_libraries(Struct PUBLIC ROOT::RIO ROOT::Net)
+target_include_directories(Struct PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include>")
+target_link_libraries(Struct PUBLIC)
 
 # Creates a libUtils shared library
 add_library(Utils SHARED src/utils.cpp src/transf.cpp)
-target_link_libraries(Utils PUBLIC ROOT::RIO ROOT::Net EDepSim::edepsim_io)
+target_include_directories(Struct PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include>")
+target_link_libraries(Utils PUBLIC EDepSim::edepsim_io)
 
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp)
@@ -64,6 +70,7 @@ endif()
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
 install(TARGETS Utils Struct Digitize Reconstruct Analyze Display FastCheck
+        EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
         ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
@@ -79,6 +86,41 @@ install(
    PATTERN "CMakeFiles" EXCLUDE)
 
 install(
-  DIRECTORY include 
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include 
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
   PATTERN "Linkdef.h" EXCLUDE)
+
+#############################################################
+#
+# Prepare the package so that it can be used with the find_package interface.
+#
+#############################################################
+
+# Include module with function 'write_basic_package_version_file'
+include(CMakePackageConfigHelpers)
+
+# Build the targets description so that the package can be configured
+# using find_package.
+install(EXPORT SandRecoTargets
+  NAMESPACE SandReco::
+  DESTINATION lib/cmake/SandReco)
+
+# Write the 'SandRecoConfigVersion.cmake' file which can be used to
+# check if a version meets the requested properties.
+write_basic_package_version_file(
+  SandRecoConfigVersion.cmake
+  COMPATIBILITY SameMajorVersion)
+
+# Write the 'SandRecoConfig.cmake' file so that a user package can
+# access this with find_package.
+configure_package_config_file(
+  PackageConfig.cmake.in
+  SandRecoConfig.cmake
+  PATH_VARS CMAKE_INSTALL_PREFIX
+  INSTALL_DESTINATION lib/cmake/SandReco)
+
+# Install the config files.
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/SandRecoConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/SandRecoConfigVersion.cmake
+  DESTINATION lib/cmake/SandReco )
