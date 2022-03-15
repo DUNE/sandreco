@@ -16,6 +16,7 @@
 #include <TROOT.h>
 #include <TStyle.h>
 #include <TTree.h>
+#include <TH1F.h>
 
 #include <iomanip>
 #include <iostream>
@@ -423,13 +424,15 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
     cev->SetTitle(TString::Format("Event: %d", index).Data());
   }
 
-  cev->cd(1)->DrawFrame(centerKLOE[2] - dwz, centerKLOE[1] - dwy,
+  auto hframe = cev->cd(1)->DrawFrame(centerKLOE[2] - dwz, centerKLOE[1] - dwy,
                         centerKLOE[2] + dwz, centerKLOE[1] + dwy,
                         "ZY (side);[mm]; [mm]");
+  hframe->GetXaxis()->SetNdivisions(505);
 
-  cev->cd(2)->DrawFrame(centerKLOE[2] - dwz, centerKLOE[0] - dwx,
+  hframe = cev->cd(2)->DrawFrame(centerKLOE[2] - dwz, centerKLOE[0] - dwx,
                         centerKLOE[2] + dwz, centerKLOE[0] + dwx,
                         "XZ (top); [mm]; [mm]");
+  hframe->GetXaxis()->SetNdivisions(505);
 
   cev->cd(2);
   TBox* kloe_int_xz =
