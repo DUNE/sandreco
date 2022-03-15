@@ -73,7 +73,7 @@ TCanvas* cev = 0;
 TCanvas* cpr = 0;
 
 std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
-std::vector<dg_tube>* vec_digi = new std::vector<dg_tube>;
+std::vector<dg_tube>* vec_tube = new std::vector<dg_tube>;
 std::vector<track>* vec_tr = new std::vector<track>;
 std::vector<cluster>* vec_cl = new std::vector<cluster>;
 std::map<int, gcell> calocell;
@@ -107,18 +107,28 @@ const char* GRAIN_vol_name = "GRAIN_LAr_lv_PV";
 
 using namespace display;
 
-void init(const char* mcfile, const char* ifile)
+void init(TFile* fmc, std::vector<TFile*> vf)
 {
   gStyle->SetPalette(palette);
 
-  fmc = new TFile(mcfile);
-  f = new TFile(ifile);
-  TTree* tEvent = reinterpret_cast<TTree*>(f->Get("tEvent"));
-  TTree* tReco = reinterpret_cast<TTree*>(f->Get("tReco"));
-  TTree* tDigit = reinterpret_cast<TTree*>(f->Get("tDigit"));
+  TTree* tEvent = nullptr;
+  TTree* tReco  = nullptr;
+  TTree* tDigit = nullptr;
+
   TTree* tEdep = reinterpret_cast<TTree*>(fmc->Get("EDepSimEvents"));
   TTree* tGenie =
       reinterpret_cast<TTree*>(fmc->Get("DetSimPassThru/gRooTracker"));
+
+  for(auto f: vf)
+  {
+    TTree* tt = nullptr;
+    tt = reinterpret_cast<TTree*>(f->Get("tEvent"));
+    if(tt) tEvent = tt;
+    tt = reinterpret_cast<TTree*>(f->Get("tReco"));
+    if(tt) tReco = tt;
+    tt = reinterpret_cast<TTree*>(f->Get("tDigit"));
+    if(tt) tDigit = tt;
+  }
 
   if (!tEdep) return;
 
@@ -129,7 +139,7 @@ void init(const char* mcfile, const char* ifile)
 
   tEdep->SetBranchAddress("Event", &ev);
   if (tDigit) tDigit->SetBranchAddress("dg_cell", &vec_cell);
-  if (tDigit) tDigit->SetBranchAddress("dg_tube", &vec_digi);
+  if (tDigit) tDigit->SetBranchAddress("dg_tube", &vec_tube);
   if (tReco) tReco->SetBranchAddress("track", &vec_tr);
   if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);
   if (tEvent) tEvent->SetBranchAddress("event", &evt);
@@ -398,8 +408,7 @@ void init(const char* mcfile, const char* ifile)
   initialized = true;
 }
 
-void show(int index, bool showtrj = true, bool showfit = true,
-          bool showdig = true)
+void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
 {
   if (!initialized) {
     std::cout << "not initialized" << std::endl;
@@ -589,56 +598,100 @@ void show(int index, bool showtrj = true, bool showfit = true,
     }
   }
 
-  for (unsigned int j = 0; j < vec_cl->size(); j++) {
-    for (unsigned int i = 0; i < vec_cl->at(j).cells.size(); i++) {
-      int id = vec_cl->at(j).cells.at(i).id;
-
-      calocell[id].adc = vec_cl->at(j).cells.at(i).ps1.at(0).adc;
-      calocell[id].tdc = vec_cl->at(j).cells.at(i).ps1.at(0).tdc;
-      calocell[-id].adc = vec_cl->at(j).cells.at(i).ps2.at(0).adc;
-      calocell[-id].tdc = vec_cl->at(j).cells.at(i).ps2.at(0).tdc;
-
-      if (showdig) {
-        TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);
-        int color = (vec_cl->at(j).tid == 0) ? 632 : vec_cl->at(j).tid;
-        gr->SetFillColor(color);
-        if (id < 25000)
-          cev->cd(1);
-        else
-          cev->cd(2);
-        gr->Draw("f");
+  if(showede)
+  {
+    for(auto det: {"Straw", "EMCalSci", "LArHit"})
+    {
+      for(auto& h: ev->SegmentDetectors[det])
+      {
+        TLine* lzx = new TLine(h.Start.Z(), h.Start.X(), h.Stop.Z(), h.Stop.X());
+        TLine* lzy = new TLine(h.Start.Z(), h.Start.Y(), h.Stop.Z(), h.Stop.Y());
+        cev->cd(1);
+        lzy->Draw();
+        cev->cd(2);
+        lzx->Draw();
       }
     }
   }
 
-  if (showdig) {
-    for (unsigned int i = 0; i < vec_digi->size(); i++) {
-      if (vec_digi->at(i).hor) {
-        TMarker* m = new TMarker(vec_digi->at(i).z, vec_digi->at(i).y, 6);
+  if(showdig)
+  {
+    for (unsigned int i = 0; i < vec_tube->size(); i++) {
+      if (vec_tube->at(i).hor) {
+        TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).y, 6);
         cev->cd(1);
         m->Draw();
       } else {
-        TMarker* m = new TMarker(vec_digi->at(i).z, vec_digi->at(i).x, 6);
+        TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).x, 6);
         cev->cd(2);
         m->Draw();
       }
     }
 
-    for (const auto& tr : *vec_tr) {
-      for (const auto& d : tr.clX) {
-        TMarker* m = new TMarker(d.z, d.x, 6);
-        cev->cd(2);
-        m->Draw();
-      }
-      for (const auto& d : tr.clY) {
-        TMarker* m = new TMarker(d.z, d.y, 6);
+    for (unsigned int j = 0; j < vec_cell->size(); j++) {
+      int id = vec_cell->at(j).id;
+
+      TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);
+
+      gr->SetFillColor(kBlack);
+      if (id < 25000)
         cev->cd(1);
-        m->Draw();
-      }
+      else
+        cev->cd(2);
+      gr->Draw("f");
     }
   }
 
-  if (showfit) {
+  // for (unsigned int j = 0; j < vec_cl->size(); j++) {
+  //   for (unsigned int i = 0; i < vec_cl->at(j).cells.size(); i++) {
+  //     int id = vec_cl->at(j).cells.at(i).id;
+
+  //     calocell[id].adc = vec_cl->at(j).cells.at(i).ps1.at(0).adc;
+  //     calocell[id].tdc = vec_cl->at(j).cells.at(i).ps1.at(0).tdc;
+  //     calocell[-id].adc = vec_cl->at(j).cells.at(i).ps2.at(0).adc;
+  //     calocell[-id].tdc = vec_cl->at(j).cells.at(i).ps2.at(0).tdc;
+
+  //     if (showdig) {
+  //       TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);
+  //       int color = (vec_cl->at(j).tid == 0) ? 632 : vec_cl->at(j).tid;
+  //       gr->SetFillColor(color);
+  //       if (id < 25000)
+  //         cev->cd(1);
+  //       else
+  //         cev->cd(2);
+  //       gr->Draw("f");
+  //     }
+  //   }
+  // }
+
+  // if (showdig) {
+  //   for (unsigned int i = 0; i < vec_tube->size(); i++) {
+  //     if (vec_tube->at(i).hor) {
+  //       TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).y, 6);
+  //       cev->cd(1);
+  //       m->Draw();
+  //     } else {
+  //       TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).x, 6);
+  //       cev->cd(2);
+  //       m->Draw();
+  //     }
+  //   }
+
+  //   for (const auto& tr : *vec_tr) {
+  //     for (const auto& d : tr.clX) {
+  //       TMarker* m = new TMarker(d.z, d.x, 6);
+  //       cev->cd(2);
+  //       m->Draw();
+  //     }
+  //     for (const auto& d : tr.clY) {
+  //       TMarker* m = new TMarker(d.z, d.y, 6);
+  //       cev->cd(1);
+  //       m->Draw();
+  //     }
+  //   }
+  // }
+
+  if (showrec) {
     for (unsigned int i = 0; i < vec_tr->size(); i++) {
       if (vec_tr->at(i).ret_cr == 0 && vec_tr->at(i).ret_ln == 0) {
         cev->cd(1);
@@ -1361,51 +1414,137 @@ void DumpPri(int nev = 100, int istart = 0)
   DumpPri(nev, ids);
 }
 
+void help()
+{
+  std::cout
+      << "Display -e <event number> -mc <MC file>"
+          "[-f <input file1> -f <input file2> ... ] [-o <output file>] [--batch] [options]\n\n"
+          "--trj          -- to show trajectories\n"
+          "--ede          -- to show energy deposits\n"
+          "--dgt          -- to show digits\n"
+          "--rec          -- to show reco objects\n"
+      << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
   TApplication* myapp = new TApplication("myapp", 0, 0);
 
-  bool showtrj = true;
-  bool showfit = true;
-  bool showdig = true;
+  bool showtrj = false;
+  bool showede = false;
+  bool showdig = false;
+  bool showrec = false;
 
   int evid = 0;
-  TString fname;
-  TString fmc;
-  TString tmp;
 
-  if (argc < 4) {
-    std::cout
-        << "Display <event number> <MC file> <input file> [show trajectories] "
-           "[show fits] [show digits]"
-        << std::endl;
-    return 1;
-  } else {
-    evid = atoi(argv[1]);
-    fmc = argv[2];
-    fname = argv[3];
+  bool is_ev_number_set = false;
+  bool is_mc_file_set = false;
+  bool is_out_file_set = false;
+  bool is_batch_mode_set = false;
 
-    if (argc > 4) {
-      tmp = argv[4];
-      if (tmp.CompareTo("false") == 0) showtrj = false;
+  TFile* fmc = nullptr;
+  std::vector<TFile*> vf;
+  TString fout;
+
+  int index = 1;
+
+  while(index < argc)
+  {
+    TString opt = argv[index];
+    if (opt.CompareTo("-e") == 0)
+    {
+      try
+      {
+        evid = atoi(argv[++index]);
+        is_ev_number_set = true;
+      }
+      catch(const std::exception& e)
+      {
+        std::cerr << e.what() << '\n';
+        return 1;
+      }
     }
-
-    if (argc > 5) {
-      tmp = argv[5];
-      if (tmp.CompareTo("false") == 0) showfit = false;
+    else if (opt.CompareTo("-mc") == 0)
+    {
+      try
+      {
+        fmc = new TFile(argv[++index]);
+        is_mc_file_set = true;
+      }
+      catch(const std::exception& e)
+      {
+        std::cerr << e.what() << '\n';
+        return 1;
+      }
     }
-
-    if (argc > 6) {
-      tmp = argv[6];
-      if (tmp.CompareTo("false") == 0) showdig = false;
+    else if (opt.CompareTo("-f") == 0)
+    {
+      try
+      {
+        vf.push_back(new TFile(argv[++index]));
+      }
+      catch(const std::exception& e)
+      {
+        std::cerr << e.what() << '\n';
+        return 1;
+      }
     }
+    else if (opt.CompareTo("-o") == 0)
+    {
+      try
+      {
+        fout = argv[++index];
+        is_out_file_set = true;
+      }
+      catch(const std::exception& e)
+      {
+        std::cerr << e.what() << '\n';
+        return 1;
+      }
+    }
+    else if (opt.CompareTo("--batch") == 0)
+    {
+      try
+      {
+        is_batch_mode_set = true;
+      }
+      catch(const std::exception& e)
+      {
+        std::cerr << e.what() << '\n';
+        return 1;
+      }
+    }
+    else if (opt.CompareTo("--trj") == 0) showtrj = true;
+    else if (opt.CompareTo("--ede") == 0) showede = true;
+    else if (opt.CompareTo("--dgt") == 0) showdig = true;
+    else if (opt.CompareTo("--rec") == 0) showrec = true;
+    index++;
   }
 
-  init(fmc.Data(), fname.Data());
+  if(is_ev_number_set == false || is_mc_file_set == false)
+  {
+    help();
+    return 1;
+  }
 
-  show(evid, showtrj, showfit, showdig);
+  if(is_batch_mode_set == true)
+  {
+    gROOT->SetBatch();
+  }
 
-  myapp->Run();
+  init(fmc, vf);
+
+  show(evid, showtrj, showede, showdig, showrec);
+
+  if(is_out_file_set == true)
+  {
+    cev->SaveAs(fout.Data());
+  }
+
+  if(is_batch_mode_set == false)
+  {
+    myapp->Run();
+  }
 
   return 0;
 }
