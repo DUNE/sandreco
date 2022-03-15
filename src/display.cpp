@@ -767,33 +767,53 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
     }
 
     for (unsigned int i = 0; i < vec_cl->size(); i++) {
-      int color = (vec_cl->at(i).tid == 0) ? 632 : vec_cl->at(i).tid;
 
-      TMarker* m1 = new TMarker(vec_cl->at(i).z, vec_cl->at(i).y, 34);
-      // m1->SetMarkerColor(color);
-      cev->cd(1);
-      m1->Draw();
+      auto lw = 1. + 9. * (vec_cl->at(i).e - 100)/1000.;
+      if(lw < 1.) lw = 1.;
+      else if(lw > 10.) lw = 10.;
 
-      TMarker* m2 = new TMarker(vec_cl->at(i).z, vec_cl->at(i).x, 34);
-      // m2->SetMarkerColor(color);
-      cev->cd(2);
-      m2->Draw();
+      if(isnan(vec_cl->at(i).sz))
+      {
+        TMarker* m1 = new TMarker(vec_cl->at(i).z, vec_cl->at(i).y, 20);
+        m1->SetMarkerColor(kBlue);
+        m1->SetMarkerSize(lw);
 
-      TArrow* arr1 =
-          new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt,
-                     vec_cl->at(i).y - vec_cl->at(i).sy * 0.5 * dt,
-                     vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt,
-                     vec_cl->at(i).y + vec_cl->at(i).sy * 0.5 * dt, 0.01, ">");
-      cev->cd(1);
-      arr1->Draw();
+        cev->cd(1);
+        m1->Draw();
 
-      TArrow* arr2 =
-          new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt,
-                     vec_cl->at(i).x - vec_cl->at(i).sx * 0.5 * dt,
-                     vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt,
-                     vec_cl->at(i).x + vec_cl->at(i).sx * 0.5 * dt, 0.01, ">");
-      cev->cd(2);
-      arr2->Draw();
+        TMarker* m2 = new TMarker(vec_cl->at(i).z, vec_cl->at(i).x, 20);
+        m2->SetMarkerColor(kBlue);
+        m2->SetMarkerSize(lw);
+
+        cev->cd(2);
+        m2->Draw();
+      }
+      else
+      {
+        TArrow* arr1 =
+            new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt,
+                      vec_cl->at(i).y - vec_cl->at(i).sy * 0.5 * dt,
+                      vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt,
+                      vec_cl->at(i).y + vec_cl->at(i).sy * 0.5 * dt, 0.01, ">");
+
+        arr1->SetLineWidth(lw);
+        arr1->SetLineColor(kBlue);
+        arr1->SetFillColor(kBlue);
+        cev->cd(1);
+        arr1->Draw();
+
+        TArrow* arr2 =
+            new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt,
+                      vec_cl->at(i).x - vec_cl->at(i).sx * 0.5 * dt,
+                      vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt,
+                      vec_cl->at(i).x + vec_cl->at(i).sx * 0.5 * dt, 0.01, ">");
+        
+        arr2->SetLineWidth(lw);
+        arr2->SetLineColor(kBlue);
+        arr2->SetFillColor(kBlue);
+        cev->cd(2);
+        arr2->Draw();
+      }
     }
   }
 }
