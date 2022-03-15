@@ -6,17 +6,17 @@
 #include <TEllipse.h>
 #include <TF1.h>
 #include <TFile.h>
+#include <TGeoEltu.h>
 #include <TGeoManager.h>
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
-#include <TGeoEltu.h>
 #include <TGraph.h>
+#include <TH1F.h>
 #include <TLine.h>
 #include <TMarker.h>
 #include <TROOT.h>
 #include <TStyle.h>
 #include <TTree.h>
-#include <TH1F.h>
 
 #include <iomanip>
 #include <iostream>
@@ -95,9 +95,12 @@ const char* path_endcapL_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
 
-const char* path_GRAIN = "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
-    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
-    "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/GRAIN_gap_between_vessels_lv_PV_0/"
+const char* path_GRAIN =
+    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/"
+    "GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
+    "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/"
+    "GRAIN_gap_between_vessels_lv_PV_0/"
     "GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0";
 
 const char* barrel_mod_vol_name = "ECAL_lv_PV";
@@ -113,22 +116,21 @@ void init(TFile* fmc, std::vector<TFile*> vf)
   gStyle->SetPalette(palette);
 
   TTree* tEvent = nullptr;
-  TTree* tReco  = nullptr;
+  TTree* tReco = nullptr;
   TTree* tDigit = nullptr;
 
   TTree* tEdep = reinterpret_cast<TTree*>(fmc->Get("EDepSimEvents"));
   TTree* tGenie =
       reinterpret_cast<TTree*>(fmc->Get("DetSimPassThru/gRooTracker"));
 
-  for(auto f: vf)
-  {
+  for (auto f : vf) {
     TTree* tt = nullptr;
     tt = reinterpret_cast<TTree*>(f->Get("tEvent"));
-    if(tt) tEvent = tt;
+    if (tt) tEvent = tt;
     tt = reinterpret_cast<TTree*>(f->Get("tReco"));
-    if(tt) tReco = tt;
+    if (tt) tReco = tt;
     tt = reinterpret_cast<TTree*>(f->Get("tDigit"));
-    if(tt) tDigit = tt;
+    if (tt) tDigit = tt;
   }
 
   if (!tEdep) return;
@@ -390,21 +392,20 @@ void init(TFile* fmc, std::vector<TFile*> vf)
       }
     }
   }
-  
-  TGeoEltu *grain = 
-	(TGeoEltu*)geo->FindVolumeFast(GRAIN_vol_name)->GetShape();
+
+  TGeoEltu* grain = (TGeoEltu*)geo->FindVolumeFast(GRAIN_vol_name)->GetShape();
 
   GRAIN_dz = grain->GetRmin();
   GRAIN_dy = grain->GetRmax();
   GRAIN_dx = grain->GetDz();
 
   geo->cd(path_GRAIN);
-  
+
   dummyLoc[0] = 0.;
   dummyLoc[1] = 0.;
   dummyLoc[2] = 0.;
 
-  geo->LocalToMaster(dummyLoc,centerGRAIN);
+  geo->LocalToMaster(dummyLoc, centerGRAIN);
 
   initialized = true;
 }
@@ -425,13 +426,13 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   }
 
   auto hframe = cev->cd(1)->DrawFrame(centerKLOE[2] - dwz, centerKLOE[1] - dwy,
-                        centerKLOE[2] + dwz, centerKLOE[1] + dwy,
-                        "ZY (side);[mm]; [mm]");
+                                      centerKLOE[2] + dwz, centerKLOE[1] + dwy,
+                                      "ZY (side);[mm]; [mm]");
   hframe->GetXaxis()->SetNdivisions(505);
 
   hframe = cev->cd(2)->DrawFrame(centerKLOE[2] - dwz, centerKLOE[0] - dwx,
-                        centerKLOE[2] + dwz, centerKLOE[0] + dwx,
-                        "XZ (top); [mm]; [mm]");
+                                 centerKLOE[2] + dwz, centerKLOE[0] + dwx,
+                                 "XZ (top); [mm]; [mm]");
   hframe->GetXaxis()->SetNdivisions(505);
 
   cev->cd(2);
@@ -441,15 +442,15 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   kloe_int_xz->SetFillStyle(0);
   kloe_int_xz->Draw();
 
-  TBox* grain_xz = 
+  TBox* grain_xz =
       new TBox(centerGRAIN[2] - GRAIN_dz, centerGRAIN[0] - GRAIN_dx,
                centerGRAIN[2] + GRAIN_dz, centerGRAIN[0] + GRAIN_dx);
   grain_xz->SetFillStyle(0);
   grain_xz->Draw();
 
   cev->cd(1);
-  TEllipse* grain_zy = 
-      new TEllipse(centerGRAIN[2],centerGRAIN[1],GRAIN_dz,GRAIN_dy);
+  TEllipse* grain_zy =
+      new TEllipse(centerGRAIN[2], centerGRAIN[1], GRAIN_dz, GRAIN_dy);
   grain_zy->SetFillStyle(0);
   grain_zy->Draw();
 
@@ -601,14 +602,13 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
     }
   }
 
-  if(showede)
-  {
-    for(auto det: {"Straw", "EMCalSci", "LArHit"})
-    {
-      for(auto& h: ev->SegmentDetectors[det])
-      {
-        TLine* lzx = new TLine(h.Start.Z(), h.Start.X(), h.Stop.Z(), h.Stop.X());
-        TLine* lzy = new TLine(h.Start.Z(), h.Start.Y(), h.Stop.Z(), h.Stop.Y());
+  if (showede) {
+    for (auto det : {"Straw", "EMCalSci", "LArHit"}) {
+      for (auto& h : ev->SegmentDetectors[det]) {
+        TLine* lzx =
+            new TLine(h.Start.Z(), h.Start.X(), h.Stop.Z(), h.Stop.X());
+        TLine* lzy =
+            new TLine(h.Start.Z(), h.Start.Y(), h.Stop.Z(), h.Stop.Y());
         cev->cd(1);
         lzy->Draw();
         cev->cd(2);
@@ -617,8 +617,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
     }
   }
 
-  if(showdig)
-  {
+  if (showdig) {
     for (unsigned int i = 0; i < vec_tube->size(); i++) {
       if (vec_tube->at(i).hor) {
         TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).y, 6);
@@ -768,12 +767,13 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
 
     for (unsigned int i = 0; i < vec_cl->size(); i++) {
 
-      auto lw = 1. + 9. * (vec_cl->at(i).e - 100)/1000.;
-      if(lw < 1.) lw = 1.;
-      else if(lw > 10.) lw = 10.;
+      auto lw = 1. + 9. * (vec_cl->at(i).e - 100) / 1000.;
+      if (lw < 1.)
+        lw = 1.;
+      else if (lw > 10.)
+        lw = 10.;
 
-      if(isnan(vec_cl->at(i).sz))
-      {
+      if (isnan(vec_cl->at(i).sz)) {
         TMarker* m1 = new TMarker(vec_cl->at(i).z, vec_cl->at(i).y, 20);
         m1->SetMarkerColor(kBlue);
         m1->SetMarkerSize(lw);
@@ -787,14 +787,12 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
 
         cev->cd(2);
         m2->Draw();
-      }
-      else
-      {
-        TArrow* arr1 =
-            new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt,
-                      vec_cl->at(i).y - vec_cl->at(i).sy * 0.5 * dt,
-                      vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt,
-                      vec_cl->at(i).y + vec_cl->at(i).sy * 0.5 * dt, 0.01, ">");
+      } else {
+        TArrow* arr1 = new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt,
+                                  vec_cl->at(i).y - vec_cl->at(i).sy * 0.5 * dt,
+                                  vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt,
+                                  vec_cl->at(i).y + vec_cl->at(i).sy * 0.5 * dt,
+                                  0.01, ">");
 
         arr1->SetLineWidth(lw);
         arr1->SetLineColor(kBlue);
@@ -802,12 +800,12 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
         cev->cd(1);
         arr1->Draw();
 
-        TArrow* arr2 =
-            new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt,
-                      vec_cl->at(i).x - vec_cl->at(i).sx * 0.5 * dt,
-                      vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt,
-                      vec_cl->at(i).x + vec_cl->at(i).sx * 0.5 * dt, 0.01, ">");
-        
+        TArrow* arr2 = new TArrow(vec_cl->at(i).z - vec_cl->at(i).sz * 0.5 * dt,
+                                  vec_cl->at(i).x - vec_cl->at(i).sx * 0.5 * dt,
+                                  vec_cl->at(i).z + vec_cl->at(i).sz * 0.5 * dt,
+                                  vec_cl->at(i).x + vec_cl->at(i).sx * 0.5 * dt,
+                                  0.01, ">");
+
         arr2->SetLineWidth(lw);
         arr2->SetLineColor(kBlue);
         arr2->SetFillColor(kBlue);
@@ -1439,14 +1437,14 @@ void DumpPri(int nev = 100, int istart = 0)
 
 void help()
 {
-  std::cout
-      << "Display -e <event number> -mc <MC file>"
-          "[-f <input file1> -f <input file2> ... ] [-o <output file>] [--batch] [options]\n\n"
-          "--trj          -- to show trajectories\n"
-          "--ede          -- to show energy deposits\n"
-          "--dgt          -- to show digits\n"
-          "--rec          -- to show reco objects\n"
-      << std::endl;
+  std::cout << "Display -e <event number> -mc <MC file>"
+               "[-f <input file1> -f <input file2> ... ] [-o <output file>] "
+               "[--batch] [options]\n\n"
+               "--trj          -- to show trajectories\n"
+               "--ede          -- to show energy deposits\n"
+               "--dgt          -- to show digits\n"
+               "--rec          -- to show reco objects\n"
+            << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -1471,87 +1469,63 @@ int main(int argc, char* argv[])
 
   int index = 1;
 
-  while(index < argc)
-  {
+  while (index < argc) {
     TString opt = argv[index];
-    if (opt.CompareTo("-e") == 0)
-    {
-      try
-      {
+    if (opt.CompareTo("-e") == 0) {
+      try {
         evid = atoi(argv[++index]);
         is_ev_number_set = true;
-      }
-      catch(const std::exception& e)
-      {
+      } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';
         return 1;
       }
-    }
-    else if (opt.CompareTo("-mc") == 0)
-    {
-      try
-      {
+    } else if (opt.CompareTo("-mc") == 0) {
+      try {
         fmc = new TFile(argv[++index]);
         is_mc_file_set = true;
-      }
-      catch(const std::exception& e)
-      {
+      } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';
         return 1;
       }
-    }
-    else if (opt.CompareTo("-f") == 0)
-    {
-      try
-      {
+    } else if (opt.CompareTo("-f") == 0) {
+      try {
         vf.push_back(new TFile(argv[++index]));
-      }
-      catch(const std::exception& e)
-      {
+      } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';
         return 1;
       }
-    }
-    else if (opt.CompareTo("-o") == 0)
-    {
-      try
-      {
+    } else if (opt.CompareTo("-o") == 0) {
+      try {
         fout = argv[++index];
         is_out_file_set = true;
-      }
-      catch(const std::exception& e)
-      {
+      } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';
         return 1;
       }
-    }
-    else if (opt.CompareTo("--batch") == 0)
-    {
-      try
-      {
+    } else if (opt.CompareTo("--batch") == 0) {
+      try {
         is_batch_mode_set = true;
-      }
-      catch(const std::exception& e)
-      {
+      } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';
         return 1;
       }
-    }
-    else if (opt.CompareTo("--trj") == 0) showtrj = true;
-    else if (opt.CompareTo("--ede") == 0) showede = true;
-    else if (opt.CompareTo("--dgt") == 0) showdig = true;
-    else if (opt.CompareTo("--rec") == 0) showrec = true;
+    } else if (opt.CompareTo("--trj") == 0)
+      showtrj = true;
+    else if (opt.CompareTo("--ede") == 0)
+      showede = true;
+    else if (opt.CompareTo("--dgt") == 0)
+      showdig = true;
+    else if (opt.CompareTo("--rec") == 0)
+      showrec = true;
     index++;
   }
 
-  if(is_ev_number_set == false || is_mc_file_set == false)
-  {
+  if (is_ev_number_set == false || is_mc_file_set == false) {
     help();
     return 1;
   }
 
-  if(is_batch_mode_set == true)
-  {
+  if (is_batch_mode_set == true) {
     gROOT->SetBatch();
   }
 
@@ -1559,13 +1533,11 @@ int main(int argc, char* argv[])
 
   show(evid, showtrj, showede, showdig, showrec);
 
-  if(is_out_file_set == true)
-  {
+  if (is_out_file_set == true) {
     cev->SaveAs(fout.Data());
   }
 
-  if(is_batch_mode_set == false)
-  {
+  if (is_batch_mode_set == false) {
     myapp->Run();
   }
 
