@@ -159,6 +159,24 @@ struct gcell {
   double tdc;
 };
 
+struct dg_pixel {
+  float rise_time;
+  float fall_time;
+  float amplitude;
+  float x_center;
+  float y_center;
+  float pitch;
+};
+
+struct dg_camera {
+  std::string name;
+  std::vector<dg_pixel> pixels;
+  float position[3];
+  float x_axis[3];
+  float y_axis[3];
+  float z_axis[3];
+};
+
 #ifdef __MAKECINT__
 #pragma link C++ class std::map < int, std::vector < double>> + ;
 #pragma link C++ class std::map < int, std::vector < int>> + ;
@@ -171,6 +189,8 @@ struct gcell {
 #pragma link C++ class std::vector < track> + ;
 #pragma link C++ class std::vector < cluster> + ;
 #pragma link C++ class std::vector < particle> + ;
+#pragma link C++ class std::vector < dg_pixel> + ;
+#pragma link C++ class std::vector < dg_camera> + ;
 #pragma link C++ class pe + ;
 #pragma link C++ class dg_ps + ;
 #pragma link C++ class dg_tube + ;
@@ -179,5 +199,7 @@ struct gcell {
 #pragma link C++ class track + ;
 #pragma link C++ class particle + ;
 #pragma link C++ class event + ;
+#pragma link C++ class dg_camera + ;
+#pragma link C++ class dg_pixel + ;
 #endif
 #endif
