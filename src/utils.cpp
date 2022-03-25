@@ -818,7 +818,7 @@ void sand_reco::CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
 {
   if (c.id < 25000)  // Barrel
   {
-    x = c.x + XfromTDC(c.ps1.at(0).tdc, c.ps2.at(0).tdc);
+    x = c.x - XfromTDC(c.ps1.at(0).tdc, c.ps2.at(0).tdc);
     y = c.y;
   } else {
     x = c.x;
