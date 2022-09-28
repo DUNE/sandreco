@@ -128,10 +128,9 @@ int sand_reco::getPlaneID(TString path)
   int mod = (reinterpret_cast<TObjString*>(obja->At(1)))->GetString().Atoi();
   int icopy = (reinterpret_cast<TObjString*>(obja->At(5)))->GetString().Atoi();
   int type =
-      ((reinterpret_cast<TObjString*>(obja->At(4)))->GetString().EqualTo("hh")
+      (reinterpret_cast<TObjString*>(obja->At(4)))->GetString().EqualTo("hh")
            ? 2
-           : 1) +
-      2 * icopy;
+           : 1;
   int icopymod =
       (reinterpret_cast<TObjString*>(obja2->At(3)))->GetString().Atoi();
 
@@ -165,7 +164,7 @@ int sand_reco::getPlaneID(TString path)
 
   // delete obj;
 
-  return encodePlaneID(mod * 10 + icopymod, icopy, type);
+  return encodePlaneID(mod * 10 + icopymod, 2*icopy + type, type);
 }
 
 // get position of the center of the tube for a plane
