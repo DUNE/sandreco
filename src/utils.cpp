@@ -657,8 +657,8 @@ void sand_reco::init(TGeoManager* geo)
     }
 
     geo->cd(sand_reco::path_internal_volume);
-    double master[3];
-    geo->LocalToMaster(sand_reco::stt_center, master);
+    double local[] = {0., 0., 0.};
+    geo->LocalToMaster(local, sand_reco::stt_center);
 
     if (abs(sand_reco::ec_r - sand_reco::ec_rf) > 0.2 ||
         (abs(sand_reco::ec_dz - sand_reco::ec_dzf))) {
