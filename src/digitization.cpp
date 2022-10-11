@@ -735,21 +735,28 @@ void Digitize(const char* finname, const char* foutname)
 {
   TFile f(finname, "READ");
 
+  // Check if input file comes from FLUKA simulation chain
+  // Check is performed looking for string "fluka2edep"
+  // in the input filename
   if (TString(finname).Contains("fluka2edep") == true) {
-    flukatype = true;  // dobbiamo leggere GeneratorName ..cambiare quando fatto
+    flukatype = true; 
   }
   if (flukatype == true)
     std::cout << "This is a FLUKA SIMULATION" << std::endl;
   else
     std::cout << "This is a standard Geant4-edepsim SIMULATION" << std::endl;
 
+  // MC info tree
   TTree* t = (TTree*)f.Get("EDepSimEvents");
 
+  // Event 
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event", &ev);
 
+  // TGeoManager pointer used in case of geant4-based simulation
   TGeoManager* geo = 0;
 
+  // Tree pointer and variables used in case of FLUKA simulation chain
   TTree* MapTree;
 
   Int_t EvtNum;
@@ -759,16 +766,15 @@ void Digitize(const char* finname, const char* foutname)
   Float_t zHits[100000];
   Int_t DetType[100000];
 
+  // Get TGeoManager or additional Tree depending on the simulation chain
   if (flukatype == false) {
     geo = (TGeoManager*)f.Get("EDepSimGeometry");
   } else {
-    MapTree = (TTree*)f.Get("MapTree");  // geometry loaded for fluka file
+    MapTree = (TTree*)f.Get("MapTree");
     if (MapTree->GetEntries() < 1) {
       std::cout << "MapTree Empty" << std::endl;
     }
 
-    // vector<float> xPos;
-    // vector<float> yPos;
     MapTree->SetBranchAddress("EvtNum", &EvtNum);
     MapTree->SetBranchAddress("NHits", &NHits);
     MapTree->SetBranchAddress("xHits", xHits);
@@ -778,29 +784,66 @@ void Digitize(const char* finname, const char* foutname)
     t->AddFriend(MapTree);
   }
   if (debug) std::cout << "Inizializzo la geometria" << std::endl;
-  init(geo);  // vale sia per geant che per fluka
 
+  // Initialization of detector-geometry-related 
+  // usefull variables defined in utils.h
+  // Specifically:
+  // - calo cell center and size
+  //   - double czlay[nLay]: "radial" position of the cells
+  //   - double cxlay[nLay][nCel]: transverse position of the cells
+  //   - double ec_r: ECAL endcap radius
+  //   - double ec_dz: ECAL endcap thickness
+  // - stt center and length
+  //   - double stt_center[3]: SAND internal volume center
+  //   - std::map<int, double> sand_reco::stL
+  //       - KEY  : id of the tube
+  //       - VALUE: length of the tubes
+  //   - std::map<int, std::map<double, int>> sand_reco::stX
+  //       - KEY  : id of the plane
+  //       - VALUE: map with 
+  //         - KEY  : beam transversal coordinate of the tubes
+  //         - VALUE: id of the tube 
+  //   - std::map<int, std::map<int, TVector2>> sand_reco::stPos
+  //       - KEY  : id of the plane
+  //       - VALUE: map with 
+  //         - KEY  : local id of the tube
+  //         - VALUE: position of the center of the tube 
+  //                  (X in TVector2 is Z in the global system) 
+  //                  (Y in TVector2 is X or Y in the global system) 
+  //   - std::map<int, TVector2> sand_reco::tubePos
+  //       - KEY  : id of the tube
+  //       - VALUE: map with 
+  init(geo); 
+
+  // vector of ECAL and STT digits
   std::vector<dg_tube> digit_vec;
   std::vector<dg_cell> vec_cell;
 
+  // output
   TFile fout(foutname, "RECREATE");
   TTree tout("tDigit", "Digitization");
   tout.Branch("dg_cell", "std::vector<dg_cell>", &vec_cell);
   tout.Branch("dg_tube", "std::vector<dg_tube>", &digit_vec);
 
+  // number of events
   const int nev = t->GetEntries();
 
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
 
+  // loop on all input events
   for (int i = 0; i < nev; i++) {
     t->GetEntry(i);
 
     std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i) / nev * 100)
               << "%]" << std::flush;
 
+    // define the T0 for this event
+    // for each straw tubs: 
+    // std::map<int, double> sand_reco::t0
     initT0(ev);
 
+    // digitize ECAL and STT
     DigitizeCal(ev, geo, vec_cell);
     DigitizeStt(ev, geo, NHits, DetType, xHits, yHits, zHits, digit_vec);
 
@@ -809,6 +852,7 @@ void Digitize(const char* finname, const char* foutname)
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
 
+  // write output
   fout.cd();
   tout.Write();
   if (flukatype == false) geo->Write();
@@ -816,6 +860,7 @@ void Digitize(const char* finname, const char* foutname)
 
   f.Close();
 
+  // cleaning
   sand_reco::stL.clear();
   sand_reco::stX.clear();
   sand_reco::stPos.clear();
