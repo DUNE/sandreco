@@ -212,7 +212,7 @@ void RecoFromBeta(particle& p, double x0, double y0, double z0, double t0)
   double e;
 
   for (unsigned int i = 0; i < p.cl.cells.size(); i++) {
-    CellXYZTE(p.cl.cells.at(i), cell_x.at(i), cell_y.at(i), cell_z.at(i),
+    sand_reco::ecal::CellXYZTE(p.cl.cells.at(i), cell_x.at(i), cell_y.at(i), cell_z.at(i),
               cell_t.at(i), e);
   }
 
@@ -826,7 +826,7 @@ void Analyze(const char* fMc, const char* fIn)
       evt.particles.push_back(it->second);
     }
 
-    std::sort(evt.particles.begin(), evt.particles.end(), isAfter);
+    std::sort(evt.particles.begin(), evt.particles.end(), sand_reco::isAfter);
 
     // FindPriGammaConversion(evt);
     // FindPriPi0Decay(evt);
