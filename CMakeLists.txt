@@ -37,7 +37,7 @@ target_link_libraries(Struct PUBLIC)
 
 # Creates a libUtils shared library
 add_library(Utils SHARED src/utils.cpp src/transf.cpp)
-target_include_directories(Struct PUBLIC
+target_include_directories(Utils PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Utils PUBLIC EDepSim::edepsim_io)
