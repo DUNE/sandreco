@@ -30,8 +30,11 @@ double cellCoordEndcap[5][nLay][90][3];
 
 double czlay[nLay];
 double cxlay[nLay][nCel];
+
+namespace endcap {
 double ec_r;
 double ec_dz;
+}
 
 }  // namespace ecal
 
@@ -556,7 +559,7 @@ void sand_reco::ecal::geometry::CellPosition(TGeoManager* geo, int det, int mod,
 
     if (flukatype == false) {
 
-      dummyLoc[0] = 2 * ec_r / endcap::nCel_ec * (0.5 + cel) - ec_r;
+      dummyLoc[0] = 2 * endcap::ec_r / endcap::nCel_ec * (0.5 + cel) - endcap::ec_r;
       dummyLoc[1] = 0.;
       dummyLoc[2] = czlay[lay];
 
@@ -654,8 +657,8 @@ void sand_reco::init(TGeoManager* geo)
 
   if (sand_reco::flukatype == false) {
     TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
-    sand_reco::ecal::ec_r = ec->GetRmax();  // Maximum radius = 2000
-    sand_reco::ecal::ec_dz = ec->GetDz();   // half of thickness = 115
+    sand_reco::ecal::endcap::ec_r = ec->GetRmax();  // Maximum radius = 2000
+    sand_reco::ecal::endcap::ec_dz = ec->GetDz();   // half of thickness = 115
 
     TGeoHMatrix mat = *gGeoIdentity;
 
@@ -684,13 +687,13 @@ void sand_reco::init(TGeoManager* geo)
     double local[] = {0., 0., 0.};
     geo->LocalToMaster(local, stt::stt_center);
 
-    if (abs(sand_reco::ecal::ec_r - sand_reco::ecal::fluka::ec_rf) > 0.2 ||
-        (abs(sand_reco::ecal::ec_dz - sand_reco::ecal::fluka::ec_dzf))) {
-      std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: R= " << sand_reco::ecal::ec_r
+    if (abs(sand_reco::ecal::endcap::ec_r - sand_reco::ecal::fluka::ec_rf) > 0.2 ||
+        (abs(sand_reco::ecal::endcap::ec_dz - sand_reco::ecal::fluka::ec_dzf))) {
+      std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: R= " << sand_reco::ecal::endcap::ec_r
                 << " instead of what is expected in Fluka"
                 << sand_reco::ecal::fluka::ec_rf << std::endl;
       std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: Thickness= "
-                << sand_reco::ecal::ec_dz
+                << sand_reco::ecal::endcap::ec_dz
                 << " instead of what is expected in Fluka"
                 << sand_reco::ecal::fluka::ec_dzf << std::endl;
       //  exit(1);
