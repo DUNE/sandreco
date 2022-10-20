@@ -146,14 +146,15 @@ C                      + 1ns  uncertainty
 //  - d2: distance from pmt2
 //  - t: time of the hit
 //  - de: energy deposit
-bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
-                int& planeID, int& cellID, double& d1, double& d2, double& t,
-                double& de)
+bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& detID,
+                int& modID, int& planeID, int& cellID, double& d1, double& d2,
+                double& t, double& de)
 {
   if (debug) {
     std::cout << "ProcessHit" << std::endl;
   }
 
+  detID = -999;
   modID = -999;
   planeID = -999;
   cellID = -999;
@@ -186,7 +187,8 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   // barrel modules
   if (sand_reco::ecal::geometry::isBarrel(str)) {
 
-    sand_reco::ecal::geometry::BarrelModuleAndLayer(str, str2, modID, planeID);
+    sand_reco::ecal::geometry::BarrelModuleAndLayer(str, str2, detID, modID,
+                                                    planeID);
 
     sand_reco::ecal::geometry::BarrelCell(x, y, z, g, node, cellID, d1, d2);
 
@@ -194,8 +196,8 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
       std::cout << "hit: " << str.Data() << std::endl;
       std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
                 << std::endl;
-      std::cout << "\t[modID,planeID,cellID] " << modID << " " << planeID << " "
-                << cellID << std::endl;
+      std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
+                << " " << planeID << " " << cellID << std::endl;
       std::cout << "\t[d1,d2,t,de]           " << d1 << " " << d2 << " " << t
                 << " " << de << std::endl;
     }
@@ -215,7 +217,8 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
                 << gPos.Z() << std::endl;
     }
 
-    sand_reco::ecal::geometry::EndCapModuleAndLayer(str, str2, modID, planeID);
+    sand_reco::ecal::geometry::EndCapModuleAndLayer(str, str2, detID, modID,
+                                                    planeID);
 
     sand_reco::ecal::geometry::EndCapCell(x, y, z, g, node, cellID, d1, d2);
 
@@ -223,8 +226,8 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
       std::cout << "hit: " << str.Data() << std::endl;
       std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
                 << std::endl;
-      std::cout << "\t[modID,planeID,cellID] " << modID << " " << planeID << " "
-                << cellID << std::endl;
+      std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
+                << " " << planeID << " " << cellID << std::endl;
     }
     return true;
   } else {
@@ -401,7 +404,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
                 std::map<int, std::vector<pe> >& photo_el,
                 std::map<int, double>& L)
 {
-  int modID, planeID, cellID, id;
+  int detID, modID, planeID, cellID, uniqID;
   double d1, d2, t0, de;
 
   for (std::map<std::string, std::vector<TG4HitSegment> >::iterator it =
@@ -410,8 +413,8 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
     if (it->first == "EMCalSci") {
       for (unsigned int j = 0; j < it->second.size(); j++) {
 
-        if ((g != NULL && (ProcessHit(g, it->second[j], modID, planeID, cellID,
-                                      d1, d2, t0, de) == true)) ||
+        if ((g != NULL && (ProcessHit(g, it->second[j], detID, modID, planeID,
+                                      cellID, d1, d2, t0, de) == true)) ||
             (g == NULL && (ProcessHitFluka(it->second[j], modID, planeID,
                                            cellID, d1, d2, t0, de) == true))) {
           double en1 =
@@ -425,10 +428,10 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
           int pe1 = r.Poisson(ave_pe1);
           int pe2 = r.Poisson(ave_pe2);
 
-          id = sand_reco::ecal::decoder::EncodeID(modID, planeID, cellID);
+          uniqID = sand_reco::ecal::decoder::EncodeID(modID, planeID, cellID);
 
           if (debug) {
-            std::cout << "cell ID: " << id << std::endl;
+            std::cout << "cell ID: " << uniqID << std::endl;
             std::cout << "\t" << de << " " << en1 << " " << en2 << std::endl;
             std::cout << "\t" << ave_pe1 << " " << ave_pe2 << std::endl;
             std::cout << "\t" << pe1 << " " << pe2 << std::endl;
@@ -441,16 +444,16 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
             pe this_pe;
             this_pe.time = petime(t0, d1);
             this_pe.h_index = j;
-            photo_el[id].push_back(this_pe);
-            L[id] = d1 + d2;
+            photo_el[uniqID].push_back(this_pe);
+            L[uniqID] = d1 + d2;
           }
 
           for (int i = 0; i < pe2; i++) {
             pe this_pe;
             this_pe.time = petime(t0, d2);
             this_pe.h_index = j;
-            photo_el[-1 * id].push_back(this_pe);
-            L[-1 * id] = d1 + d2;
+            photo_el[-1 * uniqID].push_back(this_pe);
+            L[-1 * uniqID] = d1 + d2;
           }
         }
       }

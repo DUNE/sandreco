@@ -140,9 +140,9 @@ const char* const path_endcapR_template =
 
 bool isBarrel(TString& str);
 bool isEndCap(TString& str);
-void BarrelModuleAndLayer(TString& str, TString& str2, int& modID,
+void BarrelModuleAndLayer(TString& str, TString& str2, int& detID, int& modID,
                           int& planeID);
-void EndCapModuleAndLayer(TString& str, TString& str2, int& modID,
+void EndCapModuleAndLayer(TString& str, TString& str2, int& detID, int& modID,
                           int& planeID);
 void BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
                 int& cellID, double& d1, double& d2);

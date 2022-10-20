@@ -366,8 +366,8 @@ bool sand_reco::ecal::geometry::isEndCap(TString& str)
 
 // find module id and plane id for barrel
 void sand_reco::ecal::geometry::BarrelModuleAndLayer(TString& str,
-                                                     TString& str2, int& modID,
-                                                     int& planeID)
+                                                     TString& str2, int& detID,
+                                                     int& modID, int& planeID)
 {
   TObjArray* obja = str.Tokenize("_");    // BARERL => volECALActiveSlab_21_PV_0
   TObjArray* obja2 = str2.Tokenize("_");  // BARREL => ECAL_lv_PV_18
@@ -376,6 +376,7 @@ void sand_reco::ecal::geometry::BarrelModuleAndLayer(TString& str,
   // top module => modID == 0
   // increasing modID counterclockwise as seen from positive x
   //(i.e. z(modID==1) < z(modID==0) & z(modID==0) < z(modID==23))
+  detID = 2;
   modID = ((TObjString*)obja2->At(3))->GetString().Atoi();
   slabID = ((TObjString*)obja->At(1))->GetString().Atoi();
 
@@ -391,8 +392,8 @@ void sand_reco::ecal::geometry::BarrelModuleAndLayer(TString& str,
 
 // find module id and plane id for endcaps
 void sand_reco::ecal::geometry::EndCapModuleAndLayer(TString& str,
-                                                     TString& str2, int& modID,
-                                                     int& planeID)
+                                                     TString& str2, int& detID,
+                                                     int& modID, int& planeID)
 {
   TObjArray* obja = str.Tokenize("_");  // ENDCAP => endvolECALActiveSlab_0_PV_0
   TObjArray* obja2 = str2.Tokenize("_");  // ENDCAP => ECAL_end_lv_PV_0
@@ -401,13 +402,16 @@ void sand_reco::ecal::geometry::EndCapModuleAndLayer(TString& str,
   modID = ((TObjString*)obja2->At(4))->GetString().Atoi();
   slabID = ((TObjString*)obja->At(1))->GetString().Atoi();
 
-  // mod == 40 -> left
-  // mod == 30 -> right
-  if (modID == 0)
+  // mod == 40 -> left  -> detID = 1
+  // mod == 30 -> right -> detID = 3
+  // (see issue: https://baltig.infn.it/dune/sand-reco/-/issues/18)
+  if (modID == 0) {
+    detID = 1;
     modID = 40;
-  else if (modID == 1)
+  } else if (modID == 1) {
+    detID = 3;
     modID = 30;
-
+  }
   delete obja;
   delete obja2;
 
