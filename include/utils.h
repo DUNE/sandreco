@@ -149,8 +149,8 @@ void BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
 void EndCapCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
                 int& cellID, double& d1, double& d2);
 bool CheckAndProcessPath(TString& str2);
-void CellPosition(TGeoManager* geo, int mod, int lay, int cel, double& x,
-                  double& y, double& z);
+void CellPosition(TGeoManager* geo, int det, int mod, int lay, int cel,
+                  double& x, double& y, double& z);
 }  // namespace geometry
 
 namespace attenuation
@@ -213,8 +213,8 @@ const double adc2MeV = 1. / 10.;
 
 namespace decoder
 {
-int EncodeID(int mod, int lay, int cel);
-void DecodeID(int id, int& mod, int& lay, int& cel);
+int EncodeID(int det, int mod, int lay, int cel);
+void DecodeID(int id, int& det, int& mod, int& lay, int& cel);
 }  // namespace decoder
 
 namespace reco

@@ -519,9 +519,9 @@ bool sand_reco::ecal::geometry::CheckAndProcessPath(TString& str2)
 }
 
 // get cell center from module id, layer id and cell id
-void sand_reco::ecal::geometry::CellPosition(TGeoManager* geo, int mod, int lay,
-                                             int cel, double& x, double& y,
-                                             double& z)
+void sand_reco::ecal::geometry::CellPosition(TGeoManager* geo, int det, int mod,
+                                             int lay, int cel, double& x,
+                                             double& y, double& z)
 {
   x = 0;
   y = 0;
@@ -716,16 +716,24 @@ void sand_reco::stt::initT0(TG4Event* ev)
   }
 }
 
-int sand_reco::ecal::decoder::EncodeID(int mod, int lay, int cel)
+int sand_reco::ecal::decoder::EncodeID(int det, int mod, int lay, int cel)
 {
-  return cel + 100 * lay + 1000 * mod;
+  return cel + 100 * lay + 1000 * mod + det * 100000;
 }
 
-void sand_reco::ecal::decoder::DecodeID(int id, int& mod, int& lay, int& cel)
+void sand_reco::ecal::decoder::DecodeID(int id, int& det, int& mod, int& lay,
+                                        int& cel)
 {
+  det = id / 100000;
+  id -= det * 100000;
+
   mod = id / 1000;
-  lay = (id - mod * 1000) / 100;
-  cel = id - mod * 1000 - lay * 100;
+  id -= mod * 1000;
+
+  lay = id / 100;
+  id -= lay * 100;
+
+  cel = id;
 }
 
 // evaluate minimum distance between segment (s1x,s1y,s1z) -> (s2x,s2y,s2z)

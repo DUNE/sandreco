@@ -235,13 +235,15 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& detID,
   }
 }
 
-bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
-                     int& cellID, double& d1, double& d2, double& t, double& de)
+bool ProcessHitFluka(const TG4HitSegment& hit, int& detID, int& modID,
+                     int& planeID, int& cellID, double& d1, double& d2,
+                     double& t, double& de)
 {
   if (debug) {
     std::cout << "ProcessHit FLUKA" << std::endl;
   }
 
+  detID = -999;
   modID = -999;
   planeID = -999;
   cellID = -999;
@@ -318,6 +320,8 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
   //
   double cellD = 0;
   if (str == "volECAL") {
+    // detID
+    detID = 2;
     // modID
     modID = int((hitAngle + 0.5 * modDeltaAngle) / modDeltaAngle) % 24;
     // planeID
@@ -349,10 +353,13 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
       std::cout << "coord ENDCAP locali x: " << x << "\ty: " << y
                 << "\tz: " << z << "\tr: " << radius;
     // modID
-    if (x < 0)
+    if (x < 0) {
+      detID = 1;
       modID = 40;
-    else if (x > 0)
+    } else if (x > 0) {
+      detID = 3;
       modID = 30;
+    }
     // planeID
     planeID = int((abs(x) - sand_reco::ecal::fluka::kloe_int_dx_f) / 44);
     if (planeID > 4) planeID = 4;
@@ -415,7 +422,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
 
         if ((g != NULL && (ProcessHit(g, it->second[j], detID, modID, planeID,
                                       cellID, d1, d2, t0, de) == true)) ||
-            (g == NULL && (ProcessHitFluka(it->second[j], modID, planeID,
+            (g == NULL && (ProcessHitFluka(it->second[j], detID, modID, planeID,
                                            cellID, d1, d2, t0, de) == true))) {
           double en1 =
               de * sand_reco::ecal::attenuation::AttenuationFactor(d1, planeID);
@@ -428,7 +435,8 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
           int pe1 = r.Poisson(ave_pe1);
           int pe2 = r.Poisson(ave_pe2);
 
-          uniqID = sand_reco::ecal::decoder::EncodeID(modID, planeID, cellID);
+          uniqID =
+              sand_reco::ecal::decoder::EncodeID(detID, modID, planeID, cellID);
 
           if (debug) {
             std::cout << "cell ID: " << uniqID << std::endl;
@@ -553,7 +561,7 @@ void CollectSignal(TGeoManager* geo, std::map<int, std::vector<dg_ps> >& ps,
     c = &(map_cell[id]);
 
     c->id = id;
-    sand_reco::ecal::decoder::DecodeID(c->id, c->mod, c->lay, c->cel);
+    sand_reco::ecal::decoder::DecodeID(c->id, c->det, c->mod, c->lay, c->cel);
     c->l = L[it->first];
 
     if (it->first >= 0) {
@@ -561,8 +569,8 @@ void CollectSignal(TGeoManager* geo, std::map<int, std::vector<dg_ps> >& ps,
     } else {
       c->ps2 = it->second;
     }
-    sand_reco::ecal::geometry::CellPosition(geo, c->mod, c->lay, c->cel, c->x,
-                                            c->y,
+    sand_reco::ecal::geometry::CellPosition(geo, c->det, c->mod, c->lay, c->cel,
+                                            c->x, c->y,
                                             c->z);  // ok per fluka e geant4
   }
 
