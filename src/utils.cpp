@@ -19,33 +19,38 @@ namespace sand_reco
 {
 bool flukatype = false;
 
-namespace ecal {
+namespace ecal
+{
 
-  double cellCoordBarrel[nMod][nLay][nCel][3];
-  double cellCoordEndcap[5][nLay][90][3];
+namespace fluka
+{
+double cellCoordBarrel[nMod][nLay][nCel][3];
+double cellCoordEndcap[5][nLay][90][3];
+}  // namespace fluka
 
-  double czlay[nLay];
-  double cxlay[nLay][nCel];
-  double ec_r;
-  double ec_dz;
+double czlay[nLay];
+double cxlay[nLay][nCel];
+double ec_r;
+double ec_dz;
 
-}
+}  // namespace ecal
 
-namespace stt {
+namespace stt
+{
 
-  double stt_center[3];
+double stt_center[3];
 
-  TPRegexp* rST;
-  TPRegexp* r2ST;
-  TPRegexp* rSTplane;
-  TPRegexp* rSTmod;
+TPRegexp* rST;
+TPRegexp* r2ST;
+TPRegexp* rSTplane;
+TPRegexp* rSTmod;
 
-  std::map<int, std::map<double, int> > stX;
-  std::map<int, double> stL;
-  std::map<int, std::map<int, TVector2> > stPos;
-  std::map<int, TVector2> tubePos;
-  std::map<int, double> t0;
-}
+std::map<int, std::map<double, int> > stX;
+std::map<int, double> stL;
+std::map<int, std::map<int, TVector2> > stPos;
+std::map<int, TVector2> tubePos;
+std::map<int, double> t0;
+}  // namespace stt
 
 }  // namespace sand_reco
 
@@ -56,8 +61,8 @@ bool sand_reco::ecal::isPeBefore(const pe& p1, const pe& p2)
 
 // value of parameter of segment (y1,z1,y2,z2)
 // corresponding to minimal distance to point (y,z)
-double sand_reco::stt::getT(double y1, double y2, double y, double z1, double z2,
-                       double z)
+double sand_reco::stt::getT(double y1, double y2, double y, double z1,
+                            double z2, double z)
 {
   double t = 0;
   if (y1 != y2 || z1 != z2) {
@@ -88,7 +93,8 @@ int sand_reco::stt::encodePlaneID(int moduleid, int planelocid, int type)
   return moduleid * 100 + planelocid * 10 + type;
 }
 
-void sand_reco::stt::decodePlaneID(int id, int& moduleid, int& planelodid, int& type)
+void sand_reco::stt::decodePlaneID(int id, int& moduleid, int& planelodid,
+                                   int& type)
 {
   moduleid = id / 100;
   planelodid = (id - moduleid * 100) / 10;
@@ -137,8 +143,8 @@ int sand_reco::stt::getPlaneID(TString path)
   int icopy = (reinterpret_cast<TObjString*>(obja->At(5)))->GetString().Atoi();
   int type =
       (reinterpret_cast<TObjString*>(obja->At(4)))->GetString().EqualTo("hh")
-           ? 2
-           : 1;
+          ? 2
+          : 1;
   int icopymod =
       (reinterpret_cast<TObjString*>(obja2->At(3)))->GetString().Atoi();
 
@@ -172,14 +178,14 @@ int sand_reco::stt::getPlaneID(TString path)
 
   // delete obj;
 
-  return encodePlaneID(mod * 10 + icopymod, 2*icopy + type, type);
+  return encodePlaneID(mod * 10 + icopymod, 2 * icopy + type, type);
 }
 
 // get position of the center of the tube for a plane
 void sand_reco::stt::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
-                          std::map<double, int>& stX,
-                          std::map<int, double>& stL,
-                          std::map<int, TVector2>& stPos)
+                               std::map<double, int>& stX,
+                               std::map<int, double>& stL,
+                               std::map<int, TVector2>& stPos)
 {
   int type;
   int mod;
@@ -236,10 +242,9 @@ void sand_reco::stt::getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
 }
 
 // get position of the center of the tube for each plane
-void sand_reco::stt::getSTPlaneinfo(TGeoHMatrix mat,
-                               std::map<int, std::map<double, int> >& stX,
-                               std::map<int, double>& stL,
-                               std::map<int, std::map<int, TVector2> >& stPos)
+void sand_reco::stt::getSTPlaneinfo(
+    TGeoHMatrix mat, std::map<int, std::map<double, int> >& stX,
+    std::map<int, double>& stL, std::map<int, std::map<int, TVector2> >& stPos)
 {
   TGeoNode* nod = gGeoManager->GetCurrentNode();
   TString path = gGeoManager->GetPath();
@@ -316,7 +321,7 @@ int sand_reco::stt::getSTUniqID(TGeoManager* g, double x, double y, double z)
 }
 
 bool sand_reco::ecal::isCluBigger(const std::vector<dg_tube>& v1,
-                            const std::vector<dg_tube>& v2)
+                                  const std::vector<dg_tube>& v2)
 {
   return v1.size() > v2.size();
 }
@@ -328,7 +333,10 @@ bool sand_reco::stt::isDigUpstream(const dg_tube& d1, const dg_tube& d2)
 
 bool sand_reco::ecal::isHitBefore(hit h1, hit h2) { return h1.t1 < h2.t1; }
 
-bool sand_reco::stt::isDigBefore(dg_tube d1, dg_tube d2) { return d1.tdc < d2.tdc; }
+bool sand_reco::stt::isDigBefore(dg_tube d1, dg_tube d2)
+{
+  return d1.tdc < d2.tdc;
+}
 
 bool sand_reco::ecal::isCellBefore(dg_cell c1, dg_cell c2)
 {
@@ -343,22 +351,23 @@ bool sand_reco::ecal::isCellBefore(dg_cell c1, dg_cell c2)
 
 bool sand_reco::isAfter(particle p1, particle p2) { return p1.tid > p2.tid; }
 
-bool sand_reco::ecal::isBarrel(TString& str)
+bool sand_reco::ecal::geometry::isBarrel(TString& str)
 {
   // something like: volECALActiveSlab_21_PV_0
   return str.Contains("volECAL") == true && str.Contains("Active") == true &&
          str.Contains("end") == false;
 }
 
-bool sand_reco::ecal::isEndCap(TString& str)
+bool sand_reco::ecal::geometry::isEndCap(TString& str)
 {
   // something like: endvolECALActiveSlab_0_PV_0
   return str.Contains("endvolECAL") == true && str.Contains("Active") == true;
 }
 
 // find module id and plane id for barrel
-void sand_reco::ecal::BarrelModuleAndLayer(TString& str, TString& str2, int& modID,
-                                     int& planeID)
+void sand_reco::ecal::geometry::BarrelModuleAndLayer(TString& str,
+                                                     TString& str2, int& modID,
+                                                     int& planeID)
 {
   TObjArray* obja = str.Tokenize("_");    // BARERL => volECALActiveSlab_21_PV_0
   TObjArray* obja2 = str2.Tokenize("_");  // BARREL => ECAL_lv_PV_18
@@ -381,8 +390,9 @@ void sand_reco::ecal::BarrelModuleAndLayer(TString& str, TString& str2, int& mod
 }
 
 // find module id and plane id for endcaps
-void sand_reco::ecal::EndCapModuleAndLayer(TString& str, TString& str2, int& modID,
-                                     int& planeID)
+void sand_reco::ecal::geometry::EndCapModuleAndLayer(TString& str,
+                                                     TString& str2, int& modID,
+                                                     int& planeID)
 {
   TObjArray* obja = str.Tokenize("_");  // ENDCAP => endvolECALActiveSlab_0_PV_0
   TObjArray* obja2 = str2.Tokenize("_");  // ENDCAP => ECAL_end_lv_PV_0
@@ -409,8 +419,9 @@ void sand_reco::ecal::EndCapModuleAndLayer(TString& str, TString& str2, int& mod
 }
 
 // find barrel cell from (x,y,z)
-void sand_reco::ecal::BarrelCell(double x, double y, double z, TGeoManager* g,
-                           TGeoNode* node, int& cellID, double& d1, double& d2)
+void sand_reco::ecal::geometry::BarrelCell(double x, double y, double z,
+                                           TGeoManager* g, TGeoNode* node,
+                                           int& cellID, double& d1, double& d2)
 {
   double Pmaster[3];
   double Plocal[3];
@@ -451,8 +462,9 @@ void sand_reco::ecal::BarrelCell(double x, double y, double z, TGeoManager* g,
 }
 
 // find endcap cell from (x,y,z)
-void sand_reco::ecal::EndCapCell(double x, double y, double z, TGeoManager* g,
-                           TGeoNode* node, int& cellID, double& d1, double& d2)
+void sand_reco::ecal::geometry::EndCapCell(double x, double y, double z,
+                                           TGeoManager* g, TGeoNode* node,
+                                           int& cellID, double& d1, double& d2)
 {
   double Pmaster[3];
   double Plocal[3];
@@ -477,11 +489,11 @@ void sand_reco::ecal::EndCapCell(double x, double y, double z, TGeoManager* g,
   d1 = rmax * TMath::Sin(TMath::ACos(Plocal[0] / rmax)) - Plocal[1];
   d2 = rmax * TMath::Sin(TMath::ACos(Plocal[0] / rmax)) + Plocal[1];
 
-  cellID = int((Plocal[0] / rmax + 1.) * nCel_ec * 0.5);
+  cellID = int((Plocal[0] / rmax + 1.) * endcap::nCel_ec * 0.5);
 }
 
 // check if the geometry path is ok
-bool sand_reco::ecal::CheckAndProcessPath(TString& str2)
+bool sand_reco::ecal::geometry::CheckAndProcessPath(TString& str2)
 {
   // ENDCAP ==> something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_18/volECALActiveSlab_21_PV_0"
@@ -503,8 +515,9 @@ bool sand_reco::ecal::CheckAndProcessPath(TString& str2)
 }
 
 // get cell center from module id, layer id and cell id
-void sand_reco::ecal::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
-                             double& x, double& y, double& z)
+void sand_reco::ecal::geometry::CellPosition(TGeoManager* geo, int mod, int lay,
+                                             int cel, double& x, double& y,
+                                             double& z)
 {
   x = 0;
   y = 0;
@@ -523,9 +536,9 @@ void sand_reco::ecal::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
       geo->cd(TString::Format(path_barrel_template, mod).Data());
     } else {
       // Local coordinates calculation
-      dummyLoc[0] = cellCoordBarrel[mod][lay][cel][0];
-      dummyLoc[1] = cellCoordBarrel[mod][lay][cel][1];
-      dummyLoc[2] = cellCoordBarrel[mod][lay][cel][2];
+      dummyLoc[0] = fluka::cellCoordBarrel[mod][lay][cel][0];
+      dummyLoc[1] = fluka::cellCoordBarrel[mod][lay][cel][1];
+      dummyLoc[2] = fluka::cellCoordBarrel[mod][lay][cel][2];
 
       // Transformation to global coordinates
       dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
@@ -539,8 +552,7 @@ void sand_reco::ecal::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
 
     if (flukatype == false) {
 
-      dummyLoc[0] = 2 * ec_r / nCel_ec * (0.5 + cel) -
-                    ec_r;
+      dummyLoc[0] = 2 * ec_r / endcap::nCel_ec * (0.5 + cel) - ec_r;
       dummyLoc[1] = 0.;
       dummyLoc[2] = czlay[lay];
 
@@ -551,9 +563,9 @@ void sand_reco::ecal::CellPosition(TGeoManager* geo, int mod, int lay, int cel,
 
     } else {
       // Local coordinates calculation
-      dummyLoc[0] = cellCoordEndcap[int(mod / 10)][lay][cel][0];
-      dummyLoc[1] = cellCoordEndcap[int(mod / 10)][lay][cel][1];
-      dummyLoc[2] = cellCoordEndcap[int(mod / 10)][lay][cel][2];
+      dummyLoc[0] = fluka::cellCoordEndcap[int(mod / 10)][lay][cel][0];
+      dummyLoc[1] = fluka::cellCoordEndcap[int(mod / 10)][lay][cel][1];
+      dummyLoc[2] = fluka::cellCoordEndcap[int(mod / 10)][lay][cel][2];
 
       // Transformation to global coordinates
       dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
@@ -588,25 +600,25 @@ void sand_reco::init(TGeoManager* geo)
     xmax = mod->GetDx2();
     dz = mod->GetDz();
 
-    if ((abs(xmin - sand_reco::ecal::xmin_f) > 0.2) ||
-        (abs(xmax - sand_reco::ecal::xmax_f) > 0.2) ||
-        (abs(dz - sand_reco::ecal::dz_f) > 0.2)) {
+    if ((abs(xmin - sand_reco::ecal::fluka::xmin_f) > 0.2) ||
+        (abs(xmax - sand_reco::ecal::fluka::xmax_f) > 0.2) ||
+        (abs(dz - sand_reco::ecal::fluka::dz_f) > 0.2)) {
       std::cout << "ERROR ON ECAL GEOMETRY: xmin= " << xmin
-                << " instead of what is expected in Fluka" << sand_reco::ecal::xmin_f
-                << std::endl;
+                << " instead of what is expected in Fluka"
+                << sand_reco::ecal::fluka::xmin_f << std::endl;
       std::cout << "ERROR ON ECAL GEOMETRY: xmax= " << xmax
-                << " instead of what is expected in Fluka" << sand_reco::ecal::xmax_f
-                << std::endl;
+                << " instead of what is expected in Fluka"
+                << sand_reco::ecal::fluka::xmax_f << std::endl;
       std::cout << "ERROR ON ECAL GEOMETRY: dz= " << dz
-                << " instead of what is expected in Fluka" << sand_reco::ecal::dz_f
-                << std::endl;
+                << " instead of what is expected in Fluka"
+                << sand_reco::ecal::fluka::dz_f << std::endl;
       // exit(1);
     }
 
   } else {
-    xmin = sand_reco::ecal::xmin_f;
-    xmax = sand_reco::ecal::xmax_f;
-    dz = sand_reco::ecal::dz_f;
+    xmin = sand_reco::ecal::fluka::xmin_f;
+    xmax = sand_reco::ecal::fluka::xmax_f;
+    dz = sand_reco::ecal::fluka::dz_f;
   }
 
   double m = 0.5 * (xmax - xmin) / dz;
@@ -668,14 +680,15 @@ void sand_reco::init(TGeoManager* geo)
     double local[] = {0., 0., 0.};
     geo->LocalToMaster(local, stt::stt_center);
 
-    if (abs(sand_reco::ecal::ec_r - sand_reco::ecal::ec_rf) > 0.2 ||
-        (abs(sand_reco::ecal::ec_dz - sand_reco::ecal::ec_dzf))) {
+    if (abs(sand_reco::ecal::ec_r - sand_reco::ecal::fluka::ec_rf) > 0.2 ||
+        (abs(sand_reco::ecal::ec_dz - sand_reco::ecal::fluka::ec_dzf))) {
       std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: R= " << sand_reco::ecal::ec_r
-                << " instead of what is expected in Fluka" << sand_reco::ecal::ec_rf
-                << std::endl;
+                << " instead of what is expected in Fluka"
+                << sand_reco::ecal::fluka::ec_rf << std::endl;
       std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: Thickness= "
-                << sand_reco::ecal::ec_dz << " instead of what is expected in Fluka"
-                << sand_reco::ecal::ec_dzf << std::endl;
+                << sand_reco::ecal::ec_dz
+                << " instead of what is expected in Fluka"
+                << sand_reco::ecal::fluka::ec_dzf << std::endl;
       //  exit(1);
     }
   }
@@ -689,22 +702,22 @@ void sand_reco::stt::initT0(TG4Event* ev)
   t0.clear();
 
   double t0_beam = ev->Primaries[0].Position.T() -
-                   ev->Primaries[0].Position.Z() / sand_reco::c +
+                   ev->Primaries[0].Position.Z() / sand_reco::constant::c +
                    r.Gaus(0, bucket_rms);
 
   for (std::map<int, std::map<int, TVector2> >::iterator it = stPos.begin();
        it != stPos.end(); it++) {
     t0[it->first] =
-        t0_beam + it->second.begin()->second.X() / sand_reco::c;
+        t0_beam + it->second.begin()->second.X() / sand_reco::constant::c;
   }
 }
 
-int sand_reco::ecal::EncodeID(int mod, int lay, int cel)
+int sand_reco::ecal::decoder::EncodeID(int mod, int lay, int cel)
 {
   return cel + 100 * lay + 1000 * mod;
 }
 
-void sand_reco::ecal::DecodeID(int id, int& mod, int& lay, int& cel)
+void sand_reco::ecal::decoder::DecodeID(int id, int& mod, int& lay, int& cel)
 {
   mod = id / 1000;
   lay = (id - mod * 1000) / 100;
@@ -747,7 +760,7 @@ double sand_reco::angle(double x1, double y1, double z1, double x2, double y2,
 // get fiber attenuation factor.
 // It depends on distance from pmt (d)
 // and planeID (planes have different fibers)
-double sand_reco::ecal::AttenuationFactor(double d, int planeID)
+double sand_reco::ecal::attenuation::AttenuationFactor(double d, int planeID)
 {
   /*
        dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
@@ -787,41 +800,39 @@ double sand_reco::ecal::AttenuationFactor(double d, int planeID)
     std::cout << "\talt1 = " << atl1 << std::endl;
     std::cout << "\talt2 = " << atl2 << std::endl;
     std::cout << "\tatt  = "
-              << p1 * TMath::Exp(-d / atl1) +
-                     (1. - p1) * TMath::Exp(-d / atl2)
+              << p1 * TMath::Exp(-d / atl1) + (1. - p1) * TMath::Exp(-d / atl2)
               << std::endl;
   }
 
-  return p1 * TMath::Exp(-d / atl1) +
-         (1. - p1) * TMath::Exp(-d / atl2);
+  return p1 * TMath::Exp(-d / atl1) + (1. - p1) * TMath::Exp(-d / atl2);
 }
 
 // reconstruct t of the hit from tdc1 and tdc2
-double sand_reco::ecal::TfromTDC(double t1, double t2, double L)
+double sand_reco::ecal::reco::TfromTDC(double t1, double t2, double L)
 {
-  return 0.5 * (t1 + t2 - vlfb * L / m_to_mm);
+  return 0.5 * (t1 + t2 - scintillation::vlfb * L / conversion::m_to_mm);
 }
 
 // reconstruct longitudinal coordinate of the hit from tdc1 and tdc2
-double sand_reco::ecal::XfromTDC(double t1, double t2)
+double sand_reco::ecal::reco::XfromTDC(double t1, double t2)
 {
-  return 0.5 * (t1 - t2) / vlfb * m_to_mm;
+  return 0.5 * (t1 - t2) / scintillation::vlfb * conversion::m_to_mm;
 }
 
 // energy deposit of the hit from adc1 and adc2 and
 // reconstructed longidutinal coordinate
-double sand_reco::ecal::EfromADC(double adc1, double adc2, double d1, double d2,
-                           int planeID)
+double sand_reco::ecal::reco::EfromADC(double adc1, double adc2, double d1,
+                                       double d2, int planeID)
 {
-  double f1 = AttenuationFactor(d1, planeID);
-  double f2 = AttenuationFactor(d2, planeID);
+  double f1 = attenuation::AttenuationFactor(d1, planeID);
+  double f2 = attenuation::AttenuationFactor(d2, planeID);
 
-  return 0.5 * (adc1 / f1 + adc2 / f2) * adc2MeV;
+  return 0.5 * (adc1 / f1 + adc2 / f2) * energy_calibration::adc2MeV;
 }
 
 // reconstruct hit position, time and energy of the cell
-void sand_reco::ecal::CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
-                          double& e)
+void sand_reco::ecal::reco::CellXYZTE(dg_cell c, double& x, double& y,
+                                      double& z, double& t, double& e)
 {
   if (c.id < 25000)  // Barrel
   {

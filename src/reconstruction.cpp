@@ -220,8 +220,9 @@ void GetRho(const std::vector<double>& z_v, const std::vector<double>& y_v,
 
 void FillPositionInfo(track& tr, int signy, double cos, double sin)
 {
-  dg_tube d = (sand_reco::stt::isDigBefore(tr.clX.front(), tr.clY.front()) ? tr.clX.front()
-                                                           : tr.clY.front());
+  dg_tube d = (sand_reco::stt::isDigBefore(tr.clX.front(), tr.clY.front())
+                   ? tr.clX.front()
+                   : tr.clY.front());
   tr.z0 = d.z;
   tr.t0 = d.tdc;
   if (d.hor == true) {
@@ -824,11 +825,13 @@ void TrackFind(std::vector<track>& tracks, std::vector<dg_tube> digits,
 
   // order digits: upstream first
   for (unsigned int jj = 0; jj < clustersX.size(); jj++) {
-    std::sort(clustersX.at(jj).begin(), clustersX.at(jj).end(), sand_reco::stt::isDigUpstream);
+    std::sort(clustersX.at(jj).begin(), clustersX.at(jj).end(),
+              sand_reco::stt::isDigUpstream);
   }
 
   for (unsigned int jj = 0; jj < clustersY.size(); jj++) {
-    std::sort(clustersY.at(jj).begin(), clustersY.at(jj).end(), sand_reco::stt::isDigUpstream);
+    std::sort(clustersY.at(jj).begin(), clustersY.at(jj).end(),
+              sand_reco::stt::isDigUpstream);
   }
 
   // merge XZ and YZ clusters
@@ -1186,7 +1189,7 @@ void Merge(std::vector<cluster>& vec_cl)
 
     for (unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++) {
       double x, y, z, t, e;
-      sand_reco::ecal::CellXYZTE(vec_cl.at(i).cells.at(k), x, y, z, t, e);
+      sand_reco::ecal::reco::CellXYZTE(vec_cl.at(i).cells.at(k), x, y, z, t, e);
 
       // time reference at center of first layer
       // t -= ( (dzlay[0] + dzlay[1]) -
