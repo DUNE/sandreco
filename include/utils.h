@@ -81,6 +81,50 @@ void initT0(TG4Event* ev);
 namespace ecal
 {
 
+const int nLay = 5;
+const int nCel = 12;
+const int nMod = 24;
+
+// thickness of the layers in mm
+const double dzlay[nLay] = {44., 44., 44., 44., 54.};
+extern double czlay[nLay];
+extern double cxlay[nLay][nCel];
+
+namespace barrel
+{
+const double lCalBarrel = 4300;
+}
+namespace endcap
+{
+const int nCel_ec = 90;
+extern double ec_r;
+extern double ec_dz;
+}  // namespace endcap
+
+namespace fluka
+{
+const double e2p2_fluka =
+    23;  // for fluka, for reproducing the same number of pe (40) for mip
+         // crossing in the middle of barrel module
+
+// ecal dimension for fluka
+const double xmin_f = 262.55;
+const double xmax_f = 292.85;
+const double dz_f = 115.0;
+
+const double ec_rf = 2000.0;  // ad essere precisi nella realtà è 1980
+const double ec_dzf = 115.0;
+const double kloe_int_R_f = 2000.;
+const double kloe_int_dx_f = 1690.;
+
+// coordinates of the cells for FLUKA
+extern double cellCoordBarrel[nMod][nLay][nCel][3];
+extern double cellCoordEndcap[5][nLay][90][3];
+}  // namespace fluka
+
+namespace geometry
+{
+
 ////////////////////////////////////////////////////////////////////////
 // geometry v1
 const char* const path_barrel_template =
@@ -94,6 +138,23 @@ const char* const path_endcapR_template =
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 //////////////////////////////////////////////////////////////////////////
 
+bool isBarrel(TString& str);
+bool isEndCap(TString& str);
+void BarrelModuleAndLayer(TString& str, TString& str2, int& detID, int& modID,
+                          int& planeID);
+void EndCapModuleAndLayer(TString& str, TString& str2, int& detID, int& modID,
+                          int& planeID);
+void BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
+                int& cellID, double& d1, double& d2);
+void EndCapCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
+                int& cellID, double& d1, double& d2);
+bool CheckAndProcessPath(TString& str2);
+void CellPosition(TGeoManager* geo, int det, int mod, int lay, int cel,
+                  double& x, double& y, double& z);
+}  // namespace geometry
+
+namespace attenuation
+{
 /*
     dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
     d    distance from photocatode - 2 cells/cell; d1 and d2
@@ -109,47 +170,26 @@ const double atl2_01 = 4300.0;
 const double atl2_2 = 3800.0;
 const double atl2_34 = 3300.0;
 
-// Average number of photoelectrons = 25*Ea(MeV)
-// corrected to 18.5 to have mean number of pe of 40
-// for mip crossing in the middle of barrel module
-const double e2p2 = 18.5;
-const double e2p2_fluka =
-    23;  // for fluka, for reproducing the same number of pe (40) for mip
-         // crossing in the middle of barrel module
+double AttenuationFactor(double d, int planeID);
+}  // namespace attenuation
 
-const int nMod = 24;
-const int nLay = 5;
-const int nCel = 12;
-const int nCel_ec = 90;
-
-// ecal dimension for fluka
-const double xmin_f = 262.55;
-const double xmax_f = 292.85;
-const double dz_f = 115.0;
-
-const double ec_rf = 2000.0;  // ad essere precisi nella realtà è 1980
-const double ec_dzf = 115.0;
-const double lCalBarrel = 4300;
-
-const double kloe_int_R_f = 2000.;
-const double kloe_int_dx_f = 1690.;
-
-// coordinates of the cells for FLUKA
-extern double cellCoordBarrel[nMod][nLay][nCel][3];
-extern double cellCoordEndcap[5][nLay][90][3];
-
-// thickness of the layers in mm
-const double dzlay[nLay] = {44., 44., 44., 44., 54.};
-extern double czlay[nLay];
-extern double cxlay[nLay][nCel];
-
-extern double ec_r;
-extern double ec_dz;
-
+namespace scintillation
+{
 const double tscin = 3.08;
 const double tscex = 0.588;
 const double vlfb = 5.85;
+}  // namespace scintillation
 
+namespace photo_sensor
+{
+// Average number of photoelectrons = 25*Ea(MeV)
+// corrected to 18.5 to have mean number of pe of 40
+// for mip crossing in the middle of barrel module
+const double e2pe = 18.5;
+}  // namespace photo_sensor
+
+namespace acquisition
+{
 // photoelectron/counts = 0.25
 const double pe2ADC = 1 / .25;
 // ADC integration time = 30 ns
@@ -167,56 +207,65 @@ const double costant_fraction = 0.15;
 // fixed threshold discriminator
 double fixed_thresh_pe = 3.;
 
+}  // namespace acquisition
+
+namespace energy_calibration
+{
 // ADC to MeV
 const double adc2MeV = 1. / 10.;
+}  // namespace energy_calibration
+
+namespace decoder
+{
+int EncodeID(int det, int mod, int lay, int cel);
+void DecodeID(int id, int& det, int& mod, int& lay, int& cel);
+}  // namespace decoder
+
+namespace reco
+{
+double TfromTDC(double t1, double t2, double L);
+double XfromTDC(double t1, double t2);
+double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
+void CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
+               double& e);
+}  // namespace reco
+
+namespace Bfield
+{
+const double B = 0.6;
+}
 
 bool isPeBefore(const pe& p1, const pe& p2);
 bool isCluBigger(const std::vector<dg_tube>& v1,
                  const std::vector<dg_tube>& v2);
 bool isHitBefore(hit h1, hit h2);
 bool isCellBefore(dg_cell c1, dg_cell c2);
-bool isBarrel(TString& str);
-bool isEndCap(TString& str);
-void BarrelModuleAndLayer(TString& str, TString& str2, int& modID,
-                          int& planeID);
-void EndCapModuleAndLayer(TString& str, TString& str2, int& modID,
-                          int& planeID);
-void BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
-                int& cellID, double& d1, double& d2);
-void EndCapCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
-                int& cellID, double& d1, double& d2);
-bool CheckAndProcessPath(TString& str2);
-void CellPosition(TGeoManager* geo, int mod, int lay, int cel, double& x,
-                  double& y, double& z);
-int EncodeID(int mod, int lay, int cel);
-void DecodeID(int id, int& mod, int& lay, int& cel);
-double AttenuationFactor(double d, int planeID);
-double TfromTDC(double t1, double t2, double L);
-double XfromTDC(double t1, double t2);
-double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
-void CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
-               double& e);
 }  // namespace ecal
+
+namespace conversion
+{
+const double mm_to_m = 1E-3;
+const double m_to_mm = 1000.;
+const double GeV_to_MeV = 1000.;
+}  // namespace conversion
+
+namespace constant
+{
+const double k = 0.299792458;
+const double c = k * 1E3;  // mm/ns
+const double emk = 1.;
+const double hadk = 1.;
+}  // namespace constant
 
 const bool debug = false;
 
 extern bool flukatype;  // for FLUKA
-
-const double mm_to_m = 1E-3;
-const double m_to_mm = 1000.;
 
 double mindist(double s1x, double s1y, double s1z, double s2x, double s2y,
                double s2z, double px, double py, double pz);
 double angle(double x1, double y1, double z1, double x2, double y2, double z2);
 
 bool isAfter(particle p1, particle p2);
-
-const double k = 0.299792458;
-const double B = 0.6;
-const double GeV_to_MeV = 1000.;
-const double c = k * 1E3;  // mm/ns
-const double emk = 1.;
-const double hadk = 1.;
 
 void init(TGeoManager* geo);
 

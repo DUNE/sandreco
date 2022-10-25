@@ -80,15 +80,20 @@ double Attenuation(double d, int planeID)
 // into the mean number of pe
 double E2PE(double E)
 {
-  if (debug) std::cout << "E = " << E << " -> p.e. = " << sand_reco::ecal::e2p2 * E << std::endl;
+  if (debug)
+    std::cout << "E = " << E
+              << " -> p.e. = " << sand_reco::ecal::photo_sensor::e2pe * E
+              << std::endl;
 
   if (debug && flukatype == 1)
-    std::cout << "E = " << E << " -> p.e. = " << sand_reco::ecal::e2p2_fluka * E << std::endl;
+    std::cout << "E = " << E
+              << " -> p.e. = " << sand_reco::ecal::fluka::e2p2_fluka * E
+              << std::endl;
 
   if (flukatype == 1)
-    return sand_reco::ecal::e2p2_fluka * E;
+    return sand_reco::ecal::fluka::e2p2_fluka * E;
   else
-    return sand_reco::ecal::e2p2 * E;
+    return sand_reco::ecal::photo_sensor::e2pe * E;
 }
 
 // simulate pe arrival time to pmt
@@ -112,15 +117,21 @@ C                      + 1ns  uncertainty
       TSCEX  0.588
   */
 
-  double tdec = sand_reco::ecal::tscin * TMath::Power(1. / r.Uniform() - 1., sand_reco::ecal::tscex);
+  double tdec = sand_reco::ecal::scintillation::tscin *
+                TMath::Power(1. / r.Uniform() - 1.,
+                             sand_reco::ecal::scintillation::tscex);
 
-  double time = t0 + tdec + sand_reco::ecal::vlfb * d * mm_to_m + r.Gaus();
+  double time = t0 + tdec +
+                sand_reco::ecal::scintillation::vlfb * d * conversion::mm_to_m +
+                r.Gaus();
 
   if (debug) {
     std::cout << "time : " << time << std::endl;
     std::cout << "t0   : " << t0 << std::endl;
     std::cout << "scint: " << tdec << std::endl;
-    std::cout << "prop : " << sand_reco::ecal::vlfb * d * mm_to_m << std::endl;
+    std::cout << "prop : "
+              << sand_reco::ecal::scintillation::vlfb * d * conversion::mm_to_m
+              << std::endl;
   }
 
   return time;
@@ -135,14 +146,15 @@ C                      + 1ns  uncertainty
 //  - d2: distance from pmt2
 //  - t: time of the hit
 //  - de: energy deposit
-bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
-                int& planeID, int& cellID, double& d1, double& d2, double& t,
-                double& de)
+bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& detID,
+                int& modID, int& planeID, int& cellID, double& d1, double& d2,
+                double& t, double& de)
 {
   if (debug) {
     std::cout << "ProcessHit" << std::endl;
   }
 
+  detID = -999;
   modID = -999;
   planeID = -999;
   cellID = -999;
@@ -168,22 +180,24 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
     std::cout << "node name: " << str.Data() << std::endl;
   }
 
-  if (sand_reco::ecal::CheckAndProcessPath(str2) == false) return false;
+  if (sand_reco::ecal::geometry::CheckAndProcessPath(str2) == false)
+    return false;
   //////
 
   // barrel modules
-  if (sand_reco::ecal::isBarrel(str)) {
+  if (sand_reco::ecal::geometry::isBarrel(str)) {
 
-    sand_reco::ecal::BarrelModuleAndLayer(str, str2, modID, planeID);
+    sand_reco::ecal::geometry::BarrelModuleAndLayer(str, str2, detID, modID,
+                                                    planeID);
 
-    sand_reco::ecal::BarrelCell(x, y, z, g, node, cellID, d1, d2);
+    sand_reco::ecal::geometry::BarrelCell(x, y, z, g, node, cellID, d1, d2);
 
     if (debug) {
       std::cout << "hit: " << str.Data() << std::endl;
       std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
                 << std::endl;
-      std::cout << "\t[modID,planeID,cellID] " << modID << " " << planeID << " "
-                << cellID << std::endl;
+      std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
+                << " " << planeID << " " << cellID << std::endl;
       std::cout << "\t[d1,d2,t,de]           " << d1 << " " << d2 << " " << t
                 << " " << de << std::endl;
     }
@@ -191,7 +205,7 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
     return true;
   }
   // end cap modules
-  else if (sand_reco::ecal::isEndCap(str)) {
+  else if (sand_reco::ecal::geometry::isEndCap(str)) {
 
     if (debug) {
       TLorentzVector gPos(x, y, z, 0);
@@ -203,16 +217,17 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
                 << gPos.Z() << std::endl;
     }
 
-    sand_reco::ecal::EndCapModuleAndLayer(str, str2, modID, planeID);
+    sand_reco::ecal::geometry::EndCapModuleAndLayer(str, str2, detID, modID,
+                                                    planeID);
 
-    sand_reco::ecal::EndCapCell(x, y, z, g, node, cellID, d1, d2);
+    sand_reco::ecal::geometry::EndCapCell(x, y, z, g, node, cellID, d1, d2);
 
     if (debug) {
       std::cout << "hit: " << str.Data() << std::endl;
       std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
                 << std::endl;
-      std::cout << "\t[modID,planeID,cellID] " << modID << " " << planeID << " "
-                << cellID << std::endl;
+      std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
+                << " " << planeID << " " << cellID << std::endl;
     }
     return true;
   } else {
@@ -220,13 +235,15 @@ bool ProcessHit(TGeoManager* g, const TG4HitSegment& hit, int& modID,
   }
 }
 
-bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
-                     int& cellID, double& d1, double& d2, double& t, double& de)
+bool ProcessHitFluka(const TG4HitSegment& hit, int& detID, int& modID,
+                     int& planeID, int& cellID, double& d1, double& d2,
+                     double& t, double& de)
 {
   if (debug) {
     std::cout << "ProcessHit FLUKA" << std::endl;
   }
 
+  detID = -999;
   modID = -999;
   planeID = -999;
   cellID = -999;
@@ -280,14 +297,19 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
   TString str = "";
   double rotated_z = z * cos(-modAngle) - y * sin(-modAngle);
   double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
-  if ((rotated_y > sand_reco::ecal::kloe_int_R_f) && (rotated_y < sand_reco::ecal::kloe_int_R_f + 2 * sand_reco::ecal::ec_dzf) &&
-      (abs(x) < sand_reco::ecal::lCalBarrel / 2) &&
+  if ((rotated_y > sand_reco::ecal::fluka::kloe_int_R_f) &&
+      (rotated_y < sand_reco::ecal::fluka::kloe_int_R_f +
+                       2 * sand_reco::ecal::fluka::ec_dzf) &&
+      (abs(x) < sand_reco::ecal::barrel::lCalBarrel / 2) &&
       (abs(rotated_z) < abs(rotated_y * tan(modDeltaAngle / 2))))
     str = "volECAL";  // ECAL barrel
-  else if ((rotated_y < sand_reco::ecal::ec_rf) && (abs(x) > sand_reco::ecal::kloe_int_dx_f) &&
-           (abs(x) < sand_reco::ecal::kloe_int_dx_f + 2 * sand_reco::ecal::ec_dzf))
+  else if ((rotated_y < sand_reco::ecal::fluka::ec_rf) &&
+           (abs(x) > sand_reco::ecal::fluka::kloe_int_dx_f) &&
+           (abs(x) < sand_reco::ecal::fluka::kloe_int_dx_f +
+                         2 * sand_reco::ecal::fluka::ec_dzf))
     str = "endvolECAL";  // ECAL endcaps
-  else if ((rotated_y < sand_reco::ecal::ec_rf) && (abs(x) < sand_reco::ecal::kloe_int_dx_f))
+  else if ((rotated_y < sand_reco::ecal::fluka::ec_rf) &&
+           (abs(x) < sand_reco::ecal::fluka::kloe_int_dx_f))
     str = "tracker";  // tracker
   else
     str = "outside";  // outside
@@ -298,27 +320,31 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
   //
   double cellD = 0;
   if (str == "volECAL") {
+    // detID
+    detID = 2;
     // modID
     modID = int((hitAngle + 0.5 * modDeltaAngle) / modDeltaAngle) % 24;
     // planeID
-    planeID = int((rotated_y - sand_reco::ecal::kloe_int_R_f) / 44);
+    planeID = int((rotated_y - sand_reco::ecal::fluka::kloe_int_R_f) / 44);
     if (planeID > 4) planeID = 4;
     // cellID
     cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) %
              12;  // dal punto centrale in alto in senso antiorario        // d1
                   // distance from right end (x>0)
-    d1 = sand_reco::ecal::lCalBarrel / 2 - x;
+    d1 = sand_reco::ecal::barrel::lCalBarrel / 2 - x;
     // d2 distance from left end (x<0)
-    d2 = sand_reco::ecal::lCalBarrel / 2 + x;
+    d2 = sand_reco::ecal::barrel::lCalBarrel / 2 + x;
     // cellCoord
-    cellD = sand_reco::ecal::kloe_int_R_f + sand_reco::ecal::dzlay[0] / 2;
+    cellD =
+        sand_reco::ecal::fluka::kloe_int_R_f + sand_reco::ecal::dzlay[0] / 2;
     for (int planeindex = 1; planeindex < planeID + 1; planeindex++)
-      cellD += sand_reco::ecal::dzlay[planeindex - 1] / 2 + sand_reco::ecal::dzlay[planeindex] / 2;
-    sand_reco::ecal::cellCoordBarrel[modID][planeID][cellID][0] = 0;
-    sand_reco::ecal::cellCoordBarrel[modID][planeID][cellID][2] =
+      cellD += sand_reco::ecal::dzlay[planeindex - 1] / 2 +
+               sand_reco::ecal::dzlay[planeindex] / 2;
+    sand_reco::ecal::fluka::cellCoordBarrel[modID][planeID][cellID][0] = 0;
+    sand_reco::ecal::fluka::cellCoordBarrel[modID][planeID][cellID][2] =
         +cellD * sin(-modAngle) -
         cellD * tan(cellAngle - modAngle) * cos(-modAngle);
-    sand_reco::ecal::cellCoordBarrel[modID][planeID][cellID][1] =
+    sand_reco::ecal::fluka::cellCoordBarrel[modID][planeID][cellID][1] =
         +cellD * cos(-modAngle) +
         cellD * tan(cellAngle - modAngle) * sin(-modAngle);
   } else if (str == "endvolECAL") {
@@ -327,35 +353,52 @@ bool ProcessHitFluka(const TG4HitSegment& hit, int& modID, int& planeID,
       std::cout << "coord ENDCAP locali x: " << x << "\ty: " << y
                 << "\tz: " << z << "\tr: " << radius;
     // modID
-    if (x < 0)
+    if (x < 0) {
+      detID = 1;
       modID = 40;
-    else if (x > 0)
+    } else if (x > 0) {
+      detID = 3;
       modID = 30;
+    }
     // planeID
-    planeID = int((abs(x) - sand_reco::ecal::kloe_int_dx_f) / 44);
+    planeID = int((abs(x) - sand_reco::ecal::fluka::kloe_int_dx_f) / 44);
     if (planeID > 4) planeID = 4;
     // cellID
     if (modID == 40)
-      cellID = int((z + sand_reco::ecal::ec_rf) / 44);  // crescono all'aumentare di z
+      cellID = int((z + sand_reco::ecal::fluka::ec_rf) /
+                   44);  // crescono all'aumentare di z
     else
-      cellID = int((sand_reco::ecal::ec_rf - z) / 44);  // decrescosno all'aumentare di z
+      cellID = int((sand_reco::ecal::fluka::ec_rf - z) /
+                   44);  // decrescosno all'aumentare di z
     // d1 distance from top (y>0)
-    d1 = sqrt(sand_reco::ecal::ec_rf * sand_reco::ecal::ec_rf - z * z) - y;
+    d1 = sqrt(sand_reco::ecal::fluka::ec_rf * sand_reco::ecal::fluka::ec_rf -
+              z * z) -
+         y;
     // d2 distance from bottom (y<0)
-    d2 = sqrt(sand_reco::ecal::ec_rf * sand_reco::ecal::ec_rf - z * z) + y;
+    d2 = sqrt(sand_reco::ecal::fluka::ec_rf * sand_reco::ecal::fluka::ec_rf -
+              z * z) +
+         y;
     // cellCoord
-    cellD = TMath::Sign(1.0, x) * (sand_reco::ecal::kloe_int_dx_f + sand_reco::ecal::dzlay[0] / 2);
+    cellD = TMath::Sign(1.0, x) * (sand_reco::ecal::fluka::kloe_int_dx_f +
+                                   sand_reco::ecal::dzlay[0] / 2);
     for (int planeindex = 1; planeindex < planeID + 1; planeindex++)
-      cellD += TMath::Sign(1.0, x) *
-               (sand_reco::ecal::dzlay[planeindex - 1] / 2 + sand_reco::ecal::dzlay[planeindex] / 2);
-    sand_reco::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID][0] = cellD;
-    sand_reco::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID][1] = 0;
+      cellD +=
+          TMath::Sign(1.0, x) * (sand_reco::ecal::dzlay[planeindex - 1] / 2 +
+                                 sand_reco::ecal::dzlay[planeindex] / 2);
+    sand_reco::ecal::fluka::cellCoordEndcap[int(modID / 10)][planeID][cellID]
+                                           [0] = cellD;
+    sand_reco::ecal::fluka::cellCoordEndcap[int(modID / 10)][planeID][cellID]
+                                           [1] = 0;
     if (modID == 40)
-      sand_reco::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID][2] =
-          44 / 2 + cellID * 44 - sand_reco::ecal::ec_rf;  // crescono all'aumentare di cellID
+      sand_reco::ecal::fluka::cellCoordEndcap[int(modID /
+                                                  10)][planeID][cellID][2] =
+          44 / 2 + cellID * 44 -
+          sand_reco::ecal::fluka::ec_rf;  // crescono all'aumentare di cellID
     else
-      sand_reco::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID][2] =
-          44 / 2 - (cellID)*44 + sand_reco::ecal::ec_rf;  // crescono al diminuire di cellID
+      sand_reco::ecal::fluka::cellCoordEndcap[int(modID /
+                                                  10)][planeID][cellID][2] =
+          44 / 2 - (cellID)*44 +
+          sand_reco::ecal::fluka::ec_rf;  // crescono al diminuire di cellID
 
   } else if (str == "tracker" || str == "outside") {
     if (debug) std::cout << std::endl;
@@ -368,7 +411,7 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
                 std::map<int, std::vector<pe> >& photo_el,
                 std::map<int, double>& L)
 {
-  int modID, planeID, cellID, id;
+  int detID, modID, planeID, cellID, uniqID;
   double d1, d2, t0, de;
 
   for (std::map<std::string, std::vector<TG4HitSegment> >::iterator it =
@@ -377,12 +420,14 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
     if (it->first == "EMCalSci") {
       for (unsigned int j = 0; j < it->second.size(); j++) {
 
-        if ((g != NULL && (ProcessHit(g, it->second[j], modID, planeID, cellID,
-                                      d1, d2, t0, de) == true)) ||
-            (g == NULL && (ProcessHitFluka(it->second[j], modID, planeID,
+        if ((g != NULL && (ProcessHit(g, it->second[j], detID, modID, planeID,
+                                      cellID, d1, d2, t0, de) == true)) ||
+            (g == NULL && (ProcessHitFluka(it->second[j], detID, modID, planeID,
                                            cellID, d1, d2, t0, de) == true))) {
-          double en1 = de * sand_reco::ecal::AttenuationFactor(d1, planeID);
-          double en2 = de * sand_reco::ecal::AttenuationFactor(d2, planeID);
+          double en1 =
+              de * sand_reco::ecal::attenuation::AttenuationFactor(d1, planeID);
+          double en2 =
+              de * sand_reco::ecal::attenuation::AttenuationFactor(d2, planeID);
 
           double ave_pe1 = E2PE(en1);
           double ave_pe2 = E2PE(en2);
@@ -390,10 +435,11 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
           int pe1 = r.Poisson(ave_pe1);
           int pe2 = r.Poisson(ave_pe2);
 
-          id = sand_reco::ecal::EncodeID(modID, planeID, cellID);
+          uniqID =
+              sand_reco::ecal::decoder::EncodeID(detID, modID, planeID, cellID);
 
           if (debug) {
-            std::cout << "cell ID: " << id << std::endl;
+            std::cout << "cell ID: " << uniqID << std::endl;
             std::cout << "\t" << de << " " << en1 << " " << en2 << std::endl;
             std::cout << "\t" << ave_pe1 << " " << ave_pe2 << std::endl;
             std::cout << "\t" << pe1 << " " << pe2 << std::endl;
@@ -406,16 +452,16 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
             pe this_pe;
             this_pe.time = petime(t0, d1);
             this_pe.h_index = j;
-            photo_el[id].push_back(this_pe);
-            L[id] = d1 + d2;
+            photo_el[uniqID].push_back(this_pe);
+            L[uniqID] = d1 + d2;
           }
 
           for (int i = 0; i < pe2; i++) {
             pe this_pe;
             this_pe.time = petime(t0, d2);
             this_pe.h_index = j;
-            photo_el[-1 * id].push_back(this_pe);
-            L[-1 * id] = d1 + d2;
+            photo_el[-1 * uniqID].push_back(this_pe);
+            L[-1 * uniqID] = d1 + d2;
           }
         }
       }
@@ -447,12 +493,13 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
 
   std::vector<pe> photo_el_digit;
 
-  if(npe_thresh > 0) sand_reco::ecal::fixed_thresh_pe = npe_thresh; 
+  if(npe_thresh > 0) sand_reco::ecal::acquisition::fixed_thresh_pe = npe_thresh; 
 
   for (std::map<int, std::vector<pe> >::iterator it = photo_el.begin();
        it != photo_el.end(); ++it) {
     // order by arrival time
-    std::sort(it->second.begin(), it->second.end(), sand_reco::ecal::isPeBefore);
+    std::sort(it->second.begin(), it->second.end(),
+              sand_reco::ecal::isPeBefore);
 
     auto side = 2 * (it->first > 0) - 1;
 
@@ -466,22 +513,24 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
     for (std::vector<pe>::iterator this_pe = it->second.begin();
          this_pe != it->second.end(); ++this_pe) {
       // integrate for int_time
-      if (this_pe->time < int_start + sand_reco::ecal::int_time) {
+      if (this_pe->time < int_start + sand_reco::ecal::acquisition::int_time) {
         pe_count++;
         photo_el_digit.push_back(*this_pe);
-      } else if (this_pe->time > int_start + sand_reco::ecal::int_time + sand_reco::ecal::dead_time) {
+      } else if (this_pe->time > int_start +
+                                     sand_reco::ecal::acquisition::int_time +
+                                     sand_reco::ecal::acquisition::dead_time) {
         // above threshold -> digit
-        if (pe_count > sand_reco::ecal::pe_threshold) {
+        if (pe_count > sand_reco::ecal::acquisition::pe_threshold) {
           dg_ps signal;
           signal.side = side;
-          signal.adc = sand_reco::ecal::pe2ADC * pe_count;
+          signal.adc = sand_reco::ecal::acquisition::pe2ADC * pe_count;
 	  switch (ecal_digi_mode) {
 	  case ECAL_digi_mode::const_fract:
-	      index = int(sand_reco::ecal::costant_fraction * pe_count) + start_index;
+	      index = int(sand_reco::ecal::acquisition::costant_fraction * pe_count) + start_index;
 	      if (debug) std::cout << " Const. Fract. " << index << std::endl;
 	      break;
 	  case ECAL_digi_mode::fixed_thresh:
-	      double tdc_thresh = (sand_reco::ecal::fixed_thresh_pe > sand_reco::ecal::pe_threshold) ? sand_reco::ecal::fixed_thresh_pe : sand_reco::ecal::pe_threshold;
+	      double tdc_thresh = (sand_reco::ecal::acquisition::fixed_thresh_pe > sand_reco::ecal::acquisition::pe_threshold) ? sand_reco::ecal::acquisition::fixed_thresh_pe : sand_reco::ecal::acquisition::pe_threshold;
 	      index = TMath::Ceil(tdc_thresh) + start_index;
 	      if (debug) std::cout << " Fix. Thresh. " << index << std::endl;
 	      break;
@@ -498,11 +547,12 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
       }
     }
 
-    if (pe_count > sand_reco::ecal::pe_threshold) {
+    if (pe_count > sand_reco::ecal::acquisition::pe_threshold) {
       dg_ps signal;
       signal.side = side;
-      signal.adc = sand_reco::ecal::pe2ADC * pe_count;
-      index = int(sand_reco::ecal::costant_fraction * pe_count) + start_index;
+      signal.adc = sand_reco::ecal::acquisition::pe2ADC * pe_count;
+      index = int(sand_reco::ecal::acquisition::costant_fraction * pe_count) +
+              start_index;
       signal.tdc = it->second[index].time;
       signal.photo_el = photo_el_digit;
       map_pmt[it->first].push_back(signal);
@@ -524,7 +574,7 @@ void CollectSignal(TGeoManager* geo, std::map<int, std::vector<dg_ps> >& ps,
     c = &(map_cell[id]);
 
     c->id = id;
-    sand_reco::ecal::DecodeID(c->id, c->mod, c->lay, c->cel);
+    sand_reco::ecal::decoder::DecodeID(c->id, c->det, c->mod, c->lay, c->cel);
     c->l = L[it->first];
 
     if (it->first >= 0) {
@@ -532,8 +582,9 @@ void CollectSignal(TGeoManager* geo, std::map<int, std::vector<dg_ps> >& ps,
     } else {
       c->ps2 = it->second;
     }
-    sand_reco::ecal::CellPosition(geo, c->mod, c->lay, c->cel, c->x, c->y,
-                 c->z);  // ok per fluka e geant4
+    sand_reco::ecal::geometry::CellPosition(geo, c->det, c->mod, c->lay, c->cel,
+                                            c->x, c->y,
+                                            c->z);  // ok per fluka e geant4
   }
 
   for (std::map<int, dg_cell>::iterator it = map_cell.begin();
@@ -703,9 +754,10 @@ void Hits2Digit(std::map<int, std::vector<hit> >& hits2Tube,
 
       TVector2 min_dist_point(x, y);
       double min_dist_hit = (min_dist_point - wire).Mod();
-      double min_time_hit =
-          t + (min_dist_hit - sand_reco::stt::wire_radius) / sand_reco::stt::v_drift +
-          dwire / sand_reco::stt::v_signal_inwire;
+      double min_time_hit = t +
+                            (min_dist_hit - sand_reco::stt::wire_radius) /
+                                sand_reco::stt::v_drift +
+                            dwire / sand_reco::stt::v_signal_inwire;
 
       if (min_time_hit < min_time_tub) min_time_tub = min_time_hit;
 
@@ -754,7 +806,7 @@ void Digitize(const char* finname, const char* foutname, ECAL_digi_mode ecal_dig
   // Check is performed looking for string "fluka2edep"
   // in the input filename
   if (TString(finname).Contains("fluka2edep") == true) {
-    flukatype = true; 
+    flukatype = true;
   }
   if (flukatype == true)
     std::cout << "This is a FLUKA SIMULATION" << std::endl;
@@ -764,7 +816,7 @@ void Digitize(const char* finname, const char* foutname, ECAL_digi_mode ecal_dig
   // MC info tree
   TTree* t = (TTree*)f.Get("EDepSimEvents");
 
-  // Event 
+  // Event
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event", &ev);
 
@@ -800,7 +852,7 @@ void Digitize(const char* finname, const char* foutname, ECAL_digi_mode ecal_dig
   }
   if (debug) std::cout << "Inizializzo la geometria" << std::endl;
 
-  // Initialization of detector-geometry-related 
+  // Initialization of detector-geometry-related
   // usefull variables defined in utils.h
   // Specifically:
   // - calo cell center and size
@@ -815,20 +867,20 @@ void Digitize(const char* finname, const char* foutname, ECAL_digi_mode ecal_dig
   //       - VALUE: length of the tubes
   //   - std::map<int, std::map<double, int>> sand_reco::stX
   //       - KEY  : id of the plane
-  //       - VALUE: map with 
+  //       - VALUE: map with
   //         - KEY  : beam transversal coordinate of the tubes
-  //         - VALUE: id of the tube 
+  //         - VALUE: id of the tube
   //   - std::map<int, std::map<int, TVector2>> sand_reco::stPos
   //       - KEY  : id of the plane
-  //       - VALUE: map with 
+  //       - VALUE: map with
   //         - KEY  : local id of the tube
-  //         - VALUE: position of the center of the tube 
-  //                  (X in TVector2 is Z in the global system) 
-  //                  (Y in TVector2 is X or Y in the global system) 
+  //         - VALUE: position of the center of the tube
+  //                  (X in TVector2 is Z in the global system)
+  //                  (Y in TVector2 is X or Y in the global system)
   //   - std::map<int, TVector2> sand_reco::tubePos
   //       - KEY  : id of the tube
-  //       - VALUE: map with 
-  init(geo); 
+  //       - VALUE: map with
+  init(geo);
 
   // vector of ECAL and STT digits
   std::vector<dg_tube> digit_vec;
@@ -854,7 +906,7 @@ void Digitize(const char* finname, const char* foutname, ECAL_digi_mode ecal_dig
               << "%]" << std::flush;
 
     // define the T0 for this event
-    // for each straw tubs: 
+    // for each straw tubs:
     // std::map<int, double> sand_reco::t0
     sand_reco::stt::initT0(ev);
 

@@ -44,6 +44,7 @@ struct dg_cell {
   int mod;
   int lay;
   int cel;
+  int det;
   std::vector<dg_ps> ps1;
   std::vector<dg_ps> ps2;
 };
