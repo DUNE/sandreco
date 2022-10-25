@@ -29,6 +29,8 @@ namespace ecal {
   double ec_r;
   double ec_dz;
 
+  extern bool fixed_thresh_discri;
+
 }
 
 namespace stt {

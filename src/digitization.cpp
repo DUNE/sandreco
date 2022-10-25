@@ -470,8 +470,15 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
           dg_ps signal;
           signal.side = side;
           signal.adc = sand_reco::ecal::pe2ADC * pe_count;
-          index = int(sand_reco::ecal::costant_fraction * pe_count) + start_index;
-          signal.tdc = it->second[index].time;
+	  if(sand_reco::ecal::fixed_thresh_discri){
+	    int tdc_thresh = (sand_reco::ecal::fixed_threshold > sand_reco::ecal::pe_threshold) ? sand_reco::ecal::fixed_threshold : sand_reco::ecal::pe_threshold;
+	    std::cout << " Fixed threshold discriminator at " << tdc_thresh << " p.e. " << std::endl;  
+	    index = tdc_thresh + start_index;
+	  }
+	  else {
+	    index = int(sand_reco::ecal::costant_fraction * pe_count) + start_index;
+	  }
+	  signal.tdc = it->second[index].time;
           signal.photo_el = photo_el_digit;
           map_pmt[it->first].push_back(signal);
         }
