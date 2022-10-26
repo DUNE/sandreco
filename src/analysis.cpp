@@ -67,7 +67,7 @@ void FillParticleInfo(TG4Event* ev, std::map<int, particle>& map_part)
 
     TParticlePDG* part = db.GetParticle(p.pdg);
     if (part != 0) {
-      p.mass = part->Mass() * GeV_to_MeV;
+      p.mass = part->Mass() * conversion::GeV_to_MeV;
       p.charge = part->Charge() / 3.;
     }
 
@@ -174,7 +174,7 @@ void RecoFromTrack(particle& p)
     double r0z = p.tr.z0 - p.tr.zc;
     double r0y = p.tr.y0 - p.tr.yc;
 
-    double mom_yz = k * p.tr.r * B;
+    double mom_yz = constant::k * p.tr.r * ecal::Bfield::B;
     double ang_yz = TMath::ATan2(r0z, -r0y);
     double ang_x = 0.5 * TMath::Pi() - TMath::ATan(1. / p.tr.b);
 
@@ -212,8 +212,9 @@ void RecoFromBeta(particle& p, double x0, double y0, double z0, double t0)
   double e;
 
   for (unsigned int i = 0; i < p.cl.cells.size(); i++) {
-    sand_reco::ecal::CellXYZTE(p.cl.cells.at(i), cell_x.at(i), cell_y.at(i), cell_z.at(i),
-              cell_t.at(i), e);
+    sand_reco::ecal::reco::CellXYZTE(p.cl.cells.at(i), cell_x.at(i),
+                                     cell_y.at(i), cell_z.at(i), cell_t.at(i),
+                                     e);
   }
 
   int idx_min = std::distance(cell_t.begin(),
@@ -224,7 +225,7 @@ void RecoFromBeta(particle& p, double x0, double y0, double z0, double t0)
   double dy = cell_y.at(idx_min) - y0;
   double dz = cell_z.at(idx_min) - z0;
   double dr = TMath::Sqrt(dx * dx + dy * dy + dz * dz);
-  double beta = dr / dt / c;
+  double beta = dr / dt / constant::c;
   double gamma = 1. / TMath::Sqrt(1 - beta * beta);
 
   if (beta < 1.) {
@@ -242,24 +243,24 @@ void RecoFromBeta(particle& p, double x0, double y0, double z0, double t0)
 
 void RecoFromEMShower(particle& p)
 {
-  p.Ereco = p.cl.e * emk;
+  p.Ereco = p.cl.e * constant::emk;
 
   double mom = TMath::Sqrt(p.Ereco * p.Ereco - p.mass * p.mass);
 
-  p.pxreco = mom * emk * p.cl.sx;
-  p.pyreco = mom * emk * p.cl.sy;
-  p.pzreco = mom * emk * p.cl.sz;
+  p.pxreco = mom * constant::emk * p.cl.sx;
+  p.pyreco = mom * constant::emk * p.cl.sy;
+  p.pzreco = mom * constant::emk * p.cl.sz;
 }
 
 void RecoFromHadShower(particle& p)
 {
-  p.Ereco = p.cl.e * hadk;
+  p.Ereco = p.cl.e * constant::hadk;
 
   double mom = TMath::Sqrt(p.Ereco * p.Ereco - p.mass * p.mass);
 
-  p.pxreco = hadk * emk * p.cl.sx;
-  p.pyreco = hadk * emk * p.cl.sy;
-  p.pzreco = hadk * emk * p.cl.sz;
+  p.pxreco = constant::hadk * constant::emk * p.cl.sx;
+  p.pyreco = constant::hadk * constant::emk * p.cl.sy;
+  p.pzreco = constant::hadk * constant::emk * p.cl.sz;
 }
 
 void RecoFromDaugthers(particle& p)
@@ -789,10 +790,10 @@ void Analyze(const char* fMc, const char* fIn)
     evt.z = ev->Primaries.at(0).Position.Z();
     evt.t = ev->Primaries.at(0).Position.T();
 
-    evt.pxnu = part_mom[0][0] * GeV_to_MeV;
-    evt.pynu = part_mom[0][1] * GeV_to_MeV;
-    evt.pznu = part_mom[0][2] * GeV_to_MeV;
-    evt.Enu = part_mom[0][3] * GeV_to_MeV;
+    evt.pxnu = part_mom[0][0] * conversion::GeV_to_MeV;
+    evt.pynu = part_mom[0][1] * conversion::GeV_to_MeV;
+    evt.pznu = part_mom[0][2] * conversion::GeV_to_MeV;
+    evt.Enu = part_mom[0][3] * conversion::GeV_to_MeV;
 
     // std::string volname = geo->FindNode(evt.x, evt.y, evt.z)->GetName();
     // strcpy(evt.vol, geo->FindNode(evt.x, evt.y, evt.z)->GetName());
