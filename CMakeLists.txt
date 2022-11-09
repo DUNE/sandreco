@@ -42,6 +42,11 @@ target_include_directories(Utils PUBLIC
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Utils PUBLIC EDepSim::edepsim_io)
 
+# Create SANDGeoManager lib
+add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp)
+target_link_libraries(SANDGeoManager PUBLIC)
+ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h MODULE SANDGeoManager LINKDEF include/Linkdef.h)
+
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp)
 target_link_libraries(Digitize Struct Utils)
@@ -69,7 +74,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-install(TARGETS Utils Struct Digitize Reconstruct Analyze Display FastCheck
+install(TARGETS Utils SANDGeoManager Struct Digitize Reconstruct Analyze Display FastCheck
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
