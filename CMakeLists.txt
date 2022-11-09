@@ -21,19 +21,20 @@ find_package(EDepSim REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -Wno-unused-parameter")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-ROOT_GENERATE_DICTIONARY(G__Struct struct.h LINKDEF include/Linkdef.h)
 
 # set output directory
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
 
 # Creates a libStruct shared library with a generated dictionary.
-add_library(Struct SHARED G__Struct.cxx)
+add_library(Struct SHARED include/struct.h)
 target_include_directories(Struct PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Struct PUBLIC)
+ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/Linkdef.h)
 
 # Creates a libUtils shared library
 add_library(Utils SHARED src/utils.cpp src/transf.cpp)
