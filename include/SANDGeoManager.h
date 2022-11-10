@@ -1,7 +1,10 @@
 #ifndef SANDGEOMANAGER_H
 #define	SANDGEOMANAGER_H
 
-class SANDGeoManager{
+#include "TObject.h"
+#include "TClass.h"
+class SANDGeoManager : public TObject {
+    ClassDef(SANDGeoManager, 1)
 };
 
 
