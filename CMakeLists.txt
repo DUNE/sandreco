@@ -44,9 +44,9 @@ target_include_directories(Utils PUBLIC
 target_link_libraries(Utils PUBLIC EDepSim::edepsim_io)
 
 # Create SANDGeoManager lib
-add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/STTInfo.cpp src/CellInfo.cpp)
+add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDSTTTubeInfo.cpp src/SANDECALCellInfo.cpp)
 target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
-ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h STTInfo.h CellInfo.h MODULE SANDGeoManager LINKDEF include/Linkdef.h)
+ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDSTTTubeInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/Linkdef.h)
 
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp)
