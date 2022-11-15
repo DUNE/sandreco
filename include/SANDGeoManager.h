@@ -91,6 +91,15 @@ class SANDGeoManager : public TObject {
         std::pair<int, int> decode_ecal_endcap_cell_local_id(int id);
         std::map<int, TVector3> get_ecal_barrel_cell_center_local_position(const std::vector<double>& zlevels, double m, double q);
         std::map<int, TVector3> get_ecal_endcap_cell_center_local_position(const std::vector<double>& zlevels, double rmin, double rmax);
+        int encode_ecal_cell_id(int detector_id, int module_id, int layer_id, int cell_local_id);
+        void decode_ecal_cell_id(int cell_global_id, int& detector_id, int& module_id, int& layer_id, int& cell_local_id);
+        bool is_ecal_barrel(const TString& volume_name);
+        bool is_ecal_endcap(const TString& volume_name);
+        bool check_and_process_ecal_path(TString& volume_path);
+        void get_ecal_barrel_module_and_layer(const TString& volume_name, const TString& volume_path, int& detector_id, int& module_id, int& plane_id);
+        void get_ecal_endcap_module_and_layer(const TString& volume_name, const TString& volume_path, int& detector_id, int& module_id, int& plane_id);
+        void get_ecal_barrel_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id, double& cell_length);
+        void get_ecal_endcap_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id, double& cell_length);
         void set_ecal_info();
 
         // STT

@@ -127,6 +127,160 @@ std::map<int, TVector3> SANDGeoManager::get_ecal_endcap_cell_center_local_positi
   return ecal_endcap_cell_center_local_positions;
 }
 
+int SANDGeoManager::encode_ecal_cell_id(int detector_id, int module_id, int layer_id, int cell_local_id)
+{
+  return cell_local_id + 100 * layer_id + 1000 * module_id + detector_id * 100000;
+}
+
+void SANDGeoManager::decode_ecal_cell_id(int cell_global_id, int& detector_id, int& module_id, int& layer_id, int& cell_local_id)
+{
+  detector_id = cell_global_id / 100000;
+  cell_global_id -= detector_id * 100000;
+
+  module_id = cell_global_id / 1000;
+  cell_global_id -= module_id * 1000;
+
+  layer_id = cell_global_id / 100;
+  cell_global_id -= layer_id * 100;
+
+  cell_local_id = cell_global_id;
+}
+
+bool SANDGeoManager::is_ecal_barrel(const TString& volume_name)
+{
+  // something like: volECALActiveSlab_21_PV_0
+  return volume_name.Contains("volECAL") == true && volume_name.Contains("Active") == true &&
+         volume_name.Contains("end") == false;
+
+}
+
+bool SANDGeoManager::is_ecal_endcap(const TString& volume_name)
+{
+  // something like: endvolECALActiveSlab_0_PV_0
+  return volume_name.Contains("endvolECAL") == true && volume_name.Contains("Active") == true;
+}
+
+bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path)
+{
+  // ENDCAP ==> something like:
+  // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_18/volECALActiveSlab_21_PV_0"
+  // BARREL ==> something like:
+  // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0/endvolECALActiveSlab_0_PV_0"
+  TObjArray* obj = volume_path.Tokenize("/");
+
+  int size = obj->GetEntries();
+  if (size < 8) {
+    return false;
+  };
+
+  // BARREL => ECAL_lv_PV_18
+  // ENDCAP => ECAL_end_lv_PV_0
+  volume_path = ((TObjString*)obj->At(6))->GetString();
+  delete obj;
+
+  return true;
+}
+
+void get_ecal_barrel_module_and_layer(const TString& volume_name, const TString& volume_path, int& detector_id, int& module_id, int& plane_id)
+{
+  TObjArray* obja1 = volume_name.Tokenize("_");    // BARERL => volECALActiveSlab_21_PV_0
+  TObjArray* obja2 = volume_path.Tokenize("_");  // BARREL => ECAL_lv_PV_18
+
+  // top module => modID == 0
+  // increasing modID counterclockwise as seen from positive x
+  //(i.e. z(modID==1) < z(modID==0) & z(modID==0) < z(modID==23))
+  detector_id = 2;
+  module_id = ((TObjString*)obja2->At(3))->GetString().Atoi();
+  int slab_id = ((TObjString*)obja1->At(1))->GetString().Atoi();
+
+  delete obja1;
+  delete obja2;
+
+  // planeID==0 -> smallest slab -> internal
+  // planeID==208 -> biggest slab -> external
+  plane_id = slab_id / 40;
+
+  if (plane_id > 4) plane_id = 4;
+}
+
+void get_ecal_endcap_module_and_layer(const TString& volume_name, const TString& volume_path, int& detector_id, int& module_id, int& plane_id)
+{
+  TObjArray* obja1 = volume_name.Tokenize("_");  // ENDCAP => endvolECALActiveSlab_0_PV_0
+  TObjArray* obja2 = volume_path.Tokenize("_");  // ENDCAP => ECAL_end_lv_PV_0
+
+  module_id = ((TObjString*)obja2->At(4))->GetString().Atoi();
+  int slab_id = ((TObjString*)obja1->At(1))->GetString().Atoi();
+
+  // mod == 40 -> left  -> detID = 1
+  // mod == 30 -> right -> detID = 3
+  // (see issue: https://baltig.infn.it/dune/sand-reco/-/issues/18)
+  if (module_id == 0) {
+    detector_id = 1;
+    module_id = 40;
+  } else if (module_id == 1) {
+    detector_id = 3;
+    module_id = 30;
+  }
+  delete obja1;
+  delete obja2;
+
+  // planeID==0 -> internal
+  // planeID==208 -> external
+  plane_id = slab_id / 40;
+
+  if (plane_id > 4) plane_id = 4;
+}
+
+void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id, double& cell_length)
+{
+  double master[3];
+  double local[3];
+  master[0] = x;
+  master[1] = y;
+  master[2] = z;
+
+  geo_->GetCurrentNavigator()->MasterToLocal(master, local);
+
+  TGeoTrd2* trd = (TGeoTrd2*)node->GetVolume()->GetShape();
+
+  double dx1 = trd->GetDx1();
+  double dx2 = trd->GetDx2();
+  double dz = trd->GetDz();
+  cell_length = trd->GetDy1();
+
+  // http://geant4-userdoc.web.cern.ch/geant4-userdoc/UsersGuides/ForApplicationDeveloper/html/Detector/Geometry/geomSolids.html
+  // if z = -dz -> dx = 2*dx1
+  // if z =  dz -> dx = 2*dx2
+  // semilarghezza della slab di scintillatore alla quota Plocal[2]
+  double dx = 0.5 * local[2] / dz * (dx2 - dx1) + 0.5 * (dx2 + dx1);
+
+  // Cell width at z = Plocal[2]
+  double cell_width = 2. * dx / sand_geometry::ecal::number_of_cells_per_barrel_layer;
+
+  // cellID = distanza dall'estremo diviso larghezza cella
+  cell_local_id = (local[0] + dx) / cell_width;
+}
+
+void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id, double& cell_length)
+{
+  double master[3];
+  double local[3];
+  master[0] = x;
+  master[1] = y;
+  master[2] = z;
+
+  geo_->GetCurrentNavigator()->MasterToLocal(master, local);
+
+  TGeoTube* tub = (TGeoTube*)node->GetVolume()->GetShape();
+
+  double rmin = tub->GetRmin();
+  double rmax = tub->GetRmax();
+  double dz = tub->GetDz();
+
+  cell_length = rmax * TMath::Sin(TMath::ACos(local[0] / rmax));
+  cell_local_id = int((local[0] / rmax + 1.) * sand_geometry::ecal::number_of_cells_per_endcap_layer * 0.5);
+}
+
 void SANDGeoManager::set_ecal_info()
 {
   // https://root.cern.ch/root/htmldoc/guides/users-guide/Geometry.html#shapes
@@ -141,7 +295,6 @@ void SANDGeoManager::set_ecal_info()
 
   double ecal_endcap_rmin;
   double ecal_endcap_rmax;
-  double ecal_endcap_dz;
   
   if (geo_type_ == SANDGeoType::kFromEdepSim) {
     TGeoTrd2* mod = (TGeoTrd2*)geo_->FindVolumeFast(sand_geometry::ecal::barrel_module_name)->GetShape();
@@ -153,7 +306,6 @@ void SANDGeoManager::set_ecal_info()
     TGeoTube* ec = (TGeoTube*)geo_->FindVolumeFast(sand_geometry::ecal::endcap_module_name)->GetShape();
     ecal_endcap_rmax = ec->GetRmax();  // Maximum radius = 2000
     ecal_endcap_rmin = ec->GetRmin();
-    ecal_endcap_dz = ec->GetDz();   // half of thickness = 115
   }
   else if (geo_type_ == SANDGeoType::kFromFluka) {
     ecal_barrel_xmin = sand_geometry::ecal::fluka::barrel_module_xmin;;
@@ -163,7 +315,6 @@ void SANDGeoManager::set_ecal_info()
 
     ecal_endcap_rmax = sand_geometry::ecal::fluka::endcap_rmax;  // Maximum radius = 2000
     ecal_endcap_rmin = 0.;
-    ecal_endcap_dz = sand_geometry::ecal::fluka::endcap_thickness;   // half of thickness = 115
   }
   else
   {
@@ -183,7 +334,7 @@ void SANDGeoManager::set_ecal_info()
   double local[3];
   double master[3];
 
-  for(int mod_id = 0; mod_id < sand_geometry::ecal::number_of_barrel_modules; mod_id++)
+  for(int module_id = 0; module_id < sand_geometry::ecal::number_of_barrel_modules; module_id++)
   {
     for(auto cell_position: ecal_barrel_cell_center_local_positions)
     {
@@ -193,19 +344,22 @@ void SANDGeoManager::set_ecal_info()
 
       auto cell_and_layer_id = decode_ecal_barrel_cell_local_id(cell_position.first);
       auto layer_id = cell_and_layer_id.first;
-      auto cell_id = cell_and_layer_id.second;
+      auto cell_local_id = cell_and_layer_id.second;
       
-      geo_->cd(TString::Format(sand_geometry::ecal::path_barrel_template, mod_id).Data());
+      geo_->cd(TString::Format(sand_geometry::ecal::path_barrel_template, module_id).Data());
       geo_->LocalToMaster(local, master);
 
-      // here we create new cellInfo         
+      // here we create new cellInfo
+      int detector_id = 2;
+      int cell_unique_id = encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
+      cellmap_[cell_unique_id] = SANDECALCellInfo(cell_unique_id, master[0], master[1], master[2], ecal_barrel_dy, SANDECALCellInfo::Orient::kHorizontal);
     }
   }
   
   // eval barrel cell center global position
   auto ecal_endcap_cell_center_local_positions = get_ecal_endcap_cell_center_local_position(z_levels, ecal_endcap_rmin, ecal_endcap_rmax);
   
-  for(auto endcap_mod_id: sand_geometry::ecal::endcap_module_ids)
+  for(auto module_id: sand_geometry::ecal::endcap_module_ids)
   {
     for(auto cell_position: ecal_barrel_cell_center_local_positions)
     {
@@ -215,16 +369,26 @@ void SANDGeoManager::set_ecal_info()
 
       auto cell_and_layer_id = decode_ecal_endcap_cell_local_id(cell_position.first);
       auto layer_id = cell_and_layer_id.first;
-      auto cell_id = cell_and_layer_id.second;
-
-      if(endcap_mod_id == 30)
+      auto cell_local_id = cell_and_layer_id.second;
+      int detector_id = 0;
+      
+      if(module_id == 30)
+      {
+        detector_id = 3;
         geo_->cd(sand_geometry::ecal::path_endcapR_template);
-      else if(endcap_mod_id == 40)
+      }
+      else if(module_id == 40)
+      {
+        detector_id = 1;
         geo_->cd(sand_geometry::ecal::path_endcapL_template);
+      }
 
       geo_->LocalToMaster(local, master);
 
-      // here we create new cellInfo    
+      // here we create new cellInfo  
+      int cell_unique_id = encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
+      cellmap_[cell_unique_id] = SANDECALCellInfo(cell_unique_id, master[0], master[1], master[2],ecal_barrel_dy, SANDECALCellInfo::Orient::kVertical); 
+
     }
   }
 }
@@ -345,6 +509,13 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node, const TGeoHMa
       this_plane_stt_tube_tranverse_position_map[tube_position.Y()] = tube_unique_id;
 
       // here we fill STT tube info
+      sttmap_[tube_unique_id]= SANDSTTTubeInfo(tube_unique_id, 
+                                tube_position.X(),
+                                tube_position.Y(),
+                                tube_position.Z(),
+                                tube_length,
+                                stt_plane_type == 1 ? SANDSTTTubeInfo::Orient::kVertical : SANDSTTTubeInfo::Orient::kHorizontal,
+                                stt_plane_type == 1 ? SANDSTTTubeInfo::ReadoutEnd::kPlus : SANDSTTTubeInfo::ReadoutEnd::kPlus);
     }
   }
 
@@ -389,7 +560,47 @@ void SANDGeoManager::init(TGeoManager* const geo, SANDGeoType geo_type)
 
 int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
 {
+  /////
+  TGeoNode* node = geo_->FindNode(x, y, z);
 
+  if (node == 0) return false;
+
+  TString volume_name = node->GetName();
+  TString volume_path = geo_->GetPath();
+
+  if (check_and_process_ecal_path(volume_path) == false)
+    return false;
+  //////
+
+  int detector_id;
+  int module_id;
+  int layer_id;
+  int cell_local_id;
+  double cell_length;
+
+  // barrel modules
+  if (is_ecal_barrel(volume_name)) {
+
+    get_ecal_barrel_module_and_layer(volume_name, volume_path, detector_id, module_id, layer_id);
+    get_ecal_barrel_cell_local_id(x, y, z, node, cell_local_id, cell_length);
+
+    return true;
+  }
+  // end cap modules
+  else if (is_ecal_endcap(volume_name)) {
+
+
+    get_ecal_endcap_module_and_layer(volume_name, volume_path, detector_id, module_id, layer_id);
+    get_ecal_endcap_cell_local_id(x, y, z, node, cell_local_id, cell_length);
+
+    return true;
+  } else {
+    return false;
+  }
+
+  int cell_unique_id = encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
+
+  return cell_unique_id;
 }
 
 int SANDGeoManager::get_stt_tube_id(double x, double y, double z)
@@ -426,11 +637,18 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z)
     TVector2 v1;
     TVector2 v2;
 
+    v1.SetX(tube1.z());
+    v2.SetX(tube2.z());
+
     if(plane_type == 1)
     {
+      v1.SetY(tube1.x());
+      v2.SetY(tube2.x());
     }
     else
     {
+      v1.SetY(tube1.y());
+      v2.SetY(tube2.y());
     }
 
     TVector2 v(z, transverse_coord);
@@ -448,5 +666,5 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z)
     }
   }
 
-  return encode_stt_tube_id(plane_id, tube_id);
+  return tube_id;
 }
