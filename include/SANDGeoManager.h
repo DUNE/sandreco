@@ -91,8 +91,6 @@ class SANDGeoManager : public TObject {
         std::pair<int, int> decode_ecal_endcap_cell_local_id(int id);
         std::map<int, TVector3> get_ecal_barrel_cell_center_local_position(const std::vector<double>& zlevels, double m, double q);
         std::map<int, TVector3> get_ecal_endcap_cell_center_local_position(const std::vector<double>& zlevels, double rmin, double rmax);
-        int encode_ecal_cell_id(int detector_id, int module_id, int layer_id, int cell_local_id);
-        void decode_ecal_cell_id(int cell_global_id, int& detector_id, int& module_id, int& layer_id, int& cell_local_id);
         bool is_ecal_barrel(const TString& volume_name);
         bool is_ecal_endcap(const TString& volume_name);
         bool check_and_process_ecal_path(TString& volume_path);
@@ -103,10 +101,6 @@ class SANDGeoManager : public TObject {
         void set_ecal_info();
 
         // STT
-        int encode_stt_tube_id(int stt_plane_global_id, int stt_tube_local_id);
-        void decode_stt_tube_id(int stt_tube_global_id, int& stt_plane_global_id, int& stt_tube_local_id);
-        int encode_stt_plane_id(int stt_module_id, int stt_plane_local_id, int stt_plane_type);
-        void decode_stt_plane_id(int stt_plane_global_id, int& stt_module_id, int& stt_plane_local_id, int& stt_plane_type);
         bool is_stt_tube(const TString& volume_name);
         bool is_stt_plane(const TString& volume_name);
         int get_stt_plane_id(const TString& volume_path);
@@ -131,6 +125,16 @@ class SANDGeoManager : public TObject {
         const std::map<int, SANDSTTTubeInfo>& get_stt_tube_info() {return sttmap_;}
         int get_ecal_cell_id(double x, double y, double z);
         int get_stt_tube_id(double x, double y, double z);
+
+        // ECAL
+        static int encode_ecal_cell_id(int detector_id, int module_id, int layer_id, int cell_local_id);
+        static void decode_ecal_cell_id(int cell_global_id, int& detector_id, int& module_id, int& layer_id, int& cell_local_id);
+
+        //STT
+        static int encode_stt_tube_id(int stt_plane_global_id, int stt_tube_local_id);
+        static void decode_stt_tube_id(int stt_tube_global_id, int& stt_plane_global_id, int& stt_tube_local_id);
+        static int encode_stt_plane_id(int stt_module_id, int stt_plane_local_id, int stt_plane_type);
+        static void decode_stt_plane_id(int stt_plane_global_id, int& stt_module_id, int& stt_plane_local_id, int& stt_plane_type);
 
     ClassDef(SANDGeoManager, 1);
 };
