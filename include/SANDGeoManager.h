@@ -96,8 +96,8 @@ class SANDGeoManager : public TObject {
         bool check_and_process_ecal_path(TString& volume_path);
         void get_ecal_barrel_module_and_layer(const TString& volume_name, const TString& volume_path, int& detector_id, int& module_id, int& plane_id);
         void get_ecal_endcap_module_and_layer(const TString& volume_name, const TString& volume_path, int& detector_id, int& module_id, int& plane_id);
-        void get_ecal_barrel_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id, double& cell_length);
-        void get_ecal_endcap_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id, double& cell_length);
+        void get_ecal_barrel_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id);
+        void get_ecal_endcap_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id);
         void set_ecal_info();
 
         // STT

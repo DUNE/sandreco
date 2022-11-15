@@ -113,7 +113,7 @@ std::map<int, TVector3> SANDGeoManager::get_ecal_endcap_cell_center_local_positi
     auto z_this_layer = 0.5 * (zlevels.at(i) + zlevels.at(i + 1));
 
     // cell width at the z position of the center of the cell
-    double x_cell_width = rmax / sand_geometry::ecal::number_of_cells_per_endcap_layer;
+    double x_cell_width = 2 * rmax / sand_geometry::ecal::number_of_cells_per_endcap_layer;
 
     // x position of the center of the cells
     for (int j = 0; j < sand_geometry::ecal::number_of_cells_per_endcap_layer; j++) {
@@ -231,7 +231,7 @@ void get_ecal_endcap_module_and_layer(const TString& volume_name, const TString&
   if (plane_id > 4) plane_id = 4;
 }
 
-void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id, double& cell_length)
+void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id)
 {
   double master[3];
   double local[3];
@@ -246,7 +246,6 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
   double dx1 = trd->GetDx1();
   double dx2 = trd->GetDx2();
   double dz = trd->GetDz();
-  cell_length = trd->GetDy1();
 
   // http://geant4-userdoc.web.cern.ch/geant4-userdoc/UsersGuides/ForApplicationDeveloper/html/Detector/Geometry/geomSolids.html
   // if z = -dz -> dx = 2*dx1
@@ -261,7 +260,7 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
   cell_local_id = (local[0] + dx) / cell_width;
 }
 
-void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id, double& cell_length)
+void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z, const TGeoNode* const node, int& cell_local_id)
 {
   double master[3];
   double local[3];
@@ -277,7 +276,6 @@ void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
   double rmax = tub->GetRmax();
   double dz = tub->GetDz();
 
-  cell_length = rmax * TMath::Sin(TMath::ACos(local[0] / rmax));
   cell_local_id = int((local[0] / rmax + 1.) * sand_geometry::ecal::number_of_cells_per_endcap_layer * 0.5);
 }
 
@@ -361,11 +359,13 @@ void SANDGeoManager::set_ecal_info()
   
   for(auto module_id: sand_geometry::ecal::endcap_module_ids)
   {
-    for(auto cell_position: ecal_barrel_cell_center_local_positions)
+    for(auto cell_position: ecal_endcap_cell_center_local_positions)
     {
       local[0] = cell_position.second.X();
       local[1] = cell_position.second.Y();
       local[2] = cell_position.second.Z();
+
+      double cell_length = ecal_endcap_rmax * TMath::Sin(TMath::ACos(local[0] / ecal_endcap_rmax));
 
       auto cell_and_layer_id = decode_ecal_endcap_cell_local_id(cell_position.first);
       auto layer_id = cell_and_layer_id.first;
@@ -387,7 +387,7 @@ void SANDGeoManager::set_ecal_info()
 
       // here we create new cellInfo  
       int cell_unique_id = encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
-      cellmap_[cell_unique_id] = SANDECALCellInfo(cell_unique_id, master[0], master[1], master[2],ecal_barrel_dy, SANDECALCellInfo::Orient::kVertical); 
+      cellmap_[cell_unique_id] = SANDECALCellInfo(cell_unique_id, master[0], master[1], master[2], cell_length, SANDECALCellInfo::Orient::kVertical); 
 
     }
   }
@@ -576,13 +576,12 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
   int module_id;
   int layer_id;
   int cell_local_id;
-  double cell_length;
 
   // barrel modules
   if (is_ecal_barrel(volume_name)) {
 
     get_ecal_barrel_module_and_layer(volume_name, volume_path, detector_id, module_id, layer_id);
-    get_ecal_barrel_cell_local_id(x, y, z, node, cell_local_id, cell_length);
+    get_ecal_barrel_cell_local_id(x, y, z, node, cell_local_id);
 
     return true;
   }
@@ -591,7 +590,7 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
 
 
     get_ecal_endcap_module_and_layer(volume_name, volume_path, detector_id, module_id, layer_id);
-    get_ecal_endcap_cell_local_id(x, y, z, node, cell_local_id, cell_length);
+    get_ecal_endcap_cell_local_id(x, y, z, node, cell_local_id);
 
     return true;
   } else {
