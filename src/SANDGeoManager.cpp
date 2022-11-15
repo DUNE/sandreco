@@ -58,7 +58,7 @@ std::map<int, TVector3>
     double x_cell_width = x_module_width_at_z /
                           sand_geometry::ecal::number_of_cells_per_barrel_layer;
 
-    // x position of the center of the cells
+    // position of the center of the cells
     for (int j = 0; j < sand_geometry::ecal::number_of_cells_per_barrel_layer;
          j++) {
       auto x = x_cell_width * (j + 0.5) - x_module_width_at_z * 0.5;
@@ -84,7 +84,7 @@ std::map<int, TVector3>
     double x_cell_width =
         2 * rmax / sand_geometry::ecal::number_of_cells_per_endcap_layer;
 
-    // x position of the center of the cells
+    // position of the center of the cells
     for (int j = 0; j < sand_geometry::ecal::number_of_cells_per_endcap_layer;
          j++) {
       auto x = x_cell_width * (j + 0.5) - rmax;
@@ -564,12 +564,12 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
   /////
   TGeoNode* node = geo_->FindNode(x, y, z);
 
-  if (node == 0) return false;
+  if (node == 0) return -999;
 
   TString volume_name = node->GetName();
   TString volume_path = geo_->GetPath();
 
-  if (check_and_process_ecal_path(volume_path) == false) return false;
+  if (check_and_process_ecal_path(volume_path) == false) return -999;
   //////
 
   int detector_id;
@@ -583,8 +583,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
     get_ecal_barrel_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
     get_ecal_barrel_cell_local_id(x, y, z, node, cell_local_id);
-
-    return true;
   }
   // end cap modules
   else if (is_ecal_endcap(volume_name)) {
@@ -592,10 +590,8 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
     get_ecal_endcap_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
     get_ecal_endcap_cell_local_id(x, y, z, node, cell_local_id);
-
-    return true;
   } else {
-    return false;
+    return -999;
   }
 
   int cell_unique_id =
