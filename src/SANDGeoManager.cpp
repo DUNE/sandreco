@@ -461,7 +461,7 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node, const TGeoHMa
 
   std::map<double, int> this_plane_stt_tube_tranverse_position_map;
 
-  if (stt_plane_type != 0 && stt_plane_type != 1)
+  if (stt_plane_type != 1 && stt_plane_type != 2)
     std::cout << "Error: stt plane type expected 0 or 1 -> " << stt_plane_type << std::endl;
 
   for (int i = 0; i < node->GetNdaughters(); i++) {
