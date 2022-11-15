@@ -6,51 +6,6 @@
 #include <TGeoTube.h>
 #include <TObjString.h>
 
-bool check_ecal_barrel_geometry_consistency_with_fluka(double xmin, double xmax,
-                                                       double dz)
-{
-  bool condition =
-      (abs(xmin - sand_geometry::ecal::fluka::barrel_module_xmin) > 0.2) ||
-      (abs(xmax - sand_geometry::ecal::fluka::barrel_module_xmax) > 0.2) ||
-      (abs(dz - sand_geometry::ecal::fluka::barrel_module_thickness) > 0.2);
-
-  if (condition) {
-    std::cout << "ERROR ON ECAL GEOMETRY: xmin= " << xmin
-              << " instead of what is expected in Fluka"
-              << sand_geometry::ecal::fluka::barrel_module_xmin << std::endl;
-    std::cout << "ERROR ON ECAL GEOMETRY: xmax= " << xmax
-              << " instead of what is expected in Fluka"
-              << sand_geometry::ecal::fluka::barrel_module_xmax << std::endl;
-    std::cout << "ERROR ON ECAL GEOMETRY: dz= " << dz
-              << " instead of what is expected in Fluka"
-              << sand_geometry::ecal::fluka::barrel_module_thickness
-              << std::endl;
-    // exit(1);
-  }
-
-  return condition;
-}
-
-bool check_ecal_endcap_geometry_consistency_with_fluka(double ec_r,
-                                                       double ec_dz)
-{
-
-  bool condition = abs(ec_r - sand_geometry::ecal::fluka::endcap_rmax) > 0.2 ||
-                   (abs(ec_dz - sand_geometry::ecal::fluka::endcap_thickness));
-
-  if (condition) {
-    std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: R= " << ec_r
-              << " instead of what is expected in Fluka"
-              << sand_geometry::ecal::fluka::endcap_rmax << std::endl;
-    std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: Thickness= " << ec_dz
-              << " instead of what is expected in Fluka"
-              << sand_geometry::ecal::fluka::endcap_thickness << std::endl;
-    //  exit(1);
-  }
-
-  return condition;
-}
-
 int SANDGeoManager::encode_ecal_barrel_cell_local_id(int layer, int cell)
 {
   return cell * 100 + layer;
