@@ -7,10 +7,10 @@ for storing geometric info of the SAND STTs*/
 SANDSTTTubeInfo::SANDSTTTubeInfo(){}
 
 //Parametric constructor
-SANDSTTTubeInfo::SANDSTTTubeInfo(int id, double x, double y, 
-        double z, double length, Orient orientation, ReadoutEnd readout_end)
-        : id_(id), x_(x), y_(y), z_(z),length_(length), 
-        orientation_(orientation), readout_end_(readout_end){}
+SANDSTTTubeInfo::SANDSTTTubeInfo(int arg_id, double arg_x, double arg_y, 
+        double arg_z, double arg_length, Orient arg_orientation, ReadoutEnd arg_readout_end)
+        : id_(arg_id), x_(arg_x), y_(arg_y), z_(arg_z),length_(arg_length), 
+        orientation_(arg_orientation), readout_end_(arg_readout_end){}
 
 //Setter methods for the attributes
 void SANDSTTTubeInfo::id(int arg_id){id_=arg_id;}

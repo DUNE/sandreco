@@ -13,9 +13,9 @@ class SANDSTTTubeInfo : public TObject{
         double x_;                                    // x position of the center of the tube
         double y_;                                    // y position of the center of the tube
         double z_;                                    // z position of the center of the tube
+        double length_;                               // length of the tube
         Orient orientation_;                          // orientation of the tube
         ReadoutEnd readout_end_;                      // end where signal are read
-        double length_;                               // length of the tube
 
     public:
         SANDSTTTubeInfo();                            //Default constructor

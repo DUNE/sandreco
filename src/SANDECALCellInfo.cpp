@@ -7,10 +7,10 @@ for storing geometric info of the SAND ECAL cells*/
 SANDECALCellInfo::SANDECALCellInfo(){}  
 
 //Parametric constructor
-SANDECALCellInfo::SANDECALCellInfo(int id, double x, double y, 
-        double z, double length, Orient orientation)
-        : id_(id), x_(x), y_(y), z_(z),
-        length_(length), orientation_(orientation){}
+SANDECALCellInfo::SANDECALCellInfo(int arg_id, double arg_x, double arg_y, 
+        double arg_z, double arg_length, Orient arg_orientation)
+        : id_(arg_id), x_(arg_x), y_(arg_y), z_(arg_z),
+        length_(arg_length), orientation_(arg_orientation){}
         
 //Setter methods for the attributes
 void SANDECALCellInfo::id(int arg_id){id_=arg_id;}
