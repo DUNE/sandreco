@@ -127,6 +127,8 @@ class SANDGeoManager : public TObject {
         void init(TGeoManager* const geo, SANDGeoType geo_type);
         const SANDECALCellInfo& get_ecal_cell_info(int ecal_cell_id) {return cellmap_.at(ecal_cell_id);}
         const SANDSTTTubeInfo& get_stt_tube_info(int stt_tube_id) {return sttmap_.at(stt_tube_id);}
+        const std::map<int, SANDECALCellInfo>& get_ecal_cell_info() {return cellmap_;}
+        const std::map<int, SANDSTTTubeInfo>& get_stt_tube_info() {return sttmap_;}
         int get_ecal_cell_id(double x, double y, double z);
         int get_stt_tube_id(double x, double y, double z);
 
