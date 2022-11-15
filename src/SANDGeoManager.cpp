@@ -254,18 +254,18 @@ void SANDGeoManager::decode_stt_plane_id(int stt_plane_global_id, int& stt_modul
 
 bool SANDGeoManager::is_stt_tube(const TString& volume_name)
 {
-  return volume_name.Contains(stt_single_tube_regex);
+  return volume_name.Contains(stt_single_tube_regex_);
 }
 
 bool SANDGeoManager::is_stt_plane(const TString& volume_name)
 {
-  return volume_name.Contains(stt_plane_regex);
+  return volume_name.Contains(stt_plane_regex_);
 }
 
 int SANDGeoManager::get_stt_plane_id(const TString& volume_path)
 {
-  auto plane_matches = stt_plane_regex.MatchS(volume_path);
-  auto module_matches = stt_module_regex.MatchS(volume_path);
+  auto plane_matches = stt_plane_regex_.MatchS(volume_path);
+  auto module_matches = stt_module_regex_.MatchS(volume_path);
 
   if (plane_matches->GetEntries() == 0) {
     delete plane_matches;
@@ -295,12 +295,14 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node, const TGeoHMa
   int stt_plane_local_id;
   decode_stt_plane_id(stt_plane_id, stt_module_id, stt_plane_local_id, stt_plane_type);
 
+  std::map<double, int> this_plane_stt_tube_tranverse_position_map;
+
   if (stt_plane_type != 0 && stt_plane_type != 1)
     std::cout << "Error: stt plane type expected 0 or 1 -> " << stt_plane_type << std::endl;
 
   for (int i = 0; i < node->GetNdaughters(); i++) {
     auto two_tubes_node = node->GetDaughter(i);
-    auto two_tubes_matches = stt_two_tubes_regex.MatchS(two_tubes_node->GetName());
+    auto two_tubes_matches = stt_two_tubes_regex_.MatchS(two_tubes_node->GetName());
 
     int two_tubes_id =
         (reinterpret_cast<TObjString*>(two_tubes_matches->At(5)))->GetString().Atoi();
@@ -322,7 +324,7 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node, const TGeoHMa
       TGeoMatrix* tube_matrix = two_tubes_node->GetDaughter(j)->GetMatrix();
       TGeoHMatrix tube_hmatrix = two_tubes_hmatrix * (*tube_matrix);
 
-      auto tube_matches = stt_single_tube_regex.MatchS(tube_volume_name);
+      auto tube_matches = stt_single_tube_regex_.MatchS(tube_volume_name);
 
       int tube_id =
           (reinterpret_cast<TObjString*>(tube_matches->At(tube_matches->GetEntries() - 2)))
@@ -330,18 +332,23 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node, const TGeoHMa
               .Atoi();
       delete tube_matches;
 
-      int tube_unique_id = two_tubes_id * 2 + tube_id;
+      int tube_local_id = two_tubes_id * 2 + tube_id;
+      int tube_unique_id = encode_stt_tube_id(stt_plane_id, tube_local_id);
 
-      // int coord_index = 1 - (stt_plane_type % 2);
-      // TVector2 tube_position;
-      // tube_position.SetX(tube_hmatrix.GetTranslation()[2]);
-      // tube_position.SetY(tube_hmatrix.GetTranslation()[coord_index]);
+      int z_coord_index = stt_plane_type % 2;
+      int y_coord_index = 1 - z_coord_index;
+      TVector3 tube_position;
+      tube_position.SetX(tube_hmatrix.GetTranslation()[2]);
+      tube_position.SetY(tube_hmatrix.GetTranslation()[y_coord_index]);
+      tube_position.SetZ(tube_hmatrix.GetTranslation()[z_coord_index]);
 
-      // stX[v.Y()] = id;
-      // stL[id] = lenght;
-      // stPos[id] = v;
+      this_plane_stt_tube_tranverse_position_map[tube_position.Y()] = tube_unique_id;
+
+      // here we fill STT tube info
     }
   }
+
+  stt_tube_tranverse_position_map_[stt_plane_id] = this_plane_stt_tube_tranverse_position_map;
 }
 
 void SANDGeoManager::set_stt_info(const TGeoHMatrix& matrix)
@@ -387,4 +394,59 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
 
 int SANDGeoManager::get_stt_tube_id(double x, double y, double z)
 {
+  TGeoNode* node = geo_->FindNode(x, y, z);
+  TString volume_name = node->GetName();
+
+  int plane_id = get_stt_plane_id(geo_->GetPath());
+  if (plane_id == 0) return -999;
+  
+  int tube_id = -999;
+  int module_id;
+  int plane_local_id;
+  int plane_type;
+  decode_stt_plane_id(plane_id, module_id, plane_local_id, plane_type);
+
+  double transverse_coord = 0.;
+
+  if (plane_type == 1)
+    transverse_coord = x;
+  else
+    transverse_coord = y;
+
+  std::map<double, int>::iterator it = stt_tube_tranverse_position_map_.at(plane_id).lower_bound(transverse_coord);
+
+  if (it == stt_tube_tranverse_position_map_.at(plane_id).begin()) {
+    tube_id = stt_tube_tranverse_position_map_.at(plane_id).begin()->second;
+  } else if (it == stt_tube_tranverse_position_map_.at(plane_id).end()) {
+    tube_id = stt_tube_tranverse_position_map_.at(plane_id).rbegin()->second;
+  } else {
+    SANDSTTTubeInfo tube1 = sttmap_.at(it->second);
+    SANDSTTTubeInfo tube2 = sttmap_.at(std::prev(it)->second);
+
+    TVector2 v1;
+    TVector2 v2;
+
+    if(plane_type == 1)
+    {
+    }
+    else
+    {
+    }
+
+    TVector2 v(z, transverse_coord);
+
+    if ((v - v1).Mod() > (v - v2).Mod()) {
+      if ((v - v2).Mod() > 5)
+        std::cout << "Error: distance grater than ST radius" << std::endl;
+
+      tube_id = std::prev(it)->second;
+    } else {
+      if ((v - v1).Mod() > 5)
+        std::cout << "Error: distance grater than ST radius" << std::endl;
+
+      tube_id = it->second;
+    }
+  }
+
+  return encode_stt_tube_id(plane_id, tube_id);
 }

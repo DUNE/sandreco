@@ -71,15 +71,17 @@ namespace sand_geometry {
 class SANDGeoManager : public TObject {
     public:
         enum class SANDGeoType {kFromEdepSim, kFromFluka};
+
     private:
         TGeoManager* geo_;
         SANDGeoType geo_type_;
         std::map<int, SANDECALCellInfo> cellmap_;
         std::map<int, SANDSTTTubeInfo> sttmap_;
-        TPRegexp stt_single_tube_regex;
-        TPRegexp stt_two_tubes_regex;
-        TPRegexp stt_plane_regex;
-        TPRegexp stt_module_regex;
+        TPRegexp stt_single_tube_regex_;
+        TPRegexp stt_two_tubes_regex_;
+        TPRegexp stt_plane_regex_;
+        TPRegexp stt_module_regex_;
+        std::map<int, std::map<double, int> > stt_tube_tranverse_position_map_;
 
         // ECAL
         std::vector<double> get_levels_z(double half_module_height);
@@ -105,11 +107,14 @@ class SANDGeoManager : public TObject {
     
     public:
         SANDGeoManager(): cellmap_(), sttmap_(), 
-            stt_single_tube_regex(sand_geometry::stt::stt_single_tube_regex_string),
-            stt_two_tubes_regex(sand_geometry::stt::stt_two_tubes_regex_string),
-            stt_plane_regex(sand_geometry::stt::stt_plane_regex_string),
-            stt_module_regex(sand_geometry::stt::stt_module_regex_string) {};
-        ~SANDGeoManager() {cellmap_.clear(); sttmap_.clear();};
+            stt_single_tube_regex_(sand_geometry::stt::stt_single_tube_regex_string),
+            stt_two_tubes_regex_(sand_geometry::stt::stt_two_tubes_regex_string),
+            stt_plane_regex_(sand_geometry::stt::stt_plane_regex_string),
+            stt_module_regex_(sand_geometry::stt::stt_module_regex_string),
+            stt_tube_tranverse_position_map_() {};
+        ~SANDGeoManager() {cellmap_.clear(); 
+                           sttmap_.clear();
+                           stt_tube_tranverse_position_map_.clear();};
         void init(TGeoManager* const geo, SANDGeoType geo_type);
         const SANDECALCellInfo& get_ecal_cell_info(int ecal_cell_id) {return cellmap_.at(ecal_cell_id);}
         const SANDSTTTubeInfo& get_stt_tube_info(int stt_tube_id) {return sttmap_.at(stt_tube_id);}
