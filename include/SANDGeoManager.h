@@ -69,12 +69,8 @@ namespace sand_geometry {
 }
 
 class SANDGeoManager : public TObject {
-    public:
-        enum class SANDGeoType {kFromEdepSim, kFromFluka};
-
     private:
-        TGeoManager* geo_;
-        SANDGeoType geo_type_;
+        TGeoManager* geo_;                         // TGeoManager pointer to ND site geometry
         std::map<int, SANDECALCellInfo> cellmap_;
         std::map<int, SANDSTTTubeInfo> sttmap_;
         TPRegexp stt_single_tube_regex_;
@@ -118,7 +114,7 @@ class SANDGeoManager : public TObject {
         ~SANDGeoManager() {cellmap_.clear(); 
                            sttmap_.clear();
                            stt_tube_tranverse_position_map_.clear();};
-        void init(TGeoManager* const geo, SANDGeoType geo_type);
+        void init(TGeoManager* const geo);
         const SANDECALCellInfo& get_ecal_cell_info(int ecal_cell_id) {return cellmap_.at(ecal_cell_id);}
         const SANDSTTTubeInfo& get_stt_tube_info(int stt_tube_id) {return sttmap_.at(stt_tube_id);}
         const std::map<int, SANDECALCellInfo>& get_ecal_cell_info() {return cellmap_;}

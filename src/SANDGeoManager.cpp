@@ -285,39 +285,16 @@ void SANDGeoManager::set_ecal_info()
   // GetDx1() half length in x at -Dz
   // GetDx2() half length in x at +Dz
   // Dx1 < Dx2 => -Dz corresponds to minor width => internal side
-
-  double ecal_barrel_xmin;
-  double ecal_barrel_xmax;
-  double ecal_barrel_dz;
-  double ecal_barrel_dy;
-
-  double ecal_endcap_rmin;
-  double ecal_endcap_rmax;
   
-  if (geo_type_ == SANDGeoType::kFromEdepSim) {
-    TGeoTrd2* mod = (TGeoTrd2*)geo_->FindVolumeFast(sand_geometry::ecal::barrel_module_name)->GetShape();
-    ecal_barrel_xmin = mod->GetDx1();
-    ecal_barrel_xmax = mod->GetDx2();
-    ecal_barrel_dz = mod->GetDz();
-    ecal_barrel_dy = mod->GetDy1();
+  TGeoTrd2* mod = (TGeoTrd2*)geo_->FindVolumeFast(sand_geometry::ecal::barrel_module_name)->GetShape();
+  double ecal_barrel_xmin = mod->GetDx1();
+  double ecal_barrel_xmax = mod->GetDx2();
+  double ecal_barrel_dz = mod->GetDz();
+  double ecal_barrel_dy = mod->GetDy1();
 
-    TGeoTube* ec = (TGeoTube*)geo_->FindVolumeFast(sand_geometry::ecal::endcap_module_name)->GetShape();
-    ecal_endcap_rmax = ec->GetRmax();  // Maximum radius = 2000
-    ecal_endcap_rmin = ec->GetRmin();
-  }
-  else if (geo_type_ == SANDGeoType::kFromFluka) {
-    ecal_barrel_xmin = sand_geometry::ecal::fluka::barrel_module_xmin;;
-    ecal_barrel_xmax = sand_geometry::ecal::fluka::barrel_module_xmax;
-    ecal_barrel_dz = sand_geometry::ecal::fluka::barrel_module_thickness;
-    ecal_barrel_dy = sand_geometry::ecal::fluka::barrel_module_length;
-
-    ecal_endcap_rmax = sand_geometry::ecal::fluka::endcap_rmax;  // Maximum radius = 2000
-    ecal_endcap_rmin = 0.;
-  }
-  else
-  {
-    std::cout << "ERROR: Unknown Geometry Type" << std::endl;
-  }
+  TGeoTube* ec = (TGeoTube*)geo_->FindVolumeFast(sand_geometry::ecal::endcap_module_name)->GetShape();
+  double ecal_endcap_rmax = ec->GetRmax();  // Maximum radius = 2000
+  double ecal_endcap_rmin = ec->GetRmin();
 
   // get z of the levels between the layers
   auto z_levels = get_levels_z(ecal_barrel_dz);
@@ -549,10 +526,9 @@ void SANDGeoManager::set_stt_info()
     set_stt_info(matrix);
 }
 
-void SANDGeoManager::init(TGeoManager* const geo, SANDGeoType geo_type)
+void SANDGeoManager::init(TGeoManager* const geo)
 {
     geo_ = geo;
-    geo_type_ = geo_type;
 
     set_ecal_info();
     set_stt_info();
