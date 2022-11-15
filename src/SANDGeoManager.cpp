@@ -498,15 +498,15 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node, const TGeoHMa
 
       int tube_local_id = two_tubes_id * 2 + tube_id;
       int tube_unique_id = encode_stt_tube_id(stt_plane_id, tube_local_id);
-
-      int z_coord_index = stt_plane_type % 2;
-      int y_coord_index = 1 - z_coord_index;
+      
       TVector3 tube_position;
-      tube_position.SetX(tube_hmatrix.GetTranslation()[2]);
-      tube_position.SetY(tube_hmatrix.GetTranslation()[y_coord_index]);
-      tube_position.SetZ(tube_hmatrix.GetTranslation()[z_coord_index]);
+      tube_position.SetX(tube_hmatrix.GetTranslation()[0]);
+      tube_position.SetY(tube_hmatrix.GetTranslation()[1]);
+      tube_position.SetZ(tube_hmatrix.GetTranslation()[2]);
 
-      this_plane_stt_tube_tranverse_position_map[tube_position.Y()] = tube_unique_id;
+      double transverse_coord = stt_plane_type == 1 ? tube_position.Y() : tube_position.X();
+
+      this_plane_stt_tube_tranverse_position_map[transverse_coord] = tube_unique_id;
 
       // here we fill STT tube info
       sttmap_[tube_unique_id]= SANDSTTTubeInfo(tube_unique_id, 
