@@ -49,7 +49,7 @@ target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
 ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDSTTTubeInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/Linkdef.h)
 
 # Creates Digitize executable.
-add_executable(Digitize src/digitization.cpp)
+add_executable(Digitize src/digitization.cpp src/SANDDigitization.cpp src/SANDDigitizationEDEPSIM.cpp src/SANDDigitizationFLUKA.cpp)
 target_link_libraries(Digitize Struct Utils)
 
 # Creates Reconstruct executable.
@@ -68,39 +68,39 @@ target_link_libraries(Display Struct Utils)
 add_executable(FastCheck src/fastcheck.cpp)
 target_link_libraries(FastCheck Struct Utils)
 
-if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE)
 endif()
 
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
 install(TARGETS Utils SANDGeoManager Struct Digitize Reconstruct Analyze Display FastCheck
-        EXPORT SandRecoTargets
-        RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-        LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-        ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
-        
-install(
-   DIRECTORY "${CMAKE_BINARY_DIR}/."
-   DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-   FILES_MATCHING 
-   PATTERN "*.pcm"
-   PATTERN "*.rootmap"
-   PATTERN "lib" EXCLUDE
-   PATTERN "bin" EXCLUDE
-   PATTERN "CMakeFiles" EXCLUDE)
+  EXPORT SandRecoTargets
+  RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
 
 install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include 
+  DIRECTORY "${CMAKE_BINARY_DIR}/."
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
+  FILES_MATCHING
+  PATTERN "*.pcm"
+  PATTERN "*.rootmap"
+  PATTERN "lib" EXCLUDE
+  PATTERN "bin" EXCLUDE
+  PATTERN "CMakeFiles" EXCLUDE)
+
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
   PATTERN "Linkdef.h" EXCLUDE)
 
-#############################################################
+# ############################################################
 #
 # Prepare the package so that it can be used with the find_package interface.
 #
-#############################################################
+# ############################################################
 
 # Include module with function 'write_basic_package_version_file'
 include(CMakePackageConfigHelpers)
@@ -129,4 +129,4 @@ configure_package_config_file(
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/SandRecoConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/SandRecoConfigVersion.cmake
-  DESTINATION lib/cmake/SandReco )
+  DESTINATION lib/cmake/SandReco)
