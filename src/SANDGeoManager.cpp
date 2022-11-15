@@ -4,43 +4,42 @@
 
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
-
-#include "utils.h"
+#include <TObjString.h>
 
 bool check_ecal_barrel_geometry_consistency_with_fluka(double xmin, double xmax, double dz) {
-    bool condition = (abs(xmin - sand_reco::ecal::fluka::xmin_f) > 0.2) ||
-        (abs(xmax - sand_reco::ecal::fluka::xmax_f) > 0.2) ||
-        (abs(dz - sand_reco::ecal::fluka::dz_f) > 0.2);
+    bool condition = (abs(xmin - sand_geometry::ecal::fluka::barrel_module_xmin) > 0.2) ||
+        (abs(xmax - sand_geometry::ecal::fluka::barrel_module_xmax) > 0.2) ||
+        (abs(dz - sand_geometry::ecal::fluka::barrel_module_thickness) > 0.2);
 
     if (condition) {
       std::cout << "ERROR ON ECAL GEOMETRY: xmin= " << xmin
                 << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::xmin_f << std::endl;
+                << sand_geometry::ecal::fluka::barrel_module_xmin << std::endl;
       std::cout << "ERROR ON ECAL GEOMETRY: xmax= " << xmax
                 << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::xmax_f << std::endl;
+                << sand_geometry::ecal::fluka::barrel_module_xmax << std::endl;
       std::cout << "ERROR ON ECAL GEOMETRY: dz= " << dz
                 << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::dz_f << std::endl;
+                << sand_geometry::ecal::fluka::barrel_module_thickness << std::endl;
       // exit(1);
     }
 
     return condition;
 }
 
-bool check_ecal_endcap_geometry_consistency_with_fluka(){
+bool check_ecal_endcap_geometry_consistency_with_fluka(double ec_r, double ec_dz){
 
-    bool condition = abs(sand_reco::ecal::endcap::ec_r - sand_reco::ecal::fluka::ec_rf) > 0.2 ||
-        (abs(sand_reco::ecal::endcap::ec_dz - sand_reco::ecal::fluka::ec_dzf));
+    bool condition = abs(ec_r - sand_geometry::ecal::fluka::endcap_rmax) > 0.2 ||
+        (abs(ec_dz - sand_geometry::ecal::fluka::endcap_thickness));
 
     if (condition) {
-      std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: R= " << sand_reco::ecal::endcap::ec_r
+      std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: R= " << ec_r
                 << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::ec_rf << std::endl;
+                << sand_geometry::ecal::fluka::endcap_rmax << std::endl;
       std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: Thickness= "
-                << sand_reco::ecal::endcap::ec_dz
+                << ec_dz
                 << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::ec_dzf << std::endl;
+                << sand_geometry::ecal::fluka::endcap_thickness << std::endl;
       //  exit(1);
     }
 
@@ -77,8 +76,8 @@ std::vector<double> SANDGeoManager::get_levels_z(double half_module_height)
   std::vector<double> zlevel;
   zlevel.push_back(-half_module_height);
 
-  for (int i = 0; i < sand_geometry::ecal::nLay; i++) {
-    zlevel.push_back(zlevel.back() + sand_geometry::ecal::dzlay[i]);
+  for (int i = 0; i < sand_geometry::ecal::number_of_layers; i++) {
+    zlevel.push_back(zlevel.back() + sand_geometry::ecal::layer_thickness[i]);
   }
   return zlevel;
 }
@@ -93,10 +92,10 @@ std::map<int, TVector3> SANDGeoManager::get_ecal_barrel_cell_center_local_positi
     double x_module_width_at_z = 2 * (m * z_this_layer + q);
 
     // cell width at the z position of the center of the cell
-    double x_cell_width = x_module_width_at_z / sand_geometry::ecal::nCel;
+    double x_cell_width = x_module_width_at_z / sand_geometry::ecal::number_of_cells_per_barrel_layer;
 
     // x position of the center of the cells
-    for (int j = 0; j < sand_geometry::ecal::nCel; j++) {
+    for (int j = 0; j < sand_geometry::ecal::number_of_cells_per_barrel_layer; j++) {
         auto x = x_cell_width * (j + 0.5) - x_module_width_at_z * 0.5;
         auto y = 0.;
         auto z = z_this_layer;
@@ -114,10 +113,10 @@ std::map<int, TVector3> SANDGeoManager::get_ecal_endcap_cell_center_local_positi
     auto z_this_layer = 0.5 * (zlevels.at(i) + zlevels.at(i + 1));
 
     // cell width at the z position of the center of the cell
-    double x_cell_width = rmax / sand_geometry::ecal::nCel_ec;
+    double x_cell_width = rmax / sand_geometry::ecal::number_of_cells_per_endcap_layer;
 
     // x position of the center of the cells
-    for (int j = 0; j < sand_geometry::ecal::nCel_ec; j++) {
+    for (int j = 0; j < sand_geometry::ecal::number_of_cells_per_endcap_layer; j++) {
         auto x = x_cell_width * (j + 0.5) - rmax;
         auto y = 0.;
         auto z = z_this_layer;
@@ -128,7 +127,7 @@ std::map<int, TVector3> SANDGeoManager::get_ecal_endcap_cell_center_local_positi
   return ecal_endcap_cell_center_local_positions;
 }
 
-void SANDGeoManager::set_ecal_cell_center_position(TGeoManager* const geo, SANDGeoType geo_type)
+void SANDGeoManager::set_ecal_info()
 {
   // https://root.cern.ch/root/htmldoc/guides/users-guide/Geometry.html#shapes
   // GetDx1() half length in x at -Dz
@@ -144,27 +143,27 @@ void SANDGeoManager::set_ecal_cell_center_position(TGeoManager* const geo, SANDG
   double ecal_endcap_rmax;
   double ecal_endcap_dz;
   
-  if (geo_type == SANDGeoType::kFromEdepSim) {
-    TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast(sand_geometry::ecal::barrel_module_name)->GetShape();
+  if (geo_type_ == SANDGeoType::kFromEdepSim) {
+    TGeoTrd2* mod = (TGeoTrd2*)geo_->FindVolumeFast(sand_geometry::ecal::barrel_module_name)->GetShape();
     ecal_barrel_xmin = mod->GetDx1();
     ecal_barrel_xmax = mod->GetDx2();
     ecal_barrel_dz = mod->GetDz();
     ecal_barrel_dy = mod->GetDy1();
 
-    TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast(sand_geometry::ecal::endcap_module_name)->GetShape();
+    TGeoTube* ec = (TGeoTube*)geo_->FindVolumeFast(sand_geometry::ecal::endcap_module_name)->GetShape();
     ecal_endcap_rmax = ec->GetRmax();  // Maximum radius = 2000
     ecal_endcap_rmin = ec->GetRmin();
     ecal_endcap_dz = ec->GetDz();   // half of thickness = 115
   }
-  else if (geo_type == SANDGeoType::kFromFluka) {
-    ecal_barrel_xmin = sand_reco::ecal::fluka::xmin_f;;
-    ecal_barrel_xmax = sand_reco::ecal::fluka::xmax_f;
-    ecal_barrel_dz = sand_reco::ecal::fluka::dz_f;
-    ecal_barrel_dy = sand_reco::ecal::barrel::lCalBarrel;
+  else if (geo_type_ == SANDGeoType::kFromFluka) {
+    ecal_barrel_xmin = sand_geometry::ecal::fluka::barrel_module_xmin;;
+    ecal_barrel_xmax = sand_geometry::ecal::fluka::barrel_module_xmax;
+    ecal_barrel_dz = sand_geometry::ecal::fluka::barrel_module_thickness;
+    ecal_barrel_dy = sand_geometry::ecal::fluka::barrel_module_length;
 
-    ecal_endcap_rmax = sand_reco::ecal::fluka::ec_rf;  // Maximum radius = 2000
+    ecal_endcap_rmax = sand_geometry::ecal::fluka::endcap_rmax;  // Maximum radius = 2000
     ecal_endcap_rmin = 0.;
-    ecal_endcap_dz = sand_reco::ecal::fluka::ec_dzf;   // half of thickness = 115
+    ecal_endcap_dz = sand_geometry::ecal::fluka::endcap_thickness;   // half of thickness = 115
   }
   else
   {
@@ -184,7 +183,7 @@ void SANDGeoManager::set_ecal_cell_center_position(TGeoManager* const geo, SANDG
   double local[3];
   double master[3];
 
-  for(int mod_id = 0; mod_id < sand_geometry::ecal::nMod; mod_id++)
+  for(int mod_id = 0; mod_id < sand_geometry::ecal::number_of_barrel_modules; mod_id++)
   {
     for(auto cell_position: ecal_barrel_cell_center_local_positions)
     {
@@ -196,10 +195,10 @@ void SANDGeoManager::set_ecal_cell_center_position(TGeoManager* const geo, SANDG
       auto layer_id = cell_and_layer_id.first;
       auto cell_id = cell_and_layer_id.second;
       
-      geo->cd(TString::Format(sand_geometry::ecal::path_barrel_template, mod_id).Data());
-      geo->LocalToMaster(local, master);
+      geo_->cd(TString::Format(sand_geometry::ecal::path_barrel_template, mod_id).Data());
+      geo_->LocalToMaster(local, master);
 
-      // here we create new cellInfo      
+      // here we create new cellInfo         
     }
   }
   
@@ -219,18 +218,173 @@ void SANDGeoManager::set_ecal_cell_center_position(TGeoManager* const geo, SANDG
       auto cell_id = cell_and_layer_id.second;
 
       if(endcap_mod_id == 30)
-        geo->cd(sand_geometry::ecal::path_endcapR_template);
+        geo_->cd(sand_geometry::ecal::path_endcapR_template);
       else if(endcap_mod_id == 40)
-        geo->cd(sand_geometry::ecal::path_endcapL_template);
+        geo_->cd(sand_geometry::ecal::path_endcapL_template);
 
-      geo->LocalToMaster(local, master);
+      geo_->LocalToMaster(local, master);
 
-      // here we create new cellInfo      
+      // here we create new cellInfo    
     }
   }
 }
 
+int SANDGeoManager::encode_stt_tube_id(int stt_plane_global_id, int stt_tube_local_id)
+{
+  return stt_tube_local_id * 100000 + stt_plane_global_id;
+}
+
+void SANDGeoManager::decode_stt_tube_id(int stt_tube_global_id, int& stt_plane_global_id, int& stt_tube_local_id)
+{
+  stt_tube_local_id = stt_tube_global_id / 100000;
+  stt_plane_global_id = stt_tube_global_id % 100000;  // global id
+}
+
+int SANDGeoManager::encode_stt_plane_id(int stt_module_id, int stt_plane_local_id, int stt_plane_type)
+{
+  return stt_module_id * 100 + stt_plane_local_id * 10 + stt_plane_type;
+}
+
+void SANDGeoManager::decode_stt_plane_id(int stt_plane_global_id, int& stt_module_id, int& stt_plane_local_id, int& stt_plane_type)
+{
+  stt_module_id = stt_plane_global_id / 100;
+  stt_plane_local_id = (stt_plane_global_id - stt_module_id * 100) / 10;
+  stt_plane_type = stt_plane_global_id % 10;
+}
+
+bool SANDGeoManager::is_stt_tube(const TString& volume_name)
+{
+  return volume_name.Contains(stt_single_tube_regex);
+}
+
+bool SANDGeoManager::is_stt_plane(const TString& volume_name)
+{
+  return volume_name.Contains(stt_plane_regex);
+}
+
+int SANDGeoManager::get_stt_plane_id(const TString& volume_path)
+{
+  auto plane_matches = stt_plane_regex.MatchS(volume_path);
+  auto module_matches = stt_module_regex.MatchS(volume_path);
+
+  if (plane_matches->GetEntries() == 0) {
+    delete plane_matches;
+    delete module_matches;
+    return 0;
+  }
+
+  int module_id = (reinterpret_cast<TObjString*>(plane_matches->At(1)))->GetString().Atoi();
+  int plane_replica_id = (reinterpret_cast<TObjString*>(plane_matches->At(5)))->GetString().Atoi();
+  int plane_type =
+      (reinterpret_cast<TObjString*>(plane_matches->At(4)))->GetString().EqualTo("hh")
+          ? 2
+          : 1;
+  int module_replica_id =
+      (reinterpret_cast<TObjString*>(module_matches->At(3)))->GetString().Atoi();
+
+  delete plane_matches;
+  delete module_matches;
+
+  return encode_stt_plane_id(module_id * 10 + module_replica_id, 2 * plane_replica_id + plane_type, plane_type);
+}
+
+void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node, const TGeoHMatrix& matrix, int stt_plane_id)
+{
+  int stt_plane_type;
+  int stt_module_id;
+  int stt_plane_local_id;
+  decode_stt_plane_id(stt_plane_id, stt_module_id, stt_plane_local_id, stt_plane_type);
+
+  if (stt_plane_type != 0 && stt_plane_type != 1)
+    std::cout << "Error: stt plane type expected 0 or 1 -> " << stt_plane_type << std::endl;
+
+  for (int i = 0; i < node->GetNdaughters(); i++) {
+    auto two_tubes_node = node->GetDaughter(i);
+    auto two_tubes_matches = stt_two_tubes_regex.MatchS(two_tubes_node->GetName());
+
+    int two_tubes_id =
+        (reinterpret_cast<TObjString*>(two_tubes_matches->At(5)))->GetString().Atoi();
+    delete two_tubes_matches;
+
+    TGeoMatrix* two_tubes_matrix = two_tubes_node->GetMatrix();
+    TGeoHMatrix two_tubes_hmatrix = matrix * (*two_tubes_matrix);
+
+    for (int j = 0; j < two_tubes_node->GetNdaughters(); j++) {
+      TGeoNode* tube_node = two_tubes_node->GetDaughter(j);
+      TGeoTube* tube_shape = (TGeoTube*)tube_node->GetVolume()->GetShape();
+      double tube_length = 2 * tube_shape->GetDz();
+      TString tube_volume_name = tube_node->GetName();
+
+      if (!is_stt_tube(tube_volume_name))
+        std::cout << "Error: expected ST but not -> " << tube_volume_name.Data()
+                  << std::endl;
+
+      TGeoMatrix* tube_matrix = two_tubes_node->GetDaughter(j)->GetMatrix();
+      TGeoHMatrix tube_hmatrix = two_tubes_hmatrix * (*tube_matrix);
+
+      auto tube_matches = stt_single_tube_regex.MatchS(tube_volume_name);
+
+      int tube_id =
+          (reinterpret_cast<TObjString*>(tube_matches->At(tube_matches->GetEntries() - 2)))
+              ->GetString()
+              .Atoi();
+      delete tube_matches;
+
+      int tube_unique_id = two_tubes_id * 2 + tube_id;
+
+      // int coord_index = 1 - (stt_plane_type % 2);
+      // TVector2 tube_position;
+      // tube_position.SetX(tube_hmatrix.GetTranslation()[2]);
+      // tube_position.SetY(tube_hmatrix.GetTranslation()[coord_index]);
+
+      // stX[v.Y()] = id;
+      // stL[id] = lenght;
+      // stPos[id] = v;
+    }
+  }
+}
+
+void SANDGeoManager::set_stt_info(const TGeoHMatrix& matrix)
+{
+  TGeoNode* node = gGeoManager->GetCurrentNode();
+  TString node_path = gGeoManager->GetPath();
+  TString node_name = node->GetName();
+  TGeoMatrix* node_matrix = node->GetMatrix();
+  TGeoHMatrix node_hmatrix = matrix * (*node_matrix);
+
+  if (is_stt_plane(node_name)) {
+    int plane_id = get_stt_plane_id(node_path);
+    set_stt_tube_info(node, node_hmatrix, plane_id);
+  } else {
+    for (int i = 0; i < node->GetNdaughters(); i++) {
+      gGeoManager->CdDown(i);
+      set_stt_info(node_hmatrix);
+      gGeoManager->CdUp();
+    }
+  }
+}
+
+void SANDGeoManager::set_stt_info()
+{
+    geo_->CdTop();
+    TGeoHMatrix matrix = *gGeoIdentity;
+    set_stt_info(matrix);
+}
+
 void SANDGeoManager::init(TGeoManager* const geo, SANDGeoType geo_type)
 {
-    set_ecal_cell_center_position(geo, geo_type);
+    geo_ = geo;
+    geo_type_ = geo_type;
+
+    set_ecal_info();
+    set_stt_info();
+}
+
+int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
+{
+
+}
+
+int SANDGeoManager::get_stt_tube_id(double x, double y, double z)
+{
 }
