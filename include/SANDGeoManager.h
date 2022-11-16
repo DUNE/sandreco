@@ -151,7 +151,7 @@ class SANDGeoManager : public TObject
   int save_to_file(const char* name = 0, Int_t option = 0, Int_t bufsize = 0)
   {
     geo_ = 0;
-    Write(name, option, bufsize);
+    return Write(name, option, bufsize);
   }
   const SANDECALCellInfo& get_ecal_cell_info(int ecal_cell_id)
   {
