@@ -25,11 +25,6 @@ double energy_to_photo_electrons(double E)
 {
   if (debug)
     std::cout << "E = " << E
-              << " -> p.e. = " << sand_reco::ecal::photo_sensor::e2pe * E
-              << std::endl;
-
-  if (debug && flukatype == 1)
-    std::cout << "E = " << E
               << " -> p.e. = " << sand_reco::ecal::fluka::e2p2_fluka * E
               << std::endl;
 
