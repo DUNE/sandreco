@@ -555,12 +555,22 @@ void SANDGeoManager::init(TGeoManager* const geo)
 {
   geo_ = geo;
 
+  cellmap_.clear();
+  sttmap_.clear();
+  stt_tube_tranverse_position_map_.clear();
+
   set_ecal_info();
   set_stt_info();
 }
 
 int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
 {
+  if(geo_ == 0)
+  {
+    std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
+    return -999;
+  }
+
   /////
   TGeoNode* node = geo_->FindNode(x, y, z);
 
@@ -602,6 +612,12 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
 
 int SANDGeoManager::get_stt_tube_id(double x, double y, double z)
 {
+  if(geo_ == 0)
+  {
+    std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
+    return -999;
+  }
+
   TGeoNode* node = geo_->FindNode(x, y, z);
   TString volume_name = node->GetName();
 
