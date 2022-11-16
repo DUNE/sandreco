@@ -164,8 +164,7 @@ namespace sand_reco
         const double costant_fraction = 0.15;
 
 	// fixed threshold discriminator
-	bool fixed_thresh_discri = true;
-	const double fixed_threshold = 3.;
+	double fixed_thresh_pe = 3.;
 
         // ADC to MeV
         const double adc2MeV = 1. / 10.;
