@@ -1,5 +1,7 @@
 #include "SANDDigitization.h"
 
+#include "utils.h"
+
 #include <iostream>
 
 using namespace sand_reco;
@@ -55,7 +57,7 @@ C                      + 1ns  uncertainty
 // from simulated pe produce adc e tdc of calo cell
 void eval_adc_and_tdc_from_photo_electrons(
     std::map<int, std::vector<pe> >& photo_el,
-    std::map<int, std::vector<dg_ps> >& map_pmt)
+    std::map<int, std::vector<dg_ps> >& map_pmt, ECAL_digi_mode ecal_digi_mode)
 {
   /*
     -  ADC - Proportional to NPHE
@@ -103,10 +105,25 @@ void eval_adc_and_tdc_from_photo_electrons(
           dg_ps signal;
           signal.side = side;
           signal.adc = sand_reco::ecal::acquisition::pe2ADC * pe_count;
-          index =
-              int(sand_reco::ecal::acquisition::costant_fraction * pe_count) +
-              start_index;
+          switch (ecal_digi_mode) {
+            case ECAL_digi_mode::const_fract:
+              index = int(sand_reco::ecal::acquisition::costant_fraction *
+                          pe_count) +
+                      start_index;
+              if (debug) std::cout << " Const. Fract. " << index << std::endl;
+              break;
+            case ECAL_digi_mode::fixed_thresh:
+              double tdc_thresh =
+                  (sand_reco::ecal::acquisition::fixed_thresh_pe >
+                   sand_reco::ecal::acquisition::pe_threshold)
+                      ? sand_reco::ecal::acquisition::fixed_thresh_pe
+                      : sand_reco::ecal::acquisition::pe_threshold;
+              index = TMath::Ceil(tdc_thresh) + start_index;
+              if (debug) std::cout << " Fix. Thresh. " << index << std::endl;
+              break;
+          }
           signal.tdc = it->second[index].time;
+
           signal.photo_el = photo_el_digit;
           map_pmt[it->first].push_back(signal);
         }

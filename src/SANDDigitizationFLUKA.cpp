@@ -280,7 +280,8 @@ void simulate_photo_electrons(TG4Event* ev, TGeoManager* g,
 
 // simulate calorimeter responce for whole event
 void digitize_ecal(TG4Event* ev, TGeoManager* geo,
-                   std::vector<dg_cell>& vec_cell)
+                   std::vector<dg_cell>& vec_cell,
+                   ECAL_digi_mode ecal_digi_mode)
 {
   std::map<int, std::vector<pe> > photo_el;
   std::map<int, std::vector<dg_ps> > ps;
@@ -296,7 +297,8 @@ void digitize_ecal(TG4Event* ev, TGeoManager* geo,
   if (debug) {
     std::cout << "TimeAndSignal" << std::endl;
   }
-  digitization::ecal::eval_adc_and_tdc_from_photo_electrons(photo_el, ps);
+  digitization::ecal::eval_adc_and_tdc_from_photo_electrons(photo_el, ps,
+                                                            ecal_digi_mode);
   if (debug) {
     std::cout << "CollectSignal" << std::endl;
   }
@@ -389,7 +391,8 @@ void digitize_stt(TG4Event* ev, TGeoManager* geo, int NHits,
 }  // namespace stt
 
 // digitize event
-void digitize(const char* finname, const char* foutname)
+void digitize(const char* finname, const char* foutname,
+              ECAL_digi_mode ecal_digi_mode)
 {
   TFile f(finname, "READ");
 
@@ -491,7 +494,7 @@ void digitize(const char* finname, const char* foutname)
     sand_reco::stt::initT0(ev);
 
     // digitize ECAL and STT
-    digitization::fluka::ecal::digitize_ecal(ev, geo, vec_cell);
+    digitization::fluka::ecal::digitize_ecal(ev, geo, vec_cell, ecal_digi_mode);
     digitization::fluka::stt::digitize_stt(ev, geo, NHits, DetType, xHits,
                                            yHits, zHits, digit_vec);
 

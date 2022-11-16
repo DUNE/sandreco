@@ -565,8 +565,7 @@ void SANDGeoManager::init(TGeoManager* const geo)
 
 int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
 {
-  if(geo_ == 0)
-  {
+  if (geo_ == 0) {
     std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
     return -999;
   }
@@ -612,8 +611,7 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
 
 int SANDGeoManager::get_stt_tube_id(double x, double y, double z)
 {
-  if(geo_ == 0)
-  {
+  if (geo_ == 0) {
     std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
     return -999;
   }

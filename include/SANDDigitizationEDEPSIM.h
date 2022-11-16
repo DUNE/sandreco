@@ -11,6 +11,8 @@
 namespace digitization
 {
 
+enum class ECAL_digi_mode;
+
 namespace edep_sim
 {
 
@@ -28,7 +30,8 @@ void simulate_photo_electrons(TG4Event* ev, TGeoManager* g,
                               std::map<int, double>& L);
 
 void digitize_ecal(TG4Event* ev, TGeoManager* geo,
-                   std::vector<dg_cell>& vec_cell);
+                   std::vector<dg_cell>& vec_cell,
+                   ECAL_digi_mode ecal_digi_mode);
 
 }  // namespace ecal
 
@@ -42,7 +45,8 @@ void digitize_stt(TG4Event* ev, TGeoManager* geo,
 }  // namespace stt
 
 // digitize event
-void digitize(const char* finname, const char* foutname);
+void digitize(const char* finname, const char* foutname,
+              ECAL_digi_mode ecal_digi_mode);
 
 }  // namespace edep_sim
 

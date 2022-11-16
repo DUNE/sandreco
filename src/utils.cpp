@@ -19,6 +19,7 @@ namespace sand_reco
 {
 namespace ecal
 {
+double acquisition::fixed_thresh_pe = 3.;
 
 double czlay[nLay];
 double cxlay[nLay][nCel];

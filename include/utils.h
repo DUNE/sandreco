@@ -183,6 +183,10 @@ const double pe_threshold = 2.5;
 
 // costant fraction 15%
 const double costant_fraction = 0.15;
+
+// fixed threshold discriminator
+extern double fixed_thresh_pe;
+
 }  // namespace acquisition
 
 namespace energy_calibration
