@@ -6,8 +6,8 @@
 #include "TFile.h"
 #include "TTree.h"
 
-#include "utils.h"
 #include "transf.h"
+#include "utils.h"
 
 using namespace sand_reco;
 
@@ -25,10 +25,10 @@ double energy_to_photo_electrons(double E)
 {
   if (debug)
     std::cout << "E = " << E
-              << " -> p.e. = " << sand_reco::ecal::fluka::e2p2_fluka * E
+              << " -> p.e. = " << sand_reco::fluka::ecal::e2p2_fluka * E
               << std::endl;
 
-  return sand_reco::ecal::fluka::e2p2_fluka * E;
+  return sand_reco::fluka::ecal::e2p2_fluka * E;
 }
 
 // process calorimeter hits
@@ -101,19 +101,19 @@ bool process_hit(const TG4HitSegment& hit, int& detID, int& modID, int& planeID,
   TString str = "";
   double rotated_z = z * cos(-modAngle) - y * sin(-modAngle);
   double rotated_y = z * sin(-modAngle) + y * cos(-modAngle);
-  if ((rotated_y > sand_reco::ecal::fluka::kloe_int_R_f) &&
-      (rotated_y < sand_reco::ecal::fluka::kloe_int_R_f +
-                       2 * sand_reco::ecal::fluka::ec_dzf) &&
+  if ((rotated_y > sand_reco::fluka::ecal::kloe_int_R_f) &&
+      (rotated_y < sand_reco::fluka::ecal::kloe_int_R_f +
+                       2 * sand_reco::fluka::ecal::ec_dzf) &&
       (abs(x) < sand_reco::ecal::barrel::lCalBarrel / 2) &&
       (abs(rotated_z) < abs(rotated_y * tan(modDeltaAngle / 2))))
     str = "volECAL";  // ECAL barrel
-  else if ((rotated_y < sand_reco::ecal::fluka::ec_rf) &&
-           (abs(x) > sand_reco::ecal::fluka::kloe_int_dx_f) &&
-           (abs(x) < sand_reco::ecal::fluka::kloe_int_dx_f +
-                         2 * sand_reco::ecal::fluka::ec_dzf))
+  else if ((rotated_y < sand_reco::fluka::ecal::ec_rf) &&
+           (abs(x) > sand_reco::fluka::ecal::kloe_int_dx_f) &&
+           (abs(x) < sand_reco::fluka::ecal::kloe_int_dx_f +
+                         2 * sand_reco::fluka::ecal::ec_dzf))
     str = "endvolECAL";  // ECAL endcaps
-  else if ((rotated_y < sand_reco::ecal::fluka::ec_rf) &&
-           (abs(x) < sand_reco::ecal::fluka::kloe_int_dx_f))
+  else if ((rotated_y < sand_reco::fluka::ecal::ec_rf) &&
+           (abs(x) < sand_reco::fluka::ecal::kloe_int_dx_f))
     str = "tracker";  // tracker
   else
     str = "outside";  // outside
@@ -129,7 +129,7 @@ bool process_hit(const TG4HitSegment& hit, int& detID, int& modID, int& planeID,
     // modID
     modID = int((hitAngle + 0.5 * modDeltaAngle) / modDeltaAngle) % 24;
     // planeID
-    planeID = int((rotated_y - sand_reco::ecal::fluka::kloe_int_R_f) / 44);
+    planeID = int((rotated_y - sand_reco::fluka::ecal::kloe_int_R_f) / 44);
     if (planeID > 4) planeID = 4;
     // cellID
     cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) %
@@ -140,15 +140,15 @@ bool process_hit(const TG4HitSegment& hit, int& detID, int& modID, int& planeID,
     d2 = sand_reco::ecal::barrel::lCalBarrel / 2 + x;
     // cellCoord
     cellD =
-        sand_reco::ecal::fluka::kloe_int_R_f + sand_reco::ecal::dzlay[0] / 2;
+        sand_reco::fluka::ecal::kloe_int_R_f + sand_reco::ecal::dzlay[0] / 2;
     for (int planeindex = 1; planeindex < planeID + 1; planeindex++)
       cellD += sand_reco::ecal::dzlay[planeindex - 1] / 2 +
                sand_reco::ecal::dzlay[planeindex] / 2;
-    sand_reco::ecal::fluka::cellCoordBarrel[modID][planeID][cellID][0] = 0;
-    sand_reco::ecal::fluka::cellCoordBarrel[modID][planeID][cellID][2] =
+    sand_reco::fluka::ecal::cellCoordBarrel[modID][planeID][cellID][0] = 0;
+    sand_reco::fluka::ecal::cellCoordBarrel[modID][planeID][cellID][2] =
         +cellD * sin(-modAngle) -
         cellD * tan(cellAngle - modAngle) * cos(-modAngle);
-    sand_reco::ecal::fluka::cellCoordBarrel[modID][planeID][cellID][1] =
+    sand_reco::fluka::ecal::cellCoordBarrel[modID][planeID][cellID][1] =
         +cellD * cos(-modAngle) +
         cellD * tan(cellAngle - modAngle) * sin(-modAngle);
   } else if (str == "endvolECAL") {
@@ -165,44 +165,44 @@ bool process_hit(const TG4HitSegment& hit, int& detID, int& modID, int& planeID,
       modID = 30;
     }
     // planeID
-    planeID = int((abs(x) - sand_reco::ecal::fluka::kloe_int_dx_f) / 44);
+    planeID = int((abs(x) - sand_reco::fluka::ecal::kloe_int_dx_f) / 44);
     if (planeID > 4) planeID = 4;
     // cellID
     if (modID == 40)
-      cellID = int((z + sand_reco::ecal::fluka::ec_rf) /
+      cellID = int((z + sand_reco::fluka::ecal::ec_rf) /
                    44);  // crescono all'aumentare di z
     else
-      cellID = int((sand_reco::ecal::fluka::ec_rf - z) /
+      cellID = int((sand_reco::fluka::ecal::ec_rf - z) /
                    44);  // decrescosno all'aumentare di z
     // d1 distance from top (y>0)
-    d1 = sqrt(sand_reco::ecal::fluka::ec_rf * sand_reco::ecal::fluka::ec_rf -
+    d1 = sqrt(sand_reco::fluka::ecal::ec_rf * sand_reco::fluka::ecal::ec_rf -
               z * z) -
          y;
     // d2 distance from bottom (y<0)
-    d2 = sqrt(sand_reco::ecal::fluka::ec_rf * sand_reco::ecal::fluka::ec_rf -
+    d2 = sqrt(sand_reco::fluka::ecal::ec_rf * sand_reco::fluka::ecal::ec_rf -
               z * z) +
          y;
     // cellCoord
-    cellD = TMath::Sign(1.0, x) * (sand_reco::ecal::fluka::kloe_int_dx_f +
+    cellD = TMath::Sign(1.0, x) * (sand_reco::fluka::ecal::kloe_int_dx_f +
                                    sand_reco::ecal::dzlay[0] / 2);
     for (int planeindex = 1; planeindex < planeID + 1; planeindex++)
       cellD +=
           TMath::Sign(1.0, x) * (sand_reco::ecal::dzlay[planeindex - 1] / 2 +
                                  sand_reco::ecal::dzlay[planeindex] / 2);
-    sand_reco::ecal::fluka::cellCoordEndcap[int(modID / 10)][planeID][cellID]
+    sand_reco::fluka::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID]
                                            [0] = cellD;
-    sand_reco::ecal::fluka::cellCoordEndcap[int(modID / 10)][planeID][cellID]
+    sand_reco::fluka::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID]
                                            [1] = 0;
     if (modID == 40)
-      sand_reco::ecal::fluka::cellCoordEndcap[int(modID /
+      sand_reco::fluka::ecal::cellCoordEndcap[int(modID /
                                                   10)][planeID][cellID][2] =
           44 / 2 + cellID * 44 -
-          sand_reco::ecal::fluka::ec_rf;  // crescono all'aumentare di cellID
+          sand_reco::fluka::ecal::ec_rf;  // crescono all'aumentare di cellID
     else
-      sand_reco::ecal::fluka::cellCoordEndcap[int(modID /
+      sand_reco::fluka::ecal::cellCoordEndcap[int(modID /
                                                   10)][planeID][cellID][2] =
           44 / 2 - (cellID)*44 +
-          sand_reco::ecal::fluka::ec_rf;  // crescono al diminuire di cellID
+          sand_reco::fluka::ecal::ec_rf;  // crescono al diminuire di cellID
 
   } else if (str == "tracker" || str == "outside") {
     if (debug) std::cout << std::endl;

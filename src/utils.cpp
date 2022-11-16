@@ -17,24 +17,17 @@
 
 namespace sand_reco
 {
-bool flukatype = false;
-
 namespace ecal
 {
-
-namespace fluka
-{
-double cellCoordBarrel[nMod][nLay][nCel][3];
-double cellCoordEndcap[5][nLay][90][3];
-}  // namespace fluka
 
 double czlay[nLay];
 double cxlay[nLay][nCel];
 
-namespace endcap {
+namespace endcap
+{
 double ec_r;
 double ec_dz;
-}
+}  // namespace endcap
 
 }  // namespace ecal
 
@@ -54,6 +47,16 @@ std::map<int, std::map<int, TVector2> > stPos;
 std::map<int, TVector2> tubePos;
 std::map<int, double> t0;
 }  // namespace stt
+
+namespace fluka
+{
+namespace ecal
+{
+double cellCoordBarrel[sand_reco::ecal::nMod][sand_reco::ecal::nLay]
+                      [sand_reco::ecal::nCel][3];
+double cellCoordEndcap[5][sand_reco::ecal::nLay][90][3];
+}  // namespace ecal
+}  // namespace fluka
 
 }  // namespace sand_reco
 
@@ -535,53 +538,74 @@ void sand_reco::ecal::geometry::CellPosition(TGeoManager* geo, int det, int mod,
 
   if (mod < 24) {
 
-    if (flukatype == false) {
-      dummyLoc[0] = cxlay[lay][cel];
-      dummyLoc[1] = 0.;
-      dummyLoc[2] = czlay[lay];
+    dummyLoc[0] = cxlay[lay][cel];
+    dummyLoc[1] = 0.;
+    dummyLoc[2] = czlay[lay];
 
-      geo->cd(TString::Format(path_barrel_template, mod).Data());
-    } else {
-      // Local coordinates calculation
-      dummyLoc[0] = fluka::cellCoordBarrel[mod][lay][cel][0];
-      dummyLoc[1] = fluka::cellCoordBarrel[mod][lay][cel][1];
-      dummyLoc[2] = fluka::cellCoordBarrel[mod][lay][cel][2];
+    geo->cd(TString::Format(path_barrel_template, mod).Data());
 
-      // Transformation to global coordinates
-      dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
-      dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
-      dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
-    }
   } else if (mod == 30 || mod == 40)
   // right x > 0 : c->mod = 30
   // left  x < 0 : c->mod = 40
   {
 
-    if (flukatype == false) {
+    dummyLoc[0] =
+        2 * endcap::ec_r / endcap::nCel_ec * (0.5 + cel) - endcap::ec_r;
+    dummyLoc[1] = 0.;
+    dummyLoc[2] = czlay[lay];
 
-      dummyLoc[0] = 2 * endcap::ec_r / endcap::nCel_ec * (0.5 + cel) - endcap::ec_r;
-      dummyLoc[1] = 0.;
-      dummyLoc[2] = czlay[lay];
-
-      if (mod == 30)
-        geo->cd(path_endcapR_template);
-      else if (mod == 40)
-        geo->cd(path_endcapL_template);
-
-    } else {
-      // Local coordinates calculation
-      dummyLoc[0] = fluka::cellCoordEndcap[int(mod / 10)][lay][cel][0];
-      dummyLoc[1] = fluka::cellCoordEndcap[int(mod / 10)][lay][cel][1];
-      dummyLoc[2] = fluka::cellCoordEndcap[int(mod / 10)][lay][cel][2];
-
-      // Transformation to global coordinates
-      dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
-      dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
-      dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
-    }
+    if (mod == 30)
+      geo->cd(path_endcapR_template);
+    else if (mod == 40)
+      geo->cd(path_endcapL_template);
   }
 
-  if (flukatype == false) geo->LocalToMaster(dummyLoc, dummyMas);
+  geo->LocalToMaster(dummyLoc, dummyMas);
+
+  x = dummyMas[0];
+  y = dummyMas[1];
+  z = dummyMas[2];
+}
+
+// get cell center from module id, layer id and cell id
+void sand_reco::fluka::ecal::CellPosition(TGeoManager* geo, int det, int mod,
+                                          int lay, int cel, double& x,
+                                          double& y, double& z)
+{
+  x = 0;
+  y = 0;
+  z = 0;
+
+  double dummyLoc[3];
+  double dummyMas[3];
+
+  if (mod < 24) {
+
+    // Local coordinates calculation
+    dummyLoc[0] = cellCoordBarrel[mod][lay][cel][0];
+    dummyLoc[1] = cellCoordBarrel[mod][lay][cel][1];
+    dummyLoc[2] = cellCoordBarrel[mod][lay][cel][2];
+
+    // Transformation to global coordinates
+    dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
+    dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
+    dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
+
+  } else if (mod == 30 || mod == 40)
+  // right x > 0 : c->mod = 30
+  // left  x < 0 : c->mod = 40
+  {
+
+    // Local coordinates calculation
+    dummyLoc[0] = cellCoordEndcap[int(mod / 10)][lay][cel][0];
+    dummyLoc[1] = cellCoordEndcap[int(mod / 10)][lay][cel][1];
+    dummyLoc[2] = cellCoordEndcap[int(mod / 10)][lay][cel][2];
+
+    // Transformation to global coordinates
+    dummyMas[0] = LocalToGlobalCoordinates(dummyLoc).X();
+    dummyMas[1] = LocalToGlobalCoordinates(dummyLoc).Y();
+    dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
+  }
 
   x = dummyMas[0];
   y = dummyMas[1];
@@ -601,32 +625,10 @@ void sand_reco::init(TGeoManager* geo)
   double xmax;
   double dz;
 
-  if (sand_reco::flukatype == false) {
-    TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
-    xmin = mod->GetDx1();
-    xmax = mod->GetDx2();
-    dz = mod->GetDz();
-
-    if ((abs(xmin - sand_reco::ecal::fluka::xmin_f) > 0.2) ||
-        (abs(xmax - sand_reco::ecal::fluka::xmax_f) > 0.2) ||
-        (abs(dz - sand_reco::ecal::fluka::dz_f) > 0.2)) {
-      std::cout << "ERROR ON ECAL GEOMETRY: xmin= " << xmin
-                << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::xmin_f << std::endl;
-      std::cout << "ERROR ON ECAL GEOMETRY: xmax= " << xmax
-                << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::xmax_f << std::endl;
-      std::cout << "ERROR ON ECAL GEOMETRY: dz= " << dz
-                << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::dz_f << std::endl;
-      // exit(1);
-    }
-
-  } else {
-    xmin = sand_reco::ecal::fluka::xmin_f;
-    xmax = sand_reco::ecal::fluka::xmax_f;
-    dz = sand_reco::ecal::fluka::dz_f;
-  }
+  TGeoTrd2* mod = (TGeoTrd2*)geo->FindVolumeFast("ECAL_lv_PV")->GetShape();
+  xmin = mod->GetDx1();
+  xmax = mod->GetDx2();
+  dz = mod->GetDz();
 
   double m = 0.5 * (xmax - xmin) / dz;
   double q = 0.5 * (xmax + xmin);
@@ -655,48 +657,79 @@ void sand_reco::init(TGeoManager* geo)
     }
   }
 
-  if (sand_reco::flukatype == false) {
-    TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
-    sand_reco::ecal::endcap::ec_r = ec->GetRmax();  // Maximum radius = 2000
-    sand_reco::ecal::endcap::ec_dz = ec->GetDz();   // half of thickness = 115
+  TGeoTube* ec = (TGeoTube*)geo->FindVolumeFast("ECAL_end_lv_PV")->GetShape();
+  sand_reco::ecal::endcap::ec_r = ec->GetRmax();  // Maximum radius = 2000
+  sand_reco::ecal::endcap::ec_dz = ec->GetDz();   // half of thickness = 115
 
-    TGeoHMatrix mat = *gGeoIdentity;
+  TGeoHMatrix mat = *gGeoIdentity;
 
-    stt::rST = new TPRegexp(stt::rST_string);
-    stt::r2ST = new TPRegexp(stt::r2ST_string);
-    stt::rSTplane = new TPRegexp(stt::rSTplane_string);
-    stt::rSTmod = new TPRegexp(stt::rSTmod_string);
+  stt::rST = new TPRegexp(stt::rST_string);
+  stt::r2ST = new TPRegexp(stt::r2ST_string);
+  stt::rSTplane = new TPRegexp(stt::rSTplane_string);
+  stt::rSTmod = new TPRegexp(stt::rSTmod_string);
 
-    gGeoManager->CdDown(0);
+  gGeoManager->CdDown(0);
 
-    stt::getSTPlaneinfo(mat, stt::stX, stt::stL, stt::stPos);
+  stt::getSTPlaneinfo(mat, stt::stX, stt::stL, stt::stPos);
 
-    for (std::map<int, std::map<int, TVector2> >::iterator it =
-             stt::stPos.begin();
-         it != stt::stPos.end(); it++) {
-      int mod_id = it->first;
-      for (std::map<int, TVector2>::iterator ite = it->second.begin();
-           ite != it->second.end(); ite++) {
-        int tub_id = ite->first;
-        int id = stt::encodeSTID(mod_id, tub_id);
-        stt::tubePos[id] = ite->second;
-      }
+  for (std::map<int, std::map<int, TVector2> >::iterator it =
+           stt::stPos.begin();
+       it != stt::stPos.end(); it++) {
+    int mod_id = it->first;
+    for (std::map<int, TVector2>::iterator ite = it->second.begin();
+         ite != it->second.end(); ite++) {
+      int tub_id = ite->first;
+      int id = stt::encodeSTID(mod_id, tub_id);
+      stt::tubePos[id] = ite->second;
     }
+  }
 
-    geo->cd(stt::path_internal_volume);
-    double local[] = {0., 0., 0.};
-    geo->LocalToMaster(local, stt::stt_center);
+  geo->cd(stt::path_internal_volume);
+  double local[] = {0., 0., 0.};
+  geo->LocalToMaster(local, stt::stt_center);
+}
 
-    if (abs(sand_reco::ecal::endcap::ec_r - sand_reco::ecal::fluka::ec_rf) > 0.2 ||
-        (abs(sand_reco::ecal::endcap::ec_dz - sand_reco::ecal::fluka::ec_dzf))) {
-      std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: R= " << sand_reco::ecal::endcap::ec_r
-                << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::ec_rf << std::endl;
-      std::cout << "ERROR ON ECAL ENDCAP GEOMETRY: Thickness= "
-                << sand_reco::ecal::endcap::ec_dz
-                << " instead of what is expected in Fluka"
-                << sand_reco::ecal::fluka::ec_dzf << std::endl;
-      //  exit(1);
+// init geometry
+// - costruct calo cells
+// - find straw tube center
+void sand_reco::fluka::init(TGeoManager* geo)
+{
+  // https://root.cern.ch/root/htmldoc/guides/users-guide/Geometry.html#shapes
+  // GetDx1() half length in x at -Dz
+  // GetDx2() half length in x at +Dz
+  // Dx1 < Dx2 => -Dz corresponds to minor width => internal side
+  double xmin;
+  double xmax;
+  double dz;
+
+  xmin = ecal::xmin_f;
+  xmax = ecal::xmax_f;
+  dz = ecal::dz_f;
+
+  double m = 0.5 * (xmax - xmin) / dz;
+  double q = 0.5 * (xmax + xmin);
+
+  // z edge of the cells
+  double zlevel[sand_reco::ecal::nLay + 1];
+  zlevel[0] = -dz;
+
+  for (int i = 0; i < sand_reco::ecal::nLay; i++) {
+    zlevel[i + 1] = zlevel[i] + sand_reco::ecal::dzlay[i];
+  }
+
+  // z position of the center of the cells
+  for (int i = 0; i < sand_reco::ecal::nLay; i++) {
+    sand_reco::ecal::czlay[i] = 0.5 * (zlevel[i] + zlevel[i + 1]);
+
+    // total module width at the z position of the center of the cell
+    double xwidth = 2 * (m * sand_reco::ecal::czlay[i] + q);
+
+    // cell width at the z position of the center of the cell
+    double dx = xwidth / sand_reco::ecal::nCel;
+
+    // x position of the center of the cells
+    for (int j = 0; j < sand_reco::ecal::nCel; j++) {
+      sand_reco::ecal::cxlay[i][j] = dx * (j + 0.5) - xwidth * 0.5;
     }
   }
 }

@@ -13,6 +13,7 @@
 
 namespace sand_reco
 {
+
 namespace stt
 {
 const char* const path_internal_volume =
@@ -100,27 +101,6 @@ const int nCel_ec = 90;
 extern double ec_r;
 extern double ec_dz;
 }  // namespace endcap
-
-namespace fluka
-{
-const double e2p2_fluka =
-    23;  // for fluka, for reproducing the same number of pe (40) for mip
-         // crossing in the middle of barrel module
-
-// ecal dimension for fluka
-const double xmin_f = 262.55;
-const double xmax_f = 292.85;
-const double dz_f = 115.0;
-
-const double ec_rf = 2000.0;  // ad essere precisi nella realtà è 1980
-const double ec_dzf = 115.0;
-const double kloe_int_R_f = 2000.;
-const double kloe_int_dx_f = 1690.;
-
-// coordinates of the cells for FLUKA
-extern double cellCoordBarrel[nMod][nLay][nCel][3];
-extern double cellCoordEndcap[5][nLay][90][3];
-}  // namespace fluka
 
 namespace geometry
 {
@@ -238,6 +218,37 @@ bool isHitBefore(hit h1, hit h2);
 bool isCellBefore(dg_cell c1, dg_cell c2);
 }  // namespace ecal
 
+namespace fluka
+{
+namespace ecal
+{
+const double e2p2_fluka =
+    23;  // for fluka, for reproducing the same number of pe (40) for mip
+         // crossing in the middle of barrel module
+
+// ecal dimension for fluka
+const double xmin_f = 262.55;
+const double xmax_f = 292.85;
+const double dz_f = 115.0;
+
+const double ec_rf = 2000.0;  // ad essere precisi nella realtà è 1980
+const double ec_dzf = 115.0;
+const double kloe_int_R_f = 2000.;
+const double kloe_int_dx_f = 1690.;
+
+// coordinates of the cells for FLUKA
+extern double cellCoordBarrel[sand_reco::ecal::nMod][sand_reco::ecal::nLay]
+                             [sand_reco::ecal::nCel][3];
+extern double cellCoordEndcap[5][sand_reco::ecal::nLay][90][3];
+
+void CellPosition(TGeoManager* geo, int det, int mod, int lay, int cel,
+                  double& x, double& y, double& z);
+}  // namespace ecal
+
+void init(TGeoManager* geo);
+
+}  // namespace fluka
+
 namespace conversion
 {
 const double mm_to_m = 1E-3;
@@ -254,8 +265,6 @@ const double hadk = 1.;
 }  // namespace constant
 
 const bool debug = false;
-
-extern bool flukatype;  // for FLUKA
 
 double mindist(double s1x, double s1y, double s1z, double s2x, double s2y,
                double s2z, double px, double py, double pz);
