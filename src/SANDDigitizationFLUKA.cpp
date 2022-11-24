@@ -491,7 +491,7 @@ void digitize(const char* finname, const char* foutname,
     // define the T0 for this event
     // for each straw tubs:
     // std::map<int, double> sand_reco::t0
-    sand_reco::stt::initT0(ev);
+    // sand_reco::stt::initT0(ev);
 
     // digitize ECAL and STT
     digitization::fluka::ecal::digitize_ecal(ev, geo, vec_cell, ecal_digi_mode);
