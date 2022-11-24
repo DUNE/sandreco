@@ -156,7 +156,7 @@ bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path)
   return true;
 }
 
-void get_ecal_barrel_module_and_layer(const TString& volume_name,
+void SANDGeoManager::get_ecal_barrel_module_and_layer(const TString& volume_name,
                                       const TString& volume_path,
                                       int& detector_id, int& module_id,
                                       int& plane_id)
@@ -182,7 +182,7 @@ void get_ecal_barrel_module_and_layer(const TString& volume_name,
   if (plane_id > 4) plane_id = 4;
 }
 
-void get_ecal_endcap_module_and_layer(const TString& volume_name,
+void SANDGeoManager::get_ecal_endcap_module_and_layer(const TString& volume_name,
                                       const TString& volume_path,
                                       int& detector_id, int& module_id,
                                       int& plane_id)
