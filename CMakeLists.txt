@@ -36,25 +36,25 @@ target_include_directories(Struct PUBLIC
 target_link_libraries(Struct PUBLIC)
 ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/Linkdef.h)
 
-# Creates a libUtils shared library
-add_library(Utils SHARED src/utils.cpp src/transf.cpp)
-target_include_directories(Utils PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:include>")
-target_link_libraries(Utils PUBLIC EDepSim::edepsim_io)
-
 # Create SANDGeoManager lib
 add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDSTTTubeInfo.cpp src/SANDECALCellInfo.cpp)
 target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
 ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDSTTTubeInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/Linkdef.h)
 
+# Creates a libUtils shared library
+add_library(Utils SHARED src/utils.cpp src/transf.cpp)
+target_include_directories(Utils PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include>")
+target_link_libraries(Utils PUBLIC SANDGeoManager EDepSim::edepsim_io)
+
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp src/SANDDigitization.cpp src/SANDDigitizationEDEPSIM.cpp src/SANDDigitizationFLUKA.cpp)
-target_link_libraries(Digitize Struct Utils)
+target_link_libraries(Digitize Struct SANDGeoManager Utils)
 
 # Creates Reconstruct executable.
 add_executable(Reconstruct src/reconstruction.cpp)
-target_link_libraries(Reconstruct Struct Utils)
+target_link_libraries(Reconstruct Struct Utils SANDGeoManager)
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)

@@ -104,7 +104,7 @@ bool process_hit(const TG4HitSegment& hit, int& detID, int& modID, int& planeID,
   if ((rotated_y > sand_reco::fluka::ecal::kloe_int_R_f) &&
       (rotated_y < sand_reco::fluka::ecal::kloe_int_R_f +
                        2 * sand_reco::fluka::ecal::ec_dzf) &&
-      (abs(x) < sand_reco::ecal::barrel::lCalBarrel / 2) &&
+      (abs(x) < sand_reco::fluka::ecal::lCalBarrel / 2) &&
       (abs(rotated_z) < abs(rotated_y * tan(modDeltaAngle / 2))))
     str = "volECAL";  // ECAL barrel
   else if ((rotated_y < sand_reco::fluka::ecal::ec_rf) &&
@@ -135,15 +135,15 @@ bool process_hit(const TG4HitSegment& hit, int& detID, int& modID, int& planeID,
     cellID = int((hitAngle + 0.5 * modDeltaAngle) / cellDeltaAngle) %
              12;  // dal punto centrale in alto in senso antiorario        // d1
                   // distance from right end (x>0)
-    d1 = sand_reco::ecal::barrel::lCalBarrel / 2 - x;
+    d1 = sand_reco::fluka::ecal::lCalBarrel / 2 - x;
     // d2 distance from left end (x<0)
-    d2 = sand_reco::ecal::barrel::lCalBarrel / 2 + x;
+    d2 = sand_reco::fluka::ecal::lCalBarrel / 2 + x;
     // cellCoord
-    cellD =
-        sand_reco::fluka::ecal::kloe_int_R_f + sand_reco::ecal::dzlay[0] / 2;
+    cellD = sand_reco::fluka::ecal::kloe_int_R_f +
+            sand_reco::fluka::ecal::dzlay[0] / 2;
     for (int planeindex = 1; planeindex < planeID + 1; planeindex++)
-      cellD += sand_reco::ecal::dzlay[planeindex - 1] / 2 +
-               sand_reco::ecal::dzlay[planeindex] / 2;
+      cellD += sand_reco::fluka::ecal::dzlay[planeindex - 1] / 2 +
+               sand_reco::fluka::ecal::dzlay[planeindex] / 2;
     sand_reco::fluka::ecal::cellCoordBarrel[modID][planeID][cellID][0] = 0;
     sand_reco::fluka::ecal::cellCoordBarrel[modID][planeID][cellID][2] =
         +cellD * sin(-modAngle) -
@@ -184,11 +184,11 @@ bool process_hit(const TG4HitSegment& hit, int& detID, int& modID, int& planeID,
          y;
     // cellCoord
     cellD = TMath::Sign(1.0, x) * (sand_reco::fluka::ecal::kloe_int_dx_f +
-                                   sand_reco::ecal::dzlay[0] / 2);
+                                   sand_reco::fluka::ecal::dzlay[0] / 2);
     for (int planeindex = 1; planeindex < planeID + 1; planeindex++)
-      cellD +=
-          TMath::Sign(1.0, x) * (sand_reco::ecal::dzlay[planeindex - 1] / 2 +
-                                 sand_reco::ecal::dzlay[planeindex] / 2);
+      cellD += TMath::Sign(1.0, x) *
+               (sand_reco::fluka::ecal::dzlay[planeindex - 1] / 2 +
+                sand_reco::fluka::ecal::dzlay[planeindex] / 2);
     sand_reco::fluka::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID]
                                            [0] = cellD;
     sand_reco::fluka::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID]
@@ -278,6 +278,41 @@ void simulate_photo_electrons(TG4Event* ev, TGeoManager* g,
   }
 }
 
+// construct calo digit and collect them in a vector
+void group_pmts_in_cells(TGeoManager* geo,
+                         std::map<int, std::vector<dg_ps> >& ps,
+                         std::map<int, double>& L,
+                         std::vector<dg_cell>& vec_cell)
+{
+  std::map<int, dg_cell> map_cell;
+  dg_cell* c;
+
+  for (std::map<int, std::vector<dg_ps> >::iterator it = ps.begin();
+       it != ps.end(); ++it) {
+    int id = abs(it->first);
+
+    c = &(map_cell[id]);
+
+    c->id = id;
+    sand_reco::ecal::decoder::DecodeID(c->id, c->det, c->mod, c->lay, c->cel);
+    c->l = L[it->first];
+
+    if (it->first >= 0) {
+      c->ps1 = it->second;
+    } else {
+      c->ps2 = it->second;
+    }
+    sand_reco::fluka::ecal::CellPosition(geo, c->det, c->mod, c->lay, c->cel,
+                                         c->x, c->y,
+                                         c->z);  // ok per fluka e geant4
+  }
+
+  for (std::map<int, dg_cell>::iterator it = map_cell.begin();
+       it != map_cell.end(); ++it) {
+    vec_cell.push_back(it->second);
+  }
+}
+
 // simulate calorimeter responce for whole event
 void digitize_ecal(TG4Event* ev, TGeoManager* geo,
                    std::vector<dg_cell>& vec_cell,
@@ -302,7 +337,7 @@ void digitize_ecal(TG4Event* ev, TGeoManager* geo,
   if (debug) {
     std::cout << "CollectSignal" << std::endl;
   }
-  digitization::ecal::group_pmts_in_cells(geo, ps, L, vec_cell);
+  digitization::fluka::ecal::group_pmts_in_cells(geo, ps, L, vec_cell);
 }
 
 }  // namespace ecal
@@ -346,8 +381,8 @@ void group_hits_by_tube(TG4Event* ev, TGeoManager* geo, int NHits,
         found = true;
         // STT module id put to k for fluka STT digit
         // ST id put to k for fluka STT digit
-        int planeid = sand_reco::stt::encodePlaneID(k, 0, DetType[k]);
-        stid = sand_reco::stt::encodeSTID(planeid, k);
+        int planeid = sand_reco::fluka::stt::encodePlaneID(k, 0, DetType[k]);
+        stid = sand_reco::fluka::stt::encodeSTID(planeid, k);
         break;
       }
     }
@@ -376,6 +411,88 @@ void group_hits_by_tube(TG4Event* ev, TGeoManager* geo, int NHits,
   }
 }
 
+// for each tube simulate tdc and adc
+// tdc is the time of closest point to wire + drift time
+// adc is the sum of energy deposit within integration time window
+void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
+                             std::vector<dg_tube>& digit_vec)
+{
+  digit_vec.clear();
+
+  for (std::map<int, std::vector<hit> >::iterator it = hits2Tube.begin();
+       it != hits2Tube.end(); ++it) {
+    double min_time_tub = 1E9;  // mm
+    int did = it->first;
+
+    int mod, tub, type, pla, plloc;
+    double dwire = 0.;
+
+    sand_reco::fluka::stt::decodeSTID(did, pla, tub);
+    sand_reco::fluka::stt::decodePlaneID(pla, mod, plloc, type);
+
+    TVector2 wire = sand_reco::fluka::stt::tubePos[did];
+
+    dg_tube d;
+    d.det = it->second[0].det;
+    d.did = did;
+    d.de = 0;
+    d.hor = (type % 2 == 0);
+    d.t0 = sand_reco::stt::t0[pla];
+
+    if (d.hor == true) {
+      d.x = sand_reco::stt::stt_center[0];
+      d.y = wire.Y();
+      d.z = wire.X();
+      dwire = d.x - 0.5 * sand_reco::fluka::stt::stL[did];
+    } else {
+      d.x = wire.Y();
+      d.y = sand_reco::stt::stt_center[1];
+      d.z = wire.X();
+      dwire = d.y - 0.5 * sand_reco::fluka::stt::stL[did];
+    }
+
+    for (unsigned int i = 0; i < it->second.size(); i++) {
+      double x1 = it->second[i].z1;
+      double x2 = it->second[i].z2;
+      double t1 = it->second[i].t1;
+      double t2 = it->second[i].t2;
+
+      double y1, y2;
+
+      if (type == 2) {
+        y1 = it->second[i].y1;
+        y2 = it->second[i].y2;
+      } else {
+        y1 = it->second[i].x1;
+        y2 = it->second[i].x2;
+      }
+
+      double l = sand_reco::stt::getT(y1, y2, wire.Y(), x1, x2, wire.X());
+      double x = x1 + (x2 - x1) * l;
+      double y = y1 + (y2 - y1) * l;
+      double t = t1 + (t2 - t1) * l;
+
+      TVector2 min_dist_point(x, y);
+      double min_dist_hit = (min_dist_point - wire).Mod();
+      double min_time_hit = t +
+                            (min_dist_hit - sand_reco::stt::wire_radius) /
+                                sand_reco::stt::v_drift +
+                            dwire / sand_reco::stt::v_signal_inwire;
+
+      if (min_time_hit < min_time_tub) min_time_tub = min_time_hit;
+
+      if (t - d.t0 < sand_reco::stt::stt_int_time) d.de += it->second[i].de;
+
+      d.hindex.push_back(it->second[i].index);
+    }
+
+    d.tdc = min_time_tub + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
+    d.adc = d.de;
+
+    digit_vec.push_back(d);
+  }
+}
+
 // simulate stt responce for whole event
 void digitize_stt(TG4Event* ev, TGeoManager* geo, int NHits,
                   Int_t DetType[10000], Float_t xPos[10000],
@@ -386,7 +503,7 @@ void digitize_stt(TG4Event* ev, TGeoManager* geo, int NHits,
   digit_vec.clear();
 
   group_hits_by_tube(ev, geo, NHits, DetType, xPos, yPos, zPos, hits2Tube);
-  digitization::stt::create_digits_from_hits(hits2Tube, digit_vec);
+  digitization::fluka::stt::create_digits_from_hits(hits2Tube, digit_vec);
 }
 }  // namespace stt
 
@@ -463,7 +580,7 @@ void digitize(const char* finname, const char* foutname,
   //   - std::map<int, TVector2> sand_reco::tubePos
   //       - KEY  : id of the tube
   //       - VALUE: map with
-  sand_reco::init(geo);
+  sand_reco::fluka::init(geo);
 
   // vector of ECAL and STT digits
   std::vector<dg_tube> digit_vec;
@@ -511,11 +628,11 @@ void digitize(const char* finname, const char* foutname,
   f.Close();
 
   // cleaning
-  sand_reco::stt::stL.clear();
-  sand_reco::stt::stX.clear();
-  sand_reco::stt::stPos.clear();
+  sand_reco::fluka::stt::stL.clear();
+  sand_reco::fluka::stt::stX.clear();
+  sand_reco::fluka::stt::stPos.clear();
+  sand_reco::fluka::stt::tubePos.clear();
   sand_reco::stt::t0.clear();
-  sand_reco::stt::tubePos.clear();
 }
 
 }  // namespace fluka

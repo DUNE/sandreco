@@ -4,6 +4,7 @@
 #include <TString.h>
 #include <TVector2.h>
 
+#include "SANDGeoManager.h"
 #include "struct.h"
 
 #include <TG4Event.h>
@@ -16,28 +17,31 @@ namespace sand_reco
 
 namespace stt
 {
+////////////////////////// to be removed
 const char* const path_internal_volume =
     "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/sand_inner_volume_PV_0";
 const char* const name_internal_volume = "sand_inner_volume_PV";
+////////////////////////////////////////////////////
 
-const char* const rST_string =
-    "(horizontalST_(Ar|Xe)|STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_vv_ST)_PV_([0-9]+"
-    ")(/|)";
+// const char* const rST_string =
+//     "(horizontalST_(Ar|Xe)|STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_vv_ST)_PV_([0-9]+"
+//     ")(/|)";
+// //
 // "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
-// "0-9]+)";
-const char* const r2ST_string =
-    "STT_([0-9]+)_(Trk|C3H6|C)Mod_(ST_|)(hh|vv)_2straw_PV_([0-9]+)(/|)";
-const char* const rSTplane_string =
-    "STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_(hh|vv)_PV_([0-9]+)(/|)";
-// "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
-const char* const rSTmod_string =
-    "STT_([0-9]+)_(Trk|C3H6|C)Mod_PV_([0-9]+)(/|)";
+// // "0-9]+)";
+// const char* const r2ST_string =
+//     "STT_([0-9]+)_(Trk|C3H6|C)Mod_(ST_|)(hh|vv)_2straw_PV_([0-9]+)(/|)";
+// const char* const rSTplane_string =
+//     "STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_(hh|vv)_PV_([0-9]+)(/|)";
+// // "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
+// const char* const rSTmod_string =
+//     "STT_([0-9]+)_(Trk|C3H6|C)Mod_PV_([0-9]+)(/|)";
 
-extern TPRegexp* rST;
-extern TPRegexp* r2ST;
-extern TPRegexp* rSTplane;
-extern TPRegexp* rSTmod;
+// extern TPRegexp* rST;
+// extern TPRegexp* r2ST;
+// extern TPRegexp* rSTplane;
+// extern TPRegexp* rSTmod;
 
 // stt resolution and threshold
 // const double res_x = 0.2;            // 0.2 mm
@@ -52,54 +56,55 @@ const double v_drift = 0.05;          // mm/ns
 const double v_signal_inwire = 200.;  // mm/ns
 const double tm_stt_smearing = 3.5;   // ns
 
-extern std::map<int, std::map<double, int> > stX;
-extern std::map<int, double> stL;
-extern std::map<int, std::map<int, TVector2> > stPos;
-extern std::map<int, TVector2> tubePos;
+// extern std::map<int, std::map<double, int> > stX;
+// extern std::map<int, double> stL;
+// extern std::map<int, std::map<int, TVector2> > stPos;
+// extern std::map<int, TVector2> tubePos;
 extern std::map<int, double> t0;
 
-bool isST(TString name);
-bool isSTPlane(TString name);
-// int getSTId(TString name);
-int getPlaneID(TString name);
-void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
-               std::map<double, int>& stX, std::map<int, double>& stL,
-               std::map<int, TVector2>& stPos);
-void getSTPlaneinfo(TGeoHMatrix mat, std::map<int, std::map<double, int> >& stX,
-                    std::map<int, double>& stL,
-                    std::map<int, std::map<int, TVector2> >& stPos);
-int getSTUniqID(TGeoManager* g, double x, double y, double z);
-int encodeSTID(int planeid, int tubeid);
-void decodeSTID(int id, int& planeid, int& tubeid);
-int encodePlaneID(int moduleid, int planelocid, int type);
-void decodePlaneID(int id, int& moduleid, int& planelocid, int& type);
+// bool isST(TString name);
+// bool isSTPlane(TString name);
+// // int getSTId(TString name);
+// int getPlaneID(TString name);
+// void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
+//                std::map<double, int>& stX, std::map<int, double>& stL,
+//                std::map<int, TVector2>& stPos);
+// void getSTPlaneinfo(TGeoHMatrix mat, std::map<int, std::map<double, int> >&
+// stX,
+//                     std::map<int, double>& stL,
+//                     std::map<int, std::map<int, TVector2> >& stPos);
+// int getSTUniqID(TGeoManager* g, double x, double y, double z);
+// int encodeSTID(int planeid, int tubeid);
+// void decodeSTID(int id, int& planeid, int& tubeid);
+// int encodePlaneID(int moduleid, int planelocid, int type);
+// void decodePlaneID(int id, int& moduleid, int& planelocid, int& type);
 double getT(double y1, double y2, double y, double z1, double z2, double z);
 bool isDigBefore(dg_tube d1, dg_tube d2);
 bool isDigUpstream(const dg_tube& d1, const dg_tube& d2);
-void initT0(TG4Event* ev);
+void initT0(TG4Event* ev, SANDGeoManager& geo);
 }  // namespace stt
 
 namespace ecal
 {
 
-const int nLay = 5;
-const int nCel = 12;
-const int nMod = 24;
+// const int nLay = 5;
+// const int nCel = 12;
+// const int nMod = 24;
 
 // thickness of the layers in mm
-const double dzlay[nLay] = {44., 44., 44., 44., 54.};
-extern double czlay[nLay];
-extern double cxlay[nLay][nCel];
+// const double dzlay[nLay] = {44., 44., 44., 44., 54.};
+// extern double czlay[nLay];
+// extern double cxlay[nLay][nCel];
 
 namespace barrel
 {
-const double lCalBarrel = 4300;
+// const double lCalBarrel = 4300;
 }
 namespace endcap
 {
-const int nCel_ec = 90;
-extern double ec_r;
-extern double ec_dz;
+// const int nCel_ec = 90;
+// extern double ec_r;
+// extern double ec_dz;
 }  // namespace endcap
 
 namespace geometry
@@ -107,30 +112,32 @@ namespace geometry
 
 ////////////////////////////////////////////////////////////////////////
 // geometry v1
-const char* const path_barrel_template =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
-    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
-const char* const path_endcapL_template =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
-    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
-const char* const path_endcapR_template =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
-    "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+// const char* const path_barrel_template =
+//     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+//     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
+// const char* const path_endcapL_template =
+//     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+//     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
+// const char* const path_endcapR_template =
+//     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+//     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
 //////////////////////////////////////////////////////////////////////////
 
-bool isBarrel(TString& str);
-bool isEndCap(TString& str);
-void BarrelModuleAndLayer(TString& str, TString& str2, int& detID, int& modID,
-                          int& planeID);
-void EndCapModuleAndLayer(TString& str, TString& str2, int& detID, int& modID,
-                          int& planeID);
-void BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
-                int& cellID, double& d1, double& d2);
-void EndCapCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
-                int& cellID, double& d1, double& d2);
-bool CheckAndProcessPath(TString& str2);
-void CellPosition(TGeoManager* geo, int det, int mod, int lay, int cel,
-                  double& x, double& y, double& z);
+// bool isBarrel(TString& str);
+// bool isEndCap(TString& str);
+// void BarrelModuleAndLayer(TString& str, TString& str2, int& detID, int&
+// modID,
+//                           int& planeID);
+// void EndCapModuleAndLayer(TString& str, TString& str2, int& detID, int&
+// modID,
+//                           int& planeID);
+// void BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
+//                 int& cellID, double& d1, double& d2);
+// void EndCapCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
+//                 int& cellID, double& d1, double& d2);
+// bool CheckAndProcessPath(TString& str2);
+// void CellPosition(TGeoManager* geo, int det, int mod, int lay, int cel,
+//                   double& x, double& y, double& z);
 }  // namespace geometry
 
 namespace attenuation
@@ -226,6 +233,14 @@ namespace fluka
 {
 namespace ecal
 {
+const int nLay = 5;
+const int nCel = 12;
+const int nMod = 24;
+
+const double lCalBarrel = 4300;
+
+const double dzlay[nLay] = {44., 44., 44., 44., 54.};
+
 const double e2p2_fluka =
     23;  // for fluka, for reproducing the same number of pe (40) for mip
          // crossing in the middle of barrel module
@@ -241,13 +256,26 @@ const double kloe_int_R_f = 2000.;
 const double kloe_int_dx_f = 1690.;
 
 // coordinates of the cells for FLUKA
-extern double cellCoordBarrel[sand_reco::ecal::nMod][sand_reco::ecal::nLay]
-                             [sand_reco::ecal::nCel][3];
-extern double cellCoordEndcap[5][sand_reco::ecal::nLay][90][3];
+extern double cellCoordBarrel[nMod][nLay][nCel][3];
+extern double cellCoordEndcap[5][nLay][90][3];
 
 void CellPosition(TGeoManager* geo, int det, int mod, int lay, int cel,
                   double& x, double& y, double& z);
 }  // namespace ecal
+
+namespace stt
+{
+
+extern std::map<int, std::map<double, int> > stX;
+extern std::map<int, double> stL;
+extern std::map<int, std::map<int, TVector2> > stPos;
+extern std::map<int, TVector2> tubePos;
+
+int encodeSTID(int planeid, int tubeid);
+int encodePlaneID(int moduleid, int planelocid, int type);
+void decodeSTID(int id, int& planeid, int& tubeid);
+void decodePlaneID(int id, int& moduleid, int& planelocid, int& type);
+}  // namespace stt
 
 void init(TGeoManager* geo);
 

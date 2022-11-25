@@ -80,52 +80,63 @@ class SANDGeoManager : public TObject
                                              // value: info on cell)
   std::map<int, SANDSTTTubeInfo> sttmap_;    // map of stt tube (key: id, value:
                                              // info on tube)
-  TPRegexp stt_single_tube_regex_;  // regular expression to match relevant info
-                                    // about tube from volume path
-  TPRegexp stt_two_tubes_regex_;    // regular expression to match relevant info
-                                    // about tube couple from volume path
-  TPRegexp stt_plane_regex_;  // regular expression to match relevant info about
-                              // plane from volume path
-  TPRegexp stt_module_regex_;  // regular expression to match relevant info
-                               // about module from volume path
+  mutable TPRegexp stt_single_tube_regex_{
+      sand_geometry::stt::stt_single_tube_regex_string};  // regular expression
+                                                          // to match relevant
+                                                          // info about tube
+                                                          // from volume path
+  mutable TPRegexp stt_two_tubes_regex_{
+      sand_geometry::stt::stt_two_tubes_regex_string};  // regular expression to
+                                                        // match relevant info
+                                                        // about tube couple
+                                                        // from volume path
+  mutable TPRegexp stt_plane_regex_{
+      sand_geometry::stt::stt_plane_regex_string};  // regular expression to
+                                                    // match relevant info about
+                                                    // plane from volume path
+  mutable TPRegexp stt_module_regex_{
+      sand_geometry::stt::stt_module_regex_string};  // regular expression to
+                                                     // match relevant info
+                                                     // about module from volume
+                                                     // path
   std::map<int, std::map<double, int> >
       stt_tube_tranverse_position_map_;  // map (key: plane id, value: map (key:
                                          // tube id, value: 2D position [i.e. x
                                          // = z, y = transversal coord]))
 
   // ECAL
-  std::vector<double> get_levels_z(double half_module_height);
-  int encode_ecal_barrel_cell_local_id(int layer, int cell);
-  int encode_ecal_endcap_cell_local_id(int layer, int cell);
-  std::pair<int, int> decode_ecal_barrel_cell_local_id(int id);
-  std::pair<int, int> decode_ecal_endcap_cell_local_id(int id);
+  std::vector<double> get_levels_z(double half_module_height) const;
+  int encode_ecal_barrel_cell_local_id(int layer, int cell) const;
+  int encode_ecal_endcap_cell_local_id(int layer, int cell) const;
+  std::pair<int, int> decode_ecal_barrel_cell_local_id(int id) const;
+  std::pair<int, int> decode_ecal_endcap_cell_local_id(int id) const;
   std::map<int, TVector3> get_ecal_barrel_cell_center_local_position(
-      const std::vector<double>& zlevels, double m, double q);
+      const std::vector<double>& zlevels, double m, double q) const;
   std::map<int, TVector3> get_ecal_endcap_cell_center_local_position(
-      const std::vector<double>& zlevels, double rmin, double rmax);
-  bool is_ecal_barrel(const TString& volume_name);
-  bool is_ecal_endcap(const TString& volume_name);
-  bool check_and_process_ecal_path(TString& volume_path);
+      const std::vector<double>& zlevels, double rmin, double rmax) const;
+  bool is_ecal_barrel(const TString& volume_name) const;
+  bool is_ecal_endcap(const TString& volume_name) const;
+  bool check_and_process_ecal_path(TString& volume_path) const;
   void get_ecal_barrel_module_and_layer(const TString& volume_name,
                                         const TString& volume_path,
                                         int& detector_id, int& module_id,
-                                        int& plane_id);
+                                        int& plane_id) const;
   void get_ecal_endcap_module_and_layer(const TString& volume_name,
                                         const TString& volume_path,
                                         int& detector_id, int& module_id,
-                                        int& plane_id);
+                                        int& plane_id) const;
   void get_ecal_barrel_cell_local_id(double x, double y, double z,
                                      const TGeoNode* const node,
-                                     int& cell_local_id);
+                                     int& cell_local_id) const;
   void get_ecal_endcap_cell_local_id(double x, double y, double z,
                                      const TGeoNode* const node,
-                                     int& cell_local_id);
+                                     int& cell_local_id) const;
   void set_ecal_info();
 
   // STT
-  bool is_stt_tube(const TString& volume_name);
-  bool is_stt_plane(const TString& volume_name);
-  int get_stt_plane_id(const TString& volume_path);
+  bool is_stt_tube(const TString& volume_name) const;
+  bool is_stt_plane(const TString& volume_name) const;
+  int get_stt_plane_id(const TString& volume_path) const;
   void set_stt_tube_info(const TGeoNode* const node, const TGeoHMatrix& matrix,
                          int stt_plane_id);
   void set_stt_info(const TGeoHMatrix& matrix);
@@ -135,39 +146,38 @@ class SANDGeoManager : public TObject
   SANDGeoManager()
       : cellmap_(),
         sttmap_(),
-        stt_single_tube_regex_(
-            sand_geometry::stt::stt_single_tube_regex_string),
+        // stt_single_tube_regex_(
+        //     sand_geometry::stt::stt_single_tube_regex_string),
         stt_two_tubes_regex_(sand_geometry::stt::stt_two_tubes_regex_string),
         stt_plane_regex_(sand_geometry::stt::stt_plane_regex_string),
         stt_module_regex_(sand_geometry::stt::stt_module_regex_string),
-        stt_tube_tranverse_position_map_(){};
-  ~SANDGeoManager()
+        stt_tube_tranverse_position_map_()
   {
-    cellmap_.clear();
-    sttmap_.clear();
-    stt_tube_tranverse_position_map_.clear();
-  };
+  }
   void init(TGeoManager* const geo);
   int save_to_file(const char* name = 0, Int_t option = 0, Int_t bufsize = 0)
   {
     geo_ = 0;
     return Write(name, option, bufsize);
   }
-  const SANDECALCellInfo& get_ecal_cell_info(int ecal_cell_id)
+  const SANDECALCellInfo& get_ecal_cell_info(int ecal_cell_id) const
   {
     return cellmap_.at(ecal_cell_id);
   }
-  const SANDSTTTubeInfo& get_stt_tube_info(int stt_tube_id)
+  const SANDSTTTubeInfo& get_stt_tube_info(int stt_tube_id) const
   {
     return sttmap_.at(stt_tube_id);
   }
-  const std::map<int, SANDECALCellInfo>& get_ecal_cell_info()
+  const std::map<int, SANDECALCellInfo>& get_ecal_cell_info() const
   {
     return cellmap_;
   }
-  const std::map<int, SANDSTTTubeInfo>& get_stt_tube_info() { return sttmap_; }
-  int get_ecal_cell_id(double x, double y, double z);
-  int get_stt_tube_id(double x, double y, double z);
+  const std::map<int, SANDSTTTubeInfo>& get_stt_tube_info() const
+  {
+    return sttmap_;
+  }
+  int get_ecal_cell_id(double x, double y, double z) const;
+  int get_stt_tube_id(double x, double y, double z) const;
 
   // ECAL
   static int encode_ecal_cell_id(int detector_id, int module_id, int layer_id,

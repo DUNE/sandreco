@@ -17,7 +17,7 @@ void help_digit()
 
 int main(int argc, char* argv[])
 {
-  if (argc < 3 || argc > 6) { 
+  if (argc < 3 || argc > 6) {
     help_digit();
     return -1;
   }
@@ -35,11 +35,11 @@ int main(int argc, char* argv[])
   }
 
   std::cout << (detsim_type == digitization::DETSIM_TYPE::kEdepsim
-      ? "DETSIM_TYPE: EDEPSIM\n"
-      : "DETSIM_TYPE: FLUKA\n");
+                    ? "DETSIM_TYPE: EDEPSIM\n"
+                    : "DETSIM_TYPE: FLUKA\n");
   std::cout << (ecal_digi_mode == digitization::ECAL_digi_mode::const_fract
-      ? "ECAL_digi_mode: constant fraction\n"
-      : "ECAL_digi_mode: fixed threshold\n");
+                    ? "ECAL_digi_mode: constant fraction\n"
+                    : "ECAL_digi_mode: fixed threshold\n");
 
   if (detsim_type == digitization::DETSIM_TYPE::kEdepsim) {
     digitization::edep_sim::digitize(argv[1], argv[2], ecal_digi_mode);

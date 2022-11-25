@@ -39,7 +39,7 @@ double energy_to_photo_electrons(double E)
 //  - d2: distance from pmt2
 //  - t: time of the hit
 //  - de: energy deposit
-bool process_hit(TGeoManager* g, const TG4HitSegment& hit, int& detID,
+bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
                  int& modID, int& planeID, int& cellID, double& d1, double& d2,
                  double& t, double& de)
 {
@@ -61,64 +61,68 @@ bool process_hit(TGeoManager* g, const TG4HitSegment& hit, int& detID,
   t = 0.5 * (hit.Start.T() + hit.Stop.T());
   de = hit.EnergyDeposit;
 
-  /////
-  TGeoNode* node = g->FindNode(x, y, z);
+  auto cell_global_id = g.get_ecal_cell_id(x, y, z);
+  g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
+  return true;
 
-  if (node == 0) return false;
+  // /////
+  // TGeoNode* node = g->FindNode(x, y, z);
 
-  TString str = node->GetName();
-  TString str2 = g->GetPath();
+  // if (node == 0) return false;
 
-  if (debug) {
-    std::cout << "node name: " << str.Data() << std::endl;
-  }
+  // TString str = node->GetName();
+  // TString str2 = g->GetPath();
 
-  if (sand_reco::ecal::geometry::CheckAndProcessPath(str2) == false)
-    return false;
-  //////
+  // if (debug) {
+  //   std::cout << "node name: " << str.Data() << std::endl;
+  // }
 
-  // barrel modules
-  if (sand_reco::ecal::geometry::isBarrel(str)) {
+  // if (sand_reco::ecal::geometry::CheckAndProcessPath(str2) == false)
+  //   return false;
+  // //////
 
-    sand_reco::ecal::geometry::BarrelModuleAndLayer(str, str2, detID, modID,
-                                                    planeID);
+  // // barrel modules
+  // if (sand_reco::ecal::geometry::isBarrel(str)) {
 
-    sand_reco::ecal::geometry::BarrelCell(x, y, z, g, node, cellID, d1, d2);
+  //   sand_reco::ecal::geometry::BarrelModuleAndLayer(str, str2, detID, modID,
+  //                                                   planeID);
 
-    if (debug) {
-      std::cout << "hit: " << str.Data() << std::endl;
-      std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
-                << std::endl;
-      std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
-                << " " << planeID << " " << cellID << std::endl;
-      std::cout << "\t[d1,d2,t,de]           " << d1 << " " << d2 << " " << t
-                << " " << de << std::endl;
-    }
+  //   sand_reco::ecal::geometry::BarrelCell(x, y, z, g, node, cellID, d1, d2);
 
-    return true;
-  }
-  // end cap modules
-  else if (sand_reco::ecal::geometry::isEndCap(str)) {
+  //   if (debug) {
+  //     std::cout << "hit: " << str.Data() << std::endl;
+  //     std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
+  //               << std::endl;
+  //     std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
+  //               << " " << planeID << " " << cellID << std::endl;
+  //     std::cout << "\t[d1,d2,t,de]           " << d1 << " " << d2 << " " << t
+  //               << " " << de << std::endl;
+  //   }
 
-    sand_reco::ecal::geometry::EndCapModuleAndLayer(str, str2, detID, modID,
-                                                    planeID);
+  //   return true;
+  // }
+  // // end cap modules
+  // else if (sand_reco::ecal::geometry::isEndCap(str)) {
 
-    sand_reco::ecal::geometry::EndCapCell(x, y, z, g, node, cellID, d1, d2);
+  //   sand_reco::ecal::geometry::EndCapModuleAndLayer(str, str2, detID, modID,
+  //                                                   planeID);
 
-    if (debug) {
-      std::cout << "hit: " << str.Data() << std::endl;
-      std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
-                << std::endl;
-      std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
-                << " " << planeID << " " << cellID << std::endl;
-    }
-    return true;
-  } else {
-    return false;
-  }
+  //   sand_reco::ecal::geometry::EndCapCell(x, y, z, g, node, cellID, d1, d2);
+
+  //   if (debug) {
+  //     std::cout << "hit: " << str.Data() << std::endl;
+  //     std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
+  //               << std::endl;
+  //     std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
+  //               << " " << planeID << " " << cellID << std::endl;
+  //   }
+  //   return true;
+  // } else {
+  //   return false;
+  // }
 }
 
-void simulate_photo_electrons(TG4Event* ev, TGeoManager* g,
+void simulate_photo_electrons(TG4Event* ev, const SANDGeoManager& g,
                               std::map<int, std::vector<pe> >& photo_el,
                               std::map<int, double>& L)
 {
@@ -131,9 +135,9 @@ void simulate_photo_electrons(TG4Event* ev, TGeoManager* g,
     if (it->first == "EMCalSci") {
       for (unsigned int j = 0; j < it->second.size(); j++) {
 
-        if (g != NULL && (digitization::edep_sim::ecal::process_hit(
-                              g, it->second[j], detID, modID, planeID, cellID,
-                              d1, d2, t0, de) == true)) {
+        if (digitization::edep_sim::ecal::process_hit(g, it->second[j], detID,
+                                                      modID, planeID, cellID,
+                                                      d1, d2, t0, de) == true) {
           double en1 =
               de * sand_reco::ecal::attenuation::AttenuationFactor(d1, planeID);
           double en2 =
@@ -185,8 +189,44 @@ void simulate_photo_electrons(TG4Event* ev, TGeoManager* g,
   }
 }
 
+// construct calo digit and collect them in a vector
+void group_pmts_in_cells(const SANDGeoManager& geo,
+                         std::map<int, std::vector<dg_ps> >& ps,
+                         std::map<int, double>& L,
+                         std::vector<dg_cell>& vec_cell)
+{
+  std::map<int, dg_cell> map_cell;
+  dg_cell* c;
+
+  for (std::map<int, std::vector<dg_ps> >::iterator it = ps.begin();
+       it != ps.end(); ++it) {
+    int id = abs(it->first);
+
+    c = &(map_cell[id]);
+
+    c->id = id;
+    sand_reco::ecal::decoder::DecodeID(c->id, c->det, c->mod, c->lay, c->cel);
+    c->l = L[it->first];
+
+    if (it->first >= 0) {
+      c->ps1 = it->second;
+    } else {
+      c->ps2 = it->second;
+    }
+    auto cell_info = geo.get_ecal_cell_info(c->id);
+    c->x = cell_info.x();
+    c->y = cell_info.y();
+    c->z = cell_info.z();
+  }
+
+  for (std::map<int, dg_cell>::iterator it = map_cell.begin();
+       it != map_cell.end(); ++it) {
+    vec_cell.push_back(it->second);
+  }
+}
+
 // simulate calorimeter responce for whole event
-void digitize_ecal(TG4Event* ev, TGeoManager* geo,
+void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
                    std::vector<dg_cell>& vec_cell,
                    ECAL_digi_mode ecal_digi_mode)
 {
@@ -209,7 +249,7 @@ void digitize_ecal(TG4Event* ev, TGeoManager* geo,
   if (debug) {
     std::cout << "CollectSignal" << std::endl;
   }
-  digitization::ecal::group_pmts_in_cells(geo, ps, L, vec_cell);
+  digitization::edep_sim::ecal::group_pmts_in_cells(geo, ps, L, vec_cell);
 }
 
 }  // namespace ecal
@@ -217,7 +257,7 @@ void digitize_ecal(TG4Event* ev, TGeoManager* geo,
 namespace stt
 {
 // Group hits into tube
-void group_hits_by_tube(TG4Event* ev, TGeoManager* geo,
+void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
                         std::map<int, std::vector<hit> >& hits2Tube)
 {
   hits2Tube.clear();
@@ -229,16 +269,18 @@ void group_hits_by_tube(TG4Event* ev, TGeoManager* geo,
     double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
-    std::string sttname = "NULL";
-    int stid = -999;  // should be implemented for FLUKA
+    int stid = geo.get_stt_tube_id(x, y, z);
 
-    sttname = geo->FindNode(x, y, z)->GetName();
+    // std::string sttname = "NULL";
+    // int stid = -999;  // should be implemented for FLUKA
 
-    stid = sand_reco::stt::getSTUniqID(geo, x, y, z);
-    if (stid == -999) continue;
+    // sttname = geo->FindNode(x, y, z)->GetName();
+
+    // stid = sand_reco::stt::getSTUniqID(geo, x, y, z);
+    // if (stid == -999) continue;
 
     hit h;
-    h.det = sttname;
+    h.det = "STT";
     h.did = stid;
     h.x1 = hseg.Start.X();
     h.y1 = hseg.Start.Y();
@@ -256,15 +298,112 @@ void group_hits_by_tube(TG4Event* ev, TGeoManager* geo,
   }
 }
 
+// for each tube simulate tdc and adc
+// tdc is the time of closest point to wire + drift time
+// adc is the sum of energy deposit within integration time window
+void create_digits_from_hits(const SANDGeoManager& geo,
+                             std::map<int, std::vector<hit> >& hits2Tube,
+                             std::vector<dg_tube>& digit_vec)
+{
+  digit_vec.clear();
+
+  for (std::map<int, std::vector<hit> >::iterator it = hits2Tube.begin();
+       it != hits2Tube.end(); ++it) {
+    double min_time_tub = 1E9;  // mm
+    int did = it->first;
+
+    int mod, tub, type, pla, plloc;
+
+    SANDGeoManager::decode_stt_tube_id(did, pla, tub);
+    SANDGeoManager::decode_stt_plane_id(pla, mod, plloc, type);
+
+    auto stt_info = geo.get_stt_tube_info(did);
+
+    dg_tube d;
+    d.det = it->second[0].det;
+    d.did = did;
+    d.de = 0;
+    d.hor = (type % 2 == 0);
+    d.t0 = sand_reco::stt::t0[pla];
+    TVector2 wire;
+
+    if (d.hor == true) {
+      d.x = sand_reco::stt::stt_center[0];
+      d.y = stt_info.y();
+      d.z = stt_info.z();
+      wire.SetX(stt_info.z());
+      wire.SetY(stt_info.y());
+    } else {
+      d.x = stt_info.x();
+      d.y = sand_reco::stt::stt_center[1];
+      d.z = stt_info.z();
+      wire.SetX(stt_info.z());
+      wire.SetY(stt_info.x());
+    }
+
+    for (unsigned int i = 0; i < it->second.size(); i++) {
+      double x1 = it->second[i].z1;
+      double x2 = it->second[i].z2;
+      double t1 = it->second[i].t1;
+      double t2 = it->second[i].t2;
+
+      double y1, y2;
+      double z1, z2, z;
+      double l, dwire;
+
+      if (type == 2) {
+        y1 = it->second[i].y1;
+        y2 = it->second[i].y2;
+        z1 = it->second[i].x1;
+        z2 = it->second[i].x2;
+        l = sand_reco::stt::getT(y1, y2, stt_info.y(), x1, x2, stt_info.z());
+        z = z1 + (z2 - z1) * l;
+        dwire = stt_info.x() + stt_info.length() - z;
+      } else {
+        y1 = it->second[i].x1;
+        y2 = it->second[i].x2;
+        z1 = it->second[i].y1;
+        z2 = it->second[i].y2;
+        l = sand_reco::stt::getT(y1, y2, stt_info.x(), x1, x2, stt_info.z());
+        z = z1 + (z2 - z1) * l;
+        dwire = stt_info.y() + stt_info.length() - z;
+      }
+
+      double x = x1 + (x2 - x1) * l;
+      double y = y1 + (y2 - y1) * l;
+      double t = t1 + (t2 - t1) * l;
+
+      TVector2 min_dist_point(x, y);
+      double min_dist_hit = (min_dist_point - wire).Mod();
+      double min_time_hit = t +
+                            (min_dist_hit - sand_reco::stt::wire_radius) /
+                                sand_reco::stt::v_drift +
+                            dwire / sand_reco::stt::v_signal_inwire;
+
+      if (min_time_hit < min_time_tub) min_time_tub = min_time_hit;
+
+      if (t - d.t0 < sand_reco::stt::stt_int_time) d.de += it->second[i].de;
+
+      d.hindex.push_back(it->second[i].index);
+    }
+
+    d.tdc = min_time_tub + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
+    d.adc = d.de;
+
+    digit_vec.push_back(d);
+  }
+}
+
 // simulate stt responce for whole event
-void digitize_stt(TG4Event* ev, TGeoManager* geo,
+void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
                   std::vector<dg_tube>& digit_vec)
 {
   std::map<int, std::vector<hit> > hits2Tube;
   digit_vec.clear();
 
   group_hits_by_tube(ev, geo, hits2Tube);
-  digitization::stt::create_digits_from_hits(hits2Tube, digit_vec);
+  digitization::edep_sim::stt::create_digits_from_hits(geo, hits2Tube,
+                                                       digit_vec);
 }
 }  // namespace stt
 
@@ -319,7 +458,9 @@ void digitize(const char* finname, const char* foutname,
   //   - std::map<int, TVector2> sand_reco::tubePos
   //       - KEY  : id of the tube
   //       - VALUE: map with
-  sand_reco::init(geo);
+  // sand_reco::init(geo);
+  SANDGeoManager sand_geo;
+  sand_geo.init(geo);
 
   // vector of ECAL and STT digits
   std::vector<dg_tube> digit_vec;
@@ -347,12 +488,12 @@ void digitize(const char* finname, const char* foutname,
     // define the T0 for this event
     // for each straw tubs:
     // std::map<int, double> sand_reco::t0
-    sand_reco::stt::initT0(ev);
+    sand_reco::stt::initT0(ev, sand_geo);
 
     // digitize ECAL and STT
-    digitization::edep_sim::ecal::digitize_ecal(ev, geo, vec_cell,
+    digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
                                                 ecal_digi_mode);
-    digitization::edep_sim::stt::digitize_stt(ev, geo, digit_vec);
+    digitization::edep_sim::stt::digitize_stt(ev, sand_geo, digit_vec);
 
     tout.Fill();
   }
@@ -368,11 +509,11 @@ void digitize(const char* finname, const char* foutname,
   f.Close();
 
   // cleaning
-  sand_reco::stt::stL.clear();
-  sand_reco::stt::stX.clear();
-  sand_reco::stt::stPos.clear();
+  // sand_reco::stt::stL.clear();
+  // sand_reco::stt::stX.clear();
+  // sand_reco::stt::stPos.clear();
+  // sand_reco::stt::tubePos.clear();
   sand_reco::stt::t0.clear();
-  sand_reco::stt::tubePos.clear();
 }
 
 }  // namespace edep_sim

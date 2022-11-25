@@ -6,31 +6,34 @@
 #include <TGeoTube.h>
 #include <TObjString.h>
 
-int SANDGeoManager::encode_ecal_barrel_cell_local_id(int layer, int cell)
+int SANDGeoManager::encode_ecal_barrel_cell_local_id(int layer, int cell) const
 {
   return cell * 100 + layer;
 }
 
-int SANDGeoManager::encode_ecal_endcap_cell_local_id(int layer, int cell)
+int SANDGeoManager::encode_ecal_endcap_cell_local_id(int layer, int cell) const
 {
   return cell * 100 + layer;
 }
 
-std::pair<int, int> SANDGeoManager::decode_ecal_barrel_cell_local_id(int id)
+std::pair<int, int> SANDGeoManager::decode_ecal_barrel_cell_local_id(
+    int id) const
 {
   int cell = id / 100;
   int layer = id % 100;
   return std::make_pair(layer, cell);
 }
 
-std::pair<int, int> SANDGeoManager::decode_ecal_endcap_cell_local_id(int id)
+std::pair<int, int> SANDGeoManager::decode_ecal_endcap_cell_local_id(
+    int id) const
 {
   int cell = id / 100;
   int layer = id % 100;
   return std::make_pair(layer, cell);
 }
 
-std::vector<double> SANDGeoManager::get_levels_z(double half_module_height)
+std::vector<double> SANDGeoManager::get_levels_z(
+    double half_module_height) const
 {
   // z edge of the cells
   std::vector<double> zlevel;
@@ -44,7 +47,7 @@ std::vector<double> SANDGeoManager::get_levels_z(double half_module_height)
 
 std::map<int, TVector3>
     SANDGeoManager::get_ecal_barrel_cell_center_local_position(
-        const std::vector<double>& zlevels, double m, double q)
+        const std::vector<double>& zlevels, double m, double q) const
 {
   // z position of the center of the cells
   std::map<int, TVector3> ecal_barrel_cell_center_local_positions;
@@ -73,7 +76,7 @@ std::map<int, TVector3>
 
 std::map<int, TVector3>
     SANDGeoManager::get_ecal_endcap_cell_center_local_position(
-        const std::vector<double>& zlevels, double rmin, double rmax)
+        const std::vector<double>& zlevels, double rmin, double rmax) const
 {
   // z position of the center of the cells
   std::map<int, TVector3> ecal_endcap_cell_center_local_positions;
@@ -120,7 +123,7 @@ void SANDGeoManager::decode_ecal_cell_id(int cell_global_id, int& detector_id,
   cell_local_id = cell_global_id;
 }
 
-bool SANDGeoManager::is_ecal_barrel(const TString& volume_name)
+bool SANDGeoManager::is_ecal_barrel(const TString& volume_name) const
 {
   // something like: volECALActiveSlab_21_PV_0
   return volume_name.Contains("volECAL") == true &&
@@ -128,14 +131,14 @@ bool SANDGeoManager::is_ecal_barrel(const TString& volume_name)
          volume_name.Contains("end") == false;
 }
 
-bool SANDGeoManager::is_ecal_endcap(const TString& volume_name)
+bool SANDGeoManager::is_ecal_endcap(const TString& volume_name) const
 {
   // something like: endvolECALActiveSlab_0_PV_0
   return volume_name.Contains("endvolECAL") == true &&
          volume_name.Contains("Active") == true;
 }
 
-bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path)
+bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path) const
 {
   // ENDCAP ==> something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_18/volECALActiveSlab_21_PV_0"
@@ -156,10 +159,9 @@ bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path)
   return true;
 }
 
-void SANDGeoManager::get_ecal_barrel_module_and_layer(const TString& volume_name,
-                                      const TString& volume_path,
-                                      int& detector_id, int& module_id,
-                                      int& plane_id)
+void SANDGeoManager::get_ecal_barrel_module_and_layer(
+    const TString& volume_name, const TString& volume_path, int& detector_id,
+    int& module_id, int& plane_id) const
 {
   TObjArray* obja1 =
       volume_name.Tokenize("_");  // BARERL => volECALActiveSlab_21_PV_0
@@ -182,10 +184,9 @@ void SANDGeoManager::get_ecal_barrel_module_and_layer(const TString& volume_name
   if (plane_id > 4) plane_id = 4;
 }
 
-void SANDGeoManager::get_ecal_endcap_module_and_layer(const TString& volume_name,
-                                      const TString& volume_path,
-                                      int& detector_id, int& module_id,
-                                      int& plane_id)
+void SANDGeoManager::get_ecal_endcap_module_and_layer(
+    const TString& volume_name, const TString& volume_path, int& detector_id,
+    int& module_id, int& plane_id) const
 {
   TObjArray* obja1 =
       volume_name.Tokenize("_");  // ENDCAP => endvolECALActiveSlab_0_PV_0
@@ -216,7 +217,7 @@ void SANDGeoManager::get_ecal_endcap_module_and_layer(const TString& volume_name
 
 void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
                                                    const TGeoNode* const node,
-                                                   int& cell_local_id)
+                                                   int& cell_local_id) const
 {
   double master[3];
   double local[3];
@@ -248,7 +249,7 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
 
 void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
                                                    const TGeoNode* const node,
-                                                   int& cell_local_id)
+                                                   int& cell_local_id) const
 {
   double master[3];
   double local[3];
@@ -404,17 +405,17 @@ void SANDGeoManager::decode_stt_plane_id(int stt_plane_global_id,
   stt_plane_type = stt_plane_global_id % 10;
 }
 
-bool SANDGeoManager::is_stt_tube(const TString& volume_name)
+bool SANDGeoManager::is_stt_tube(const TString& volume_name) const
 {
   return volume_name.Contains(stt_single_tube_regex_);
 }
 
-bool SANDGeoManager::is_stt_plane(const TString& volume_name)
+bool SANDGeoManager::is_stt_plane(const TString& volume_name) const
 {
   return volume_name.Contains(stt_plane_regex_);
 }
 
-int SANDGeoManager::get_stt_plane_id(const TString& volume_path)
+int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
 {
   auto plane_matches = stt_plane_regex_.MatchS(volume_path);
   auto module_matches = stt_module_regex_.MatchS(volume_path);
@@ -563,7 +564,7 @@ void SANDGeoManager::init(TGeoManager* const geo)
   set_stt_info();
 }
 
-int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
+int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 {
   if (geo_ == 0) {
     std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
@@ -609,7 +610,7 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z)
   return cell_unique_id;
 }
 
-int SANDGeoManager::get_stt_tube_id(double x, double y, double z)
+int SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
 {
   if (geo_ == 0) {
     std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
@@ -635,7 +636,7 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z)
   else
     transverse_coord = y;
 
-  std::map<double, int>::iterator it =
+  std::map<double, int>::const_iterator it =
       stt_tube_tranverse_position_map_.at(plane_id).lower_bound(
           transverse_coord);
 

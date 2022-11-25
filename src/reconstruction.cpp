@@ -1549,6 +1549,7 @@ void VertexFind(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
              hrmsY, hnX, hnY);
 }
 
+///////// to be reimplemented with SANDGeoManager
 void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
 {
   TString path_prefix(stt::path_internal_volume);
