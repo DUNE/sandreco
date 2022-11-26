@@ -469,12 +469,12 @@ void SimulatePE(TG4Event* ev, TGeoManager* g,
   }
 }
 
-enum class ECAL_digi_mode {const_fract, fixed_thresh};
+enum class ECAL_digi_mode { const_fract, fixed_thresh };
 
 // from simulated pe produce adc e tdc of calo cell
 void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
                    std::map<int, std::vector<dg_ps> >& map_pmt,
-		   ECAL_digi_mode ecal_digi_mode, double npe_thresh)
+                   ECAL_digi_mode ecal_digi_mode, double npe_thresh)
 {
   /*
     -  ADC - Proportional to NPHE
@@ -493,7 +493,8 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
 
   std::vector<pe> photo_el_digit;
 
-  if(npe_thresh > 0) sand_reco::ecal::acquisition::fixed_thresh_pe = npe_thresh; 
+  if (npe_thresh > 0)
+    sand_reco::ecal::acquisition::fixed_thresh_pe = npe_thresh;
 
   for (std::map<int, std::vector<pe> >::iterator it = photo_el.begin();
        it != photo_el.end(); ++it) {
@@ -524,18 +525,24 @@ void TimeAndSignal(std::map<int, std::vector<pe> >& photo_el,
           dg_ps signal;
           signal.side = side;
           signal.adc = sand_reco::ecal::acquisition::pe2ADC * pe_count;
-	  switch (ecal_digi_mode) {
-	  case ECAL_digi_mode::const_fract:
-	      index = int(sand_reco::ecal::acquisition::costant_fraction * pe_count) + start_index;
-	      if (debug) std::cout << " Const. Fract. " << index << std::endl;
-	      break;
-	  case ECAL_digi_mode::fixed_thresh:
-	      double tdc_thresh = (sand_reco::ecal::acquisition::fixed_thresh_pe > sand_reco::ecal::acquisition::pe_threshold) ? sand_reco::ecal::acquisition::fixed_thresh_pe : sand_reco::ecal::acquisition::pe_threshold;
-	      index = TMath::Ceil(tdc_thresh) + start_index;
-	      if (debug) std::cout << " Fix. Thresh. " << index << std::endl;
-	      break;
-	  }
-	  signal.tdc = it->second[index].time;
+          switch (ecal_digi_mode) {
+            case ECAL_digi_mode::const_fract:
+              index = int(sand_reco::ecal::acquisition::costant_fraction *
+                          pe_count) +
+                      start_index;
+              if (debug) std::cout << " Const. Fract. " << index << std::endl;
+              break;
+            case ECAL_digi_mode::fixed_thresh:
+              double tdc_thresh =
+                  (sand_reco::ecal::acquisition::fixed_thresh_pe >
+                   sand_reco::ecal::acquisition::pe_threshold)
+                      ? sand_reco::ecal::acquisition::fixed_thresh_pe
+                      : sand_reco::ecal::acquisition::pe_threshold;
+              index = TMath::Ceil(tdc_thresh) + start_index;
+              if (debug) std::cout << " Fix. Thresh. " << index << std::endl;
+              break;
+          }
+          signal.tdc = it->second[index].time;
           signal.photo_el = photo_el_digit;
           map_pmt[it->first].push_back(signal);
         }
@@ -594,7 +601,8 @@ void CollectSignal(TGeoManager* geo, std::map<int, std::vector<dg_ps> >& ps,
 }
 
 // simulate calorimeter responce for whole event
-void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<dg_cell>& vec_cell, ECAL_digi_mode ecal_digi_mode, double npe_thresh)
+void DigitizeCal(TG4Event* ev, TGeoManager* geo, std::vector<dg_cell>& vec_cell,
+                 ECAL_digi_mode ecal_digi_mode, double npe_thresh)
 {
   std::map<int, std::vector<pe> > photo_el;
   std::map<int, std::vector<dg_ps> > ps;
@@ -798,7 +806,8 @@ xPos[10000], Float_t yPos[10000], Float_t zPos[10000],
 */
 
 // digitize event
-void Digitize(const char* finname, const char* foutname, ECAL_digi_mode ecal_digi_mode, double npe_thresh)
+void Digitize(const char* finname, const char* foutname,
+              ECAL_digi_mode ecal_digi_mode, double npe_thresh)
 {
   TFile f(finname, "READ");
 
@@ -937,15 +946,19 @@ void Digitize(const char* finname, const char* foutname, ECAL_digi_mode ecal_dig
 
 void help_digit()
 {
-  std::cout << "Digitize <MC file> <digit file> [ecal digitization mode]" << std::endl;
+  std::cout << "Digitize <MC file> <digit file> [ecal digitization mode]"
+            << std::endl;
   std::cout << "MC file name could contain wild card" << std::endl;
-  std::cout << "ecal digitization mode: 'ecal_digi_mode::const_fract' (default) " << std::endl;
-  std::cout << "                        'ecal_digi_mode::fixed_thresh' " << std::endl;
+  std::cout
+      << "ecal digitization mode: 'ecal_digi_mode::const_fract' (default) "
+      << std::endl;
+  std::cout << "                        'ecal_digi_mode::fixed_thresh' "
+            << std::endl;
 }
 
 int main(int argc, char* argv[])
 {
-  if (argc < 3 || argc > 5){
+  if (argc < 3 || argc > 5) {
     help_digit();
     return -1;
   }
@@ -953,11 +966,10 @@ int main(int argc, char* argv[])
   auto ecal_digi_mode = ECAL_digi_mode::const_fract;
   if (argc > 3 && strcmp(argv[3], "ecal_digi_mode::fixed_thresh") == 0) {
     ecal_digi_mode = ECAL_digi_mode::fixed_thresh;
-    std::cout << " ecal_digi_mode: fixed threshold "  << std::endl;
-  }
-  else {
+    std::cout << " ecal_digi_mode: fixed threshold " << std::endl;
+  } else {
     std::cout << " ecal_digi_mode: constant fraction " << std::endl;
-  } 
+  }
 
   Digitize(argv[1], argv[2], ecal_digi_mode, atof(argv[4]));
   return 0;
