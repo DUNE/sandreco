@@ -17,3 +17,5 @@ lib
 scripts
 .vscode/*
 build/*
+build.sh
+env.sh
