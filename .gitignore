@@ -18,3 +18,4 @@ scripts
 .vscode/*
 build/*
 *.ipynb
+*.sh
