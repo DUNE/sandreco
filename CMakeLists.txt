@@ -21,7 +21,9 @@ find_package(EDepSim REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -Wno-unused-parameter")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 ROOT_GENERATE_DICTIONARY(G__Struct struct.h LINKDEF include/Linkdef.h)
+ROOT_GENERATE_DICTIONARY(SANDEventDisplayDict SANDEventDisplay.h LINKDEF include/SANDEventDisplayLinkDef.h)
 
 # set output directory
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
@@ -62,6 +64,18 @@ target_link_libraries(Display Struct Utils)
 add_executable(FastCheck src/fastcheck.cpp)
 target_link_libraries(FastCheck Struct Utils)
 
+# Creates a libSANDEventDisplay shared library
+add_library(SANDEventDisplay SHARED src/SANDEventDisplay.cpp src/SANDDisplayUtils.cpp SANDEventDisplayDict.cxx)
+target_include_directories(SANDEventDisplay PUBLIC ${EDepSim_INCLUDE_DIR}
+"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+"$<INSTALL_INTERFACE:include>")
+target_link_libraries(SANDEventDisplay PUBLIC Utils EDepSim::edepsim_io)
+
+# Creates eventDisplay executable.
+
+add_executable(eventDisplay src/eventDisplay.cpp)
+target_link_libraries(eventDisplay PUBLIC SANDEventDisplay "-lEG -lGui")
+
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
 endif()
@@ -69,16 +83,16 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-install(TARGETS Utils Struct Digitize Reconstruct Analyze Display FastCheck
+install(TARGETS Utils Struct SANDEventDisplay Digitize Reconstruct Analyze Display FastCheck eventDisplay
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
         ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
-        
+
 install(
    DIRECTORY "${CMAKE_BINARY_DIR}/."
    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-   FILES_MATCHING 
+   FILES_MATCHING
    PATTERN "*.pcm"
    PATTERN "*.rootmap"
    PATTERN "lib" EXCLUDE
@@ -86,9 +100,15 @@ install(
    PATTERN "CMakeFiles" EXCLUDE)
 
 install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include 
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
-  PATTERN "Linkdef.h" EXCLUDE)
+  PATTERN "Linkdef.h" EXCLUDE
+  PATTERN "SANDEventDisplayLinkDef.h" EXCLUDE)
+
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/icons
+  DESTINATION "${CMAKE_INSTALL_PREFIX}")
+
 
 #############################################################
 #
