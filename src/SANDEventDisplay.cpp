@@ -90,6 +90,7 @@ SANDEventDisplay::SANDEventDisplay(const TGWindow *p, int w, int h) : TGMainFram
 
   fColNum = 20;
   fSetHitsMode = 2;
+  fSetZoomTo = 0; // 0 - detector, 1 - vertex
   fGeomInitialized = false;
   fDrawHits = kDigitHits;
 
@@ -138,6 +139,17 @@ SANDEventDisplay::SANDEventDisplay(const TGWindow *p, int w, int h) : TGMainFram
   fVerticesZXTrue->SetMarkerColor(6);
   fVerticesZXTrue->SetMarkerSize(2);
 
+  double sandCenter[3] = {0, -2384.73/10, 23910/10};
+  double sandRadius = 200;
+  double sandLenght = 338;
+
+  fDetectorZmin = sandCenter[2] - 1.1 * sandRadius;
+  fDetectorZmax = sandCenter[2] + 1.1 * sandRadius;
+  fDetectorYmin = sandCenter[1] - 1.1 * sandRadius;
+  fDetectorYmax = sandCenter[1] + 1.1 * sandRadius;
+  fDetectorXmin = sandCenter[0] - 1.1 * 0.5 * sandLenght;
+  fDetectorXmax = sandCenter[0] + 1.1 * 0.5 * sandLenght;
+
   DefineColors();
   DrawButtons();
 
@@ -160,20 +172,31 @@ SANDEventDisplay::~SANDEventDisplay()
 
 
 //---------------------------------------------------------------------------
-void SANDEventDisplay::Run()
+void SANDEventDisplay::RunEvent()
 {
   if (fTreeSimData) fTreeSimData->GetEntry(fEventNumber);
   if (fTreeDigitData) fTreeDigitData->GetEntry(fEventNumber);
-  DrawEvent();
+
+  InitObjects(); // clear all drawing objects
+  FillEventHits();
+  FillDigitHits();
+  if (fSetZoomTo == 0) ZoomDetector();
+  else if (fSetZoomTo == 1) ZoomToVertex();
 }
+
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::DrawEvent()
 {
-  InitObjects(); // clear all drawing objects
-  DrawDetector();
-  FillEventHits();
-  FillDigitHits();
+  SafeDelete(fPadZY); SafeDelete(fPadZX);
+  fDisplayCanvas->Clear(); fDisplayCanvas->cd();
+
+  fPadZY = new TPad("ZY plane", "ZY plane", 0., 0, 0.5, 1);
+  fPadZX = new TPad("ZX plane", "ZX plane", 0.5, 0, 1, 1);
+
+  fPadZY->Draw(); fPadZX->Draw();
+
+  DrawSAND();
   DrawTracks();
   fEntryEventId->SetIntNumber(fEventNumber);
   fDisplayCanvas->cd(); fDisplayCanvas->Update();
@@ -327,7 +350,8 @@ void SANDEventDisplay::DrawTracks()
   // fHistoHitsZYviewTrue->SetTitle(Form("%i", entry));
 
   TEllipse *ellipse;
-  TBox *box;
+
+  double sttRadius = (fZmaxView - fZminView < 200) ? 0.25 : 1;
 
   // define track colors
 
@@ -345,7 +369,7 @@ void SANDEventDisplay::DrawTracks()
   }
   else if (fDrawHits == kDigitHits) {
     for (auto &hit : fTubeDigitHitsZY){
-      ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
+      ellipse = new TEllipse(hit.z, hit.x, sttRadius, sttRadius, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
     for (auto &hit : fCellDigitHitsZY){
@@ -366,7 +390,7 @@ void SANDEventDisplay::DrawTracks()
   }
   else if (fDrawHits == kDigitHits) {
     for (auto &hit : fTubeDigitHitsZX){
-      ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
+      ellipse = new TEllipse(hit.z, hit.x, sttRadius, sttRadius, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
     for (auto &hit : fCellDigitHitsZX){
@@ -377,15 +401,19 @@ void SANDEventDisplay::DrawTracks()
 
   fPadZY->cd();
 
-  for (int i = 0; i < fTracksArrayZYTrue->GetEntries(); ++i)
-  ((TPolyLine*)fTracksArrayZYTrue->At(i))->Draw();
+  if (fCheckDrawSimTracks->IsDown()) {
+    for (int i = 0; i < fTracksArrayZYTrue->GetEntries(); ++i)
+    ((TPolyLine*)fTracksArrayZYTrue->At(i))->Draw();
+  }
 
   fVerticesZYTrue->Draw();
 
   fPadZX->cd();
 
-  for (int i = 0; i < fTracksArrayZXTrue->GetEntries(); ++i)
-  ((TPolyLine*)fTracksArrayZXTrue->At(i))->Draw();
+  if (fCheckDrawSimTracks->IsDown()) {
+    for (int i = 0; i < fTracksArrayZXTrue->GetEntries(); ++i)
+    ((TPolyLine*)fTracksArrayZXTrue->At(i))->Draw();
+  }
 
   fVerticesZXTrue->Draw();
 
@@ -408,20 +436,20 @@ void SANDEventDisplay::InitObjects()
   fCellDigitHitsZY.clear();
   fCellDigitHitsZX.clear();
 
-  SafeDelete(fPadZY); SafeDelete(fPadZX);
-  fDisplayCanvas->Clear(); fDisplayCanvas->cd();
-
   // SafeDelete(fPadZY); SafeDelete(fPadZX);
+  // fDisplayCanvas->Clear(); fDisplayCanvas->cd();
 
-  fPadZY = new TPad("ZY plane", "ZY plane", 0., 0, 0.5, 1);
-  fPadZX = new TPad("ZX plane", "ZX plane", 0.5, 0, 1, 1);
+  // // SafeDelete(fPadZY); SafeDelete(fPadZX);
 
-  fPadZY->Draw(); fPadZX->Draw();
+  // fPadZY = new TPad("ZY plane", "ZY plane", 0., 0, 0.5, 1);
+  // fPadZX = new TPad("ZX plane", "ZX plane", 0.5, 0, 1, 1);
+
+  // fPadZY->Draw(); fPadZX->Draw();
 }
 
 
 //----------------------------------------------------------------------------
-void SANDEventDisplay::DrawDetector()
+void SANDEventDisplay::DrawSAND()
 {
   // set all sizes in cm
 
@@ -433,17 +461,24 @@ void SANDEventDisplay::DrawDetector()
   double sandRadius = 200;
   double sandLenght = 338;
 
+  // fZminView = sandCenter[2] - 1.1 * sandRadius;
+  // fZmaxView = sandCenter[2] + 1.1 * sandRadius;
+  // fYminView = sandCenter[1] - 1.1 * sandRadius;
+  // fYmaxView = sandCenter[1] + 1.1 * sandRadius;
+  // fXminView = sandCenter[0] - 1.1 * 0.5 * sandLenght;
+  // fXmaxView = sandCenter[0] + 1.1 * 0.5 * sandLenght;
+
   // for (int i = 0; i < 3; ++i) sandCenter[i] /= 10;
 
   fPadZY->cd();
-  fPadZY->DrawFrame(sandCenter[2] - 1.1 * sandRadius, sandCenter[1] - 1.1 * sandRadius, sandCenter[2] + 1.1 * sandRadius, sandCenter[1] + 1.1 * sandRadius);
+  fPadZY->DrawFrame(fZminView, fYminView, fZmaxView, fYmaxView);
 
   TEllipse *el1 = new TEllipse(sandCenter[2], sandCenter[1], sandRadius);
   el1->SetLineColor(2);
   el1->Draw();
 
   fPadZX->cd();
-  fPadZX->DrawFrame(sandCenter[2] - 1.1 * sandRadius, sandCenter[0] - 1.1 * 0.5 * sandLenght, sandCenter[2] + 1.1 * sandRadius, sandCenter[0] + 1.1 * 0.5 * sandLenght);
+  fPadZX->DrawFrame(fZminView, fXminView, fZmaxView, fXmaxView);
 
   TBox *box1 = new TBox(sandCenter[2] - sandRadius, sandCenter[0] - 0.5*sandLenght, sandCenter[2] + sandRadius, sandCenter[0] + 0.5*sandLenght);
   box1->SetFillStyle(0);
@@ -745,12 +780,10 @@ void SANDEventDisplay::AddRunEventFrame(TGHorizontalFrame *workframe)
 
   // Using selected brick
 
-  // fCheckSelectedBrickMode = new TGCheckButton(buttonframe,
-	// 				      "Zoom to selected brick", 104);
-  // fCheckSelectedBrickMode->Associate(this);
-  // if (fSetZoomToSelectedBrick)
-  //   fCheckSelectedBrickMode->SetState(kButtonDown, kTRUE);
-  // buttonframe->AddFrame(fCheckSelectedBrickMode, fLayoutExpX);
+  fCheckDrawSimTracks = new TGCheckButton(buttonframe, "Draw simulated tracks", 104);
+  fCheckDrawSimTracks->Associate(this);
+  buttonframe->AddFrame(fCheckDrawSimTracks, fLayoutExpX);
+
   //
   // fCheckDrawVetoTracks = new TGCheckButton(buttonframe,
 	// 				   "Draw veto tracks", 174);
@@ -810,10 +843,10 @@ void SANDEventDisplay::AddNavigateButtons(TGVerticalFrame *workframe)
   pictButton[2] = new TGPictureButton(viewNavigate2, gClient->GetPicture(icpath+"down.xpm"));
   pictButton[3] = new TGPictureButton(viewNavigate2, gClient->GetPicture(icpath+"right.xpm"));
 
-  // pictButton[0]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=2)");
-  // pictButton[1]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=-1)");
-  // pictButton[3]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=1)");
-  // pictButton[2]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=-2)");
+  pictButton[0]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=2)");
+  pictButton[1]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=-1)");
+  pictButton[3]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=1)");
+  pictButton[2]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=-2)");
 
   viewNavigate1->AddFrame(pictButton[0], fLayoutExpY);
   viewNavigate2->AddFrame(pictButton[1], fLayoutExpY);
@@ -911,13 +944,13 @@ bool SANDEventDisplay::ProcessMessage(Long_t msg, Long_t param1, Long_t)
       //   case kCM_COMBOBOX:
       //   if (param1 == 100 && fSM) DrawDetector(kFALSE);
       //   break;
-      //   case kCM_CHECKBUTTON:
+      case kCM_CHECKBUTTON:
       //   if (param1 == 101) fSetNavigateMode=fCheckNavigateMode->IsDown();
       //   else if (param1 == 103) {
       //     fSetBrickFinderInfo = fCheckBrickFinderInfo->IsDown();
       //     DrawDetector();
       //   }
-      //   else if (param1 == 104) SetViewToBrick();
+      if (param1 == 104) DrawEvent();
       //   else if (param1 == 105) {
       //     fSetPresentationMode = fCheckPresentationMode->IsDown();
       //     DrawDetector(kFALSE);
@@ -931,7 +964,7 @@ bool SANDEventDisplay::ProcessMessage(Long_t msg, Long_t param1, Long_t)
       //     fTTCSConnection->SetRemoveSelectedTracks(fCheckRemoveSelectedTracks->IsDown());
       //     DrawDetector(kFALSE);
       //   }
-      //   break;
+      break;
 //      case kCM_RADIOBUTTON:
       //   if (param1 == 100) fSetZoomTo = 0;
       //   else if (param1 == 101) fSetZoomTo = 1;
@@ -1003,21 +1036,21 @@ bool SANDEventDisplay::ProcessMessage(Long_t msg, Long_t param1, Long_t)
         case M_NEXT_EVENT:
         NextEvent();
         break;
-        // case M_ZOOM_IN:
-        // ZoomDetector(1.07);
-        // break;
-        // case M_ZOOM_OUT:
-        // ZoomDetector(0.93);
-        // break;
+        case M_ZOOM_IN:
+        ZoomDetector(1.1);
+        break;
+        case M_ZOOM_OUT:
+        ZoomDetector(0.9);
+        break;
         // case M_ZOOM_EVENT:
         // FitZoomToEvent();
         // break;
-        // case M_ZOOM_VERTEX:
-        // FitZoomToVertex();
-        // break;
-        // case M_ZOOM_DETECTOR:
-        // ZoomDetector();
-        // break;
+        case M_ZOOM_VERTEX:
+        ZoomToVertex();
+        break;
+        case M_ZOOM_DETECTOR:
+        ZoomDetector();
+        break;
         case M_FILE_EXIT:
         ExitApplication();
         break;
@@ -1040,7 +1073,7 @@ bool SANDEventDisplay::ProcessMessage(Long_t msg, Long_t param1, Long_t)
 void SANDEventDisplay::NextEvent()
 {
   fEventNumber = TMath::Min(fEventNumber+1, fTreeSimData->GetEntries()-1);
-  Run();
+  RunEvent();
 }
 
 
@@ -1048,7 +1081,7 @@ void SANDEventDisplay::NextEvent()
 void SANDEventDisplay::PreviousEvent()
 {
   if (fEventNumber > 0) --fEventNumber;
-  Run();
+  RunEvent();
 }
 
 
@@ -1069,7 +1102,7 @@ void SANDEventDisplay::SetHitsMode()
     if (fRadioEnergyMode[i]->WidgetId() != id && fRadioEnergyMode[i]->GetState() != kButtonDisabled) fRadioEnergyMode[i]->SetState(kButtonUp);
   }
 
-  Run();
+  DrawEvent();
 }
 
 
@@ -1090,7 +1123,7 @@ void SANDEventDisplay::SetHitsType()
     if (fRadioHitsType[i]->WidgetId() != id && fRadioHitsType[i]->GetState() != kButtonDisabled) fRadioHitsType[i]->SetState(kButtonUp);
   }
 
-  Run();
+  DrawEvent();
 }
 
 
@@ -1100,7 +1133,124 @@ void SANDEventDisplay::SetEventId()
   long long eventId = atoi(fEntryEventId->GetNumberEntry()->GetText());
   fEventNumber = TMath::Range(0, fTreeSimData->GetEntries()-1, eventId);
   fEntryEventId->GetNumberEntry()->SetIntNumber(fEventNumber);
-  Run();
+  RunEvent();
+}
+
+
+//----------------------------------------------------------------------------
+void SANDEventDisplay::ZoomDetector(double zoom)
+{
+  if (zoom > 0) {
+
+    if (zoom < 1 && fZminView < 0.999*fDetectorZmin && fZmaxView > 0.999*fDetectorZmax && fYminView > 0.999*fDetectorYmin && fYmaxView > 0.999*fDetectorYmax && fXminView < 0.999*fDetectorXmin && fXmaxView < 0.999*fDetectorXmax) return;
+
+    double range  = fZmaxView - fZminView;
+    fZminView = fZminView - range*(1. - zoom);
+    fZmaxView = fZmaxView + range*(1. - zoom);
+
+    range = fYmaxView - fYminView;
+    fYminView = fYminView - range*(1. - zoom);
+    fYmaxView = fYmaxView + range*(1. - zoom);
+
+    range = fXmaxView - fXminView;
+    fXminView = fXminView - range*(1. - zoom);
+    fXmaxView = fXmaxView + range*(1. - zoom);
+
+    // avoid the zoom outside the detector geometry
+
+    if (fZminView < fDetectorZmin) fZminView = fDetectorZmin;
+    if (fZmaxView > fDetectorZmax) fZmaxView = fDetectorZmax;
+    if (fYminView < fDetectorYmin) fYminView = fDetectorYmin;
+    if (fYmaxView > fDetectorYmax) fYmaxView = fDetectorYmax;
+    if (fXminView < fDetectorXmin) fXminView = fDetectorXmin;
+    if (fXmaxView > fDetectorXmax) fXmaxView = fDetectorXmax;
+  }
+  else if (!zoom) { // zoom to detector
+    fZminView = fDetectorZmin;
+    fZmaxView = fDetectorZmax;
+    fYminView = fDetectorYmin;
+    fYmaxView = fDetectorYmax;
+    fXminView = fDetectorXmin;
+    fXmaxView = fDetectorXmax;
+  }
+  DrawEvent();
+}
+
+
+//----------------------------------------------------------------------------
+void SANDEventDisplay::ZoomToVertex()
+{
+  // get primary vertex
+
+  if (fVerticesZYTrue->GetN()) {
+    double z = fVerticesZYTrue->GetX()[0];
+    double y = fVerticesZYTrue->GetY()[0];
+    double x = fVerticesZXTrue->GetY()[0];
+
+    fZminView = z - 30; fZmaxView = z + 30;
+    fYminView = y - 30; fYmaxView = y + 30;
+    fXminView = x - 30; fXmaxView = x + 30;
+
+    DrawEvent();
+  }
+}
+
+
+//----------------------------------------------------------------------------
+void SANDEventDisplay::ShiftDetector(int dir)
+{
+  const static double ShiftFactor = 0.2;
+
+  double rangeZ = ShiftFactor*(fZmaxView - fZminView);
+  double rangeY = ShiftFactor*(fYmaxView - fYminView);
+  double rangeX = ShiftFactor*(fXmaxView - fXminView);
+
+  bool drawDetector = false;
+
+  switch(dir) {
+  case -1:
+    if (fZminView >= fDetectorZmin) {
+      fZminView -= rangeZ;
+      fZmaxView -= rangeZ;
+      drawDetector = true;
+    }
+    else return;
+    break;
+  case 1:
+    if (fZmaxView <= fDetectorZmax) {
+      fZminView += rangeZ;
+      fZmaxView += rangeZ;
+      drawDetector = true;
+    }
+    else return;
+    break;
+  case -2:
+    if (fYminView >= fDetectorYmin) {
+      fYminView -= rangeY;
+      fYmaxView -= rangeY;
+      drawDetector = true;
+    }
+    if (fXminView >= fDetectorXmin) {
+      fXminView -= rangeX;
+      fXmaxView -= rangeX;
+      drawDetector = true;
+    }
+    break;
+  case 2:
+    if (fYmaxView <= fDetectorYmax) {
+      fYminView += rangeY;
+      fYmaxView += rangeY;
+      drawDetector = true;
+    }
+    if (fXmaxView <= fDetectorXmax) {
+      fXminView += rangeX;
+      fXmaxView += rangeX;
+      drawDetector = true;
+    }
+    break;
+  }
+
+  if (drawDetector) DrawEvent();
 }
 
 

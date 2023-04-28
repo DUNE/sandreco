@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
   if (simFileName != "")   eventDisplay.SetSimData(simFileName);
   if (digitFileName != "") eventDisplay.SetDigitData(digitFileName);
 
-  eventDisplay.Run();
+  eventDisplay.RunEvent();
 
   // cout << gClient->GetDisplayWidth() << " " << gClient->GetDisplayHeight() << endl;
 

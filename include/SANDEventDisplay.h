@@ -25,6 +25,7 @@ class TDatabasePDG;
 class TCanvas;
 class TGNumberEntry;
 class TGRadioButton;
+class TGCheckButton;
 class TFile;
 class TTree;
 class TColor;
@@ -70,11 +71,14 @@ public:
   void   SetEventNumber(long long eventNumber) {fEventNumber = eventNumber;}
   void   SetSimData(TString fileName);
   void   SetDigitData(TString fileName);
-  void   Run();
+  void   RunEvent();
   void   NextEvent();
   void   PreviousEvent();
   void   SetHitsMode();
   void   SetHitsType();
+  void   ZoomDetector(double zoom = 0);
+  void   ZoomToVertex();
+  void   ShiftDetector(int dir);
   bool   ProcessMessage(Long_t msg, Long_t param1, Long_t);
   // void   AddNavigateButtons(TGVerticalFrame *workframe);
   void   ExitApplication();
@@ -84,7 +88,20 @@ private:
   int           fColNum;
   int           fPalette[100];
   int           fSetHitsMode;
+  int           fSetZoomTo;
   long long     fEventNumber;
+  double        fZminView;
+  double        fZmaxView;
+  double        fYmaxView;
+  double        fYminView;
+  double        fXminView;
+  double        fXmaxView;
+  double        fDetectorZmin;
+  double        fDetectorZmax;
+  double        fDetectorYmin;
+  double        fDetectorYmax;
+  double        fDetectorXmin;
+  double        fDetectorXmax;
   bool          fGeomInitialized;
   HitsType_t    fDrawHits;
   TG4Event     *fEvent;
@@ -120,6 +137,7 @@ private:
   TGNumberEntry       *fEntryEventId;
   TGRadioButton       *fRadioEnergyMode[3];
   TGRadioButton       *fRadioHitsType[3];
+  TGCheckButton       *fCheckDrawSimTracks;
 
   // TRootEmbeddedCanvas *fDisplayDetector;
 
@@ -134,7 +152,7 @@ private:
   void   FillEventHits();
   void   FillDigitHits();
   void   DrawEvent();
-  void   DrawDetector();
+  void   DrawSAND();
   void   DrawTracks();
   void   SetHistoStyle(TH2F *histo);
   void   DrawButtons();
