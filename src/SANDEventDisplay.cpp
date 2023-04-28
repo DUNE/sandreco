@@ -470,71 +470,32 @@ void SANDEventDisplay::DrawSAND()
 
   // for (int i = 0; i < 3; ++i) sandCenter[i] /= 10;
 
-  fPadZY->cd();
-  fPadZY->DrawFrame(fZminView, fYminView, fZmaxView, fYmaxView);
+  TString nameZY = "SAND ZY plane", nameZX = "SAND ZX plane";
+  
+  TH2F *histoZY = (TH2F*)gROOT->FindObject(nameZY);
+  TH2F *histoZX = (TH2F*)gROOT->FindObject(nameZX);
+  
+  SafeDelete(histoZY); SafeDelete(histoZX);
+
+  histoZY = new TH2F(nameZY, "", 100, fZminView, fZmaxView, 100, fYminView, fYmaxView);
+  histoZX = new TH2F(nameZX, "", 100, fZminView, fZmaxView, 100, fXminView, fXmaxView);
+
+  histoZY->GetXaxis()->SetTitle("Z (cm)"); histoZY->GetYaxis()->SetTitle("Y (cm)");
+  histoZX->GetXaxis()->SetTitle("Z (cm)"); histoZX->GetYaxis()->SetTitle("X (cm)");
+  
+  SetHistoStyle(histoZY); SetHistoStyle(histoZX);
+
+  fPadZY->cd(); histoZY->Draw();
 
   TEllipse *el1 = new TEllipse(sandCenter[2], sandCenter[1], sandRadius);
-  el1->SetLineColor(2);
-  el1->Draw();
+  el1->SetLineColor(2); el1->Draw();
 
-  fPadZX->cd();
-  fPadZX->DrawFrame(fZminView, fXminView, fZmaxView, fXmaxView);
+  fPadZX->cd(); histoZX->Draw();
 
   TBox *box1 = new TBox(sandCenter[2] - sandRadius, sandCenter[0] - 0.5*sandLenght, sandCenter[2] + sandRadius, sandCenter[0] + 0.5*sandLenght);
-  box1->SetFillStyle(0);
-  box1->SetLineColor(2);
-  box1->Draw();
-
-  // TString name = "Plane ZY";
-  // TH2F *histo = (TH2F*)gROOT->FindObject(name);
-  // SafeDelete(histo);
-  //
-  // histo = new TH2F(name, "", 100, sandCenter[2] - 1.1*sandRadius, sandCenter[0] - 1.1*0.5*sandLenght,
-  // 100, sandCenter[2] + 1.1*sandRadius, sandCenter[0] + 1.1*0.5*sandLenght);
-
-  // histo = new TH2F(name, "", 100, sandCenter[2] - 1.1*sandRadius, sandCenter[0] - 1.1*0.5*sandLenght,
-  // 100, sandCenter[2] + 1.1*sandRadius, sandCenter[0] + 1.1*0.5*sandLenght);
-  // histo->GetXaxis()->SetTitle("Z (cm)");
-  // histo->GetYaxis()->SetTitle("Y (cm)");
-
-  // SetHistoStyle(histo);
-  //
-  // histo->Draw();
-
-  // fPadZX->cd();
-  //
-  // name = "Plane ZX";
-  // histo = (TH2F*)gROOT->FindObject(name);
-  // SafeDelete(histo);
-  //
-  // histo = new TH2F(name, "", 100, sandCenter[2] - 1.1*sandRadius, sandCenter[1] - 1.1*sandRadius,
-  // 100, sandCenter[2] + 1.1*sandRadius, sandCenter[1] + 1.1*sandRadius);
-  // histo->GetXaxis()->SetTitle("Z (cm)");
-  // histo->GetYaxis()->SetTitle("X (cm)");
-  //
-  // SetHistoStyle(histo);
-  //
-  // histo->Draw();
-
-
-
-  // auto c = new TCanvas("myDisplay","", 2000, 1000);
-  // c->Divide(2,1);
-  // c->cd(1)->DrawFrame(sandCenter[2]/10 - 1.1 * sandRadius, sandCenter[0]/10 - 1.1 * 0.5 * sandLenght, sandCenter[2]/10 + 1.1 * sandRadius, sandCenter[0]/10 + 1.1 * 0.5 * sandLenght);
-  //
-  // TBox *box1 = new TBox(sandCenter[2]/10 - sandRadius, sandCenter[0]/10 - 0.5*sandLenght, sandCenter[2]/10 + sandRadius, sandCenter[0]/10 + 0.5*sandLenght);
-  // box1->SetFillStyle(0);
-  // box1->SetLineColor(2);
-  // box1->Draw();
-  //
-  // c->cd(2)->DrawFrame(sandCenter[2]/10 - 1.1 * sandRadius, sandCenter[1]/10 - 1.1 * sandRadius, sandCenter[2]/10 + 1.1 * sandRadius, sandCenter[1]/10 + 1.1 * sandRadius);
-  //
-  // TEllipse *el1 = new TEllipse(sandCenter[2]/10, sandCenter[1]/10, sandRadius);
-  // el1->SetLineColor(2);
-  // el1->Draw();
-  //
-  // return c;
+  box1->SetFillStyle(0); box1->SetLineColor(2); box1->Draw();
 }
+
 
 // TMarker* SANDEventDisplay::GetMarkerFromCluster(const STTCluster& cluster, EColor color){
 //
@@ -1369,8 +1330,8 @@ void SANDEventDisplay::SetHistoStyle(TH2F *histo)
   histo->GetYaxis()->SetTitleFont(63);
   histo->GetYaxis()->SetTitleSize(27);
 
-  histo->SetTitleOffset(1.2,"X");
-  histo->SetTitleOffset(1.2,"Y");
+  histo->SetTitleOffset(1.2, "X");
+  histo->SetTitleOffset(1.2, "Y");
 
   histo->GetXaxis()->SetNdivisions(507, true);
   histo->GetYaxis()->SetNdivisions(505, true);
