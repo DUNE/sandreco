@@ -304,8 +304,6 @@ double angle(double x1, double y1, double z1, double x2, double y2, double z2);
 
 bool isAfter(particle p1, particle p2);
 
-void init(TGeoManager* geo);
-
 }  // namespace sand_reco
 
 #endif
