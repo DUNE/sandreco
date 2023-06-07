@@ -1128,7 +1128,7 @@ void SANDEventDisplay::SetSimData(TString fileName)
   }
 
   if (!fGeomInitialized) {
-    sand_reco::init(geo);
+    //sand_reco::init(geo);
     fGeomInitialized = true;
   }
 
@@ -1163,7 +1163,7 @@ void SANDEventDisplay::SetDigitData(TString fileName)
   }
 
   if (!fGeomInitialized) {
-    sand_reco::init(geo);
+    //sand_reco::init(geo);
     fGeomInitialized = true;
   }
 
