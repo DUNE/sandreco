@@ -1,10 +1,10 @@
 #include <TObject.h>
 
-#ifndef SANDSTTTUBEINFO_H
-#define SANDSTTTUBEINFO_H
+#ifndef SANDWireInfo_H
+#define SANDWireInfo_H
 
 // class for storing the STT tubes geometrical info
-class SANDSTTTubeInfo : public TObject
+class SANDWireInfo : public TObject
 {
  public:
   enum class Orient { kHorizontal, kVertical };
@@ -20,8 +20,8 @@ class SANDSTTTubeInfo : public TObject
   ReadoutEnd readout_end_;  // end where signal are read
 
  public:
-  SANDSTTTubeInfo();  // Default constructor
-  SANDSTTTubeInfo(int id, double x, double y, double z, double length,
+  SANDWireInfo();  // Default constructor
+  SANDWireInfo(int id, double x, double y, double z, double length,
                   Orient orientation,
                   ReadoutEnd readout_end);  // parametric constructor
 
@@ -42,11 +42,11 @@ class SANDSTTTubeInfo : public TObject
   Orient orientation();
   ReadoutEnd readout_end();
 
-  ClassDef(SANDSTTTubeInfo, 1);
+  ClassDef(SANDWireInfo, 1);
 };
 
 #ifdef __MAKECINT__
-#pragma link C++ class SANDSTTTubeInfo + ;
+#pragma link C++ class SANDWireInfo + ;
 #endif
 
 #endif

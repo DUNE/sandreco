@@ -415,6 +415,11 @@ bool SANDGeoManager::is_stt_plane(const TString& volume_name) const
   return volume_name.Contains(stt_plane_regex_);
 }
 
+bool SANDGeoManager::is_drift_plane(const TString& volume_name) const
+{
+  return volume_name.Contains(drift_plane_regex_);
+}
+
 int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
 {
   auto plane_matches = stt_plane_regex_.MatchS(volume_path);
@@ -511,13 +516,13 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
           tube_unique_id;
 
       // here we fill STT tube info
-      sttmap_[tube_unique_id] = SANDSTTTubeInfo(
+      sttmap_[tube_unique_id] = SANDWireInfo(
           tube_unique_id, tube_position.X(), tube_position.Y(),
           tube_position.Z(), tube_length,
-          stt_plane_type == 1 ? SANDSTTTubeInfo::Orient::kVertical
-                              : SANDSTTTubeInfo::Orient::kHorizontal,
-          stt_plane_type == 1 ? SANDSTTTubeInfo::ReadoutEnd::kPlus
-                              : SANDSTTTubeInfo::ReadoutEnd::kPlus);
+          stt_plane_type == 1 ? SANDWireInfo::Orient::kVertical
+                              : SANDWireInfo::Orient::kHorizontal,
+          stt_plane_type == 1 ? SANDWireInfo::ReadoutEnd::kPlus
+                              : SANDWireInfo::ReadoutEnd::kPlus);
     }
   }
 
@@ -545,11 +550,28 @@ void SANDGeoManager::set_stt_info(const TGeoHMatrix& matrix)
   }
 }
 
-void SANDGeoManager::set_stt_info()
+void SANDGeoManager::set_wire_info(const TGeoHMatrix& matrix)
+{
+  TGeoNode* node = gGeoManager->GetCurrentNode();
+  TString node_path = gGeoManager->GetPath();
+  TString node_name = node->GetName();
+  TGeoMatrix* node_matrix = node->GetMatrix();
+  TGeoHMatrix node_hmatrix = matrix * (*node_matrix);
+  // create get_drift_plane_id function
+}
+
+void SANDGeoManager::set_wire_info()
 {
   geo_->CdTop();
   TGeoHMatrix matrix = *gGeoIdentity;
-  set_stt_info(matrix);
+  if(geo_->FindVolumeFast("STTtracker_PV")){
+    std::cout<<"using SAND tracker : STT\n";
+    set_stt_info(matrix);
+  }else
+  {
+    std::cout<<"using SAND tracker : DRIFT CHAMBER\n";
+    set_wire_info(matrix);
+  }
 }
 
 void SANDGeoManager::init(TGeoManager* const geo)
@@ -558,10 +580,11 @@ void SANDGeoManager::init(TGeoManager* const geo)
 
   cellmap_.clear();
   sttmap_.clear();
+  wiremap_.clear();
   stt_tube_tranverse_position_map_.clear();
 
   set_ecal_info();
-  set_stt_info();
+  set_wire_info();
 }
 
 int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
@@ -645,8 +668,8 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
   } else if (it == stt_tube_tranverse_position_map_.at(plane_id).end()) {
     tube_id = stt_tube_tranverse_position_map_.at(plane_id).rbegin()->second;
   } else {
-    SANDSTTTubeInfo tube1 = sttmap_.at(it->second);
-    SANDSTTTubeInfo tube2 = sttmap_.at(std::prev(it)->second);
+    SANDWireInfo tube1 = sttmap_.at(it->second);
+    SANDWireInfo tube2 = sttmap_.at(std::prev(it)->second);
 
     TVector2 v1;
     TVector2 v2;
