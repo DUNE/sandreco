@@ -1,7 +1,7 @@
 #include "SANDGeoManager.h"
 
 #include <iostream>
-
+#include <fstream>
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
 #include <TObjString.h>
@@ -457,10 +457,10 @@ int SANDGeoManager::get_supermodule_id(const TString& volume_path) const
   // Trk, C1, B1, A1, A0, B0, C0, X0, X1
   //   0,  1,  2,  3,  4,  5,  6,  7,  8
   auto supermodule_matches = supermodule_regex_.MatchS(volume_path);
-  TString supermodule_name = (reinterpret_cast<TObjString*>(supermodule_matches->At(1)))
+  TString supermodule_name = (reinterpret_cast<TObjString*>(supermodule_matches->At(2)))
                             ->GetString();
-  int supermodule_replica = (reinterpret_cast<TObjString*>(supermodule_matches->At(2)))
-                            ->GetString().Atoi();
+  int supermodule_replica = (reinterpret_cast<TObjString*>(supermodule_matches->At(3)))
+                            ->GetString().Atoi();                         
   int supermodule_id;
   if(supermodule_name.Contains("X0"))
   {
@@ -497,10 +497,7 @@ int SANDGeoManager::get_module_id(const TString& volume_path) const
 
 bool SANDGeoManager::isSwire(const TString& volume_path) const
 {
-  auto matches = wire_regex_.MatchS(volume_path);
-  TString wiretype = (reinterpret_cast<TObjString*>(matches->At(6)))
-                            ->GetString();
-  return (wiretype.Contains("S"));
+  return (volume_path.Contains("Swire"));
 } 
 
 int SANDGeoManager::get_wire_id(const TString& volume_path) const
@@ -514,13 +511,14 @@ int SANDGeoManager::get_wire_id(const TString& volume_path) const
 int SANDGeoManager::get_drift_plane_id(const TString& volume_path) const
 {
   int supermodule_id = get_supermodule_id(volume_path);
-  int module_id      = get_module_id(volume_path);
+  int module_id = 0;
+  if(supermodule_id) module_id = get_module_id(volume_path);
 
-  auto drift_plane_matches = supermodule_regex_.MatchS(volume_path);
+  auto drift_plane_matches = drift_plane_regex_.MatchS(volume_path);
   int drift_plane_id = (reinterpret_cast<TObjString*>(drift_plane_matches->At(2)))
                             ->GetString().Atoi();
 
-  return supermodule_id*10000 + module_id*1000 + drift_plane_id*1000;
+  return supermodule_id*100000 + module_id*10000 + drift_plane_id*1000;
 }
 
 void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
@@ -603,17 +601,16 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
 }
 void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
                                          const TGeoHMatrix& matrix,
-                                         const TString& drift_plane_path)
+                                         int drift_plane_unique_id)
 {
-  int drift_plane_unique_id = get_drift_plane_id(drift_plane_path);
 
   for (int i = 0; i < node->GetNdaughters(); i++) { // loop over wires
     auto wire_node = node->GetDaughter(i);
-    
     if(isSwire(wire_node->GetName()))
       {
       int wire_id = get_wire_id(wire_node->GetName());
       int wire_unique_id = drift_plane_unique_id + wire_id;
+      // if(wire_unique_id < 100000) std::cout<<"wire_node: "<<wire_node->GetName()<<" wire_unique_id "<<wire_unique_id<<std::endl;
 
       TGeoMatrix*  wire_matrix = wire_node->GetMatrix();
       TGeoHMatrix wire_hmatrix = matrix * (*wire_matrix);
@@ -667,7 +664,11 @@ void SANDGeoManager::set_wire_info(const TGeoHMatrix& matrix)
   TGeoHMatrix  node_hmatrix = matrix * (*node_matrix);
   
   if(is_drift_plane(node_name)){
-    set_drift_wire_info(node, node_hmatrix, node_path);
+    // std::cout<<node_path<<std::endl;
+    int drift_plane_unique_id = get_drift_plane_id(node_path);
+    // std::cout<<"drift_plane_path "<<node_path<<std::endl;
+    // std::cout<<"drift_plane_unique_id "<<drift_plane_unique_id<<std::endl;
+    set_drift_wire_info(node, node_hmatrix, drift_plane_unique_id);
   }else{
     for (int i = 0; i < node->GetNdaughters(); i++) {
       gGeoManager->CdDown(i);
@@ -690,6 +691,22 @@ void SANDGeoManager::set_wire_info()
     std::cout<<"using SAND tracker : DRIFT CHAMBER\n";
     set_wire_info(matrix);
   }
+  std::cout<<"writing wiremap_ info on separate file\n";
+  std::cout<<"wiremap_ size: "<<wiremap_.size()<<std::endl;
+  WriteMapOnFile(wiremap_);
+}
+
+void SANDGeoManager::WriteMapOnFile(const std::map<int,SANDWireInfo>& map)
+{
+  std::fstream file_wireinfo;
+  file_wireinfo.open("wireinfo.txt", std::ios::out); 
+  file_wireinfo << "id,x,y,z,length\n";
+  for(auto& wire: map)
+  {
+    SANDWireInfo w = wire.second;
+    file_wireinfo << std::setprecision(20) << wire.first <<","<<w.x()<<","<<w.y()<<","<<w.z()<<","<<w.length()<<"\n";
+  }
+  file_wireinfo.close();
 }
 
 void SANDGeoManager::init(TGeoManager* const geo)

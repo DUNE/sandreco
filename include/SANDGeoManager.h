@@ -28,7 +28,7 @@ const char* const drift_chamber_regex_string =
 const char* const module_regex_string =
    "(C|C3H6)Mod(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-9]+)(/|)";
 const char* const supermodule_regex_string =
-   "SuperMod(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-1]+)(/|)";
+   "(Trk|SuperMod)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-1]+)(/|)";
 } // namespace chamber
     
 namespace stt
@@ -178,13 +178,14 @@ class SANDGeoManager : public TObject
   void set_wire_info(const TGeoHMatrix& matrix);
   void set_drift_wire_info (const TGeoNode* const node,
                             const TGeoHMatrix& matrix,
-                            const TString& drift_module_path);
+                            int drift_plane_unique_id);
   int get_drift_plane_id(const TString& volume_path) const;
   int get_supermodule_id(const TString& volume_path) const;
   int get_module_id(const TString& volume_path) const;
   int get_wire_id(const TString& volume_path) const;
   bool is_drift_plane(const TString& volume_name) const;
   bool isSwire(const TString& volume_path) const;
+  void WriteMapOnFile(const std::map<int,SANDWireInfo>& map);
 
  public:
   SANDGeoManager()
