@@ -395,6 +395,7 @@ int SANDGeoManager::encode_stt_plane_id(int stt_module_id,
   return stt_module_id * 100 + stt_plane_local_id * 10 + stt_plane_type;
 }
 
+
 void SANDGeoManager::decode_stt_plane_id(int stt_plane_global_id,
                                          int& stt_module_id,
                                          int& stt_plane_local_id,
@@ -414,7 +415,6 @@ bool SANDGeoManager::is_stt_plane(const TString& volume_name) const
 {
   return volume_name.Contains(stt_plane_regex_);
 }
-
 bool SANDGeoManager::is_drift_plane(const TString& volume_name) const
 {
   return volume_name.Contains(drift_plane_regex_);
@@ -449,6 +449,78 @@ int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
 
   return encode_stt_plane_id(module_id * 10 + module_replica_id,
                              2 * plane_replica_id + plane_type, plane_type);
+}
+
+int SANDGeoManager::get_supermodule_id(const TString& volume_path) const
+{
+  // upstram -> downstrea,
+  // Trk, C1, B1, A1, A0, B0, C0, X0, X1
+  //   0,  1,  2,  3,  4,  5,  6,  7,  8
+  auto supermodule_matches = supermodule_regex_.MatchS(volume_path);
+  TString supermodule_name = (reinterpret_cast<TObjString*>(supermodule_matches->At(1)))
+                            ->GetString();
+  int supermodule_replica = (reinterpret_cast<TObjString*>(supermodule_matches->At(2)))
+                            ->GetString().Atoi();
+  int supermodule_id;
+  if(supermodule_name.Contains("X0"))
+  {
+    supermodule_id = 8;
+  }else if(supermodule_name.Contains("X1"))
+  {
+    supermodule_id = 7;
+  }else if(supermodule_name.Contains("C"))
+  {
+    supermodule_id = supermodule_replica  ? 1 : 6;
+  }else if(supermodule_name.Contains("B"))
+  {
+    supermodule_id = supermodule_replica  ? 2 : 5;
+  }else if(supermodule_name.Contains("A"))
+  {
+    supermodule_id = supermodule_replica  ? 3 : 4;
+  }else
+  {
+    supermodule_id = 0;
+  }
+
+  delete supermodule_matches;
+
+  return supermodule_id;
+}
+
+int SANDGeoManager::get_module_id(const TString& volume_path) const
+{
+  auto matches = module_regex_.MatchS(volume_path);
+  int id = (reinterpret_cast<TObjString*>(matches->At(3)))
+            ->GetString().Atoi();
+  return id;
+}
+
+bool SANDGeoManager::isSwire(const TString& volume_path) const
+{
+  auto matches = wire_regex_.MatchS(volume_path);
+  TString wiretype = (reinterpret_cast<TObjString*>(matches->At(6)))
+                            ->GetString();
+  return (wiretype.Contains("S"));
+} 
+
+int SANDGeoManager::get_wire_id(const TString& volume_path) const
+{
+  auto matches = wire_regex_.MatchS(volume_path);
+  int id = (reinterpret_cast<TObjString*>(matches->At(5)))
+                            ->GetString().Atoi();
+  return id;
+}
+
+int SANDGeoManager::get_drift_plane_id(const TString& volume_path) const
+{
+  int supermodule_id = get_supermodule_id(volume_path);
+  int module_id      = get_module_id(volume_path);
+
+  auto drift_plane_matches = supermodule_regex_.MatchS(volume_path);
+  int drift_plane_id = (reinterpret_cast<TObjString*>(drift_plane_matches->At(2)))
+                            ->GetString().Atoi();
+
+  return supermodule_id*10000 + module_id*1000 + drift_plane_id*1000;
 }
 
 void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
@@ -529,6 +601,42 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
   stt_tube_tranverse_position_map_[stt_plane_id] =
       this_plane_stt_tube_tranverse_position_map;
 }
+void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
+                                         const TGeoHMatrix& matrix,
+                                         const TString& drift_plane_path)
+{
+  int drift_plane_unique_id = get_drift_plane_id(drift_plane_path);
+
+  for (int i = 0; i < node->GetNdaughters(); i++) { // loop over wires
+    auto wire_node = node->GetDaughter(i);
+    
+    if(isSwire(wire_node->GetName()))
+      {
+      int wire_id = get_wire_id(wire_node->GetName());
+      int wire_unique_id = drift_plane_unique_id + wire_id;
+
+      TGeoMatrix*  wire_matrix = wire_node->GetMatrix();
+      TGeoHMatrix wire_hmatrix = matrix * (*wire_matrix);
+      TGeoTube*     wire_shape = (TGeoTube*)wire_node->GetVolume()->GetShape();
+      double       wire_length = 2 * wire_shape->GetDz();
+
+      TVector3 wire_position;
+      wire_position.SetX(wire_hmatrix.GetTranslation()[0]);
+      wire_position.SetY(wire_hmatrix.GetTranslation()[1]);
+      wire_position.SetZ(wire_hmatrix.GetTranslation()[2]);
+
+      // here we fill wire info
+      wiremap_[wire_unique_id] = SANDWireInfo(
+                                 wire_unique_id, 
+                                 wire_position.X(), 
+                                 wire_position.Y(),
+                                 wire_position.Z(), 
+                                 wire_length, 
+                                 SANDWireInfo::Orient::kVertical, // to be changed
+                                 SANDWireInfo::ReadoutEnd::kPlus);// to be changed
+      }
+  }
+}
 
 void SANDGeoManager::set_stt_info(const TGeoHMatrix& matrix)
 {
@@ -552,13 +660,23 @@ void SANDGeoManager::set_stt_info(const TGeoHMatrix& matrix)
 
 void SANDGeoManager::set_wire_info(const TGeoHMatrix& matrix)
 {
-  TGeoNode* node = gGeoManager->GetCurrentNode();
-  TString node_path = gGeoManager->GetPath();
-  TString node_name = node->GetName();
-  TGeoMatrix* node_matrix = node->GetMatrix();
-  TGeoHMatrix node_hmatrix = matrix * (*node_matrix);
-  // create get_drift_plane_id function
+  TGeoNode*            node = gGeoManager->GetCurrentNode();
+  TString         node_path = gGeoManager->GetPath();
+  TString         node_name = node->GetName();
+  TGeoMatrix*   node_matrix = node->GetMatrix();
+  TGeoHMatrix  node_hmatrix = matrix * (*node_matrix);
+  
+  if(is_drift_plane(node_name)){
+    set_drift_wire_info(node, node_hmatrix, node_path);
+  }else{
+    for (int i = 0; i < node->GetNdaughters(); i++) {
+      gGeoManager->CdDown(i);
+      set_wire_info(node_hmatrix);
+      gGeoManager->CdUp();
+    }
+  }
 }
+
 
 void SANDGeoManager::set_wire_info()
 {

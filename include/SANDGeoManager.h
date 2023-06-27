@@ -132,7 +132,7 @@ class SANDGeoManager : public TObject
       sand_geometry::chamber::module_regex_string};
     mutable TPRegexp supermodule_regex_{
       sand_geometry::chamber::supermodule_regex_string};
-  }                                         
+                                           
                                            
 
   // ECAL
@@ -176,6 +176,15 @@ class SANDGeoManager : public TObject
 
   // DRIFT CHAMEBER
   void set_wire_info(const TGeoHMatrix& matrix);
+  void set_drift_wire_info (const TGeoNode* const node,
+                            const TGeoHMatrix& matrix,
+                            const TString& drift_module_path);
+  int get_drift_plane_id(const TString& volume_path) const;
+  int get_supermodule_id(const TString& volume_path) const;
+  int get_module_id(const TString& volume_path) const;
+  int get_wire_id(const TString& volume_path) const;
+  bool is_drift_plane(const TString& volume_name) const;
+  bool isSwire(const TString& volume_path) const;
 
  public:
   SANDGeoManager()
@@ -241,7 +250,6 @@ class SANDGeoManager : public TObject
                                   int& stt_plane_local_id, int& stt_plane_type);
 
     // DRIFT CHAMBER
-  static int encode_wire_id(int drift_plane_global_id, int wire_local_id);
   static void decode_wire_id(int wire_global_id, int& drift_plane_global_id, int& wire_local_id);
 
   ClassDef(SANDGeoManager, 1);
