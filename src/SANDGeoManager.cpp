@@ -505,7 +505,7 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
       tube_position.SetZ(tube_hmatrix.GetTranslation()[2]);
 
       double transverse_coord =
-          stt_plane_type == 1 ? tube_position.Y() : tube_position.X();
+          stt_plane_type == 1 ? tube_position.X() : tube_position.Y();
 
       this_plane_stt_tube_tranverse_position_map[transverse_coord] =
           tube_unique_id;
