@@ -499,7 +499,8 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
     for (const auto& p : time_ordered_XZdigit) tr.clX.push_back(p.second);
     for (const auto& p : time_ordered_YZdigit) tr.clY.push_back(p.second);
 
-    vec_tr.push_back(tr);
+    if(tr.clX.size() > 0 || tr.clY.size() > 0)
+      vec_tr.push_back(tr);
   }
 }
 
