@@ -54,6 +54,12 @@ void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
                   std::vector<dg_tube>& digit_vec);
 }  // namespace stt
 
+namespace chamber
+{
+void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
+                        std::map<int, std::vector<hit> >& hits2wire);
+} // namespace chamber
+
 // digitize event
 void digitize(const char* finname, const char* foutname,
               ECAL_digi_mode ecal_digi_mode);

@@ -120,6 +120,10 @@ class SANDGeoManager : public TObject
       stt_tube_tranverse_position_map_;  // map (key: plane id, value: map (key:
                                          // tube id, value: 2D position [i.e. x
                                          // = z, y = transversal coord]))
+  std::map<int, std::map<double, int> >
+      wire_tranverse_position_map_;  // map (key: plane id, value: map (key:
+                                         // wire id, value: 2D position [i.e. x
+                                         // = z, y = transversal coord]))
 
   // DRIFT CHAMBER
     mutable TPRegexp wire_regex_{
@@ -179,7 +183,7 @@ class SANDGeoManager : public TObject
   void set_drift_wire_info (const TGeoNode* const node,
                             const TGeoHMatrix& matrix,
                             int drift_plane_unique_id);
-  int get_drift_plane_id(const TString& volume_path) const;
+  int get_drift_plane_id(const TString& volume_path, bool JustLocalId) const;
   int get_supermodule_id(const TString& volume_path) const;
   int get_module_id(const TString& volume_path) const;
   int get_wire_id(const TString& volume_path) const;
@@ -196,7 +200,8 @@ class SANDGeoManager : public TObject
         stt_two_tubes_regex_(sand_geometry::stt::stt_two_tubes_regex_string),
         stt_plane_regex_(sand_geometry::stt::stt_plane_regex_string),
         stt_module_regex_(sand_geometry::stt::stt_module_regex_string),
-        stt_tube_tranverse_position_map_()
+        stt_tube_tranverse_position_map_(),
+        wire_tranverse_position_map_()
   {
   }
   void init(TGeoManager* const geo);

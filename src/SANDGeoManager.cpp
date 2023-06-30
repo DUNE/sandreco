@@ -508,17 +508,19 @@ int SANDGeoManager::get_wire_id(const TString& volume_path) const
   return id;
 }
 
-int SANDGeoManager::get_drift_plane_id(const TString& volume_path) const
+int SANDGeoManager::get_drift_plane_id(const TString& volume_path, bool JustLocalId = false) const
 {
-  int supermodule_id = get_supermodule_id(volume_path);
-  int module_id = 0;
-  if(supermodule_id) module_id = get_module_id(volume_path);
-
   auto drift_plane_matches = drift_plane_regex_.MatchS(volume_path);
   int drift_plane_id = (reinterpret_cast<TObjString*>(drift_plane_matches->At(2)))
                             ->GetString().Atoi();
-
-  return supermodule_id*100000 + module_id*10000 + drift_plane_id*1000;
+  if(JustLocalId){
+    return drift_plane_id;
+  }else{
+    int supermodule_id = get_supermodule_id(volume_path);
+    int module_id = 0;
+    if(supermodule_id) module_id = get_module_id(volume_path);
+    return supermodule_id*100000 + module_id*10000 + drift_plane_id*1000;
+  }
 }
 
 void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
@@ -604,13 +606,16 @@ void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
                                          int drift_plane_unique_id)
 {
 
+  int drift_plane_local_id = get_drift_plane_id(node->GetName(),true); // 0,1 or 2
+
+  std::map<double, int> this_wire_tranverse_position_map;
+
   for (int i = 0; i < node->GetNdaughters(); i++) { // loop over wires
     auto wire_node = node->GetDaughter(i);
     if(isSwire(wire_node->GetName()))
       {
       int wire_id = get_wire_id(wire_node->GetName());
       int wire_unique_id = drift_plane_unique_id + wire_id;
-      // if(wire_unique_id < 100000) std::cout<<"wire_node: "<<wire_node->GetName()<<" wire_unique_id "<<wire_unique_id<<std::endl;
 
       TGeoMatrix*  wire_matrix = wire_node->GetMatrix();
       TGeoHMatrix wire_hmatrix = matrix * (*wire_matrix);
@@ -622,6 +627,10 @@ void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
       wire_position.SetY(wire_hmatrix.GetTranslation()[1]);
       wire_position.SetZ(wire_hmatrix.GetTranslation()[2]);
 
+      double transverse_coord = drift_plane_local_id == 2 ? wire_position.X() : wire_position.Y();
+      
+      this_wire_tranverse_position_map[transverse_coord] = wire_unique_id;
+
       // here we fill wire info
       wiremap_[wire_unique_id] = SANDWireInfo(
                                  wire_unique_id, 
@@ -629,10 +638,12 @@ void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
                                  wire_position.Y(),
                                  wire_position.Z(), 
                                  wire_length, 
-                                 SANDWireInfo::Orient::kVertical, // to be changed
+                                 drift_plane_local_id == 2  ? SANDWireInfo::Orient::kVertical 
+                                                            : SANDWireInfo::Orient::kHorizontal, 
                                  SANDWireInfo::ReadoutEnd::kPlus);// to be changed
       }
   }
+  wire_tranverse_position_map_[drift_plane_unique_id] = this_wire_tranverse_position_map;
 }
 
 void SANDGeoManager::set_stt_info(const TGeoHMatrix& matrix)
@@ -664,10 +675,7 @@ void SANDGeoManager::set_wire_info(const TGeoHMatrix& matrix)
   TGeoHMatrix  node_hmatrix = matrix * (*node_matrix);
   
   if(is_drift_plane(node_name)){
-    // std::cout<<node_path<<std::endl;
     int drift_plane_unique_id = get_drift_plane_id(node_path);
-    // std::cout<<"drift_plane_path "<<node_path<<std::endl;
-    // std::cout<<"drift_plane_unique_id "<<drift_plane_unique_id<<std::endl;
     set_drift_wire_info(node, node_hmatrix, drift_plane_unique_id);
   }else{
     for (int i = 0; i < node->GetNdaughters(); i++) {
@@ -700,11 +708,12 @@ void SANDGeoManager::WriteMapOnFile(const std::map<int,SANDWireInfo>& map)
 {
   std::fstream file_wireinfo;
   file_wireinfo.open("wireinfo.txt", std::ios::out); 
-  file_wireinfo << "id,x,y,z,length\n";
+  file_wireinfo << "id,x,y,z,length,orientation\n";
   for(auto& wire: map)
   {
     SANDWireInfo w = wire.second;
-    file_wireinfo << std::setprecision(20) << wire.first <<","<<w.x()<<","<<w.y()<<","<<w.z()<<","<<w.length()<<"\n";
+    int orientation = (w.orientation()==SANDWireInfo::Orient::kVertical) ? 1 : 0;
+    file_wireinfo << std::setprecision(20) << wire.first <<","<<w.x()<<","<<w.y()<<","<<w.z()<<","<<w.length()<<","<<orientation<<"\n";
   }
   file_wireinfo.close();
 }
@@ -836,4 +845,58 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
   }
 
   return tube_id;
+}
+
+int SANDGeoManager::get_wire_id(double x, double y, double z) const
+{
+  // return the id of the closest wire to the poin x y z 
+  if (geo_ == 0) {
+  std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
+  return -999;
+  }
+
+  TGeoNode* node = geo_->FindNode(x, y, z);
+  TString volume_name = node->GetName();
+
+  int wire_id = -999;
+  int drift_plane_id = get_drift_plane_id(geo_->GetPath());
+  int drift_plane_local_id = get_drift_plane_id(volume_name, true);
+
+  double transverse_coord = (drift_plane_local_id == 2) ? x : y;
+
+  std::map<double, int>::const_iterator it =
+    wire_tranverse_position_map_.at(drift_plane_id).lower_bound(transverse_coord);
+    // return the wire with the smallest coordinate grater than transverse_coord
+  
+  if (it == wire_tranverse_position_map_.at(drift_plane_id).begin()) {
+    wire_id = wire_tranverse_position_map_.at(drift_plane_id).begin()->second;
+  }else if (it == wire_tranverse_position_map_.at(drift_plane_id).end()){
+    wire_id = wire_tranverse_position_map_.at(drift_plane_id).rbegin()->second;
+  }else{
+    SANDWireInfo wire1 = wiremap_.at(it->second);
+    SANDWireInfo wire2 = wiremap_.at(std::prev(it)->second);
+
+    TVector2 v1;
+    TVector2 v2;
+
+    v1.SetX(wire1.z());
+    v2.SetX(wire2.z());
+
+    if (drift_plane_local_id == 2) {
+      v1.SetY(wire1.x());
+      v2.SetY(wire2.x());
+    } else {
+      v1.SetY(wire1.y());
+      v2.SetY(wire2.y());
+    }
+
+    TVector2 v(z, transverse_coord);
+
+    if ((v - v1).Mod() > (v - v2).Mod()) {
+      wire_id = std::prev(it)->second;
+    } else {
+      wire_id = it->second;
+    }
+  }
+  return wire_id;
 }
