@@ -517,6 +517,174 @@ void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
     }
   }                        
 }
+
+bool isInWire(SANDWireInfo& wire, TVector3& point)
+{
+  TVector3 wire3  = {wire.x(),wire.y(),wire.z()};
+  return ((wire3-point).Mag()<=wire.length());
+}
+
+bool isInHit(hit& h, TVector3& point)
+{
+  TVector3 middle = {(h.x1+h.x2)/2.,(h.y1+h.y2)/2.,(h.z1+h.z2)/2.};
+  TVector3 start  = {h.x1,h.y1,h.z1};
+  return ((point - middle).Mag()<=(start - middle).Mag());
+}
+
+std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& arg_wire)
+{
+  // return hit closest point to wire between hit start and stop and viceversa
+  // -----------------------------------------------------------
+  TVector3 start    = {h.x1, h.y1, h.z1}; // hit start
+  TVector3 stop     = {h.x2, h.y2, h.z2}; // hit end
+  TVector3 s        = stop - start;       // hit direction
+
+  TVector3 wire     = {arg_wire.x(),arg_wire.y(),arg_wire.z()};
+  TVector3 r0       = {-999.,-999.,-999.}; // point on the wire
+  TVector3 r        = {-999.,-999.,-999.}; // wire direction
+  double angle      = 0.; // wire.angle();
+  double m          = -999.; // angular coeffcient
+  TVector3 leftend  = {arg_wire.x()-arg_wire.length()*std::cos(angle),
+                       arg_wire.y()-arg_wire.length()*std::sin(angle),
+                       arg_wire.z()}; // wire left/bottom end
+
+  TVector3 rightend = {arg_wire.x()+arg_wire.length()*std::cos(angle),
+                       arg_wire.y()+arg_wire.length()*std::sin(angle),
+                       arg_wire.z()}; // wire right/top
+  
+  double t          = -999.; // real number to find the closest hit point to the wire
+  double t_prime    = -999.; // real number to find the closest wire point to the hit
+  // 1 check wire orientation: horizonatal, vertical or inclined 
+  if(arg_wire.orientation()==SANDWireInfo::Orient::kVertical)
+  {
+    m  = 0.;
+    r  = {0., 1., 0.};
+    r0 = {wire.x(), 0., wire.z()};
+  }else{
+    m  = std::tan(angle);
+    r  = {1., m, 0.};
+    r0 = {0., wire.y() - m * wire.x(), wire.z()};
+  }
+  // 2 find closest point
+  t = (r0.Dot(s) + start.Dot(r)*s.Dot(r)/(r.Mag()*r.Mag()) 
+      - start.Dot(s) - r0.Dot(r)*r.Dot(s)/(r.Mag()*r.Mag()) )/
+      ((s.Mag()*s.Mag()) - (r.Dot(s)*r.Dot(s))/(r.Mag()*r.Mag()));
+
+  t_prime = (start.Dot(r)+t*s.Dot(r)-r0.Dot(r))/(r.Mag()*r.Mag());
+  // check if it is between start and stop, otherwise set the closest to be either start or stop
+  TVector3 v_closest2Wire = {start.X() + t*s.X(), 
+                             start.Y() + t*s.Y(), 
+                             start.Z() + t*s.Z()};
+
+  TVector3 v_closest2Hit  = {r0.X() + t_prime*r.X(), 
+                             r0.Y() + t_prime*r.Y(), 
+                             r0.Z() + t_prime*r.Z()};
+
+  TLorentzVector closest2Wire, closest2Hit;
+
+  if(digitization::edep_sim::chamber::isInWire(arg_wire, v_closest2Hit))
+  {
+    closest2Hit.SetXYZT(v_closest2Hit.X(), v_closest2Hit.Y(),v_closest2Hit.Z(), 0.);
+  }else{
+    // closest is one of the 2 extremes
+    if((leftend - v_closest2Wire).Mag()<(rightend - v_closest2Wire).Mag())
+    {
+      closest2Hit.SetXYZT(leftend.X(), leftend.Y(), leftend.Z(), 0.);
+    }else{
+      closest2Hit.SetXYZT(rightend.X(), rightend.Y(), rightend.Z(), 0.);
+      }
+  }
+
+  if(digitization::edep_sim::chamber::isInHit(h, v_closest2Wire))
+  {
+    double fraction = (v_closest2Wire - start).Mag()/s.Mag();
+    closest2Wire.SetXYZT(v_closest2Wire.X(), v_closest2Wire.Y(), v_closest2Wire.Z(), h.t1 + fraction*h.t1);
+  }else{
+    // closest is either start or stop
+    if((start - v_closest2Hit).Mag()<(stop - v_closest2Hit).Mag())
+    {
+      closest2Wire.SetXYZT(h.x1, h.y1, h.z1, h.t1);
+    }else{
+      closest2Wire.SetXYZT(h.x2, h.y2, h.z2, h.t2);
+    }
+  }
+
+  closest2Hit.SetT(closest2Wire.T() + ((v_closest2Wire-v_closest2Hit).Mag()-sand_reco::stt::wire_radius)/sand_reco::stt::v_drift);
+  std::vector<TLorentzVector> closestPoints = {closest2Wire,closest2Hit};
+  return closestPoints;
+}
+
+double GetMinWireTime(TLorentzVector point, SANDWireInfo& arg_wire)
+{
+  TVector3 wire     = {arg_wire.x(),arg_wire.y(),arg_wire.z()};
+  double angle      = 0.; // wire.angle();
+  double m          = -999.; // angular coeffcient
+  TVector3 leftend  = {arg_wire.x()-arg_wire.length()*std::cos(angle),
+                       arg_wire.y()-arg_wire.length()*std::sin(angle),
+                       arg_wire.z()}; // wire left/bottom end
+
+  return point.T() + (point.Vect() - leftend).Mag()/sand_reco::stt::v_signal_inwire;
+}
+
+void create_digits_from_wire_hits(const SANDGeoManager& geo,
+                             std::map<int, std::vector<hit> >& hits2wire,
+                             std::vector<dg_tube>& digit_vec)
+{
+  digit_vec.clear();
+
+  for (std::map<int, std::vector<hit> >::iterator it = hits2wire.begin();
+       it != hits2wire.end(); ++it) // run over wires
+  {
+    int did          = it->first; // wire unique id
+    auto wire_info   = geo.get_wire_info(did);
+    double wire_time = 999.;
+
+    dg_tube d;
+    d.det   = it->second[0].det;
+    d.did   = did;
+    d.de    = 0;
+    d.hor   = (wire_info.orientation()==SANDWireInfo::Orient::kHorizontal);
+    d.x     = wire_info.x(); 
+    d.y     = wire_info.y();
+    d.z     = wire_info.z();
+    for (unsigned int i = 0; i < it->second.size(); i++) 
+    { // run over hits of given wire
+      
+      auto running_hit = it->second[i];
+      // find hit closest point to wire
+      std::vector<TLorentzVector> ClosestPoints = digitization::edep_sim::chamber::WireHitClosestPoints(running_hit, wire_info);
+
+      TLorentzVector closest2wire = ClosestPoints[0];
+      // find wire closest point to hit : time of closest2hit  = drift time + hit time
+      TLorentzVector closest2hit  = ClosestPoints[1];
+
+      // total time = time 2 signal propagation + drift time + hit time
+      double hit_smallest_time = digitization::edep_sim::chamber::GetMinWireTime(closest2hit, wire_info);
+      
+      if(hit_smallest_time < wire_time) wire_time = hit_smallest_time;
+
+      d.de += running_hit.de;
+      d.hindex.push_back(running_hit.index);
+    }
+    d.tdc   = wire_time + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
+    d.adc   = d.de;
+
+    digit_vec.push_back(d);
+  }
+}
+
+// simulate wire responce for whole event
+void digitize_wire(TG4Event* ev, const SANDGeoManager& geo,
+                  std::vector<dg_tube>& digit_vec)
+{
+  std::map<int, std::vector<hit> > hits2wire;
+  digit_vec.clear();
+
+  group_hits_by_wire(ev, geo, hits2wire);
+  digitization::edep_sim::chamber::create_digits_from_wire_hits(geo, hits2wire,
+                                                       digit_vec);
+}
+
 }// namespace chamber
 
 // digitize event
