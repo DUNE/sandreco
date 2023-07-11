@@ -98,23 +98,20 @@ const char* path_endcapL_template =
 const char* path_GRAIN =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/"
-    "GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
-    "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/"
-    "GRAIN_gap_between_vessels_lv_PV_0/"
-    "GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0";
+    "GRAIN_LAr_lv_PV_0";
 
-const char* path_GRIAN =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
-    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/"
-    "GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
-    "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/"
-    "GRAIN_gap_between_vessels_lv_PV_0/"
-    "GRAIN_inner_vessel_lv_PV_0/GRIAN_LAr_lv_PV_0";
+// const char* path_GRIAN =
+//     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+//     "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/"
+//     "GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
+//     "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/"
+//     "GRAIN_gap_between_vessels_lv_PV_0/"
+//     "GRAIN_inner_vessel_lv_PV_0/GRIAN_LAr_lv_PV_0";
 
 const char* barrel_mod_vol_name = "ECAL_lv_PV";
 const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
 const char* GRAIN_vol_name = "GRAIN_LAr_lv_PV";
-const char* GRIAN_vol_name = "GRIAN_LAr_lv_PV";
+// const char* GRIAN_vol_name = "GRIAN_LAr_lv_PV";
 
 }  // namespace display
 
@@ -403,7 +400,7 @@ void init(TFile* fmc, std::vector<TFile*> vf)
   }
 
   TGeoVolume* GRAIN_vol = geo->FindVolumeFast(GRAIN_vol_name);
-  if(!GRAIN_vol) GRAIN_vol = geo->FindVolumeFast(GRIAN_vol_name);
+  // if(!GRAIN_vol) GRAIN_vol = geo->FindVolumeFast(GRIAN_vol_name);
 
   TGeoEltu* grain = (TGeoEltu*)GRAIN_vol->GetShape();
 
@@ -411,7 +408,8 @@ void init(TFile* fmc, std::vector<TFile*> vf)
   GRAIN_dy = grain->GetRmax();
   GRAIN_dx = grain->GetDz();
 
-  if(geo->cd(path_GRAIN) == kFALSE) geo->cd(path_GRIAN);
+  geo->cd(path_GRAIN);
+  // if(geo->cd(path_GRAIN) == kFALSE) geo->cd(path_GRIAN);
 
   dummyLoc[0] = 0.;
   dummyLoc[1] = 0.;

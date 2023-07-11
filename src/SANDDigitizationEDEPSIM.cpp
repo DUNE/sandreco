@@ -62,9 +62,8 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   de = hit.EnergyDeposit;
 
   auto cell_global_id = g.get_ecal_cell_id(x, y, z);
-  
-  if(cell_global_id == 999 || cell_global_id == -999)
-    return false;
+
+  if (cell_global_id == 999 || cell_global_id == -999) return false;
 
   g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
   return true;
