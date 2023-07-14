@@ -9,6 +9,7 @@
 #include "utils.h"
 
 using namespace sand_reco;
+using namespace sand_geometry;
 
 namespace digitization
 {
@@ -439,17 +440,29 @@ TVector3 IntersectHitPlane(const TG4HitSegment& hseg,
 void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
                         std::map<int, std::vector<hit> >& hits2wire)
 {
+  std::cout<<"group_hits_by_wire\n";
   hits2wire.clear();
 
   for (unsigned int j = 0; j < ev->SegmentDetectors["DriftVolume"].size(); j++) 
   {
-    
     const TG4HitSegment& hseg = ev->SegmentDetectors["DriftVolume"].at(j);
-    
-    int id1  = geo.get_wire_id(hseg.Start.X(), hseg.Start.Y(), hseg.Start.Z());
-    int id2  = geo.get_wire_id(hseg.Stop.X(), hseg.Stop.Y(), hseg.Stop.Z());
 
-    int start_id, stop_id;
+    std::vector<int> ids = geo.get_segment_ids(hseg);
+    std::cout<<__FILE__<<" "<<__LINE__<<" \n";
+    int id1=ids[0]; 
+    int id2=ids[1];
+
+    if(id1==-999){
+      std::cout<<"skipping this hit\n";
+      continue;}
+
+    if(abs(id1-id2)>1000){
+      std::cout << "WIRE ID CORRESPONDING TO 2 DIFFERENT DIRFT PLANES" << std::endl;
+      break;
+    }
+
+    int start_id = 999; 
+    int stop_id  = 999;
     if(id2>id1)
     {
       start_id = id1;
@@ -476,6 +489,7 @@ void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
       h.index = j;
 
       hits2wire[id1].push_back(h);
+      continue;
     }
 
     TVector3 start      = {hseg.Start.X(), hseg.Start.Y(), hseg.Start.Z()};
@@ -630,6 +644,7 @@ void create_digits_from_wire_hits(const SANDGeoManager& geo,
                              std::map<int, std::vector<hit> >& hits2wire,
                              std::vector<dg_tube>& digit_vec)
 {
+  std::cout<<"create_digits_from_wire_hits";
   digit_vec.clear();
 
   for (std::map<int, std::vector<hit> >::iterator it = hits2wire.begin();
@@ -677,10 +692,12 @@ void create_digits_from_wire_hits(const SANDGeoManager& geo,
 void digitize_wire(TG4Event* ev, const SANDGeoManager& geo,
                   std::vector<dg_tube>& digit_vec)
 {
+  std::cout<<"\ndigitize_wire\n";
   std::map<int, std::vector<hit> > hits2wire;
   digit_vec.clear();
 
   group_hits_by_wire(ev, geo, hits2wire);
+  std::cout<<__FILE__<<" "<<__LINE__<<" \n";
   digitization::edep_sim::chamber::create_digits_from_wire_hits(geo, hits2wire,
                                                        digit_vec);
 }
@@ -768,17 +785,23 @@ void digitize(const char* finname, const char* foutname,
     // define the T0 for this event
     // for each straw tubs:
     // std::map<int, double> sand_reco::t0
-    sand_reco::stt::initT0(ev, sand_geo);
 
-    // digitize ECAL and STT
-    digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
-                                                ecal_digi_mode);
-    digitization::edep_sim::stt::digitize_stt(ev, sand_geo, digit_vec);
+    // !!!!!! TESTING
+    // sand_reco::stt::initT0(ev, sand_geo);
+
+    // // digitize ECAL and STT
+    // digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
+    //                                             ecal_digi_mode);
+    // digitization::edep_sim::stt::digitize_stt(ev, sand_geo, digit_vec);
+    digitization::edep_sim::chamber::digitize_wire(ev, sand_geo, digit_vec);
+    // !!!! TESTING
 
     tout.Fill();
   }
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
+  
+  sand_geo.PrintCounter();
 
   // write output
   fout.cd();

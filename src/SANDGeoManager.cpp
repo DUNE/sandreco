@@ -5,6 +5,9 @@
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
 #include <TObjString.h>
+#include <TRandom3.h>
+
+Counter counter_;
 
 int SANDGeoManager::encode_ecal_barrel_cell_local_id(int layer, int cell) const
 {
@@ -511,8 +514,11 @@ int SANDGeoManager::get_wire_id(const TString& volume_path) const
 int SANDGeoManager::get_drift_plane_id(const TString& volume_path, bool JustLocalId = false) const
 {
   auto drift_plane_matches = drift_plane_regex_.MatchS(volume_path);
+  // std::cout<<"volume path "<<volume_path<<"\n";
   int drift_plane_id = (reinterpret_cast<TObjString*>(drift_plane_matches->At(2)))
                             ->GetString().Atoi();
+  // std::cout<<"drift_plane_id "<<drift_plane_id<<"\n";
+
   if(JustLocalId){
     return drift_plane_id;
   }else{
@@ -718,10 +724,18 @@ void SANDGeoManager::WriteMapOnFile(const std::map<int,SANDWireInfo>& map)
   file_wireinfo.close();
 }
 
+void Counter::IncrementCounter(std::string k)
+{
+  hit_counter_[k]++;
+}
+
+void SANDGeoManager::PrintCounter(){
+  for(auto c: counter_.hit_counter_) std::cout<<"\n"<<c.first<<" : "<<c.second<<"\n";
+}
 void SANDGeoManager::init(TGeoManager* const geo)
 {
   geo_ = geo;
-
+  counter_.hit_counter_.clear();
   cellmap_.clear();
   sttmap_.clear();
   wiremap_.clear();
@@ -847,23 +861,16 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
   return tube_id;
 }
 
-int SANDGeoManager::get_wire_id(double x, double y, double z) const
+int SANDGeoManager::get_wire_id(int drift_plane_id, double z, double transverse_coord) const
 {
   // return the id of the closest wire to the poin x y z 
   if (geo_ == 0) {
   std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
   return -999;
   }
-
-  TGeoNode* node = geo_->FindNode(x, y, z);
-  TString volume_name = node->GetName();
-
+  std::cout<<__FILE__<<" "<<__LINE__<<" \n";
   int wire_id = -999;
-  int drift_plane_id = get_drift_plane_id(geo_->GetPath());
-  int drift_plane_local_id = get_drift_plane_id(volume_name, true);
-
-  double transverse_coord = (drift_plane_local_id == 2) ? x : y;
-
+  
   std::map<double, int>::const_iterator it =
     wire_tranverse_position_map_.at(drift_plane_id).lower_bound(transverse_coord);
     // return the wire with the smallest coordinate grater than transverse_coord
@@ -881,6 +888,8 @@ int SANDGeoManager::get_wire_id(double x, double y, double z) const
 
     v1.SetX(wire1.z());
     v2.SetX(wire2.z());
+    
+    int drift_plane_local_id = get_drift_plane_id(geo_->GetPath(), true);
 
     if (drift_plane_local_id == 2) {
       v1.SetY(wire1.x());
@@ -899,4 +908,94 @@ int SANDGeoManager::get_wire_id(double x, double y, double z) const
     }
   }
   return wire_id;
+}
+
+bool SANDGeoManager::IsOnEdge(TVector3 point) const
+{
+  bool OnEdge = 0;
+  counter_.IncrementCounter("total");
+  TString volume = geo_->FindNode(point.X(),point.Y(),point.Z())->GetName();
+
+  if(!is_drift_plane(volume)){
+    counter_.IncrementCounter("edge");
+    OnEdge = 1;
+  }
+  return OnEdge;
+}
+
+TVector3 SANDGeoManager::SmearPoint(TVector3 point, double epsilon) const
+{
+  TRandom3 ran;
+  double theta = ran.Uniform(0, TMath::Pi());
+  double phi   = ran.Uniform(0, 2 * TMath::Pi());
+  double x     = point.X() + epsilon * TMath::Sin(theta) * TMath::Cos(phi);
+  double y     = point.Y() + epsilon * TMath::Sin(theta) * TMath::Sin(phi);
+  double z     = point.Z() + epsilon * TMath::Cos(theta);
+  return {x,y,z};
+}
+
+TVector3 SANDGeoManager::FindClosestDrift(TVector3 point, double epsilon = 0.01) const 
+                                                          // move by 10 micron
+{
+  bool drift_found = 0;
+  TVector3 smeared_point;
+  int trials = 0;
+  while(!drift_found)
+  {
+    trials++;
+    smeared_point  = SmearPoint(point, epsilon);
+    TString volume = geo_->FindNode(smeared_point.X(), smeared_point.Y(), smeared_point.Z())->GetName();
+    if(is_drift_plane(volume)) drift_found = 1;
+    if(trials>1000){
+      std::cout<<"not able to find closest drift";
+      break;
+    }
+  }
+  return {smeared_point.X(), smeared_point.Y(), smeared_point.Z()};
+}
+
+std::vector<int> SANDGeoManager::get_segment_ids(const TG4HitSegment& hseg) const
+{
+  IsOnEdge(hseg.Start.Vect()); IsOnEdge(hseg.Stop.Vect());
+  
+  std::cout<<__FILE__<<" "<<__LINE__<<" \n";
+  
+  auto middle = (hseg.Start + hseg.Stop)*0.5;
+
+  if(IsOnEdge(middle.Vect())){
+    std::cout<<"middle on the edge\n";
+    counter_.IncrementCounter("wired");
+    // middle = {FindClosestDrift(middle.Vect()), middle.T()};
+    return {-999,-999};
+  }
+  
+  TGeoNode* node           = geo_->FindNode(middle.X(), middle.Y(), middle.Z());
+  TString volume_name      = node->GetName();
+  
+  std::cout<<__FILE__<<" "<<__LINE__<<" \n";
+  std::cout<<volume_name<<"\n";
+  std::cout<<std::setprecision (18)<<hseg.Start.X() <<" "<<hseg.Start.Y()<<" "<<hseg.Start.Z()<<"\n";
+  std::cout<<std::setprecision (18)<<hseg.Stop.X() <<" "<<hseg.Stop.Y()<<" "<<hseg.Stop.Z()<<"\n";
+  std::cout<<(hseg.Stop - hseg.Start).Mag()<<"\n";
+  std::cout<<__FILE__<<" "<<__LINE__<<" \n";
+
+  int drift_plane_id       = get_drift_plane_id(geo_->GetPath());
+  int drift_plane_local_id = get_drift_plane_id(volume_name, true);
+  
+  double transverse_coord_start, transverse_coord_stop;
+
+  if(drift_plane_local_id == 2)
+  {
+    transverse_coord_start = hseg.Start.X();
+    transverse_coord_stop  = hseg.Stop.X();
+  }else{
+    transverse_coord_start = hseg.Start.Y();
+    transverse_coord_stop  = hseg.Stop.Y();
+  }
+
+  int id1 = get_wire_id(drift_plane_id,  hseg.Start.Z(), transverse_coord_start);
+  int id2 = get_wire_id(drift_plane_id,  hseg.Stop.Z(), transverse_coord_stop);
+
+  return {id1,id2};
+
 }

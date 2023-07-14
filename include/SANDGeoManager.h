@@ -4,6 +4,7 @@
 #include <TGeoManager.h>
 #include <TPRegexp.h>
 #include <TVector3.h>
+#include <TG4HitSegment.h>
 
 #include <map>
 
@@ -86,9 +87,19 @@ const double endcap_thickness = 115.0;
 }  // namespace ecal
 }  // namespace sand_geometry
 
+class Counter
+{
+  // private:
+  public:
+    std::map<std::string, int> hit_counter_;
+    void IncrementCounter(std::string k);
+    void PrintCounter();
+};
+
 class SANDGeoManager : public TObject
 {
  private:
+  
   TGeoManager* geo_;  // TGeoManager pointer to ND site geometry
   std::map<int, SANDECALCellInfo> cellmap_;  // map of ecal cell (key: id,
                                              // value: info on cell)
@@ -205,6 +216,7 @@ class SANDGeoManager : public TObject
   {
   }
   void init(TGeoManager* const geo);
+  void PrintCounter();
   int save_to_file(const char* name = 0, Int_t option = 0, Int_t bufsize = 0)
   {
     geo_ = 0;
@@ -236,7 +248,11 @@ class SANDGeoManager : public TObject
   }
   int get_ecal_cell_id(double x, double y, double z) const;
   int get_stt_tube_id(double x, double y, double z) const;
-  int get_wire_id(double x, double y, double z) const;
+  int get_wire_id(int drift_plane_id, double z, double transverse_coord) const;
+  std::vector<int> get_segment_ids(const TG4HitSegment& hseg) const;
+  TVector3 FindClosestDrift(TVector3 point, double epsilon) const;
+  TVector3 SmearPoint(TVector3 point, double epsilon) const;
+  bool IsOnEdge(TVector3 point) const;
 
   // ECAL
   static int encode_ecal_cell_id(int detector_id, int module_id, int layer_id,
