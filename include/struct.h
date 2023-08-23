@@ -1,49 +1,17 @@
 // File struct.h
-#include <vector>
 #include <map>
+#include <string>
+#include <vector>
 
 #ifndef STRUCT_H
 #define STRUCT_H
 
-struct cell
-{
-  int id;
-  double z;
-  double y;
-  double x;
-  double l;
-  double adc1;
-  double tdc1;
-  double adc2;
-  double tdc2;
-  int mod;
-  int lay;
-  int cel;
-  std::vector<double> pe_time1;
-  std::vector<int> hindex1;
-  std::vector<double> pe_time2;
-  std::vector<int> hindex2;
+struct pe {
+  double time;
+  int h_index;
 };
 
-struct cluster
-{
-  int tid;
-  double x;
-  double y;
-  double z;
-  double t;
-  double e;
-  double sx;
-  double sy;
-  double sz;
-  double varx;
-  double vary;
-  double varz;
-  std::vector<cell> cells;
-};
-
-struct hit
-{
+struct hit {
   std::string det;
   int did;
   double x1;
@@ -59,21 +27,59 @@ struct hit
   int index;
 };
 
-struct digit
-{
+// photo-signal
+struct dg_ps {
+  int side;
+  double adc;
+  double tdc;
+  std::vector<pe> photo_el;
+};
+
+struct dg_cell {
+  int id;
+  double z;
+  double y;
+  double x;
+  double l;
+  int mod;
+  int lay;
+  int cel;
+  int det;
+  std::vector<dg_ps> ps1;
+  std::vector<dg_ps> ps2;
+};
+
+struct dg_tube {
   std::string det;
   int did;
   double x;
   double y;
   double z;
-  double t;
+  double t0;
   double de;
+  double adc;
+  double tdc;
   bool hor;
   std::vector<int> hindex;
 };
 
-struct track
-{
+struct cluster {
+  int tid;
+  double x;
+  double y;
+  double z;
+  double t;
+  double e;
+  double sx;
+  double sy;
+  double sz;
+  double varx;
+  double vary;
+  double varz;
+  std::vector<dg_cell> cells;
+};
+
+struct track {
   int tid;
   double yc;
   double zc;
@@ -90,12 +96,11 @@ struct track
   double chi2_ln;
   int ret_cr;
   double chi2_cr;
-  std::vector<digit> clX;
-  std::vector<digit> clY;
+  std::vector<dg_tube> clX;
+  std::vector<dg_tube> clY;
 };
 
-struct particle
-{
+struct particle {
   int primary;
   int pdg;
   int tid;
@@ -131,8 +136,7 @@ struct particle
   std::vector<particle> daughters;
 };
 
-struct event
-{
+struct event {
   double x;
   double y;
   double z;
@@ -148,8 +152,7 @@ struct event
   std::vector<particle> particles;
 };
 
-struct gcell
-{
+struct gcell {
   int id;
   double Z[4];
   double Y[4];
@@ -157,21 +160,4 @@ struct gcell
   double tdc;
 };
 
-#ifdef __MAKECINT__
-#pragma link C++ class std::map < int, std::vector < double >> +;
-#pragma link C++ class std::map < int, std::vector < int >> +;
-#pragma link C++ class std::map < int, double > +;
-#pragma link C++ class std::vector < cell > +;
-#pragma link C++ class std::map < std::string, std::vector < hit >> +;
-#pragma link C++ class std::vector < digit > +;
-#pragma link C++ class std::vector < track > +;
-#pragma link C++ class std::vector < cluster > +;
-#pragma link C++ class std::vector < particle > +;
-#pragma link C++ class digit + ;
-#pragma link C++ class cell + ;
-#pragma link C++ class cluster + ;
-#pragma link C++ class track + ;
-#pragma link C++ class particle + ;
-#pragma link C++ class event + ;
-#endif
 #endif
