@@ -14,6 +14,7 @@
 
 namespace sand_reco
 {
+extern std::map<int, double> t0;
 
 namespace stt
 {
@@ -60,7 +61,6 @@ const double tm_stt_smearing = 3.5;   // ns
 // extern std::map<int, double> stL;
 // extern std::map<int, std::map<int, TVector2> > stPos;
 // extern std::map<int, TVector2> tubePos;
-extern std::map<int, double> t0;
 
 // bool isST(TString name);
 // bool isSTPlane(TString name);
@@ -83,6 +83,11 @@ bool isDigBefore(dg_tube d1, dg_tube d2);
 bool isDigUpstream(const dg_tube& d1, const dg_tube& d2);
 void initT0(TG4Event* ev, SANDGeoManager& geo);
 }  // namespace stt
+
+namespace chamber
+{
+void initT0(TG4Event* ev, SANDGeoManager& geo);
+}// namespace chamber
 
 namespace ecal
 {

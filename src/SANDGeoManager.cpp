@@ -409,6 +409,12 @@ void SANDGeoManager::decode_stt_plane_id(int stt_plane_global_id,
   stt_plane_type = stt_plane_global_id % 10;
 }
 
+// void SANDGeoManager::decode_chamber_plane_id(int wire_global_id, 
+//                              int& drift_plane_global_id, 
+//                              int& wire_local_id)
+// {
+// }
+
 bool SANDGeoManager::is_stt_tube(const TString& volume_name) const
 {
   return volume_name.Contains(stt_single_tube_regex_);
@@ -768,6 +774,7 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   int layer_id;
   int cell_local_id;
 
+
   // barrel modules
   if (is_ecal_barrel(volume_name)) {
 
@@ -788,6 +795,7 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   int cell_unique_id =
       encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
 
+  std::cout<<"volume_name 1: "<<volume_name<<" cell_unique_id :"<<cell_unique_id<<"\n";
   return cell_unique_id;
 }
 
@@ -868,7 +876,6 @@ int SANDGeoManager::get_wire_id(int drift_plane_id, double z, double transverse_
   std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
   return -999;
   }
-  std::cout<<__FILE__<<" "<<__LINE__<<" \n";
   int wire_id = -999;
   
   std::map<double, int>::const_iterator it =
@@ -958,26 +965,17 @@ std::vector<int> SANDGeoManager::get_segment_ids(const TG4HitSegment& hseg) cons
 {
   IsOnEdge(hseg.Start.Vect()); IsOnEdge(hseg.Stop.Vect());
   
-  std::cout<<__FILE__<<" "<<__LINE__<<" \n";
-  
   auto middle = (hseg.Start + hseg.Stop)*0.5;
 
   if(IsOnEdge(middle.Vect())){
-    std::cout<<"middle on the edge\n";
-    counter_.IncrementCounter("wired");
+    counter_.IncrementCounter("weird");
     // middle = {FindClosestDrift(middle.Vect()), middle.T()};
-    return {-999,-999};
+    int particle_id = hseg.GetPrimaryId();
+    return {-999,particle_id};
   }
   
   TGeoNode* node           = geo_->FindNode(middle.X(), middle.Y(), middle.Z());
   TString volume_name      = node->GetName();
-  
-  std::cout<<__FILE__<<" "<<__LINE__<<" \n";
-  std::cout<<volume_name<<"\n";
-  std::cout<<std::setprecision (18)<<hseg.Start.X() <<" "<<hseg.Start.Y()<<" "<<hseg.Start.Z()<<"\n";
-  std::cout<<std::setprecision (18)<<hseg.Stop.X() <<" "<<hseg.Stop.Y()<<" "<<hseg.Stop.Z()<<"\n";
-  std::cout<<(hseg.Stop - hseg.Start).Mag()<<"\n";
-  std::cout<<__FILE__<<" "<<__LINE__<<" \n";
 
   int drift_plane_id       = get_drift_plane_id(geo_->GetPath());
   int drift_plane_local_id = get_drift_plane_id(volume_name, true);

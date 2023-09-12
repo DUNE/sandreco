@@ -272,7 +272,9 @@ class SANDGeoManager : public TObject
                                   int& stt_plane_local_id, int& stt_plane_type);
 
     // DRIFT CHAMBER
-  static void decode_wire_id(int wire_global_id, int& drift_plane_global_id, int& wire_local_id);
+  // static void decode_chamber_plane_id(int wire_global_id, 
+  //                            int& drift_plane_global_id, 
+  //                            int& wire_local_id);
 
   ClassDef(SANDGeoManager, 1);
 };

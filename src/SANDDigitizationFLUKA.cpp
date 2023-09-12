@@ -437,7 +437,7 @@ void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
     d.did = did;
     d.de = 0;
     d.hor = (type % 2 == 0);
-    d.t0 = sand_reco::stt::t0[pla];
+    d.t0 = sand_reco::t0[pla];
 
     if (d.hor == true) {
       d.x = sand_reco::stt::stt_center[0];
@@ -632,7 +632,7 @@ void digitize(const char* finname, const char* foutname,
   sand_reco::fluka::stt::stX.clear();
   sand_reco::fluka::stt::stPos.clear();
   sand_reco::fluka::stt::tubePos.clear();
-  sand_reco::stt::t0.clear();
+  sand_reco::t0.clear();
 }
 
 }  // namespace fluka

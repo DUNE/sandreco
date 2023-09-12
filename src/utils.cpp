@@ -17,6 +17,7 @@
 
 namespace sand_reco
 {
+std::map<int, double> t0;
 namespace ecal
 {
 double acquisition::fixed_thresh_pe = 3.;
@@ -43,7 +44,6 @@ double stt_center[3];
 // std::map<int, double> stL;
 // std::map<int, std::map<int, TVector2> > stPos;
 // std::map<int, TVector2> tubePos;
-std::map<int, double> t0;
 }  // namespace stt
 
 namespace fluka
@@ -801,6 +801,28 @@ void sand_reco::stt::initT0(TG4Event* ev, SANDGeoManager& geo)
     if (t0.find(plane_global_id) == t0.end()) {
       auto tube_info = tube.second;
       t0[plane_global_id] = t0_beam + tube_info.z() / sand_reco::constant::c;
+    }
+  }
+}
+
+void sand_reco::chamber::initT0(TG4Event* ev, SANDGeoManager& geo)
+{
+  TRandom3 r(0);
+  t0.clear();
+
+  double t0_beam = ev->Primaries[0].Position.T() -
+                   ev->Primaries[0].Position.Z() / sand_reco::constant::c +
+                   r.Gaus(0, sand_reco::stt::bucket_rms);
+  // wiremap_ is ordered, and wires id of 2 following planes differ
+  // by at least 1000 - nof wires of previous plane (about 300, to be safe 500)
+  int previous_id = geo.get_wire_info().begin()->first;             
+  for (auto& wire : geo.get_wire_info()){
+    auto wire_info = wire.second;
+    auto new_id = wire_info.id();
+    if(abs(new_id-previous_id)>500)// plane has changed
+    {
+      t0[new_id] = t0_beam + wire_info.z() / sand_reco::constant::c;
+      previous_id = new_id;
     }
   }
 }
