@@ -63,7 +63,60 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   de = hit.EnergyDeposit;
 
   auto cell_global_id = g.get_ecal_cell_id(x, y, z);
+
+  // when the segment is close to the volume border, the
+  // FindNode function may return the adjacent volume.
+  // To avoid that we look at the segment start and end
+  // to find the sensible volume
+
+  if (cell_global_id==-999)
+  {
+    std::cout<<"\n";
+    auto cell_global_id_start = g.get_ecal_cell_id(hit.Start.X(), hit.Start.Y(), hit.Start.Z()); 
+    auto cell_global_id_stop  = g.get_ecal_cell_id(hit.Stop.X(), hit.Stop.Y(), hit.Stop.Z()); 
+
+    if((cell_global_id_start!=cell_global_id_stop)) // start and stop in 2 different volumes
+    {
+      cell_global_id = (cell_global_id_start!=-999) ? cell_global_id_start : cell_global_id_stop;
+    }else
+    { // start and stop in the same volumes
+      if(cell_global_id_start!=-999)
+      {
+        cell_global_id = cell_global_id_start;
+      }else
+      { // if both start and stop are pathological
+        std::cout<<"\n";
+        std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+        std::cout<<"\t both start and stop are pathological \n";
+        std::cout<<std::setprecision(30)<<
+               "\t start x,y,z          : "<<hit.Start.X()<<", "<<hit.Start.Y()<<", "<<hit.Start.Z()<<"\n";
+        std::cout<<std::setprecision(30)<<
+               "\t stop x,y,z           : "<<hit.Stop.X()<<", "<<hit.Stop.Y()<<", "<<hit.Stop.Z()<<"\n";
+        std::cout<<"\t cell_global_id_start : "<<cell_global_id_start<<"\n";
+        std::cout<<"\t cell_global_id_stop : "<<cell_global_id_stop<<"\n";
+        
+        auto point = g.MoveFromBoundary(hit);
+        cell_global_id = g.get_ecal_cell_id(point.X(), point.Y(), point.Z());
+      }
+    }
+  }
+
   g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
+
+  if(cellID==-99)
+  {
+    std::cout<<"\n";
+    std::cout<<__FILE__<<" "<<__LINE__<<" \n";
+    std::cout<<std::setprecision(30)<<"x,y,z : "<<x<<", "<<y<<", "<<z<<"\n";
+    std::cout<<std::setprecision(30)<<"hit.Start : "<<hit.Start.X()<<", "<<hit.Start.Y()<<", "<<hit.Start.Z()<<"\n";
+    std::cout<<std::setprecision(30)<<"hit.Stop  : "<<hit.Stop.X()<<", "<<hit.Stop.Y()<<", "<<hit.Stop.Z()<<"\n";
+    std::cout<<"cell_global_id : "<<cell_global_id<<"\n";
+    std::cout<<"detID   : "<<detID<<"\n";
+    std::cout<<"modID   : "<<modID<<"\n";
+    std::cout<<"planeID : "<<planeID<<"\n";
+    std::cout<<"cellID  : "<<cellID<<"\n";
+    throw "";
+  }
   return true;
 
   // /////

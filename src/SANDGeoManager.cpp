@@ -795,7 +795,18 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   int cell_unique_id =
       encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
 
-  std::cout<<"volume_name 1: "<<volume_name<<" cell_unique_id :"<<cell_unique_id<<"\n";
+  if(cell_unique_id==-999){
+    std::cout<<"\n";
+    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+    std::cout<<"volume_name    : "<<volume_name<<" \n";
+    std::cout<<std::setprecision(30)<<
+               "x,y,z          : "<<x<<", "<<y<<", "<<z<<"\n";
+    std::cout<<"detector_id    : "<<detector_id<<"\n";
+    std::cout<<"module_id      : "<<module_id<<"\n";
+    std::cout<<"layer_id       : "<<layer_id<<"\n";
+    std::cout<<"cell_local_id  : "<<cell_local_id<<"\n";
+    std::cout<<"cell_unique_id : "<<cell_unique_id<<"\n";
+    }
   return cell_unique_id;
 }
 
@@ -928,6 +939,35 @@ bool SANDGeoManager::IsOnEdge(TVector3 point) const
     OnEdge = 1;
   }
   return OnEdge;
+}
+
+TVector3 SANDGeoManager::MoveFromBoundary(const TG4HitSegment& hseg) const
+{
+  auto direction = hseg.Stop - hseg.Start;
+  geo_->SetCurrentDirection(direction.X(), direction.Y(), direction.Z());
+  geo_->FindNextBoundary();
+  auto start_node = geo_->GetCurrentNode()->GetName();
+
+  std::cout<<"starting node : "<<start_node<<"\n";
+  geo_->Step();
+  geo_->Step();
+  auto step = geo_->GetStep();
+  std::cout<<"step : "<<step<<"\n";
+  auto new_node = geo_->GetCurrentNode()->GetName();
+  std::cout<<"new node : "<<new_node<<"\n";
+
+  auto current_point = geo_->GetCurrentPoint();
+  TVector3 point = {current_point[0]+direction.X()*step, current_point[1]+direction.Y()*step, current_point[2]+direction.Z()*step};
+
+  std::cout<<"new point x,y,z : "<<point.X()<<" "<<point.Y()<<" "<<point.Z()<<"\n";
+  std::cout<<"in volume"<<geo_->FindNode(point.X(),point.Y(),point.Z())->GetName()<<"\n";
+  
+  if(new_node==start_node)
+  {
+    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+    throw "";
+  }
+  return point;
 }
 
 TVector3 SANDGeoManager::SmearPoint(TVector3 point, double epsilon) const

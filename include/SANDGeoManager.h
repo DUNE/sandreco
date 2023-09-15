@@ -253,6 +253,7 @@ class SANDGeoManager : public TObject
   TVector3 FindClosestDrift(TVector3 point, double epsilon) const;
   TVector3 SmearPoint(TVector3 point, double epsilon) const;
   bool IsOnEdge(TVector3 point) const;
+  TVector3 MoveFromBoundary(const TG4HitSegment& hseg) const;
 
   // ECAL
   static int encode_ecal_cell_id(int detector_id, int module_id, int layer_id,
