@@ -126,6 +126,35 @@ void SANDGeoManager::decode_ecal_cell_id(int cell_global_id, int& detector_id,
   cell_local_id = cell_global_id;
 }
 
+TString SANDGeoManager::FindNextActiveLayer(const double* starting_point, const double* direction) const
+{
+  int max_nof_steps = 3;
+
+  int nof_steps = 0;
+
+  geo_->SetCurrentPoint(starting_point[0], starting_point[1], starting_point[2]);
+  
+  geo_->SetCurrentDirection(direction[0], direction[1], direction[2]);
+
+  TString current_node = geo_->GetCurrentNode()->GetName();
+  
+  // step from current point haed till you find an Active layer
+  while ((!current_node.Contains("Active")))
+  {
+    geo_->FindNextBoundaryAndStep();
+    current_node = geo_->GetCurrentNode()->GetName();
+    nof_steps++;
+    std::cout<<"current_node : "<<current_node<<"\n";
+
+    if(nof_steps>max_nof_steps)
+    { // invert direction to find Active volume
+      double _direction[3] = {-direction[0],-direction[1],-direction[2]};
+      FindNextActiveLayer(starting_point,_direction);
+    }
+  }
+  return current_node;
+}
+
 bool SANDGeoManager::is_ecal_barrel(const TString& volume_name) const
 {
   // something like: volECALActiveSlab_21_PV_0
@@ -751,6 +780,17 @@ void SANDGeoManager::init(TGeoManager* const geo)
   set_wire_info();
 }
 
+void SANDGeoManager::SetGeoCurrentPoint(double x, double y, double z) const
+{
+  double p[3] = {x,y,z};
+  geo_->SetCurrentPoint(p);
+}
+
+void SANDGeoManager::SetGeoCurrentDirection(double x, double y, double z) const
+{
+  geo_->SetCurrentDirection(x,y,z);
+}
+
 int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 {
   if (geo_ == 0) {
@@ -759,6 +799,9 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   }
 
   /////
+  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+  std::cout<<std::setprecision(15)<<"x y z : "<<x<<", "<<y<<", "<<z<<"\n";
+  
   TGeoNode* node = geo_->FindNode(x, y, z);
 
   if (node == 0) return -999;
@@ -766,8 +809,51 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   TString volume_name = node->GetName();
   TString volume_path = geo_->GetPath();
 
+  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+  std::cout<<"volume_name : "<<volume_name<<"\n";
+  std::cout<<"volume_path : "<<volume_path<<"\n";
+  std::cout<<"\n";
+
+  // if(volume_name.Contains("Passive"))
+  // {
+  //   volume_name.ReplaceAll("Passive","Active");
+  //   volume_path.ReplaceAll("Passive","Active");
+  //   std::cout<<"volume_name : "<<volume_name<<"\n";
+  //   std::cout<<"volume_path : "<<volume_path<<"\n";
+  //   if(geo_->cd(volume_path.Data()))
+  //   {
+  //     std::cout<<"current node : "<<geo_->GetCurrentNode()->GetName()<<"\n";
+  //   }else
+  //   {
+  //     std::cout<<"path : "<<volume_path<<" not found \n";
+  //     throw "";
+  //   }
+  // }else
+  // {
+  //     std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+  //     std::cout<<"calling FindNextActiveLayer \n";
+  //     volume_name = FindNextActiveLayer(geo_->GetCurrentPoint(),geo_->GetCurrentDirection());
+  //     std::cout<<"after calling FindNextActiveLayer volume_name : "<<volume_name<<"\n";
+  //     volume_path.Append("/");
+  //     volume_path.Append(volume_name);
+  //     std::cout<<"after calling FindNextActiveLayer volume_path : "<<volume_path<<"\n";
+  // }
+
+  if(!volume_name.Contains("Active"))
+  {
+    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+    std::cout<<"calling FindNextActiveLayer \n";
+    volume_name = FindNextActiveLayer(geo_->GetCurrentPoint(),geo_->GetCurrentDirection());
+    std::cout<<"after calling FindNextActiveLayer volume_name : "<<volume_name<<"\n";
+    volume_path.Append("/");
+    volume_path.Append(volume_name);
+    std::cout<<"after calling FindNextActiveLayer volume_path : "<<volume_path<<"\n"; 
+  }
+
   if (check_and_process_ecal_path(volume_path) == false) return -999;
   //////
+  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+  std::cout<<"\n";
 
   int detector_id;
   int module_id;
@@ -777,6 +863,8 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 
   // barrel modules
   if (is_ecal_barrel(volume_name)) {
+    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+    std::cout<<"\n";
 
     get_ecal_barrel_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
@@ -939,35 +1027,6 @@ bool SANDGeoManager::IsOnEdge(TVector3 point) const
     OnEdge = 1;
   }
   return OnEdge;
-}
-
-TVector3 SANDGeoManager::MoveFromBoundary(const TG4HitSegment& hseg) const
-{
-  auto direction = hseg.Stop - hseg.Start;
-  geo_->SetCurrentDirection(direction.X(), direction.Y(), direction.Z());
-  geo_->FindNextBoundary();
-  auto start_node = geo_->GetCurrentNode()->GetName();
-
-  std::cout<<"starting node : "<<start_node<<"\n";
-  geo_->Step();
-  geo_->Step();
-  auto step = geo_->GetStep();
-  std::cout<<"step : "<<step<<"\n";
-  auto new_node = geo_->GetCurrentNode()->GetName();
-  std::cout<<"new node : "<<new_node<<"\n";
-
-  auto current_point = geo_->GetCurrentPoint();
-  TVector3 point = {current_point[0]+direction.X()*step, current_point[1]+direction.Y()*step, current_point[2]+direction.Z()*step};
-
-  std::cout<<"new point x,y,z : "<<point.X()<<" "<<point.Y()<<" "<<point.Z()<<"\n";
-  std::cout<<"in volume"<<geo_->FindNode(point.X(),point.Y(),point.Z())->GetName()<<"\n";
-  
-  if(new_node==start_node)
-  {
-    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-    throw "";
-  }
-  return point;
 }
 
 TVector3 SANDGeoManager::SmearPoint(TVector3 point, double epsilon) const

@@ -216,6 +216,8 @@ class SANDGeoManager : public TObject
   {
   }
   void init(TGeoManager* const geo);
+  void SetGeoCurrentPoint(double x, double y, double z) const;
+  void SetGeoCurrentDirection(double x, double y, double z) const;
   void PrintCounter();
   int save_to_file(const char* name = 0, Int_t option = 0, Int_t bufsize = 0)
   {
@@ -253,7 +255,6 @@ class SANDGeoManager : public TObject
   TVector3 FindClosestDrift(TVector3 point, double epsilon) const;
   TVector3 SmearPoint(TVector3 point, double epsilon) const;
   bool IsOnEdge(TVector3 point) const;
-  TVector3 MoveFromBoundary(const TG4HitSegment& hseg) const;
 
   // ECAL
   static int encode_ecal_cell_id(int detector_id, int module_id, int layer_id,
@@ -261,6 +262,7 @@ class SANDGeoManager : public TObject
   static void decode_ecal_cell_id(int cell_global_id, int& detector_id,
                                   int& module_id, int& layer_id,
                                   int& cell_local_id);
+  TString FindNextActiveLayer(const double* starting_point, const double* direction) const;                                  
 
   // STT
   static int encode_stt_tube_id(int stt_plane_global_id, int stt_tube_local_id);
