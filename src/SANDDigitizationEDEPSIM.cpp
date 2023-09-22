@@ -67,8 +67,6 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   g.SetGeoCurrentPoint(x, y, z);
   g.SetGeoCurrentDirection(hit_direction.X(), hit_direction.Y(), hit_direction.Z());
 
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-
   auto cell_global_id = g.get_ecal_cell_id(x, y, z);
 
   g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
@@ -175,18 +173,6 @@ void simulate_photo_electrons(TG4Event* ev, const SANDGeoManager& g,
           uniqID =
               sand_reco::ecal::decoder::EncodeID(detID, modID, planeID, cellID);
 
-          if (debug||(uniqID==-999)||(uniqID==999)) {
-            std::cout << "uniqID: " << uniqID << std::endl;
-            std::cout << "detID: " << detID << std::endl;
-            std::cout << "modID: " << modID << std::endl;
-            std::cout << "planeID: " << planeID << std::endl;
-            std::cout << "cellID: " << cellID << std::endl;
-            std::cout << "\t" << de << " " << en1 << " " << en2 << std::endl;
-            std::cout << "\t" << ave_pe1 << " " << ave_pe2 << std::endl;
-            std::cout << "\t" << pe1 << " " << pe2 << std::endl;
-            throw "afanguuulo";
-          }
-
           // cellend 1 -> x < 0 -> ID > 0 -> left
           // cellend 2 -> x > 0 -> ID < 0 -> right
 
@@ -226,15 +212,11 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
   for (std::map<int, std::vector<dg_ps> >::iterator it = ps.begin();
        it != ps.end(); ++it) {
     int id = abs(it->first);
-    std::cout<<"it->first : "<<it->first<<"\n";
-    std::cout<<"abs(it->first) : "<<id<<"\n";
     // if(id==999) continue;
-    std::cout<<__FILE__<<" : "<<__LINE__<<"\n";
     c = &(map_cell[id]);
 
     c->id = id;
     sand_reco::ecal::decoder::DecodeID(c->id, c->det, c->mod, c->lay, c->cel);
-    std::cout<<__FILE__<<" : "<<__LINE__<<"\n";
     c->l = L[it->first];
 
     if (it->first >= 0) {
@@ -244,6 +226,7 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
     }
     std::cout<<__FILE__<<" : "<<__LINE__<<"\n";
     std::cout<<"c->id : "<<c->id<<"\n";
+    if(c->id==214294) continue;
     auto cell_info = geo.get_ecal_cell_info(c->id);
     c->x = cell_info.x();
     c->y = cell_info.y();
@@ -252,7 +235,6 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
 
   for (std::map<int, dg_cell>::iterator it = map_cell.begin();
        it != map_cell.end(); ++it) {
-    std::cout<<__FILE__<<" : "<<__LINE__<<"\n";
     vec_cell.push_back(it->second);
   }
 }

@@ -128,29 +128,29 @@ void SANDGeoManager::decode_ecal_cell_id(int cell_global_id, int& detector_id,
 
 TString SANDGeoManager::FindNextActiveLayer(const double* starting_point, const double* direction) const
 {
+  // step from current point haed till you find an Active layer
   int max_nof_steps = 3;
 
   int nof_steps = 0;
 
   geo_->SetCurrentPoint(starting_point[0], starting_point[1], starting_point[2]);
-  
+
   geo_->SetCurrentDirection(direction[0], direction[1], direction[2]);
 
   TString current_node = geo_->GetCurrentNode()->GetName();
-  
-  // step from current point haed till you find an Active layer
-  while ((!current_node.Contains("Active")))
+
+  while (!current_node.Contains("Active"))
   {
     geo_->FindNextBoundaryAndStep();
     current_node = geo_->GetCurrentNode()->GetName();
-    nof_steps++;
-    std::cout<<"current_node : "<<current_node<<"\n";
-
-    if(nof_steps>max_nof_steps)
+    std::cout<<current_node<<"\n";
+    if(current_node.Contains("Passive")) current_node.ReplaceAll("Passive","Active");
+    if((nof_steps>max_nof_steps)&&(!current_node.Contains("Active")))
     { // invert direction to find Active volume
       double _direction[3] = {-direction[0],-direction[1],-direction[2]};
-      FindNextActiveLayer(starting_point,_direction);
+      FindNextActiveLayer(starting_point, _direction);
     }
+    nof_steps++;
   }
   return current_node;
 }
@@ -196,7 +196,7 @@ void SANDGeoManager::get_ecal_barrel_module_and_layer(
     int& module_id, int& plane_id) const
 {
   TObjArray* obja1 =
-      volume_name.Tokenize("_");  // BARERL => volECALActiveSlab_21_PV_0
+      volume_name.Tokenize("_");  // BARREL => volECALActiveSlab_21_PV_0
   TObjArray* obja2 = volume_path.Tokenize("_");  // BARREL => ECAL_lv_PV_18
 
   // top module => modID == 0
@@ -204,7 +204,7 @@ void SANDGeoManager::get_ecal_barrel_module_and_layer(
   //(i.e. z(modID==1) < z(modID==0) & z(modID==0) < z(modID==23))
   detector_id = 2;
   module_id = ((TObjString*)obja2->At(3))->GetString().Atoi();
-  int slab_id = ((TObjString*)obja1->At(1))->GetString().Atoi();
+  int slab_id = ((TObjString*)obja1->At(1))->GetString().Atoi(); // 21
 
   delete obja1;
   delete obja2;
@@ -214,6 +214,20 @@ void SANDGeoManager::get_ecal_barrel_module_and_layer(
   plane_id = slab_id / 40;
 
   if (plane_id > 4) plane_id = 4;
+  
+  if(detector_id!=2){
+    std::cout<<"invalid detector id : "<<detector_id<<"\n";
+    throw "";
+  }else if(module_id>23){
+    std::cout<<"invalid module_id  : "<<module_id<<"\n";
+    throw "";
+  }else if(slab_id>208){
+    std::cout<<"invalid slab_id  : "<<slab_id<<"\n";
+    throw "";
+  }else if(plane_id>5){
+    std::cout<<"invalid plane_id  : "<<plane_id<<"\n";
+    throw "";
+  }
 }
 
 void SANDGeoManager::get_ecal_endcap_module_and_layer(
@@ -258,6 +272,15 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
   master[2] = z;
 
   geo_->GetCurrentNavigator()->MasterToLocal(master, local);
+  
+  TString shape_name = node->GetVolume()->GetShape()->GetName();
+
+  if(shape_name!="TGeoTrd2")
+  {
+    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+    std::cout<<"invalid shape : "<<shape_name<<"\n";
+    throw "";
+  }
 
   TGeoTrd2* trd = (TGeoTrd2*)node->GetVolume()->GetShape();
 
@@ -277,6 +300,14 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
 
   // cellID = distanza dall'estremo diviso larghezza cella
   cell_local_id = (local[0] + dx) / cell_width;
+
+  if(cell_local_id>11)
+  {
+    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+    std::cout<<"current node : "<<geo_->GetCurrentNavigator()->GetCurrentNode()->GetName()<<"\n";
+    std::cout<<"invalid cell_local_id : "<<cell_local_id<<"\n";
+    throw "";
+  }
 }
 
 void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
@@ -795,13 +826,9 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 {
   if (geo_ == 0) {
     std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
-    return -999;
+    throw "";
   }
 
-  /////
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  std::cout<<std::setprecision(15)<<"x y z : "<<x<<", "<<y<<", "<<z<<"\n";
-  
   TGeoNode* node = geo_->FindNode(x, y, z);
 
   if (node == 0) return -999;
@@ -809,51 +836,41 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   TString volume_name = node->GetName();
   TString volume_path = geo_->GetPath();
 
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  std::cout<<"volume_name : "<<volume_name<<"\n";
-  std::cout<<"volume_path : "<<volume_path<<"\n";
-  std::cout<<"\n";
-
-  // if(volume_name.Contains("Passive"))
-  // {
-  //   volume_name.ReplaceAll("Passive","Active");
-  //   volume_path.ReplaceAll("Passive","Active");
-  //   std::cout<<"volume_name : "<<volume_name<<"\n";
-  //   std::cout<<"volume_path : "<<volume_path<<"\n";
-  //   if(geo_->cd(volume_path.Data()))
-  //   {
-  //     std::cout<<"current node : "<<geo_->GetCurrentNode()->GetName()<<"\n";
-  //   }else
-  //   {
-  //     std::cout<<"path : "<<volume_path<<" not found \n";
-  //     throw "";
-  //   }
-  // }else
-  // {
-  //     std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  //     std::cout<<"calling FindNextActiveLayer \n";
-  //     volume_name = FindNextActiveLayer(geo_->GetCurrentPoint(),geo_->GetCurrentDirection());
-  //     std::cout<<"after calling FindNextActiveLayer volume_name : "<<volume_name<<"\n";
-  //     volume_path.Append("/");
-  //     volume_path.Append(volume_name);
-  //     std::cout<<"after calling FindNextActiveLayer volume_path : "<<volume_path<<"\n";
-  // }
-
   if(!volume_name.Contains("Active"))
   {
-    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-    std::cout<<"calling FindNextActiveLayer \n";
-    volume_name = FindNextActiveLayer(geo_->GetCurrentPoint(),geo_->GetCurrentDirection());
-    std::cout<<"after calling FindNextActiveLayer volume_name : "<<volume_name<<"\n";
-    volume_path.Append("/");
-    volume_path.Append(volume_name);
-    std::cout<<"after calling FindNextActiveLayer volume_path : "<<volume_path<<"\n"; 
+    if(volume_name.Contains("Passive"))
+    {
+      volume_name.ReplaceAll("Passive","Active");
+      volume_path.ReplaceAll("Passive","Active");
+    }else // manage cases like "ECAL_lv_18_PV_0"
+    {
+      std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+      std::cout<<std::setprecision(30)<<"calling FindNextActiveLayer for "<<volume_name<<" x y z "<<x<<", "<<y<<", "<<z<<"\n";
+      std::cout<<std::setprecision(30)<<" GetCurrentPoint  x y z "<<geo_->GetCurrentPoint()[0]<<", "<<geo_->GetCurrentPoint()[1]<<", "<<geo_->GetCurrentPoint()[2]<<"\n";
+      volume_name = FindNextActiveLayer(geo_->GetCurrentPoint(), geo_->GetCurrentDirection());
+      auto p = geo_->GetCurrentPoint();
+      std::cout<<"after calling FindNextActiveLayer volume_name : "<<volume_name<<"\n";
+      std::cout<<"after calling FindNode current point : "<<geo_->FindNode(p[0],p[1],p[2])->GetName()<<"\n";
+      volume_path.Append("/");
+      volume_path.Append(volume_name);
+    } 
+  geo_->cd(volume_path);
+  node = geo_->GetCurrentNode();
   }
 
-  if (check_and_process_ecal_path(volume_path) == false) return -999;
-  //////
   std::cout<<__FILE__<<" "<<__LINE__<<"\n";
   std::cout<<"\n";
+  std::cout<<"volume_path : "<<volume_path<<"\n";
+  if(!((TString)node->GetName()).Contains("Active"))
+  {
+    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+    std::cout<<"invalid current node (is not ecal active layer): "<<node->GetName()<<"\n";
+    throw "";
+  }
+  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+  std::cout<<"\n";
+  if (check_and_process_ecal_path(volume_path) == false) return -999;
+  //////
 
   int detector_id;
   int module_id;
@@ -863,8 +880,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 
   // barrel modules
   if (is_ecal_barrel(volume_name)) {
-    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-    std::cout<<"\n";
 
     get_ecal_barrel_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
@@ -882,19 +897,8 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 
   int cell_unique_id =
       encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
-
-  if(cell_unique_id==-999){
-    std::cout<<"\n";
-    std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-    std::cout<<"volume_name    : "<<volume_name<<" \n";
-    std::cout<<std::setprecision(30)<<
-               "x,y,z          : "<<x<<", "<<y<<", "<<z<<"\n";
-    std::cout<<"detector_id    : "<<detector_id<<"\n";
-    std::cout<<"module_id      : "<<module_id<<"\n";
-    std::cout<<"layer_id       : "<<layer_id<<"\n";
-    std::cout<<"cell_local_id  : "<<cell_local_id<<"\n";
-    std::cout<<"cell_unique_id : "<<cell_unique_id<<"\n";
-    }
+  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+  std::cout<<"\n";
   return cell_unique_id;
 }
 
