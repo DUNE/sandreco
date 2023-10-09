@@ -5,9 +5,9 @@
 # e.g. by passing `-DROOT_DIR="/path/to/root/installation` at cmake configuration time.
 
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(SandReco LANGUAGES CXX VERSION 1.0.0)
+project(SandReco LANGUAGES CXX VERSION 01.00.00)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
