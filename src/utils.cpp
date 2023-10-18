@@ -618,14 +618,11 @@ void sand_reco::fluka::ecal::CellPosition(TGeoManager* geo, int det, int mod,
                                           int lay, int cel, double& x,
                                           double& y, double& z)
 {
-  x = 0;
-  y = 0;
-  z = 0;
-
-  double dummyLoc[3];
-  double dummyMas[3];
+  double dummyMas[3] = {0., 0., 0.};
 
   if (mod < 24) {
+
+    double dummyLoc[3];
 
     // Local coordinates calculation
     dummyLoc[0] = cellCoordBarrel[mod][lay][cel][0];
@@ -641,6 +638,8 @@ void sand_reco::fluka::ecal::CellPosition(TGeoManager* geo, int det, int mod,
   // right x > 0 : c->mod = 30
   // left  x < 0 : c->mod = 40
   {
+
+    double dummyLoc[3];
 
     // Local coordinates calculation
     dummyLoc[0] = cellCoordEndcap[int(mod / 10)][lay][cel][0];
