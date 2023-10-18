@@ -34,12 +34,12 @@ target_include_directories(Struct PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Struct PUBLIC)
-ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/Linkdef.h)
+ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/StructDictLinkDef.h)
 
 # Create SANDGeoManager lib
 add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDSTTTubeInfo.cpp src/SANDECALCellInfo.cpp)
 target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
-ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDSTTTubeInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/Linkdef.h)
+ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDSTTTubeInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerDictLinkDef.h)
 
 # Creates a libUtils shared library
 add_library(Utils SHARED src/utils.cpp src/transf.cpp)
