@@ -556,6 +556,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
         case 22:
           tr_zy->SetLineStyle(7);
           tr_zx->SetLineStyle(7);
+          [[fallthrough]];
         // e+/e-
         case 11:
         case -11:
@@ -922,6 +923,7 @@ void showPri(int index)
       // photons
       case 22:
         par->SetLineStyle(7);
+        [[fallthrough]];
       // e+/e-
       case 11:
       case -11:
@@ -983,6 +985,7 @@ void showPri(int index)
       // photons
       case 22:
         par->SetLineStyle(7);
+        [[fallthrough]];
       // e+/e-
       case 11:
       case -11:
@@ -1044,6 +1047,7 @@ void showPri(int index)
       // photons
       case 22:
         par->SetLineStyle(7);
+        [[fallthrough]];
       // e+/e-
       case 11:
       case -11:
@@ -1238,6 +1242,7 @@ void showPri(int index)
         // photons
         case 22:
           par->SetLineStyle(7);
+          [[fallthrough]];
         // e+/e-
         case 11:
         case -11:
@@ -1303,6 +1308,7 @@ void showPri(int index)
         // photons
         case 22:
           par->SetLineStyle(7);
+          [[fallthrough]];
         // e+/e-
         case 11:
         case -11:
@@ -1368,6 +1374,7 @@ void showPri(int index)
         // photons
         case 22:
           par->SetLineStyle(7);
+          [[fallthrough]];
         // e+/e-
         case 11:
         case -11:

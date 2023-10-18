@@ -1180,6 +1180,10 @@ void SANDEventDisplay::SetSimData(TString fileName)
     return;
   }
 
+  if (!geo) {
+    cout << "<INFO> Geometry name: " << geo->GetName() << endl;
+  }
+
   if (!fGeomInitialized) {
     // sand_reco::init(geo);
     fGeomInitialized = true;
@@ -1210,6 +1214,10 @@ void SANDEventDisplay::SetDigitData(TString fileName)
   } catch (...) {
     cout << "<ERROR> Digit file can not be opened " << fileName << endl;
     return;
+  }
+
+  if (!geo) {
+    cout << "<INFO> Geometry name: " << geo->GetName() << endl;
   }
 
   if (!fGeomInitialized) {
