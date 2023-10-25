@@ -18,15 +18,19 @@ defaultqual	e20
 # gdmldir product_dir
 # fwdir   product_dir  fw
 
-product         version
+product         version         optional
+artdaq_core     v3_09_11
+art             v3_12_00
+cetbuildtools   v8_20_00        -          only_for_build
+gallery         v1_20_02
 edepsim         v3_2_0b
 end_product_list
 
 # define allowed qualifiers and the corresponding qualifiers for the depdencies.
 # e15  - with gcc 6.4.0 and -std=c++14
 
-qualifier   edepsim
-e20:prof    e20:prof
+qualifier   artdaq_core             art              gallery              edepsim
+e20:prof    e20:s120a:prof          e20:prof         e20:prof             e20:prof
 end_qualifier_list
 
 # table fragment to set FW_SEARCH_PATH needed
