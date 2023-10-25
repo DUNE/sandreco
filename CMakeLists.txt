@@ -15,28 +15,8 @@ set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
 # cetbuildtools contains our cmake modules
 find_package(cetbuildtools REQUIRED)
 
-list(APPEND CMAKE_MODULE_PATH $ENV{CANVAS_ROOT_IO_DIR}/Modules $ENV{ART_DIR}/Modules)
-
 include(CetCMakeEnv)
 cet_cmake_env()
-
-cet_set_compiler_flags(DIAGS VIGILANT
-#  WERROR
-# NO_UNDEFINED
-  EXTRA_FLAGS -pedantic
-  EXTRA_DEFINITIONS -D_GLIBCXX_USE_NANOSLEEP #-march=native
-)
-
-cet_report_compiler_flags()
-
-# these are minimum required versions, not the actual product versions
-find_ups_boost() # Needs to be first to cover for a missing transitive
-                 # dependency from artdaq_core.
-find_ups_product( artdaq_core )
-find_ups_product( art )
-find_ups_product( cetlib )
-find_ups_product( gallery )
-find_ups_product( messagefacility )
 
 # Locate the ROOT package and define a number of useful targets and variables.
 find_package(ROOT REQUIRED)
