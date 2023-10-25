@@ -90,18 +90,20 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
 endif()
 
+string(REPLACE "." "_" MY_VERSION "v${PROJECT_VERSION}")
+
 # Copy setup.sh configuration file
-configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
+configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/${MY_VERSION}/setup.sh" COPYONLY)
 
 install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay
         EXPORT SandRecoTargets
-        RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-        LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-        ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
+        RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/${MY_VERSION}/bin"
+        LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/${MY_VERSION}/lib"
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/${MY_VERSION}/lib")
         
 install(
   DIRECTORY "${CMAKE_BINARY_DIR}/."
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/${MY_VERSION}/lib"
   FILES_MATCHING
   PATTERN "*.pcm"
   PATTERN "*.rootmap"
@@ -111,13 +113,13 @@ install(
 
 install(
   DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
-  DESTINATION "${CMAKE_INSTALL_PREFIX}"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/${MY_VERSION}"
   PATTERN "Linkdef.h" EXCLUDE
   PATTERN "SANDEventDisplayLinkDef.h" EXCLUDE)
 
 install(
   DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/icons
-  DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/${MY_VERSION}")
 
 
 # ############################################################
