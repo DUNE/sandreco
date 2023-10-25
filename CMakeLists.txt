@@ -132,8 +132,8 @@ include(CMakePackageConfigHelpers)
 # Build the targets description so that the package can be configured
 # using find_package.
 install(EXPORT SandRecoTargets
-  NAMESPACE SandReco::
-  DESTINATION lib/cmake/SandReco)
+  NAMESPACE sandreco::
+  DESTINATION lib/cmake/sandreco)
 
 # Write the 'SandRecoConfigVersion.cmake' file which can be used to
 # check if a version meets the requested properties.
@@ -147,13 +147,13 @@ configure_package_config_file(
   PackageConfig.cmake.in
   SandRecoConfig.cmake
   PATH_VARS CMAKE_INSTALL_PREFIX
-  INSTALL_DESTINATION lib/cmake/SandReco)
+  INSTALL_DESTINATION lib/cmake/sandreco)
 
 # Install the config files.
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/SandRecoConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/SandRecoConfigVersion.cmake
-  DESTINATION lib/cmake/SandReco)
+  DESTINATION lib/cmake/sandreco)
 
 # ups - table and config files
 add_subdirectory(ups)
