@@ -1,5 +1,6 @@
 #include "SANDECALCellInfo.h"
 #include "SANDSTTTubeInfo.h"
+#include "struct.h"
 
 #include <TGeoManager.h>
 #include <TPRegexp.h>
@@ -218,6 +219,8 @@ class SANDGeoManager : public TObject
   void init(TGeoManager* const geo);
   void SetGeoCurrentPoint(double x, double y, double z) const;
   void SetGeoCurrentDirection(double x, double y, double z) const;
+  void InitVolume(volume& v) const;
+  void LOGVolumeInfo(volume& v) const;
   void PrintCounter();
   int save_to_file(const char* name = 0, Int_t option = 0, Int_t bufsize = 0)
   {

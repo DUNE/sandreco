@@ -822,6 +822,27 @@ void SANDGeoManager::SetGeoCurrentDirection(double x, double y, double z) const
   geo_->SetCurrentDirection(x,y,z);
 }
 
+void SANDGeoManager::InitVolume(volume& v) const
+{
+  auto p = geo_->GetCurrentPoint();
+  v.geo_volume = geo_->FindNode(p[0],p[1],p[2])->GetVolume();
+  v.volume_path = geo_->GetPath();
+  if(v.volume_path.Contains("Active"))
+  {
+    v.IsActive = true;
+  }else{
+    v.IsActive = false;
+  }
+}
+
+void SANDGeoManager::LOGVolumeInfo(volume& v) const
+{
+  auto p = geo_->GetCurrentPoint();
+  std::cout<<"Current Point "<<p[0]<<", "<<p[1]<<", "<<p[2]<<"\n";
+  std::cout<<"volume path "<< v.volume_path<<"\n";
+  std::cout<<"is active volume ? :"<<v.IsActive<<"\n";
+}
+
 int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 {
   if (geo_ == 0) {
@@ -842,11 +863,26 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
     {
       volume_name.ReplaceAll("Passive","Active");
       volume_path.ReplaceAll("Passive","Active");
-    }else // manage cases like "ECAL_lv_18_PV_0"
+    }else if(volume_name.Contains("end"))
     {
       std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-      std::cout<<std::setprecision(30)<<"calling FindNextActiveLayer for "<<volume_name<<" x y z "<<x<<", "<<y<<", "<<z<<"\n";
-      std::cout<<std::setprecision(30)<<" GetCurrentPoint  x y z "<<geo_->GetCurrentPoint()[0]<<", "<<geo_->GetCurrentPoint()[1]<<", "<<geo_->GetCurrentPoint()[2]<<"\n";
+      // auto n=geo_->FindNormalFast();
+      double n[3]={1.,0.,0.};
+      geo_->SetCurrentDirection(n[0], n[1], n[2]);
+      std::cout<<std::setprecision(15)<<"calling FindNextActiveLayer for "<<volume_name<<" x y z "<<x<<", "<<y<<", "<<z<<"\n";
+      std::cout<<std::setprecision(15)<<" GetCurrentPoint  x y z "<<geo_->GetCurrentPoint()[0]<<", "<<geo_->GetCurrentPoint()[1]<<", "<<geo_->GetCurrentPoint()[2]<<"\n";
+      std::cout<<std::setprecision(15)<<" GetCurrentDirection  x y z "<<n[0]<<", "<<n[1]<<", "<<n[2]<<"\n";
+      volume_name = FindNextActiveLayer(geo_->GetCurrentPoint(), geo_->GetCurrentDirection());
+      auto p = geo_->GetCurrentPoint();
+      std::cout<<"after calling FindNextActiveLayer volume_name : "<<volume_name<<"\n";
+      std::cout<<"after calling FindNode current point : "<<geo_->FindNode(p[0],p[1],p[2])->GetName()<<"\n";
+      volume_path.Append("/");
+      volume_path.Append(volume_name);
+    }else{// manage cases like "ECAL_lv_18_PV_0" and "Frame_C_PV_0"
+      std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+      std::cout<<std::setprecision(15)<<"calling FindNextActiveLayer for "<<volume_name<<" x y z "<<x<<", "<<y<<", "<<z<<"\n";
+      std::cout<<std::setprecision(15)<<" GetCurrentPoint  x y z "<<geo_->GetCurrentPoint()[0]<<", "<<geo_->GetCurrentPoint()[1]<<", "<<geo_->GetCurrentPoint()[2]<<"\n";
+      std::cout<<std::setprecision(15)<<" GetCurrentDirection  x y z "<<geo_->GetCurrentDirection()[0]<<", "<<geo_->GetCurrentDirection()[1]<<", "<<geo_->GetCurrentDirection()[2]<<"\n";
       volume_name = FindNextActiveLayer(geo_->GetCurrentPoint(), geo_->GetCurrentDirection());
       auto p = geo_->GetCurrentPoint();
       std::cout<<"after calling FindNextActiveLayer volume_name : "<<volume_name<<"\n";
@@ -858,9 +894,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   node = geo_->GetCurrentNode();
   }
 
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  std::cout<<"\n";
-  std::cout<<"volume_path : "<<volume_path<<"\n";
   if(!((TString)node->GetName()).Contains("Active"))
   {
     std::cout<<__FILE__<<" "<<__LINE__<<"\n";

@@ -66,6 +66,11 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
 
   g.SetGeoCurrentPoint(x, y, z);
   g.SetGeoCurrentDirection(hit_direction.X(), hit_direction.Y(), hit_direction.Z());
+  
+  volume running_volume;
+  g.InitVolume(running_volume);
+
+  if(!running_volume.IsActive) return false;
 
   auto cell_global_id = g.get_ecal_cell_id(x, y, z);
 

@@ -2,6 +2,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <TString.h>
+#include <TGeoManager.h>
 
 #ifndef STRUCT_H
 #define STRUCT_H
@@ -158,6 +160,12 @@ struct gcell {
   double Y[4];
   double adc;
   double tdc;
+};
+
+struct volume {
+  TGeoVolume* geo_volume;
+  TString     volume_path;
+  bool        IsActive;
 };
 
 #endif
