@@ -93,7 +93,7 @@ endif()
 string(REPLACE "." "_" MY_VERSION "v${PROJECT_VERSION}")
 
 # Copy setup.sh configuration file
-configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/${MY_VERSION}/setup.sh" COPYONLY)
+install(FILES setup.sh DESTINATION "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}/${MY_VERSION}")
 
 install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay
         EXPORT SandRecoTargets
