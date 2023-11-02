@@ -6,6 +6,7 @@
 #include "TVector3.h"
 #include "Math/Functor.h"
 #include "Math/Minimizer.h"
+#include "Math/Factory.h"
 
 class Helix
 {
@@ -74,8 +75,8 @@ class Line //: public SANDWireInfo
         double y_l(double t) const {
             return dy * t + ay;
         }
-        double z_l(double t) const {
-            return t;
+        double z_l() const {
+            return 0;
         }
         // double x_l(double t){
         //     if(orientation_ == kHorizontal){
@@ -100,7 +101,7 @@ class Line //: public SANDWireInfo
         // }
 
         TVector3 GetPointAt(double t) const {
-            return {x_l(t), y_l(t), z_l(t)};
+            return {x_l(t), y_l(t), z_l()};
         }
 
     private:
@@ -112,7 +113,7 @@ class Line //: public SANDWireInfo
     ClassDef(Line, 1);
 };
 
-namespace RecoUtils{ //RecoUtils
+// namespace RecoUtils{ //RecoUtils
 
 double GetImpactParameter(const Helix& helix, const Line& line, double s, double t) {
 
@@ -140,9 +141,9 @@ double GetMinImpactParameter(const Helix& helix, const Line& line){
 
     ROOT::Math::Functor functor(&FunctionImpactParameter, 13);
 
-    // ROOT::Math::Minimizer minimizer("Minuit2", "Migrad");
+    // gDebug=1;
 
-    ROOT::Math::Minimizer * minimizer = ROOT::Math::Factory::CreateMinimizer("minimizer", "Minuit2");
+    ROOT::Math::Minimizer * minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
 
     minimizer->SetFunction(functor);
 
@@ -165,35 +166,25 @@ double GetMinImpactParameter(const Helix& helix, const Line& line){
     minimizer->SetVariable(11, "s", 1, 0.001);
     minimizer->SetVariable(12, "t", 1, 0.001);
 
-    return minimizer->Minimize();
+    if( minimizer->Minimize()) minimizer->PrintResults();
+    return 1.;
 }
 
-}// RecoUtils
 
-// class ImpactParameterFunctor : public ROOT::Math::Functor 
-// {
-//     public:
-//         ImpactParameterFunctor(Helix& helix, Line& Line) : 
-//             ROOT::Math::Functor(2), helix_(helix), wireline_(Line) {}
-        
-//         double operator()(const double helix_pars*, const double wireline_pars*){
-
-//             helix_.SetHelixParam(helix_pars);
-//             wireline_.SetWireLineParam(wireline_pars);
-
-//             double impact_parameter = helix_.GetImpactParameter(s_, t_, wireline_);
-
-//             return impact_parameter;
-//         }
-
-//     private:
-//         Helix& helix_;
-//         Line& wireline_;
-//         double s_;
-//         double t_;
+int SANDRecoUtils(){
     
-//     ClassDef(ImpactParameterFunctor, 1);
-// }
+    TVector3 x0 = {0,0,0};
+
+    // R, dip, Phi0, h, x0
+    Helix h(1., 0., 0., 1, x0);
+    
+    // mx, my, ax, ay -> line that crosses (0,0,0)
+    Line l(1., 1., 0., 0.);
+
+    std::cout<< GetMinImpactParameter(h,l) <<"\n";
+
+    return 0;
+}
 
 #ifdef __MAKECINT__
 #pragma link C++ class Helix + ;
