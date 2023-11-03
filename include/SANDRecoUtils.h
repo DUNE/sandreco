@@ -11,7 +11,8 @@
 class Helix
 {
     public:
-        Helix(double R, double dip, double Phi0, double h, TVector3 x0) : R(R), dip(dip), Phi0(Phi0), h(h), x0(x0) {}
+        Helix(double arg_R, double arg_dip, double arg_Phi0, int arg_h, TVector3 arg_x0) : 
+                    R_(arg_R), dip_(arg_dip), Phi0_(arg_Phi0), h_(arg_h), x0_(arg_x0) {}
         
         // R : radius of the helix
         // pitch : dip angle 
@@ -20,15 +21,15 @@ class Helix
         // x0 : track starting point
         
         double x_h(double s) const{
-            return x0.X() + s * sin(dip);
+            return x0_.X() + s * sin(dip_);
         }
 
         double y_h(double s) const{
-            return x0.Y() + R * (sin(Phi0 + h*s*cos(dip)/R) - sin(Phi0));
+            return x0_.Y() + R_ * (sin(Phi0_ + h_*s*cos(dip_)/R_) - sin(Phi0_));
         }
 
         double z_h(double s) const{
-            return x0.Z() + R * (cos(Phi0 + h*s*cos(dip)/R) - cos(Phi0));
+            return x0_.Z() + R_ * (cos(Phi0_ + h_*s*cos(dip_)/R_) - cos(Phi0_));
         }
 
         TVector3 GetPointAt(double s) const {
@@ -36,19 +37,25 @@ class Helix
         }
 
         void SetHelixParam(double* p){
-            R = p[0];
-            dip = p[1];
-            Phi0 = p[2];
-            h = p[3];
-            x0 = {p[4],p[5],p[6]};
+            R_    = p[0];
+            dip_  = p[1];
+            Phi0_ = p[2];
+            h_    = p[3];
+            x0_   = {p[4],p[5],p[6]};
         }
 
+        double R() const {return R_;};
+        double dip() const {return dip_;};
+        double Phi0() const {return Phi0_;};
+        int h() const {return h_;};
+        TVector3 x0() const {return x0_;};
+
     private:
-        double R;
-        double dip;
-        double Phi0;
-        int h;
-        TVector3 x0;
+        double R_;
+        double dip_;
+        double Phi0_;
+        int h_;
+        TVector3 x0_;
     
     ClassDef(Helix, 1);
 };
@@ -56,59 +63,48 @@ class Helix
 class Line //: public SANDWireInfo
 {
     public:
-        Line(double dx, double dy, double ax, double ay) : dx(dx), dy(dy), ax(ax), ay(ay) {}
+        Line(double arg_dx, double arg_dy, double arg_ax, double arg_ay, double arg_z0) : 
+                    dx_(arg_dx), dy_(arg_dy), ax_(arg_ax), ay_(arg_ay), z0_(arg_z0) {}
 
         // (dx,dy,dz) = vector parallel to wire
         // x = dx * t + ax
         // y = dy * t + ay
+        // z = z0
         // a,b : line intercept
 
         void SetWireLineParam(double* p){
-            dx = p[0];
-            dy = p[1];
-            ax = p[2];
-            ay = p[3];
+            dx_ = p[0];
+            dy_ = p[1];
+            ax_ = p[2];
+            ay_ = p[3];
+            z0_ = p[4];
         }
         double x_l(double t) const {
-            return dx * t + ax;
+            return dx_ * t + ax_;
         }
         double y_l(double t) const {
-            return dy * t + ay;
+            return dy_ * t + ay_;
         }
         double z_l() const {
-            return 0;
+            return z0_;
         }
-        // double x_l(double t){
-        //     if(orientation_ == kHorizontal){
-        //         return x_ + t * dx;
-        //     }else{
-        //         return x_;
-        //     }
-        // }
 
-        // double y_l(double t){
-        //     if (orientation_ == kHorizontal)
-        //     {
-        //         return y_;
-        //     }else{
-        //         return y_ + t * dy; 
-        //     }
-            
-        // }
-
-        // double z_l(){
-        //     return z_;
-        // }
+        double dx() const {return dx_;};
+        double dy() const {return dy_;};
+        double ax() const {return ax_;};
+        double ay() const {return ay_;};
+        double z0() const {return z0_;};
 
         TVector3 GetPointAt(double t) const {
             return {x_l(t), y_l(t), z_l()};
         }
 
     private:
-        double dx;
-        double dy;
-        double ax;
-        double ay;
+        double dx_;
+        double dy_;
+        double ax_;
+        double ay_;
+        double z0_;
     
     ClassDef(Line, 1);
 };
@@ -129,10 +125,10 @@ double FunctionImpactParameter(const double* p) {
     TVector3 x0{p[4], p[5], p[6]};
 
     Helix helix(p[0], p[1], p[2], p[3], x0);
-    Line line(p[7],p[8],p[9],p[10]);
+    Line line(p[7],p[8],p[9],p[10],p[11]);
 
-    double s = p[11];
-    double t = p[12];
+    double s = p[12];
+    double t = p[13];
 
     return GetImpactParameter(helix, line, s, t);
 }
@@ -150,37 +146,55 @@ double GetMinImpactParameter(const Helix& helix, const Line& line){
     // set boundaries for Phi0
     
     // helix params
-    minimizer->SetFixedVariable(0, "R", 1);
-    minimizer->SetFixedVariable(1, "dip", 0);
-    minimizer->SetFixedVariable(2, "Phi0", 0);
-    minimizer->SetFixedVariable(3, "h", -1);
-    minimizer->SetFixedVariable(4, "x0_x", 1);
-    minimizer->SetFixedVariable(5, "x0_y", 1);
-    minimizer->SetFixedVariable(6, "x0_z", 1);
+    minimizer->SetFixedVariable(0, "R",     helix.R());
+    minimizer->SetFixedVariable(1, "dip",   helix.dip());
+    minimizer->SetFixedVariable(2, "Phi0",  helix.Phi0());
+    minimizer->SetFixedVariable(3, "h",     helix.h());
+    minimizer->SetFixedVariable(4, "x0_x",  helix.x0().X());
+    minimizer->SetFixedVariable(5, "x0_y",  helix.x0().Y());
+    minimizer->SetFixedVariable(6, "x0_z",  helix.x0().Z());
     // line params    
-    minimizer->SetFixedVariable(7, "dx", 1);
-    minimizer->SetFixedVariable(8, "dy", 1);
-    minimizer->SetFixedVariable(9, "ax", 1);
-    minimizer->SetFixedVariable(10, "ay", 1);
+    minimizer->SetFixedVariable(7, "dx",    line.dx());
+    minimizer->SetFixedVariable(8, "dy",    line.dy());
+    minimizer->SetFixedVariable(9, "ax",    line.ax());
+    minimizer->SetFixedVariable(10, "ay",   line.ay());
+    minimizer->SetFixedVariable(11, "z0",   line.z0());
     // s, t
-    minimizer->SetVariable(11, "s", 1, 0.001);
-    minimizer->SetVariable(12, "t", 1, 0.001);
+    minimizer->SetVariable(12, "s", 1, 0.0001);
+    minimizer->SetVariable(13, "t", 1, 0.0001);
 
-    if( minimizer->Minimize()) minimizer->PrintResults();
-    return 1.;
+    bool HasMinimized = minimizer->Minimize();
+
+    if(HasMinimized) minimizer->PrintResults();
+    return HasMinimized;
 }
 
 
 int SANDRecoUtils(){
+
+    double R = 2.3;
+    double Phi0 = 1.4;
+    int hel = 1;
+    double dip = 0.;
+
+    double s_star = -1* Phi0*R/hel/cos(dip); // so that Phi=Phi0
     
-    TVector3 x0 = {0,0,0};
+    TVector3 x0 = {33., 14., 6.}; //
 
     // R, dip, Phi0, h, x0
-    Helix h(1., 0., 0., 1, x0);
+    Helix h(R, dip, Phi0, hel, x0); // this helix crosses (0,0,0) for s=0
     
+    auto helix_at_s_star = h.GetPointAt(s_star);
     // mx, my, ax, ay -> line that crosses (0,0,0)
-    Line l(1., 1., 0., 0.);
+    Line l(2., 3., helix_at_s_star.X(), helix_at_s_star.Y(), helix_at_s_star.Z()); // this line crosses (0,0,0) for t=0
 
+    auto line_at_t_star = l.GetPointAt(0.);
+
+    std::cout<<"s_star : "<<s_star<<"\n";
+    std::cout<<"helix at s=s_star hit the point at : "<<helix_at_s_star.X()<<" "<<helix_at_s_star.Y()<<" "<<helix_at_s_star.Z()<<"\n";
+    std::cout<<"t_star : 0 \n";
+    std::cout<<"line at t=0 hit the point at : "<<line_at_t_star.X()<<" "<<line_at_t_star.Y()<<" "<<line_at_t_star.Z()<<"\n";
+    std::cout<<"GetImpactParameter(h, l , s_star, t_star) : "<<GetImpactParameter(h, l , s_star, 0)<<"\n";
     std::cout<< GetMinImpactParameter(h,l) <<"\n";
 
     return 0;
