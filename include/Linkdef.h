@@ -20,4 +20,6 @@
 #pragma link C++ class track + ;
 #pragma link C++ class particle + ;
 #pragma link C++ class event + ;
+#pragma link C++ class Helix + ;
+#pragma link C++ class Line + ;
 #endif

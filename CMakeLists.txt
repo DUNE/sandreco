@@ -48,6 +48,14 @@ target_include_directories(Utils PUBLIC
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Utils PUBLIC SANDGeoManager EDepSim::edepsim_io)
 
+# Creates a libSANDRecoUtils shared library
+add_library(SANDRecoUtils SHARED src/SANDRecoUtils.cpp)
+target_include_directories(SANDRecoUtils PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include>")
+target_link_libraries(SANDRecoUtils PUBLIC Struct Utils SANDGeoManager)
+ROOT_GENERATE_DICTIONARY(SANDRecoUtilsDict SANDRecoUtils.h SANDSTTTubeInfo.h struct.h utils.h MODULE SANDRecoUtils LINKDEF include/Linkdef.h)
+
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp src/SANDDigitization.cpp src/SANDDigitizationEDEPSIM.cpp src/SANDDigitizationFLUKA.cpp)
 target_link_libraries(Digitize Struct SANDGeoManager Utils)
@@ -55,6 +63,10 @@ target_link_libraries(Digitize Struct SANDGeoManager Utils)
 # Creates Reconstruct executable.
 add_executable(Reconstruct src/reconstruction.cpp)
 target_link_libraries(Reconstruct Struct Utils SANDGeoManager)
+
+# Creates ReconstructNLLmethod executable.
+add_executable(ReconstructNLLmethod src/reconstructionNLLmethod.cpp)
+target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)
