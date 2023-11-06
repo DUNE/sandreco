@@ -3,6 +3,8 @@
 
 #include <cmath>
 // #include "utils.h"
+#include "struct.h"
+
 #include "TVector3.h"
 #include "Math/Functor.h"
 #include "Math/Minimizer.h"
@@ -109,7 +111,7 @@ class Line //: public SANDWireInfo
     ClassDef(Line, 1);
 };
 
-// namespace RecoUtils{ //RecoUtils
+namespace RecoUtils{ //RecoUtils
 
 double GetImpactParameter(const Helix& helix, const Line& line, double s, double t) {
 
@@ -119,7 +121,7 @@ double GetImpactParameter(const Helix& helix, const Line& line, double s, double
     return (helix_point - line_point).Mag();
 };
 
-double FunctionImpactParameter(const double* p) {
+double FunctorImpactParameter(const double* p) {
     // first 7 entries of p to define the helix: R, dip, Phi0, h, x0
     // last 4 entries of p to define the line: dx, dy, ax, ay
     TVector3 x0{p[4], p[5], p[6]};
@@ -135,9 +137,7 @@ double FunctionImpactParameter(const double* p) {
 
 double GetMinImpactParameter(const Helix& helix, const Line& line){
 
-    ROOT::Math::Functor functor(&FunctionImpactParameter, 13);
-
-    // gDebug=1;
+    ROOT::Math::Functor functor(&FunctorImpactParameter, 13);
 
     ROOT::Math::Minimizer * minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
 
@@ -165,28 +165,107 @@ double GetMinImpactParameter(const Helix& helix, const Line& line){
 
     bool HasMinimized = minimizer->Minimize();
 
-    if(HasMinimized) minimizer->PrintResults();
+    if(HasMinimized) {
+        minimizer->PrintResults();
+        auto s_min = minimizer->X()[12];
+        auto t_min = minimizer->X()[13];
+        std::cout<<"found s : "<<s_min<<"\n";
+        std::cout<<"found t : "<<t_min<<"\n";
+        std::cout<<"that gives the distance : "<<GetImpactParameter(helix,line,s_min,t_min)<<"\n";
+    };
+
     return HasMinimized;
 }
 
+double GetExpectedRadiusFromDigit(const dg_tube& digit){
+    // get TDC and convert it to a radius
+    return 1.;
+}
 
+Line GetLineFromDigit(const dg_tube& digit){
+    Line l(1.,1.,1.,1.,1.);
+    return l;
+}
+
+std::vector<dg_tube> GetEventDigits(){
+    std::vector<dg_tube> v;
+    return v;
+}
+
+// negative log likelihood
+
+double NLL(const Helix& h, const vector<dg_tube>& digits)
+{   
+    double nll = 0.;
+
+    const double sigma = 200.*1e-6;
+
+    for(auto& digit : digits)
+    {
+        Line l = GetLineFromDigit(digit); // each digit define a line completly
+        double r_estimated = GetMinImpactParameter(h,l);
+        double r_expected  = GetExpectedRadiusFromDigit(digit);
+        nll += (r_estimated - r_expected) * (r_estimated - r_expected) / (sigma*sigma); 
+    }
+
+    return nll;
+}
+
+double FunctorNLL(const double* p)
+{
+    double R = p[0];
+    double dip = p[1];
+    double Phi0 = p[2];
+    int hel = p[3];
+    TVector3 x0 = {p[4],p[5],p[6]};
+
+    Helix h(R, dip, Phi0, hel, x0);
+
+    std::vector<dg_tube> digits = GetEventDigits();
+
+    return NLL(h, digits);
+}
+
+const double* GetHelixParameter()
+{
+    ROOT::Math::Functor functor(&FunctorNLL, 5);
+
+    ROOT::Math::Minimizer * minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
+
+    minimizer->SetFunction(functor);
+
+    // helix params
+    minimizer->SetVariable(0, "R", 1, 0.01);
+    minimizer->SetVariable(1, "dip", 0, 0.01);
+    minimizer->SetVariable(2, "Phi0", 0, 0.01);
+    minimizer->SetVariable(3, "h", -1, 1);
+    minimizer->SetVariable(4, "x0_x", 0, 0.01);
+    minimizer->SetVariable(5, "x0_y", 0, 0.01);
+    minimizer->SetVariable(6, "x0_z", 0, 0.01);
+
+    if(minimizer->Minimize()) std::cout<<"minimizer successfull\n";
+
+    return minimizer->X();
+}
+
+} // RecoUtils
 int SANDRecoUtils(){
 
     double R = 2.3;
-    double Phi0 = 1.4;
+    double Phi0 = TMath::Pi()/4.;
     int hel = 1;
-    double dip = 0.;
+    double dip = 5.;
 
-    double s_star = -1* Phi0*R/hel/cos(dip); // so that Phi=Phi0
+    double s_star = 0; // so that Phi=Phi0
     
-    TVector3 x0 = {33., 14., 6.}; //
+    TVector3 x0 = {0., 0., 0.}; //
 
     // R, dip, Phi0, h, x0
     Helix h(R, dip, Phi0, hel, x0); // this helix crosses (0,0,0) for s=0
     
     auto helix_at_s_star = h.GetPointAt(s_star);
-    // mx, my, ax, ay -> line that crosses (0,0,0)
-    Line l(2., 3., helix_at_s_star.X(), helix_at_s_star.Y(), helix_at_s_star.Z()); // this line crosses (0,0,0) for t=0
+    // mx, my, ax, ay, z0 -> line that crosses (0,0,0)
+    Line l(2., 0., 0., R*sin(TMath::Pi()/4.), R*cos(TMath::Pi()/4.)); // this line crosses (0,0,0) for t=0
 
     auto line_at_t_star = l.GetPointAt(0.);
 
@@ -194,8 +273,8 @@ int SANDRecoUtils(){
     std::cout<<"helix at s=s_star hit the point at : "<<helix_at_s_star.X()<<" "<<helix_at_s_star.Y()<<" "<<helix_at_s_star.Z()<<"\n";
     std::cout<<"t_star : 0 \n";
     std::cout<<"line at t=0 hit the point at : "<<line_at_t_star.X()<<" "<<line_at_t_star.Y()<<" "<<line_at_t_star.Z()<<"\n";
-    std::cout<<"GetImpactParameter(h, l , s_star, t_star) : "<<GetImpactParameter(h, l , s_star, 0)<<"\n";
-    std::cout<< GetMinImpactParameter(h,l) <<"\n";
+    std::cout<<"GetImpactParameter(h, l , s_star, t_star) : "<<RecoUtils::GetImpactParameter(h, l , s_star, 0)<<"\n";
+    std::cout<< RecoUtils::GetMinImpactParameter(h,l) <<"\n";
 
     return 0;
 }
