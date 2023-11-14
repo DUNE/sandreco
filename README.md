@@ -1,24 +1,16 @@
-# Requirements
-- [ROOT](https://root.cern/)
-- [edep-sim](https://github.com/ClarkMcGrew/edep-sim)
-
 # Installation
 
-### Get the code
-
 ```console
-$ git clone https://baltig.infn.it/dune/sand-reco.git
-```
-
-### Build the binaries
-
-```console
-$ cd sand-reco
-$ mkdir build
-$ cd build
-$ cmake -DCMAKE_INSTALL_PREFIX=./.. ./..
-$ make
-$ make install
+VERSION="v01_00_00"
+QUAL="e20:prof"
+source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh
+mrb newDev -v $VERSION -q $QUAL
+source localProducts_larsoft_*/setup
+mrb g -t $VERSION sandreco
+cd $MRB_BUILDDIR
+mrbsetenv
+mrb b -j8
+mrb i
 ```
 
 In the `bin` folder, there will be five executables:
