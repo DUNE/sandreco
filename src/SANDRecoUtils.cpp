@@ -1,5 +1,7 @@
 #include "SANDRecoUtils.h"
 
+std::vector<dg_tube>* event_digits = nullptr;
+
 double RecoUtils::GetImpactParameter(const Helix& helix, const Line& line, double s, double t) {
 
     TVector3 helix_point = helix.GetPointAt(s);
@@ -66,7 +68,14 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line){
 
 double RecoUtils::GetExpectedRadiusFromDigit(const dg_tube& digit){
     // get TDC and convert it to a radius
-    return 1.;
+    TRandom3 rand;
+    SANDGeoManager geo;
+    auto wire_info = geo.get_wire_info(digit.did);
+    double guess_wire_pmt_dist = wire_info.length()/2.;
+    double signal_propagation_time = guess_wire_pmt_dist/sand_reco::stt::v_signal_inwire;
+    double smearing = rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
+    
+    return (digit.tdc - digit.t0 - signal_propagation_time - smearing)/sand_reco::stt::v_drift;
 }
 
 Line RecoUtils::GetLineFromDigit(const dg_tube& digit){
@@ -87,12 +96,7 @@ Line RecoUtils::GetLineFromDigit(const dg_tube& digit){
     }
 }
 
-std::vector<dg_tube> RecoUtils::GetEventDigits(){
-    std::vector<dg_tube> v;
-    return v;
-}
-
-double RecoUtils::NLL(const Helix& h, const std::vector<dg_tube>& digits)
+double RecoUtils::NLL(const Helix& h,const std::vector<dg_tube>& digits)
 {   
     double nll = 0.;
 
@@ -119,13 +123,18 @@ double RecoUtils::FunctorNLL(const double* p)
 
     Helix h(R, dip, Phi0, hel, x0);
 
-    std::vector<dg_tube> digits = RecoUtils::GetEventDigits();
-
-    return RecoUtils::NLL(h, digits);
+    return RecoUtils::NLL(h, *event_digits);
 }
 
-const double* RecoUtils::GetHelixParameters()
+const double* RecoUtils::InitHelixPars(const std::vector<dg_tube>& digits)
 {
+    double* p;
+    return p;
+}
+
+const double* RecoUtils::GetHelixParameters(const double* p)
+{
+    // pass first guess to the Helix parmeters
     ROOT::Math::Functor functor(&RecoUtils::FunctorNLL, 5);
 
     ROOT::Math::Minimizer * minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
@@ -133,13 +142,13 @@ const double* RecoUtils::GetHelixParameters()
     minimizer->SetFunction(functor);
 
     // helix params
-    minimizer->SetVariable(0, "R", 1, 0.01);
-    minimizer->SetVariable(1, "dip", 0, 0.01);
-    minimizer->SetVariable(2, "Phi0", 0, 0.01);
-    minimizer->SetVariable(3, "h", -1, 1);
-    minimizer->SetVariable(4, "x0_x", 0, 0.01);
-    minimizer->SetVariable(5, "x0_y", 0, 0.01);
-    minimizer->SetVariable(6, "x0_z", 0, 0.01);
+    minimizer->SetVariable(0, "R", p[0], 0.01);
+    minimizer->SetVariable(1, "dip", p[1], 0.01);
+    minimizer->SetVariable(2, "Phi0", p[2], 0.01);
+    minimizer->SetVariable(3, "h", p[3], 1);
+    minimizer->SetVariable(4, "x0_x", p[4], 0.01);
+    minimizer->SetVariable(5, "x0_y", p[5], 0.01);
+    minimizer->SetVariable(6, "x0_z", p[6], 0.01);
 
     if(minimizer->Minimize()) std::cout<<"minimizer successfull\n";
 

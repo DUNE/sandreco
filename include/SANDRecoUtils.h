@@ -2,14 +2,18 @@
 #define SANDRECOUTILS_H
 
 #include <cmath>
+#include <TRandom3.h>
 // #include "utils.h"
 #include "struct.h"
+#include "utils.h"
 #include "SANDSTTTubeInfo.h"
 
 #include "TVector3.h"
 #include "Math/Functor.h"
 #include "Math/Minimizer.h"
 #include "Math/Factory.h"
+
+extern std::vector<dg_tube>* event_digits;
 
 class Helix
 {
@@ -124,15 +128,15 @@ double GetExpectedRadiusFromDigit(const dg_tube& digit);
 
 Line GetLineFromDigit(const dg_tube& digit);
 
-std::vector<dg_tube> GetEventDigits();
-
 // negative log likelihood
 
-double NLL(const Helix& h, const std::vector<dg_tube>& digits);
+double NLL(const Helix& h,const std::vector<dg_tube>& digits);
 
 double FunctorNLL(const double* p);
 
-const double* GetHelixParameters();
+const double* InitHelixPars(const std::vector<dg_tube>& digits);
+
+const double* GetHelixParameters(const double* p);
 
 } // RecoUtils
 

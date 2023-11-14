@@ -5,6 +5,8 @@
 #include "TFile.h"
 #include "TTree.h"
 
+std::vector<dg_tube>* event_digits = nullptr;
+
 int main(){
 
     double R = 2.3;
@@ -41,13 +43,15 @@ int main(){
     const int nev = t->GetEntries();
 
     // digits
-    std::vector<dg_tube>* digits;
-    t->SetBranchAddress("dg_tube", &digits);
+    t->SetBranchAddress("dg_tube", &event_digits);
 
     for (auto i = 0; i < nev; i++)
     {
+        if(i!=6) continue;
         t->GetEntry(i);
-        std::cout<<"evento : "<<i<<" numero di digits : "<<digits->size()<<"\n";
+        std::cout<<"evento : "<<i<<" numero di digits : "<<event_digits->size()<<"\n";
+        const double* helix_pars_guess = RecoUtils::InitHelixPars(*event_digits);
+        auto helix_pars = RecoUtils::GetHelixParameters(helix_pars_guess);
     }
     
 

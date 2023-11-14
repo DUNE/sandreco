@@ -477,6 +477,8 @@ void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
     // std::cout<<"flag,"<<pdg<<","<<hseg.Start.X()<<","<<hseg.Start.Y()<<","<<hseg.Start.Z()<<","
     //                                 <<hseg.Stop.X()<<","<<hseg.Stop.Y()<<","<<hseg.Stop.Z()<<"\n";
 
+    // if(pdg!=13) continue; ->test digit only for muons
+
     std::vector<int> ids = geo.get_segment_ids(hseg);
     int id1=ids[0]; 
     int id2=ids[1];
