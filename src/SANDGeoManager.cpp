@@ -339,7 +339,6 @@ void SANDGeoManager::set_ecal_info()
   // GetDx1() half length in x at -Dz
   // GetDx2() half length in x at +Dz
   // Dx1 < Dx2 => -Dz corresponds to minor width => internal side
-
   TGeoTrd2* mod =
       (TGeoTrd2*)geo_->FindVolumeFast(sand_geometry::ecal::barrel_module_name)
           ->GetShape();
@@ -801,12 +800,13 @@ void SANDGeoManager::PrintCounter(){
 void SANDGeoManager::init(TGeoManager* const geo)
 {
   geo_ = geo;
+  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
   counter_.hit_counter_.clear();
   cellmap_.clear();
   sttmap_.clear();
   wiremap_.clear();
   stt_tube_tranverse_position_map_.clear();
-
+  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
   set_ecal_info();
   set_wire_info();
 }
@@ -900,8 +900,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
     std::cout<<"invalid current node (is not ecal active layer): "<<node->GetName()<<"\n";
     throw "";
   }
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  std::cout<<"\n";
   if (check_and_process_ecal_path(volume_path) == false) return -999;
   //////
 
@@ -930,8 +928,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 
   int cell_unique_id =
       encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  std::cout<<"\n";
   return cell_unique_id;
 }
 

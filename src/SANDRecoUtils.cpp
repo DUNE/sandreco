@@ -2,6 +2,8 @@
 
 std::vector<dg_tube>* event_digits = nullptr;
 
+SANDGeoManager* geo_manager;
+
 double RecoUtils::GetImpactParameter(const Helix& helix, const Line& line, double s, double t) {
 
     TVector3 helix_point = helix.GetPointAt(s);
@@ -69,8 +71,7 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line){
 double RecoUtils::GetExpectedRadiusFromDigit(const dg_tube& digit){
     // get TDC and convert it to a radius
     TRandom3 rand;
-    SANDGeoManager geo;
-    auto wire_info = geo.get_wire_info(digit.did);
+    auto wire_info = geo_manager->get_wire_info(digit.did);
     double guess_wire_pmt_dist = wire_info.length()/2.;
     double signal_propagation_time = guess_wire_pmt_dist/sand_reco::stt::v_signal_inwire;
     double smearing = rand.Gaus(0, sand_reco::stt::tm_stt_smearing);

@@ -7,6 +7,7 @@
 #include "struct.h"
 #include "utils.h"
 #include "SANDSTTTubeInfo.h"
+#include "SANDGeoManager.h"
 
 #include "TVector3.h"
 #include "Math/Functor.h"
@@ -14,6 +15,10 @@
 #include "Math/Factory.h"
 
 extern std::vector<dg_tube>* event_digits;
+
+extern TGeoManager* geo;
+
+extern SANDGeoManager* geo_manager;
 
 class Helix
 {

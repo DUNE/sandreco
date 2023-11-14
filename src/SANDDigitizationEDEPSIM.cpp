@@ -229,8 +229,6 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
     } else {
       c->ps2 = it->second;
     }
-    std::cout<<__FILE__<<" : "<<__LINE__<<"\n";
-    std::cout<<"c->id : "<<c->id<<"\n";
     if(c->id==214294) continue;
     auto cell_info = geo.get_ecal_cell_info(c->id);
     c->x = cell_info.x();
@@ -254,29 +252,21 @@ void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
   std::map<int, double> L;
 
   vec_cell.clear();
-  std::cout<<"ps.size() "<<ps.size()<<"\n";
-  std::cout<<"photo_el.size() "<<photo_el.size()<<"\n";
 
   if (debug) {
     std::cout << "SimulatePE" << std::endl;
   }
 
   digitization::edep_sim::ecal::simulate_photo_electrons(ev, geo, photo_el, L);
-  std::cout<<"ps.size() "<<ps.size()<<"\n";
-  std::cout<<"photo_el.size() "<<photo_el.size()<<"\n";
   if (debug) {
     std::cout << "TimeAndSignal" << std::endl;
   }
   digitization::ecal::eval_adc_and_tdc_from_photo_electrons(photo_el, ps,
                                                             ecal_digi_mode);
-  std::cout<<"ps.size() "<<ps.size()<<"\n";
-  std::cout<<"photo_el.size() "<<photo_el.size()<<"\n";
   if (debug) {
     std::cout << "CollectSignal" << std::endl;
   }
   digitization::edep_sim::ecal::group_pmts_in_cells(geo, ps, L, vec_cell);
-  std::cout<<"ps.size() "<<ps.size()<<"\n";
-  std::cout<<"photo_el.size() "<<photo_el.size()<<"\n";
 }
 
 }  // namespace ecal
@@ -466,7 +456,6 @@ TVector3 IntersectHitPlane(const TG4HitSegment& hseg,
 void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
                         std::map<int, std::vector<hit> >& hits2wire)
 {
-  std::cout<<"group_hits_by_wire\n";
   hits2wire.clear();
 
   for (unsigned int j = 0; j < ev->SegmentDetectors["DriftVolume"].size(); j++) 
@@ -675,7 +664,6 @@ void create_digits_from_wire_hits(const SANDGeoManager& geo,
                              std::map<int, std::vector<hit> >& hits2wire,
                              std::vector<dg_tube>& digit_vec)
 {
-  std::cout<<"create_digits_from_wire_hits\n";
   digit_vec.clear();
 
   for (std::map<int, std::vector<hit> >::iterator it = hits2wire.begin();
@@ -722,7 +710,6 @@ void create_digits_from_wire_hits(const SANDGeoManager& geo,
 void digitize_wire(TG4Event* ev, const SANDGeoManager& geo,
                   std::vector<dg_tube>& digit_vec)
 {
-  std::cout<<"\ndigitize_wire\n";
   std::map<int, std::vector<hit> > hits2wire;
   digit_vec.clear();
 
@@ -817,15 +804,14 @@ void digitize(const char* finname, const char* foutname,
 
     if(geo->FindVolumeFast("STTtracker_PV"))
     {
-      std::cout<<"\n--- Digitize STT based simulation ---\n";
+      if(i==0) std::cout<<"\n--- Digitize STT based simulation ---\n";
       sand_reco::stt::initT0(ev, sand_geo);
       digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
                                                   ecal_digi_mode);
       digitization::edep_sim::stt::digitize_stt(ev, sand_geo, digit_vec);
     }else
     {
-      std::cout<<"\n--- Digitize Drift based simulation ---\n"; 
-      std::cout<<"event number : "<<i<<"\n";
+      if(i==0) std::cout<<"\n--- Digitize Drift based simulation ---\n"; 
       sand_reco::chamber::initT0(ev, sand_geo);
       digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
                                                   ecal_digi_mode);
