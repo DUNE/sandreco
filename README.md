@@ -6,12 +6,15 @@ QUAL="e20:prof"
 source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh
 mrb newDev -v $VERSION -q $QUAL
 source localProducts_larsoft_*/setup
-mrb g -t $VERSION sandreco
+mrb g sandreco
 cd $MRB_BUILDDIR
 mrbsetenv
 mrb b -j8
 mrb i
 ```
+
+for a specific tag or branch do `mrb g -t $TAG sandreco` or `mrb g -b $BRANCH sandreco`
+
 
 In the `bin` folder, there will be five executables:
 - **Digitize** will perform digitization, 
