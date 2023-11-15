@@ -654,7 +654,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
 
       gr->SetFillColor(kBlack);
       // barrel cell should be between 200000 and 300000
-      if (it->first >= 200000 && it->first < 300000)
+      if (id >= 200000 && id < 300000)
         cev->cd(1);
       else
         cev->cd(2);
