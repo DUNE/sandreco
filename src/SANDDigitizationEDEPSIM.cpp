@@ -1,8 +1,8 @@
 #include "SANDDigitizationEDEPSIM.h"
 #include "SANDDigitization.h"
 
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 
 #include "TFile.h"
 #include "TTree.h"
@@ -266,6 +266,9 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
 {
   hits2Tube.clear();
 
+  int skipped_hit = 0;
+  int all_hit = ev->SegmentDetectors["Straw"].size();
+
   for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
     const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
 
@@ -274,6 +277,12 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
     int stid = geo.get_stt_tube_id(x, y, z);
+    if (stid == -999) {
+      // std::cout << std::setprecision(12) << x << " " << y << " " << z <<
+      // std::endl;
+      skipped_hit++;
+      continue;
+    };
 
     // std::string sttname = "NULL";
     // int stid = -999;  // should be implemented for FLUKA
@@ -299,6 +308,10 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
     h.index = j;
 
     hits2Tube[stid].push_back(h);
+  }
+  if (skipped_hit != 0) {
+    std::cout << "WARNING: " << skipped_hit << " out of " << all_hit
+              << " hits skipped due to unexpected volume path!!" << std::endl;
   }
 }
 

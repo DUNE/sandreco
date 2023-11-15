@@ -426,6 +426,16 @@ int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
   //   return 0;
   // }
 
+  if (plane_matches->GetEntries() < 5) {
+    // Sometimes the volume path returned by the TGeoManager does not match
+    // with the expected one for a tube...to be investigated!!!
+    // std::cout << "Error: volume path for STT digit not expected!! returning
+    // default value (0) for stt plane id" << std::endl;
+    delete plane_matches;
+    delete module_matches;
+    return 0;
+  }
+
   int module_id =
       (reinterpret_cast<TObjString*>(plane_matches->At(2)))->GetString().Atoi();
   int plane_replica_id =
