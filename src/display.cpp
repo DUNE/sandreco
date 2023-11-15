@@ -254,7 +254,8 @@ void init(TFile* fmc, std::vector<TFile*> vf)
       for (int k = 0; k < nCel; k++) {
 
         int index = i * (nLay * nCel) + j * (nCel) + k;
-        int id = k + 100 * j + 1000 * i;
+        // detID == 2 for barrel as in KLOE
+        int id = sand_reco::ecal::decoder::EncodeID(2, i, j, k);
 
         int local_index = j * nCel + k;
 
@@ -314,7 +315,9 @@ void init(TFile* fmc, std::vector<TFile*> vf)
 
   for (int j = 0; j < nLay_ec; j++) {
     for (int k = 0; k < nCel_ec; k++) {
-      int id = k + 100 * j + 1000 * 30;
+      // detID == 3 for right endcap as in KLOE
+      // modID == 30
+      int id = sand_reco::ecal::decoder::EncodeID(3, 30, j, k);
 
       calocell[id].id = id;
 
@@ -358,7 +361,9 @@ void init(TFile* fmc, std::vector<TFile*> vf)
 
   for (int j = 0; j < nLay_ec; j++) {
     for (int k = 0; k < nCel_ec; k++) {
-      int id = k + 100 * j + 1000 * 40;
+      // detID == 1 for left endcap as in KLOE
+      // modID == 40
+      int id = sand_reco::ecal::decoder::EncodeID(1, 40, j, k);
 
       calocell[id].id = id;
 
@@ -532,7 +537,8 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
     TGraph* gr = new TGraph(4, it->second.Z, it->second.Y);
 
     gr->SetFillColor(17);
-    if (it->first < 25000)
+    // barrel cell should be between 200000 and 300000
+    if (it->first >= 200000 && it->first < 300000)
       cev->cd(1);
     else
       cev->cd(2);
@@ -647,7 +653,8 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
       TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);
 
       gr->SetFillColor(kBlack);
-      if (id < 25000)
+      // barrel cell should be between 200000 and 300000
+      if (it->first >= 200000 && it->first < 300000)
         cev->cd(1);
       else
         cev->cd(2);
