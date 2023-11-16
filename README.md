@@ -1,16 +1,16 @@
 # Installation
 
 ```console
-VERSION="v01_00_00"
-QUAL="e20:prof"
-source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh
-mrb newDev -v $VERSION -q $QUAL
-source localProducts_larsoft_*/setup
-mrb g sandreco
-cd $MRB_BUILDDIR
-mrbsetenv
-mrb b -j8
-mrb i
+$ VERSION="v01_00_00"
+$ QUAL="e20:prof"
+$ source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh
+$ mrb newDev -v $VERSION -q $QUAL
+$ source localProducts_larsoft_*/setup
+$ mrb g sandreco
+$ cd $MRB_BUILDDIR
+$ mrbsetenv
+$ mrb b -j8
+$ mrb i
 ```
 
 for a specific tag or branch do `mrb g -t $TAG sandreco` or `mrb g -b $BRANCH sandreco`
@@ -30,6 +30,8 @@ In the `lib` folder, there will be two libraries:
 ### Setup
 
 ```console
+$ source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh
+$ setup edepsim v3_2_0b -q "e20:prof"
 $ source setup.sh
 ```
 
