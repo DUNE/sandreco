@@ -2,7 +2,11 @@
 
 std::vector<dg_tube>* event_digits = nullptr;
 
-SANDGeoManager* geo_manager;
+SANDGeoManager geo_manager;
+
+void RecoUtils::InitWireInfos(TGeoManager* g){
+    geo_manager.init(g);
+}
 
 double RecoUtils::GetImpactParameter(const Helix& helix, const Line& line, double s, double t) {
 
@@ -26,9 +30,9 @@ double RecoUtils::FunctorImpactParameter(const double* p) {
     return RecoUtils::GetImpactParameter(helix, line, s, t);
 }
 
-double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line){
+double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized){
 
-    ROOT::Math::Functor functor(&RecoUtils::FunctorImpactParameter, 13);
+    ROOT::Math::Functor functor(&RecoUtils::FunctorImpactParameter, 14);
 
     ROOT::Math::Minimizer * minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
 
@@ -54,29 +58,44 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line){
     minimizer->SetVariable(12, "s", 1, 0.0001);
     minimizer->SetVariable(13, "t", 1, 0.0001);
 
-    bool HasMinimized = minimizer->Minimize();
+    HasMinimized = minimizer->Minimize();
 
     if(HasMinimized) {
         minimizer->PrintResults();
-        auto s_min = minimizer->X()[12];
-        auto t_min = minimizer->X()[13];
-        std::cout<<"found s : "<<s_min<<"\n";
-        std::cout<<"found t : "<<t_min<<"\n";
-        std::cout<<"that gives the distance : "<<GetImpactParameter(helix,line,s_min,t_min)<<"\n";
+        auto pars = minimizer->X(); 
+        s_min = pars[12];
+        t_min = pars[13];
+        std::cout<<"found s : "<<s_min<<" found t : "<<t_min<<" that gives the distance : "<<GetImpactParameter(helix,line,s_min,t_min)<<"\n";
+        std::cout<<"point on the Helix  : "<<helix.GetPointAt(s_min).X()<<" "<<helix.GetPointAt(s_min).Y()<<" "<<helix.GetPointAt(s_min).Z()<<"\n";
+        std::cout<<"point on the Line   : "<<line.GetPointAt(t_min).X()<<" "<<line.GetPointAt(t_min).Y()<<" "<<line.GetPointAt(t_min).Z()<<"\n";
     };
 
-    return HasMinimized;
+    return GetImpactParameter(helix,line,s_min,t_min);
+}
+
+double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line){
+    double s_min;
+    double t_min;
+    bool HasMinimized;
+    return RecoUtils::GetMinImpactParameter(helix, line, s_min, t_min,HasMinimized);
 }
 
 double RecoUtils::GetExpectedRadiusFromDigit(const dg_tube& digit){
     // get TDC and convert it to a radius
     TRandom3 rand;
-    auto wire_info = geo_manager->get_wire_info(digit.did);
+    auto wire_info = geo_manager.get_wire_info(digit.did);
+
+    // std::cout<<__FILE__<<" "<<__LINE__<<std::endl;
+    // std::cout<<"wire length : "<<wire_info.length()<<"\n";
+    // std::cout<<"signal velocity  : "<<sand_reco::stt::v_signal_inwire<<"\n";
+    // std::cout<<"drift velocity  : "<<sand_reco::stt::v_drift<<"\n";
+    // std::cout<<"tdc : "<<digit.tdc<<"\n";
+    // std::cout<<"t0 : "<<digit.t0<<"\n";
+
     double guess_wire_pmt_dist = wire_info.length()/2.;
     double signal_propagation_time = guess_wire_pmt_dist/sand_reco::stt::v_signal_inwire;
-    double smearing = rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
-    
-    return (digit.tdc - digit.t0 - signal_propagation_time - smearing)/sand_reco::stt::v_drift;
+    double t0 = 1; // assume 1 ns
+    return (digit.tdc - signal_propagation_time - t0)*sand_reco::stt::v_drift;
 }
 
 Line RecoUtils::GetLineFromDigit(const dg_tube& digit){
@@ -101,7 +120,7 @@ double RecoUtils::NLL(const Helix& h,const std::vector<dg_tube>& digits)
 {   
     double nll = 0.;
 
-    const double sigma = 200.*1e-6;
+    const double sigma = 0.2; // 200 mu_m = 0.2 mm
 
     for(auto& digit : digits)
     {

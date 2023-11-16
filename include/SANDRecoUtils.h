@@ -13,12 +13,13 @@
 #include "Math/Functor.h"
 #include "Math/Minimizer.h"
 #include "Math/Factory.h"
+#include "TDatabasePDG.h"
 
 extern std::vector<dg_tube>* event_digits;
 
 extern TGeoManager* geo;
 
-extern SANDGeoManager* geo_manager;
+extern SANDGeoManager geo_manager;
 
 class Helix
 {
@@ -27,10 +28,25 @@ class Helix
                     R_(arg_R), dip_(arg_dip), Phi0_(arg_Phi0), h_(arg_h), x0_(arg_x0) {}
         
         // R : radius of the helix
-        // pitch : dip angle 
+        // dip : dip angle 
         // Phi0 : is the azimuth angle of the starting point with respect to the helix axis
         // h : +/- sense of rotation
         // x0 : track starting point
+
+        Helix(const TG4Trajectory& trj) {
+            auto momentum = trj.GetInitialMomentum();
+            auto pt = sqrt(momentum.Z()*momentum.Z() + momentum.Y()*momentum.Y());
+            auto pl = momentum.X();
+            int pdg = trj.GetPDGCode();
+            TDatabasePDG database; // maybe class static member could be better
+            int charge = database.GetParticle(pdg)->Charge();
+
+            x0_ = trj.Points[0].GetPosition().Vect();
+            dip_ = atan(pl/pt);
+            R_ = (pt*1e-3/(0.3*0.6)); // [m] = [GeV]/[T]
+            h_ = (charge < 0) ? 1 : -1;  // to check muon helicity consistency
+            Phi0_ = TMath::ATan2(momentum.Y(),momentum.Z()) + h_*TMath::Pi()*0.5; // for mu pi/2 should be added
+        }
         
         double x_h(double s) const{
             return x0_.X() + s * sin(dip_);
@@ -123,11 +139,15 @@ class Line : public SANDWireInfo
 
 namespace RecoUtils{ //RecoUtils
 
+void InitWireInfos(TGeoManager* g);
+
 double GetImpactParameter(const Helix& helix, const Line& line, double s, double t);
 
 double FunctorImpactParameter(const double* p);
 
 double GetMinImpactParameter(const Helix& helix, const Line& line);
+
+double GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized);
 
 double GetExpectedRadiusFromDigit(const dg_tube& digit);
 

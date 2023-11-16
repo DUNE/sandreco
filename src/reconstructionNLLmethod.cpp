@@ -7,10 +7,9 @@
 
 std::vector<dg_tube>* event_digits = nullptr;
 
-TGeoManager* geo = nullptr;
+TG4Event* evEdep = nullptr;
 
-// SANDGeoManager* geo_manager = nullptr;
-SANDGeoManager* geo_manager;
+TGeoManager* geo = nullptr;
 
 int main(int argc, char* argv[]){
     
@@ -20,9 +19,9 @@ int main(int argc, char* argv[]){
         throw "";
     }
 
-    const char* fInput = argv[1];
+    const char* InputEDep = argv[1];
 
-    const char* fGeometry = argv[2];
+    const char* InputDigit = argv[2];
 
     const char* fOutput = argv[3];
     // TEST________________________________________
@@ -53,46 +52,74 @@ int main(int argc, char* argv[]){
     // TEST________________________________________
     
     // read digitization file
-    TFile f(fInput, "READ");
+    TFile fEDep(InputEDep, "READ");
+    TFile fDigit(InputDigit, "READ");
 
     // read geometry
-    geo = (TGeoManager*)f.Get("EDepSimGeometry");
+    geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
     
     // initialize wiremap
     if(geo)
     {
         std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-        geo_manager->init(geo);
+        RecoUtils::InitWireInfos(geo);
+
     }else{
         std::cout<<"TGeoManager null \n";
         throw "";
     }
 
     // MC info tree
-    TTree* t = (TTree*)f.Get("tDigit");
+    TTree* t = (TTree*)fDigit.Get("tDigit");
+    TTree* tEdep = (TTree*)fEDep.Get("EDepSimEvents");
     
     const int nev = t->GetEntries();
 
     // digits
     t->SetBranchAddress("dg_tube", &event_digits);
+    tEdep->SetBranchAddress("Event", &evEdep);
 
-    for (auto i = 0; i < nev; i++)
+    // check radius of each digit
+    // std::vector<double> radii;
+    // TFile fout("CheckDigitRadius.root", "RECREATE");
+    // TTree tout("tTDCRadius", "t");
+    // tout.Branch("ExpectedRadius", "std::vector<double>", &radii);
+
+    // for (auto i = 0; i < nev; i++)
+    for (auto i = 0; i < 1; i++)
     {
-        if(i!=6) continue;
+        // if(i!=6) continue;
         t->GetEntry(i);
+        tEdep->GetEntry(i);
         std::cout<<"evento : "<<i<<" numero di digits : "<<event_digits->size()<<"\n";
-        // const double* helix_pars_guess = RecoUtils::InitHelixPars(*event_digits);
-        // auto helix_pars = RecoUtils::GetHelixParameters(helix_pars_guess);
+        
+        auto muon_trj = evEdep->Trajectories[0];
+        if(muon_trj.GetPDGCode()!=13) continue;
+        Helix true_helix(muon_trj); // true helix
 
         // run over digits
         for(auto j=0u; j<event_digits->size(); j++)
         {
-            std::cout<<"fired wire : "<<event_digits->at(j).did<<"\n";
-            auto expected_radius = RecoUtils::GetExpectedRadiusFromDigit(event_digits->at(j));
-            // std::cout<<"digit "<<j<<" expected radius : "<<expected_radius<<"\n";
+            double s_min, t_min;
+            bool has_minimized = 0;
+            auto digit = event_digits->at(j);
+            Line digit_line = RecoUtils::GetLineFromDigit(digit);
+            auto reco_radius = RecoUtils::GetExpectedRadiusFromDigit(digit);
+            auto true_helix_radius = RecoUtils::GetMinImpactParameter(true_helix,  digit_line, s_min, t_min, has_minimized);
+            
+            std::cout<<"digit x y z hor did : "<<digit.x<<" "<<digit.y<<" "<<digit.z<<" "<<digit.hor<<" "<<digit.did<<"\n";
+            std::cout<<"found s_min, t_min  : "<<s_min<<" "<<t_min<<" "<<has_minimized<<"\n";
+            std::cout<<"digit "<<j<<" expected radius : "<<reco_radius<<" true helix radius : "<<true_helix_radius<<" mm \n";
+            std::cout<<"\n";
+
+            // radii.push_back(reco_radius);
         }
     }
-    
+    // tout.Fill();
+    // // write output
+    // fout.cd();
+    // tout.Write();
+    // fout.Close();
 
     return 0;
 }
