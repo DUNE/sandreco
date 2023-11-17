@@ -53,7 +53,7 @@ add_library(SANDRecoUtils SHARED src/SANDRecoUtils.cpp)
 target_include_directories(SANDRecoUtils PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>")
-target_link_libraries(SANDRecoUtils PUBLIC Struct Utils SANDGeoManager)
+target_link_libraries(SANDRecoUtils PUBLIC Struct Utils SANDGeoManager ROOT::EG)
 ROOT_GENERATE_DICTIONARY(SANDRecoUtilsDict SANDRecoUtils.h SANDSTTTubeInfo.h struct.h utils.h MODULE SANDRecoUtils LINKDEF include/Linkdef.h)
 
 # Creates Digitize executable.

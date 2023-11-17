@@ -80,10 +80,25 @@ int main(int argc, char* argv[]){
     tEdep->SetBranchAddress("Event", &evEdep);
 
     // check radius of each digit
-    // std::vector<double> radii;
-    // TFile fout("CheckDigitRadius.root", "RECREATE");
-    // TTree tout("tTDCRadius", "t");
-    // tout.Branch("ExpectedRadius", "std::vector<double>", &radii);
+    std::vector<double> radii;
+    std::vector<double> trj_points_x;
+    std::vector<double> trj_points_y;
+    std::vector<double> trj_points_z;
+    std::vector<double> fired_digits_x;
+    std::vector<double> fired_digits_y;
+    std::vector<double> fired_digits_z;
+    std::vector<double> helix_pars_from_edep;
+
+    TFile fout(fOutput, "RECREATE");
+    TTree tout("tTDCRadius", "t");
+    tout.Branch("ExpectedRadiusFromTDC", "std::vector<double>", &radii);
+    tout.Branch("edep_trj_points_x", "std::vector<double>", &trj_points_x);
+    tout.Branch("edep_trj_points_y", "std::vector<double>", &trj_points_y);
+    tout.Branch("edep_trj_points_z", "std::vector<double>", &trj_points_z);
+    tout.Branch("fired_digits_x", "std::vector<double>", &fired_digits_x);
+    tout.Branch("fired_digits_y", "std::vector<double>", &fired_digits_y);
+    tout.Branch("fired_digits_z", "std::vector<double>", &fired_digits_z);
+    tout.Branch("helix_pars_from_edep", "std::vector<double>", &helix_pars_from_edep);
 
     // for (auto i = 0; i < nev; i++)
     for (auto i = 0; i < 1; i++)
@@ -94,8 +109,26 @@ int main(int argc, char* argv[]){
         std::cout<<"evento : "<<i<<" numero di digits : "<<event_digits->size()<<"\n";
         
         auto muon_trj = evEdep->Trajectories[0];
+
         if(muon_trj.GetPDGCode()!=13) continue;
+
+        for(auto& point : muon_trj.Points){
+            // point is TG4TRajectoryPoint
+            TLorentzVector point_position = point.GetPosition();
+            trj_points_x.push_back(point_position.X());
+            trj_points_y.push_back(point_position.Y());
+            trj_points_z.push_back(point_position.Z());
+        }
+
         Helix true_helix(muon_trj); // true helix
+
+        helix_pars_from_edep.push_back(true_helix.R());
+        helix_pars_from_edep.push_back(true_helix.Phi0());
+        helix_pars_from_edep.push_back(true_helix.dip());
+        helix_pars_from_edep.push_back(true_helix.h());
+        helix_pars_from_edep.push_back(true_helix.x0().X());
+        helix_pars_from_edep.push_back(true_helix.x0().Y());
+        helix_pars_from_edep.push_back(true_helix.x0().Z());
 
         // run over digits
         for(auto j=0u; j<event_digits->size(); j++)
@@ -123,15 +156,18 @@ int main(int argc, char* argv[]){
             std::cout<<"digit x y z hor did : "<<digit.x<<", "<<digit.y<<", "<<digit.z<<", "<<digit.hor<<", "<<digit.did<<"\n";
             std::cout<<"expected radius : "<<reco_radius<<", true helix radius : "<<true_helix_radius<<" mm \n";
             std::cout<<"\n";
-            break;
-            // radii.push_back(reco_radius);
+            
+            radii.push_back(reco_radius);
+            fired_digits_x.push_back(digit.x);
+            fired_digits_y.push_back(digit.y);
+            fired_digits_z.push_back(digit.z);
         }
     }
-    // tout.Fill();
-    // // write output
-    // fout.cd();
-    // tout.Write();
-    // fout.Close();
+    tout.Fill();
+    // write output
+    fout.cd();
+    tout.Write();
+    fout.Close();
 
     return 0;
 }
