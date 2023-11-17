@@ -55,8 +55,21 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line, do
     minimizer->SetFixedVariable(10, "ay",   line.ay());
     minimizer->SetFixedVariable(11, "z0",   line.z0());
     // s, t
+    double s_low = helix.LowLim();
+    double s_up = helix.UpLim();
+    double t_low = line.LowLim();
+    double t_up = line.UpLim();
+
+    // minimizer->SetVariable(12, "s", (s_low+s_up)*0.5, 0.0001);
     minimizer->SetVariable(12, "s", 1, 0.0001);
+    // minimizer->SetVariable(13, "t", (t_low+t_up)*0.5, 0.0001);
     minimizer->SetVariable(13, "t", 1, 0.0001);
+
+    // set limits
+    // std::cout<<"setting limits on s : ["<<s_low<<","<<s_up<<"]\n";
+    // std::cout<<"setting limits on t : ["<<t_low<<","<<t_up<<"]\n";
+    // minimizer->SetVariableLimits(12, s_low-3, s_low+3);
+    // minimizer->SetVariableLimits(13, t_low, t_up);
 
     HasMinimized = minimizer->Minimize();
 
@@ -68,6 +81,9 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line, do
         std::cout<<"found s : "<<s_min<<" found t : "<<t_min<<" that gives the distance : "<<GetImpactParameter(helix,line,s_min,t_min)<<"\n";
         std::cout<<"point on the Helix  : "<<helix.GetPointAt(s_min).X()<<" "<<helix.GetPointAt(s_min).Y()<<" "<<helix.GetPointAt(s_min).Z()<<"\n";
         std::cout<<"point on the Line   : "<<line.GetPointAt(t_min).X()<<" "<<line.GetPointAt(t_min).Y()<<" "<<line.GetPointAt(t_min).Z()<<"\n";
+    }else{
+        std::cout<<"wasnt' able to minimize\n";
+        throw "";
     };
 
     return GetImpactParameter(helix,line,s_min,t_min);

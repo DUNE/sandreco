@@ -103,15 +103,27 @@ int main(int argc, char* argv[]){
             double s_min, t_min;
             bool has_minimized = 0;
             auto digit = event_digits->at(j);
+
             Line digit_line = RecoUtils::GetLineFromDigit(digit);
+            true_helix.SetHelixRangeFromDigit(digit);
+            digit_line.SetLineRangeFromDigit(digit);
+
+            TVector2 helix_center = {true_helix.x0().Z() - true_helix.R()*cos(true_helix.Phi0()),
+                                     true_helix.x0().Y() - true_helix.R()*sin(true_helix.Phi0())}; 
+
+            TVector2 diff = {digit.z - helix_center.X(), digit.y - helix_center.Y()};
+
+            std::cout<<"R - diff ; "<<true_helix.R() - diff.Mod()<<"\n";                                           
+
             auto reco_radius = RecoUtils::GetExpectedRadiusFromDigit(digit);
             auto true_helix_radius = RecoUtils::GetMinImpactParameter(true_helix,  digit_line, s_min, t_min, has_minimized);
-            
-            std::cout<<"digit x y z hor did : "<<digit.x<<" "<<digit.y<<" "<<digit.z<<" "<<digit.hor<<" "<<digit.did<<"\n";
-            std::cout<<"found s_min, t_min  : "<<s_min<<" "<<t_min<<" "<<has_minimized<<"\n";
-            std::cout<<"digit "<<j<<" expected radius : "<<reco_radius<<" true helix radius : "<<true_helix_radius<<" mm \n";
-            std::cout<<"\n";
 
+            std::cout<<"angle x0-z "<< TMath::ATan2(true_helix.GetPointAt(s_min).Z() - helix_center.X(),true_helix.GetPointAt(s_min).Y() - helix_center.Y()) <<"\n";                                
+            std::cout<<"angle digit-z "<< TMath::ATan2(digit.z - helix_center.X(), digit.y - helix_center.Y()) <<"\n";  
+            std::cout<<"digit x y z hor did : "<<digit.x<<", "<<digit.y<<", "<<digit.z<<", "<<digit.hor<<", "<<digit.did<<"\n";
+            std::cout<<"expected radius : "<<reco_radius<<", true helix radius : "<<true_helix_radius<<" mm \n";
+            std::cout<<"\n";
+            break;
             // radii.push_back(reco_radius);
         }
     }
