@@ -15,8 +15,6 @@
 #include "Math/Factory.h"
 #include "TDatabasePDG.h"
 
-extern std::vector<dg_tube>* event_digits;
-
 extern TGeoManager* geo;
 
 extern SANDGeoManager geo_manager;
@@ -45,14 +43,15 @@ class Helix
             int charge    = database.GetParticle(pdg)->Charge();
 
             x0_     = trj.Points[0].GetPosition().Vect();
-            dip_    = atan(pl/pt);
-            R_      = (pt*1e-3/(0.3*0.6)); // [m] = [GeV]/[T]
-            h_      = (charge < 0) ? -1 : 1;  // to check muon helicity consistency
-            Phi0_   = TMath::ATan2(momentum.Y(),momentum.Z()) - h_*TMath::Pi()*0.5; // for mu pi/2 should be added
+            // dip_    = atan(pl/pt);
+            dip_    = TMath::ATan2(pl,pt);
+            R_      = (pt/(0.3*0.6)); // [m] = [GeV]/[T]
+            h_      = (charge < 0) ? 1 : -1;  // to check muon helicity consistency
+            Phi0_   = TMath::ATan2(momentum.Y(),momentum.Z()) + h_*TMath::Pi()*0.5; // for mu pi/2 should be added
         }
         
         double x_h(double s) const{
-            return x0_.X() + s * sin(dip_);
+            return x0_.X() - s * sin(dip_);
         }
 
         double y_h(double s) const{
@@ -63,8 +62,25 @@ class Helix
             return x0_.Z() + R_ * (cos(Phi0_ + h_*s*cos(dip_)/R_) - cos(Phi0_));
         }
 
+        // first derivatives
+        double dx_over_ds(double s) const{
+            return -sin(dip_);
+        }
+
+        double dy_over_ds(double s) const{
+            return cos(Phi0_ + h_*s*cos(dip_)/R_)*h_*cos(dip_);
+        }
+
+        double dz_over_ds(double s) const{
+            return -sin(Phi0_ + h_*s*cos(dip_)/R_)*h_*cos(dip_);
+        }
+
         TVector3 GetPointAt(double s) const {
             return {x_h(s), y_h(s), z_h(s)};
+        }
+
+        TVector3 GetTangentVector(double s) const {
+            return {dx_over_ds(s), dy_over_ds(s), dz_over_ds(s)};
         }
 
         double GetPhiFromZ(double z) const {
@@ -104,6 +120,14 @@ class Helix
 
         SetLowLim(GetSFromPhi(Phi_min));
         SetUpLim(GetSFromPhi(Phi_max));
+        }
+
+        void PrintHelixPars() const {
+            std::cout<<"R   -> "<<R_<<"\n";
+            std::cout<<"dip -> "<<dip_<<"\n";
+            std::cout<<"phi -> "<<Phi0_<<"\n";
+            std::cout<<"h   -> "<<h_<<"\n";
+            std::cout<<"x0, y0, z0 -> "<<x0_.X()<<" "<<x0_.Y()<<" "<<x0_.Z()<<"\n";
         }
 
         double R() const {return R_;};
@@ -173,6 +197,26 @@ class Line : public SANDWireInfo
             return z0_;
         }
 
+        // first derivatives
+        double dx_over_dt() const {
+            return dx_;
+        }
+        double dy_over_dt() const {
+            return dy_;
+        }
+        double dz_over_dt() const {
+            return 0.;
+        }
+        // derivatives
+
+        TVector3 GetDirectionVector() const{
+            return {dx_over_dt(), dy_over_dt(), dz_over_dt()};
+        }
+
+        TVector3 GetLinePointX0() const{
+            return GetPointAt(0);
+        }
+
         double dx() const {return dx_;};
         double dy() const {return dy_;};
         double ax() const {return ax_;};
@@ -199,7 +243,13 @@ class Line : public SANDWireInfo
 
 namespace RecoUtils{ //RecoUtils
 
+extern std::vector<dg_tube>* event_digits;
+
 void InitWireInfos(TGeoManager* g);
+
+double GetDistHelix2Line(const Helix& helix, double s, const Line& line);
+
+double GetDistHelix2LineDerivative(const Helix& helix, double s, const Line& line); // may be can be remover
 
 double GetImpactParameter(const Helix& helix, const Line& line, double s, double t);
 
@@ -215,15 +265,60 @@ Line GetLineFromDigit(const dg_tube& digit);
 
 // negative log likelihood
 
-double NLL(const Helix& h,const std::vector<dg_tube>& digits);
+double NLL(Helix& h,const std::vector<dg_tube>& digits);
 
 double FunctorNLL(const double* p);
 
 const double* InitHelixPars(const std::vector<dg_tube>& digits);
 
+// const double* GetHelixParameters(const double* p, const std::vector<dg_tube>& digits);
 const double* GetHelixParameters(const double* p);
 
 } // RecoUtils
+
+class HelixParsFinder
+{
+public:
+    HelixParsFinder(std::vector<dg_tube> arg_event_digits) : event_digits_(arg_event_digits){};
+    
+    int NofParameters(){return 7;}; // R, dip, Phi0, h, x0_x, x0_y, x0_z
+    
+    double NLL(const Helix& h) const {
+        // calculate the negative log likelihood for an input helix
+        // as the (r_estimated - r_expected)^2 / sigma^2, where r are the impact parameters
+        // (min distante between helix and line define by the fired digits)
+        double nll = 0.;
+
+        const double sigma = 0.2; // 200 mu_m = 0.2 mm
+
+        for(auto& digit : event_digits_)
+        {
+            Line l = RecoUtils::GetLineFromDigit(digit); // each digit define a line completly
+            double r_estimated = RecoUtils::GetMinImpactParameter(h,l);
+            double r_expected  = RecoUtils::GetExpectedRadiusFromDigit(digit);
+            nll += (r_estimated - r_expected) * (r_estimated - r_expected) / (sigma*sigma); 
+        }
+        return nll;
+    }
+
+    double operator()(const double *parameters) const {
+        
+        double R = parameters[0];
+        double dip = parameters[1];
+        double Phi0 = parameters[2];
+        int hel = parameters[3];
+        TVector3 x0 = {parameters[4],
+                       parameters[5],
+                       parameters[6]};
+
+        Helix h(R, dip, Phi0, hel, x0);
+
+        return NLL(h);
+    }
+    
+private:
+    std::vector<dg_tube> event_digits_;
+};
 
 #ifdef __MAKECINT__
 #pragma link C++ class Helix + ;
