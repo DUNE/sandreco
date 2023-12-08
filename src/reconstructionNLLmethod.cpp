@@ -4,8 +4,14 @@
 
 #include "TFile.h"
 #include "TTree.h"
+#include "TCanvas.h"
+#include "TGraph2D.h"
+#include "TGraph.h"
+#include "TLegend.h"
 
-std::vector<dg_tube>* event_digits = nullptr;
+// using namespace RecoUtils;
+
+std::vector<dg_tube>* RecoUtils::event_digits = nullptr;
 
 TG4Event* evEdep = nullptr;
 
@@ -24,33 +30,7 @@ int main(int argc, char* argv[]){
     const char* InputDigit = argv[2];
 
     const char* fOutput = argv[3];
-    // TEST________________________________________
-    // double R = 2.3;
-    // double Phi0 = TMath::Pi()/4.;
-    // int hel = 1;
-    // double dip = 5.;
 
-    // double s_star = 0; // so that Phi=Phi0
-    
-    // TVector3 x0 = {0., 0., 0.}; //
-
-    // // R, dip, Phi0, h, x0
-    // Helix h(R, dip, Phi0, hel, x0); // this helix crosses (0,0,0) for s=0
-    
-    // auto helix_at_s_star = h.GetPointAt(s_star);
-    // // mx, my, ax, ay, z0 -> line that crosses (0,0,0)
-    // Line l(2., 0., 0., R*sin(TMath::Pi()/4.), R*cos(TMath::Pi()/4.)); // this line crosses (0,0,0) for t=0
-
-    // auto line_at_t_star = l.GetPointAt(0.);
-
-    // std::cout<<"s_star : "<<s_star<<"\n";
-    // std::cout<<"helix at s=s_star hit the point at : "<<helix_at_s_star.X()<<" "<<helix_at_s_star.Y()<<" "<<helix_at_s_star.Z()<<"\n";
-    // std::cout<<"t_star : 0 \n";
-    // std::cout<<"line at t=0 hit the point at : "<<line_at_t_star.X()<<" "<<line_at_t_star.Y()<<" "<<line_at_t_star.Z()<<"\n";
-    // std::cout<<"GetImpactParameter(h, l , s_star, t_star) : "<<RecoUtils::GetImpactParameter(h, l , s_star, 0)<<"\n";
-    // std::cout<< RecoUtils::GetMinImpactParameter(h,l) <<"\n";
-    // TEST________________________________________
-    
     // read digitization file
     TFile fEDep(InputEDep, "READ");
     TFile fDigit(InputDigit, "READ");
@@ -61,7 +41,7 @@ int main(int argc, char* argv[]){
     // initialize wiremap
     if(geo)
     {
-        std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+        // std::cout<<__FILE__<<" "<<__LINE__<<"\n";
         RecoUtils::InitWireInfos(geo);
 
     }else{
@@ -75,42 +55,86 @@ int main(int argc, char* argv[]){
     
     const int nev = t->GetEntries();
 
+    std::vector<dg_tube>* mydigit = nullptr;
+
     // digits
-    t->SetBranchAddress("dg_tube", &event_digits);
+    // t->SetBranchAddress("dg_tube", &RecoUtils::event_digits);
+    t->SetBranchAddress("dg_tube", &mydigit);
     tEdep->SetBranchAddress("Event", &evEdep);
 
-    // check radius of each digit
-    std::vector<double> radii;
-    std::vector<double> trj_points_x;
-    std::vector<double> trj_points_y;
-    std::vector<double> trj_points_z;
-    std::vector<double> fired_digits_x;
-    std::vector<double> fired_digits_y;
-    std::vector<double> fired_digits_z;
-    std::vector<double> helix_pars_from_edep;
+    // output file branches
+    std::vector<double>     impact_par_from_TDC;
+    std::vector<double>     impact_par_estimated;
+    std::vector<double>     trj_points_x;
+    std::vector<double>     trj_points_y;
+    std::vector<double>     trj_points_z;
+    TLorentzVector          initial_momentum;
+    TLorentzVector          initial_position;
+    std::vector<double>     fired_digits_x;
+    std::vector<double>     fired_digits_y;
+    std::vector<double>     fired_digits_z;
+    std::vector<double>     fired_digits_hor;
+    double                  R_true, dip_true, Phi0_true;
+    double                  R_reco, dip_reco, Phi0_reco;
+    int                     h_true, h_reco;
+    TVector3                x0_true;
+    TVector3                x0_reco;
 
     TFile fout(fOutput, "RECREATE");
-    TTree tout("tTDCRadius", "t");
-    tout.Branch("ExpectedRadiusFromTDC", "std::vector<double>", &radii);
-    tout.Branch("edep_trj_points_x", "std::vector<double>", &trj_points_x);
-    tout.Branch("edep_trj_points_y", "std::vector<double>", &trj_points_y);
-    tout.Branch("edep_trj_points_z", "std::vector<double>", &trj_points_z);
-    tout.Branch("fired_digits_x", "std::vector<double>", &fired_digits_x);
-    tout.Branch("fired_digits_y", "std::vector<double>", &fired_digits_y);
-    tout.Branch("fired_digits_z", "std::vector<double>", &fired_digits_z);
-    tout.Branch("helix_pars_from_edep", "std::vector<double>", &helix_pars_from_edep);
+    TTree tout("reco", "t");
 
+    tout.Branch("ImpactParFromTDC",    "std::vector<double>",            &impact_par_from_TDC);
+    tout.Branch("ImpactParEstimated",    "std::vector<double>",          &impact_par_estimated);
+    tout.Branch("edep_trj_points_x",        "std::vector<double>",       &trj_points_x);
+    tout.Branch("edep_trj_points_y",        "std::vector<double>",       &trj_points_y);
+    tout.Branch("edep_trj_points_z",        "std::vector<double>",       &trj_points_z);
+    tout.Branch("edep_initial_momentum",    "TLorentzVector",            &initial_momentum);
+    tout.Branch("edep_initial_position",    "TLorentzVector",            &initial_position);
+    tout.Branch("fired_digits_x",           "std::vector<double>",       &fired_digits_x);
+    tout.Branch("fired_digits_y",           "std::vector<double>",       &fired_digits_y);
+    tout.Branch("fired_digits_z",           "std::vector<double>",       &fired_digits_z);
+    tout.Branch("fired_digits_hor",         "std::vector<double>",       &fired_digits_hor);
+    tout.Branch("R_true",                   &R_true,                     "R_true/D");
+    tout.Branch("R_reco",                   &R_reco,                     "R_reco/D");
+    tout.Branch("dip_true",                 &dip_true,                   "dip_true/D");
+    tout.Branch("dip_reco",                 &dip_reco,                   "dip_reco/D");
+    tout.Branch("Phi0_true",                &Phi0_true,                  "Phi0_true/D");
+    tout.Branch("Phi0_reco",                &Phi0_reco,                  "Phi0_reco/D");
+    tout.Branch("h_true",                   &h_true,                     "h_true/I");
+    tout.Branch("h_reco",                   &h_reco,                     "h_reco/I");
+    tout.Branch("x0_true",                  "TVector3",                  &x0_true);
+    tout.Branch("x0_reco",                  "TVector3",                  &x0_reco);
+    
     // for (auto i = 0; i < nev; i++)
     for (auto i = 0; i < 1; i++)
     {
         // if(i!=6) continue;
         t->GetEntry(i);
         tEdep->GetEntry(i);
-        std::cout<<"evento : "<<i<<" numero di digits : "<<event_digits->size()<<"\n";
+        RecoUtils::event_digits = new std::vector<dg_tube>();
+        for (auto& digit : *mydigit)
+        {
+            RecoUtils::event_digits->push_back(digit);
+        }
+        
+        std::cout<<"evento : "<<i<<" numero di digits : "<<RecoUtils::event_digits->size()<<"\n";
         
         auto muon_trj = evEdep->Trajectories[0];
 
         if(muon_trj.GetPDGCode()!=13) continue;
+
+        initial_momentum = muon_trj.GetInitialMomentum();
+        initial_position = muon_trj.Points[0].GetPosition();
+        
+        Helix true_helix(muon_trj); // true helix
+        
+        R_true      = true_helix.R();
+        dip_true    = true_helix.dip();
+        Phi0_true   = true_helix.Phi0();
+        h_true      = 1;            
+        x0_true     = {true_helix.x0().X(),
+                       true_helix.x0().Y(),
+                       true_helix.x0().Z()};
 
         for(auto& point : muon_trj.Points){
             // point is TG4TRajectoryPoint
@@ -120,51 +144,84 @@ int main(int argc, char* argv[]){
             trj_points_z.push_back(point_position.Z());
         }
 
-        Helix true_helix(muon_trj); // true helix
+        std::cout<<"-----------------------------------------\n";
+        
+        double p[7] = {R_true, 
+                       dip_true, 
+                       Phi0_true, 
+                       h_true, 
+                       x0_true.X(),
+                       x0_true.Y(), 
+                       x0_true.Z()};
 
-        helix_pars_from_edep.push_back(true_helix.R());
-        helix_pars_from_edep.push_back(true_helix.Phi0());
-        helix_pars_from_edep.push_back(true_helix.dip());
-        helix_pars_from_edep.push_back(true_helix.h());
-        helix_pars_from_edep.push_back(true_helix.x0().X());
-        helix_pars_from_edep.push_back(true_helix.x0().Y());
-        helix_pars_from_edep.push_back(true_helix.x0().Z());
+        std::cout << "true helix : \n";
+
+        true_helix.PrintHelixPars();
+
+        // check
+        // auto digit2 = RecoUtils::event_digits->at(2);
+        // Line digit2_line = RecoUtils::GetLineFromDigit(digit2);
+        // true_helix.SetHelixRangeFromDigit(digit2);
+        // std::cout << "digit 2, RecoUtils::GetMinImpactParameter : " << RecoUtils::GetMinImpactParameter(true_helix, digit2_line);
+
+        // check
+
+        const double* pars = p;  
+        
+        auto fitted_pars = RecoUtils::GetHelixParameters(pars);
+
+        R_reco = fitted_pars[0];
+        dip_reco = fitted_pars[1];
+        Phi0_reco = fitted_pars[2];
+        h_reco = 1;
+        x0_reco = {fitted_pars[4],
+                   fitted_pars[5],
+                   fitted_pars[6],
+                   };
+        
+        std::cout<<"\n";
+
+        std::cout<<"TRUE values - FITTED VALUES \n";
+
+        std::cout << "R_true - R_reco       : " << R_true - R_reco << "[mm]\n";
+        std::cout << "dip_true - dip_reco   : " << dip_true - dip_reco << "\n";
+        std::cout << "Phi0_true - Phi0_reco : " << Phi0_true - Phi0_reco << "\n";
+        std::cout << "x0_true - x0_reco     : " << (x0_true - x0_reco).Mag() << "[mm]\n";
+        
+        std::cout<<"-----------------------------------------\n";
 
         // run over digits
-        for(auto j=0u; j<event_digits->size(); j++)
+        for(auto j=0u; j<RecoUtils::event_digits->size(); j++)
         {
-            double s_min, t_min;
-            bool has_minimized = 0;
-            auto digit = event_digits->at(j);
+            auto digit = RecoUtils::event_digits->at(j);
+
+            /* find s_min and s_max that gives the portion of the helix 
+            in the plane containing the wire */
+            true_helix.SetHelixRangeFromDigit(digit);
+
+            // std::cout<<"helix in range s : ["<<true_helix.LowLim()<<","<<true_helix.UpLim()<<"]\n";
 
             Line digit_line = RecoUtils::GetLineFromDigit(digit);
-            true_helix.SetHelixRangeFromDigit(digit);
-            digit_line.SetLineRangeFromDigit(digit);
 
-            TVector2 helix_center = {true_helix.x0().Z() - true_helix.R()*cos(true_helix.Phi0()),
-                                     true_helix.x0().Y() - true_helix.R()*sin(true_helix.Phi0())}; 
-
-            TVector2 diff = {digit.z - helix_center.X(), digit.y - helix_center.Y()};
-
-            std::cout<<"R - diff ; "<<true_helix.R() - diff.Mod()<<"\n";                                           
-
-            auto reco_radius = RecoUtils::GetExpectedRadiusFromDigit(digit);
-            auto true_helix_radius = RecoUtils::GetMinImpactParameter(true_helix,  digit_line, s_min, t_min, has_minimized);
-
-            std::cout<<"angle x0-z "<< TMath::ATan2(true_helix.GetPointAt(s_min).Z() - helix_center.X(),true_helix.GetPointAt(s_min).Y() - helix_center.Y()) <<"\n";                                
-            std::cout<<"angle digit-z "<< TMath::ATan2(digit.z - helix_center.X(), digit.y - helix_center.Y()) <<"\n";  
-            std::cout<<"digit x y z hor did : "<<digit.x<<", "<<digit.y<<", "<<digit.z<<", "<<digit.hor<<", "<<digit.did<<"\n";
-            std::cout<<"expected radius : "<<reco_radius<<", true helix radius : "<<true_helix_radius<<" mm \n";
-            std::cout<<"\n";
+            auto TDC_impact_par = RecoUtils::GetExpectedRadiusFromDigit(digit);
             
-            radii.push_back(reco_radius);
+            auto estimated_impact_par = RecoUtils::GetMinImpactParameter(true_helix, digit_line);
+            
+            std::cout<<"impact par from TDC : "<<TDC_impact_par<<", estimated_impact_par (my minimizer) : "<<estimated_impact_par<<" mm \n";
+            // std::cout<<"\n";
+            
+            impact_par_from_TDC.push_back(TDC_impact_par);
+            impact_par_estimated.push_back(estimated_impact_par);
             fired_digits_x.push_back(digit.x);
             fired_digits_y.push_back(digit.y);
             fired_digits_z.push_back(digit.z);
+            fired_digits_hor.push_back(digit.hor);
         }
+        
+        delete RecoUtils::event_digits;
     }
     tout.Fill();
-    // write output
+    // // write output
     fout.cd();
     tout.Write();
     fout.Close();

@@ -45,7 +45,7 @@ class Helix
             x0_     = trj.Points[0].GetPosition().Vect();
             // dip_    = atan(pl/pt);
             dip_    = TMath::ATan2(pl,pt);
-            R_      = (pt/(0.3*0.6)); // [m] = [GeV]/[T]
+            R_      = (pt/(0.3*0.6)); // [m] = [GeV]/[T] or [mm] = [MeV]/[T] 
             h_      = (charge < 0) ? 1 : -1;  // to check muon helicity consistency
             Phi0_   = TMath::ATan2(momentum.Y(),momentum.Z()) + h_*TMath::Pi()*0.5; // for mu pi/2 should be added
         }
@@ -91,6 +91,24 @@ class Helix
             return Phi * R_ / h_ / cos(dip_);
         }
 
+        std::vector<TVector3> GetHelixPoints(double s_min = -1e3, double s_max = 1e3, double step = 10.) const {
+            
+            if(s_min>=s_max){
+                std::cout << "s_min cannot be larger than s_max";
+                throw;
+            }
+
+            std::vector<TVector3> points;
+
+            while (s_min<s_max)
+            {
+                points.push_back(GetPointAt(s_min));
+                s_min += step;
+            }
+            
+            return points;
+        } 
+
         void SetHelixParam(double* p){
             R_    = p[0];
             dip_  = p[1];
@@ -123,11 +141,11 @@ class Helix
         }
 
         void PrintHelixPars() const {
-            std::cout<<"R   -> "<<R_<<"\n";
-            std::cout<<"dip -> "<<dip_<<"\n";
-            std::cout<<"phi -> "<<Phi0_<<"\n";
-            std::cout<<"h   -> "<<h_<<"\n";
-            std::cout<<"x0, y0, z0 -> "<<x0_.X()<<" "<<x0_.Y()<<" "<<x0_.Z()<<"\n";
+            std::cout<<std::setprecision(8)<<"R   -> "<<R_<<"\n";
+            std::cout<<std::setprecision(8)<<"dip -> "<<dip_<<"\n";
+            std::cout<<std::setprecision(8)<<"phi -> "<<Phi0_<<"\n";
+            std::cout<<std::setprecision(8)<<"h   -> "<<h_<<"\n";
+            std::cout<<std::setprecision(8)<<"x0, y0, z0 -> "<<x0_.X()<<" "<<x0_.Y()<<" "<<x0_.Z()<<"\n";
         }
 
         double R() const {return R_;};

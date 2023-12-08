@@ -800,13 +800,11 @@ void SANDGeoManager::PrintCounter(){
 void SANDGeoManager::init(TGeoManager* const geo)
 {
   geo_ = geo;
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
   counter_.hit_counter_.clear();
   cellmap_.clear();
   sttmap_.clear();
   wiremap_.clear();
   stt_tube_tranverse_position_map_.clear();
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
   set_ecal_info();
   set_wire_info();
 }
