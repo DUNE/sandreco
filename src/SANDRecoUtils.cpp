@@ -141,13 +141,13 @@ double RecoUtils::NLL(Helix& h,const std::vector<dg_tube>& digits)
         
         double r_measured  = RecoUtils::GetExpectedRadiusFromDigit(digit);
         
-        nll += sqrt((r_estimated - r_measured) * (r_estimated - r_measured) / (sigma * sigma));
+        nll += (r_estimated - r_measured) * (r_estimated - r_measured) / (sigma * sigma);
         
         digit_index++;
     }
     // if(iter==2) throw "";
     iter ++;
-    return nll;
+    return sqrt(nll)/digits.size();
 }
 
 double RecoUtils::FunctorNLL(const double* p)
@@ -171,14 +171,11 @@ const double* RecoUtils::InitHelixPars(const std::vector<dg_tube>& digits)
     return p;
 }
 
-// const double* RecoUtils::GetHelixParameters(const double* p, const std::vector<dg_tube>& digits)
-const double* RecoUtils::GetHelixParameters(const Helix& helix_initial_guess)
+const double* RecoUtils::GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus)
 {
-    // std::cout<<__FILE__<<" "<<__LINE__<<" RecoUtils::GetHelixParameters\n";
-
     ROOT::Math::Functor functor(&RecoUtils::FunctorNLL, 7);
 
-    ROOT::Math::Minimizer * minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
+    ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
 
     minimizer->SetPrintLevel(4);
 
@@ -188,7 +185,7 @@ const double* RecoUtils::GetHelixParameters(const Helix& helix_initial_guess)
     minimizer->SetFunction(functor);
 
     // helix params
-    // >SetLimitedVariable       (ivar, name,   val,  step,  low,   up)
+    // SetLimitedVariable       (ivar, name,   val,  step,  low,   up)
     minimizer->SetLimitedVariable(0,    "R",    helix_initial_guess.R(), 100,  100,     1e5);
     minimizer->SetLimitedVariable(1,    "dip",  helix_initial_guess.dip(), 0.01,  -1.6,  1.6);
     // minimizer->SetLimitedVariable(2,    "Phi0", helix_initial_guess.Phi0(), 0.01,  -3.14, 3.14);
@@ -206,9 +203,9 @@ const double* RecoUtils::GetHelixParameters(const Helix& helix_initial_guess)
     minimizer->SetFixedVariable(6,    "x0_z",    helix_initial_guess.x0().Z());
 
     minimizer->Minimize();
-
     minimizer->PrintResults();
 
+    TMinuitStatus      = minimizer->Status();  
     const double* pars = minimizer->X();
 
     return pars;

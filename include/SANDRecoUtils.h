@@ -39,14 +39,14 @@ class Helix
             auto pt       = sqrt(momentum.Z()*momentum.Z() + momentum.Y()*momentum.Y());
             auto pl       = momentum.X();
             int pdg       = trj.GetPDGCode();
-            TDatabasePDG database; // maybe class static member could be better
+            TDatabasePDG    database; // maybe class static member could be better
             int charge    = database.GetParticle(pdg)->Charge();
 
-            x0_     = trj.Points[0].GetPosition().Vect();
-            dip_    = TMath::ATan2(pl,pt);
-            R_      = (pt/(0.3*0.6)); // [m] = [GeV]/[T] or [mm] = [MeV]/[T] 
-            h_      = (charge < 0) ? 1 : -1;  // to check muon helicity consistency
-            Phi0_   = TMath::ATan2(momentum.Y(),momentum.Z()) + h_*TMath::Pi()*0.5; // for mu pi/2 should be added
+            x0_           = trj.Points[0].GetPosition().Vect();
+            dip_          = TMath::ATan2(pl,pt);
+            R_            = (pt/(0.3*0.6)); // [m] = [GeV]/[T] or [mm] = [MeV]/[T] 
+            h_            = (charge < 0) ? 1 : -1;  // to check muon helicity consistency
+            Phi0_         = TMath::ATan2(momentum.Y(),momentum.Z()) + h_*TMath::Pi()*0.5; // for mu pi/2 should be added
         }
 
         Helix() {
@@ -164,22 +164,22 @@ class Helix
             std::cout<<std::setprecision(8)<<"x0, y0, z0 -> "<<x0_.X()<<" "<<x0_.Y()<<" "<<x0_.Z()<<"\n";
         }
 
-        double R() const {return R_;};
-        double dip() const {return dip_;};
-        double Phi0() const {return Phi0_;};
-        int h() const {return h_;};
-        TVector3 x0() const {return x0_;};
-        double LowLim() const {return low_lim_;};
-        double UpLim() const {return up_lim_;};
+        double   R()      const {return R_;};
+        double   dip()    const {return dip_;};
+        double   Phi0()   const {return Phi0_;};
+        int      h()      const {return h_;};
+        TVector3 x0()     const {return x0_;};
+        double   LowLim() const {return low_lim_;};
+        double   UpLim()  const {return up_lim_;};
 
     private:
-        double R_;
-        double dip_;
-        double Phi0_;
-        int h_;
+        double   R_;
+        double   dip_;
+        double   Phi0_;
+        int      h_;
         TVector3 x0_;
-        double low_lim_;
-        double up_lim_;
+        double   low_lim_;
+        double   up_lim_;
     
     ClassDef(Helix, 1);
 };
@@ -277,36 +277,33 @@ class Line : public SANDWireInfo
 
 namespace RecoUtils{ //RecoUtils
 
-extern std::vector<dg_tube>* event_digits;
+extern        std::vector<dg_tube>* event_digits;
 
-void InitWireInfos(TGeoManager* g);
+void          InitWireInfos(TGeoManager* g);
 
-double GetDistHelix2Line(const Helix& helix, double s, const Line& line);
+double        GetDistHelix2Line(const Helix& helix, double s, const Line& line);
 
-double GetDistHelix2LineDerivative(const Helix& helix, double s, const Line& line); // may be can be remover
+double        GetDistHelix2LineDerivative(const Helix& helix, double s, const Line& line); // may be can be remover
 
-double GetImpactParameter(const Helix& helix, const Line& line, double s, double t);
+double        GetImpactParameter(const Helix& helix, const Line& line, double s, double t);
 
-double FunctorImpactParameter(const double* p);
+double        FunctorImpactParameter(const double* p);
 
-double GetMinImpactParameter(const Helix& helix, const Line& line);
+double        GetMinImpactParameter(const Helix& helix, const Line& line);
 
-double GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized);
+double        GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized);
 
-double GetExpectedRadiusFromDigit(const dg_tube& digit);
+double        GetExpectedRadiusFromDigit(const dg_tube& digit);
 
-Line GetLineFromDigit(const dg_tube& digit);
+Line          GetLineFromDigit(const dg_tube& digit);
 
-// negative log likelihood
+double        NLL(Helix& h,const std::vector<dg_tube>& digits); // negative log likelihood function
 
-double NLL(Helix& h,const std::vector<dg_tube>& digits);
-
-double FunctorNLL(const double* p);
+double        FunctorNLL(const double* p);
 
 const double* InitHelixPars(const std::vector<dg_tube>& digits);
 
-// const double* GetHelixParameters(const double* p, const std::vector<dg_tube>& digits);
-const double* GetHelixParameters(const Helix& helix_initial_guess);
+const double* GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus);
 
 } // RecoUtils
 
@@ -321,16 +318,15 @@ struct RecoObject
     std::vector<TLorentzVector> trj_points; // from edepsim
     double                      pt_true;
     double                      pt_reco;
-    double                      dip_true;
-    double                      dip_reco;
     int                         TMinuitFinalStatus;
 };
 
 struct EventReco
 {   
     int                         event_index;
-    std::vector<RecoObject>     reco_infos;
+    RecoObject                  reco_object;
     std::vector<dg_tube>        event_fired_wires;
+    int                         nof_digits = event_fired_wires.size();
 };
 
 
