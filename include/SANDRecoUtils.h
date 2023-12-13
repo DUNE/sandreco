@@ -22,9 +22,6 @@ extern SANDGeoManager geo_manager;
 class Helix
 {
     public:
-        Helix(double arg_R, double arg_dip, double arg_Phi0, int arg_h, TVector3 arg_x0, double low_lim = -999., double up_lim = -999.) : 
-                    R_(arg_R), dip_(arg_dip), Phi0_(arg_Phi0), h_(arg_h), x0_(arg_x0), low_lim_(low_lim), up_lim_(up_lim) {}
-        
         // R : radius of the helix
         // dip : dip angle 
         // Phi0 : is the azimuth angle of the starting point with respect to the helix axis
@@ -33,6 +30,9 @@ class Helix
 
         // optionsl : low_lim, up_lim 
         // lower and upper limit for linear parameter s to be used in case we want restrict the helix to a portion
+
+        Helix(double arg_R, double arg_dip, double arg_Phi0, int arg_h, TVector3 arg_x0, double low_lim = -999., double up_lim = -999.) : 
+                    R_(arg_R), dip_(arg_dip), Phi0_(arg_Phi0), h_(arg_h), x0_(arg_x0), low_lim_(low_lim), up_lim_(up_lim) {}
 
         Helix(const TG4Trajectory& trj) {
             auto momentum = trj.GetInitialMomentum();
@@ -43,13 +43,29 @@ class Helix
             int charge    = database.GetParticle(pdg)->Charge();
 
             x0_     = trj.Points[0].GetPosition().Vect();
-            // dip_    = atan(pl/pt);
             dip_    = TMath::ATan2(pl,pt);
             R_      = (pt/(0.3*0.6)); // [m] = [GeV]/[T] or [mm] = [MeV]/[T] 
             h_      = (charge < 0) ? 1 : -1;  // to check muon helicity consistency
             Phi0_   = TMath::ATan2(momentum.Y(),momentum.Z()) + h_*TMath::Pi()*0.5; // for mu pi/2 should be added
         }
-        
+
+        Helix() {
+            R_    = 0.;
+            dip_  = 0.;
+            Phi0_ = 0.;
+            h_    = 1;
+            x0_   = {0.,0.,0.};
+        }
+
+        // copy constructor
+        Helix(const Helix& source){
+            R_    = source.R();
+            dip_  = source.dip();
+            Phi0_ = source.Phi0();
+            h_    = source.h();
+            x0_   = source.x0();
+        }
+
         double x_h(double s) const{
             return x0_.X() - s * sin(dip_);
         }
@@ -290,61 +306,32 @@ double FunctorNLL(const double* p);
 const double* InitHelixPars(const std::vector<dg_tube>& digits);
 
 // const double* GetHelixParameters(const double* p, const std::vector<dg_tube>& digits);
-const double* GetHelixParameters(const double* p);
+const double* GetHelixParameters(const Helix& helix_initial_guess);
 
 } // RecoUtils
 
-class HelixParsFinder
+struct RecoObject
 {
-public:
-    HelixParsFinder(std::vector<dg_tube> arg_event_digits) : event_digits_(arg_event_digits){};
-    
-    int NofParameters(){return 7;}; // R, dip, Phi0, h, x0_x, x0_y, x0_z
-    
-    double NLL(const Helix& h) const {
-        // calculate the negative log likelihood for an input helix
-        // as the (r_estimated - r_expected)^2 / sigma^2, where r are the impact parameters
-        // (min distante between helix and line define by the fired digits)
-        double nll = 0.;
-
-        const double sigma = 0.2; // 200 mu_m = 0.2 mm
-
-        for(auto& digit : event_digits_)
-        {
-            Line l = RecoUtils::GetLineFromDigit(digit); // each digit define a line completly
-            double r_estimated = RecoUtils::GetMinImpactParameter(h,l);
-            double r_expected  = RecoUtils::GetExpectedRadiusFromDigit(digit);
-            nll += (r_estimated - r_expected) * (r_estimated - r_expected) / (sigma*sigma); 
-        }
-        return nll;
-    }
-
-    double operator()(const double *parameters) const {
-        
-        double R = parameters[0];
-        double dip = parameters[1];
-        double Phi0 = parameters[2];
-        int hel = parameters[3];
-        TVector3 x0 = {parameters[4],
-                       parameters[5],
-                       parameters[6]};
-
-        Helix h(R, dip, Phi0, hel, x0);
-
-        return NLL(h);
-    }
-    
-private:
-    std::vector<dg_tube> event_digits_;
+    int                         traj_edep_index;
+    std::vector<dg_tube>        fired_wires;
+    Helix                       true_helix;
+    Helix                       reco_helix;
+    std::vector<double>         impact_par_from_TDC;
+    std::vector<double>         impact_par_estimated;
+    std::vector<TLorentzVector> trj_points; // from edepsim
+    double                      pt_true;
+    double                      pt_reco;
+    double                      dip_true;
+    double                      dip_reco;
+    int                         TMinuitFinalStatus;
 };
 
-#ifdef __MAKECINT__
-#pragma link C++ class Helix + ;
-#pragma link C++ class Line + ;
-#endif
+struct EventReco
+{   
+    int                         event_index;
+    std::vector<RecoObject>     reco_infos;
+    std::vector<dg_tube>        event_fired_wires;
+};
 
-// #ifdef __MAKECINT__
-// #pragma link C++ class Line + ;
-// #endif
 
 #endif

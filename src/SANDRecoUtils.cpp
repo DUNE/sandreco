@@ -44,79 +44,6 @@ double RecoUtils::GetImpactParameter(const Helix& helix, const Line& line, doubl
     return (helix_point - line_point).Mag();
 }
 
-// double RecoUtils::FunctorImpactParameter(const double* p) {
-//     // first 7 entries of p to define the helix: R, dip, Phi0, h, x0
-//     // last 4 entries of p to define the line: dx, dy, ax, ay
-//     TVector3 x0{p[4], p[5], p[6]};
-
-//     Helix helix(p[0], p[1], p[2], p[3], x0);
-//     Line line(p[7],p[8],p[9],p[10],p[11]);
-
-//     double s = p[12];
-//     double t = p[13];
-
-//     return RecoUtils::GetImpactParameter(helix, line, s, t);
-// }
-
-// double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized){
-
-//     ROOT::Math::Functor functor(&RecoUtils::FunctorImpactParameter, 14);
-
-//     ROOT::Math::Minimizer * minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
-
-//     minimizer->SetFunction(functor);
-
-//     // std::cout<<__FILE__<<" "<<__LINE__<<" RecoUtils::GetMinImpactParameter\n";
-//     // helix.PrintHelixPars();
-    
-//     // helix params
-//     minimizer->SetFixedVariable(0, "R",     helix.R());
-//     minimizer->SetFixedVariable(1, "dip",   helix.dip());
-//     minimizer->SetFixedVariable(2, "Phi0",  helix.Phi0());
-//     minimizer->SetFixedVariable(3, "h",     helix.h());
-//     minimizer->SetFixedVariable(4, "x0_x",  helix.x0().X());
-//     minimizer->SetFixedVariable(5, "x0_y",  helix.x0().Y());
-//     minimizer->SetFixedVariable(6, "x0_z",  helix.x0().Z());
-//     // line params    
-//     minimizer->SetFixedVariable(7, "dx",    line.dx());
-//     minimizer->SetFixedVariable(8, "dy",    line.dy());
-//     minimizer->SetFixedVariable(9, "ax",    line.ax());
-//     minimizer->SetFixedVariable(10, "ay",   line.ay());
-//     minimizer->SetFixedVariable(11, "z0",   line.z0());
-//     // s, t
-//     double s_low = helix.LowLim();
-//     double s_up = helix.UpLim();
-//     double t_low = line.LowLim();
-//     double t_up = line.UpLim();
-
-//     minimizer->SetVariable(12, "s", 1, 0.0001);
-//     minimizer->SetVariable(13, "t", 1, 0.0001);
-//     // minimizer->SetVariable(12, "s", (s_low+s_up)*0.5, 0.0001);
-//     // minimizer->SetVariable(13, "t", (t_low+t_up)*0.5, 0.0001);
-
-//     // set limits
-//     // std::cout<<"setting limits on s : ["<<s_low<<","<<s_up<<"]\n";
-//     // std::cout<<"setting limits on t : ["<<t_low<<","<<t_up<<"]\n";
-//     // minimizer->SetVariableLimits(12, s_low-3, s_low+3);
-//     // minimizer->SetVariableLimits(13, t_low, t_up);
-
-//     HasMinimized = minimizer->Minimize();
-
-//     if(HasMinimized) {
-//         // minimizer->PrintResults();
-//         auto pars = minimizer->X(); 
-//         s_min = pars[12]; 
-//         t_min = pars[13];
-//         return GetImpactParameter(helix,line,s_min,t_min);
-//         // std::cout<<"found s : "<<s_min<<" found t : "<<t_min<<" that gives the distance : "<<GetImpactParameter(helix,line,s_min,t_min)<<"\n";
-//         // std::cout<<"point on the Helix  : "<<helix.GetPointAt(s_min).X()<<" "<<helix.GetPointAt(s_min).Y()<<" "<<helix.GetPointAt(s_min).Z()<<"\n";
-//         // std::cout<<"point on the Line   : "<<line.GetPointAt(t_min).X()<<" "<<line.GetPointAt(t_min).Y()<<" "<<line.GetPointAt(t_min).Z()<<"\n";
-//     }else{
-//         std::cout<<"wasnt' able to minimize\n";
-//         throw "";
-//     };
-// }
-
 double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized){
     /* given an helix and a wire line, find the impact parameter
        s_min and t_min are the parameter of the helix and line 
@@ -201,17 +128,6 @@ double RecoUtils::NLL(Helix& h,const std::vector<dg_tube>& digits)
     const double sigma = 0.2; // 200 mu_m = 0.2 mm
     int digit_index    = 0;
 
-    // std::cout <<"\n";
-    // std::cout << "iteration number : "<< iter << "\n";
-    // std::cout << iter << "," 
-    //           << h.R() << ","
-    //           << h.dip() << ","
-    //           << h.Phi0() << ","
-    //           << h.x0().X() << ","
-    //           << h.x0().Y() << ","
-    //           << h.x0().Z() << "\n";
-    // h.PrintHelixPars();
-
     for(auto& digit : digits) 
     {
         // each digit define a line completly
@@ -226,14 +142,6 @@ double RecoUtils::NLL(Helix& h,const std::vector<dg_tube>& digits)
         double r_measured  = RecoUtils::GetExpectedRadiusFromDigit(digit);
         
         nll += sqrt((r_estimated - r_measured) * (r_estimated - r_measured) / (sigma * sigma));
-        
-        // std::cout << "digit : << "         << digit_index <<
-        //             //  ", s_low_lim : "      << h.LowLim() << 
-        //             //  ", s_up_lim : "       << h.UpLim() << 
-        //              ", r_estimated : "    << r_estimated << 
-        //              ", r_measured : "     << r_measured << 
-        //              ", cumulative nll : " << nll << 
-        //              "\n";
         
         digit_index++;
     }
@@ -264,7 +172,7 @@ const double* RecoUtils::InitHelixPars(const std::vector<dg_tube>& digits)
 }
 
 // const double* RecoUtils::GetHelixParameters(const double* p, const std::vector<dg_tube>& digits)
-const double* RecoUtils::GetHelixParameters(const double* p)
+const double* RecoUtils::GetHelixParameters(const Helix& helix_initial_guess)
 {
     // std::cout<<__FILE__<<" "<<__LINE__<<" RecoUtils::GetHelixParameters\n";
 
@@ -274,26 +182,28 @@ const double* RecoUtils::GetHelixParameters(const double* p)
 
     minimizer->SetPrintLevel(4);
 
+    // minimizer->SetMaxIterations(100);
+    // minimizer->SetMaxFunctionCalls(100);
+
     minimizer->SetFunction(functor);
 
     // helix params
     // >SetLimitedVariable       (ivar, name,   val,  step,  low,   up)
-    minimizer->SetLimitedVariable(0,    "R",    p[0], 100,  100,     1e5);
-    minimizer->SetLimitedVariable(1,    "dip",  p[1], 0.01,  -1.6,  1.6);
-    // minimizer->SetLimitedVariable(2,    "Phi0", p[2], 0.01,  -3.14, 3.14);
-    // minimizer->SetLimitedVariable(3,    "h",    p[3], 0.01,  -1.1,  1.1);
-    // minimizer->SetLimitedVariable(4,    "x0_x", p[4], 1,  -1800, 1800);
-    // minimizer->SetLimitedVariable(5,    "x0_y", p[5], 1,  -4500, -300);
-    // minimizer->SetLimitedVariable(6,    "x0_z", p[6], 1,  21500, 26000);
+    minimizer->SetLimitedVariable(0,    "R",    helix_initial_guess.R(), 100,  100,     1e5);
+    minimizer->SetLimitedVariable(1,    "dip",  helix_initial_guess.dip(), 0.01,  -1.6,  1.6);
+    // minimizer->SetLimitedVariable(2,    "Phi0", helix_initial_guess.Phi0(), 0.01,  -3.14, 3.14);
+    // minimizer->SetLimitedVariable(3,    "h",    helix_initial_guess.h(), 0.01,  -1.1,  1.1);
+    minimizer->SetLimitedVariable(4,    "x0_x", helix_initial_guess.x0().X(), 1,  -1800, 1800);
+    // minimizer->SetLimitedVariable(5,    "x0_y", helix_initial_guess.x0().Y(), 1,  -4500, -300);
+    // minimizer->SetLimitedVariable(6,    "x0_z", helix_initial_guess.x0().Z(), 1,  21500, 26000);
 
-    // minimizer->SetVariable(0,    "R",    p[0], 1);
-    // minimizer->SetFixedVariable(0,    "R",    p[0]);
-    // minimizer->SetFixedVariable(1,    "dip",    p[1]);
-    minimizer->SetFixedVariable(2,    "Phi0",    p[2]);
-    minimizer->SetFixedVariable(3,    "h",    p[3]);
-    minimizer->SetFixedVariable(4,    "x0_x",    p[4]);
-    minimizer->SetFixedVariable(5,    "x0_y",    p[5]);
-    minimizer->SetFixedVariable(6,    "x0_z",    p[6]);
+    // minimizer->SetFixedVariable(0,    "R",    helix_initial_guess.R());
+    // minimizer->SetFixedVariable(1,    "dip",    helix_initial_guess.dip());
+    minimizer->SetFixedVariable(2,    "Phi0",    helix_initial_guess.Phi0());
+    minimizer->SetFixedVariable(3,    "h",    helix_initial_guess.h());
+    // minimizer->SetFixedVariable(4,    "x0_x",    helix_initial_guess.x0().X());
+    minimizer->SetFixedVariable(5,    "x0_y",    helix_initial_guess.x0().Y());
+    minimizer->SetFixedVariable(6,    "x0_z",    helix_initial_guess.x0().Z());
 
     minimizer->Minimize();
 

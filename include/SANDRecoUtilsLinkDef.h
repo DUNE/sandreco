@@ -1,0 +1,14 @@
+#ifdef __CINT__
+#include "SANDRecoUtils.h"
+
+#pragma link off all globals;
+#pragma link off all classes;
+#pragma link off all functions;
+
+#pragma link C++ class std::vector < RecoObject> + ;
+#pragma link C++ class Helix + ;
+#pragma link C++ class Line + ;
+#pragma link C++ class RecoObject +;
+#pragma link C++ class EventReco +;
+
+#endif
