@@ -19,3 +19,9 @@ scripts
 build/*
 *.ipynb
 *.sh
+*.png
+*.gdml
+tests/*.root
+tests/*.pdf
+tests/*.png
+tests/*.txt

@@ -93,8 +93,7 @@ int main(int argc, char* argv[]){
     EventReco event_reco;
     tout.Branch("event_reco",               "EventReco",                 &event_reco);
     
-    // for (auto i = 0; i < nev; i++)
-    for (auto i = 0; i < 2; i++)
+    for (auto i = 0; i < nev; i++)
     {
         tDigit->GetEntry(i);
 

@@ -96,9 +96,9 @@ double RecoUtils::GetExpectedRadiusFromDigit(const dg_tube& digit){
     // std::cout<<"tdc : "<<digit.tdc<<"\n";
     // std::cout<<"t0 : "<<digit.t0<<"\n";
 
-    double guess_wire_pmt_dist = wire_info.length()/2.;
+    double guess_wire_pmt_dist     = wire_info.length()/2.;
     double signal_propagation_time = guess_wire_pmt_dist/sand_reco::stt::v_signal_inwire;
-    double t0 = 1; // assume 1 ns
+    double t0                      = 1; // assume 1 ns
     return (digit.tdc - signal_propagation_time - t0)*sand_reco::stt::v_drift;
 }
 
