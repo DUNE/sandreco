@@ -466,7 +466,7 @@ void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
     // std::cout<<"flag,"<<pdg<<","<<hseg.Start.X()<<","<<hseg.Start.Y()<<","<<hseg.Start.Z()<<","
     //                                 <<hseg.Stop.X()<<","<<hseg.Stop.Y()<<","<<hseg.Stop.Z()<<"\n";
 
-    // if(pdg!=13) continue; ->test digit only for muons
+    if(pdg!=13) continue; //->test digit only for muons
 
     std::vector<int> ids = geo.get_segment_ids(hseg);
     int id1=ids[0]; 
@@ -588,7 +588,7 @@ std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& arg_wire)
   
   double t          = -999.; // real number to find the closest hit point to the wire
   double t_prime    = -999.; // real number to find the closest wire point to the hit
-  // 1 check wire orientation: horizonatal, vertical or inclined 
+  // 1 check wire orientation: horizontal, vertical or inclined 
   if(arg_wire.orientation()==SANDWireInfo::Orient::kVertical)
   {
     m  = 0.;
@@ -644,7 +644,9 @@ std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& arg_wire)
   }
 
   closest2Hit.SetT(closest2Wire.T() + ((v_closest2Wire-v_closest2Hit).Mag()-sand_reco::stt::wire_radius)/sand_reco::stt::v_drift);
+  
   std::vector<TLorentzVector> closestPoints = {closest2Wire,closest2Hit};
+
   return closestPoints;
 }
 
@@ -662,18 +664,21 @@ double GetMinWireTime(TLorentzVector point, SANDWireInfo& arg_wire)
 
 void create_digits_from_wire_hits(const SANDGeoManager& geo,
                              std::map<int, std::vector<hit> >& hits2wire,
-                             std::vector<dg_tube>& digit_vec)
+                             std::vector<dg_wire>& wire_digits)
 {
-  digit_vec.clear();
+  wire_digits.clear();
 
   for (std::map<int, std::vector<hit> >::iterator it = hits2wire.begin();
        it != hits2wire.end(); ++it) // run over wires
   {
-    int did          = it->first; // wire unique id
-    auto wire_info   = geo.get_wire_info(did);
-    double wire_time = 999.;
+    int did            = it->first; // wire unique id
+    auto wire_info     = geo.get_wire_info(did);
+    double wire_time   = 999.;
+    double drift_time  = 999.;
+    double signal_time = 999.;
+    double t_hit       = 999.;
   
-    dg_tube d;
+    dg_wire d;
     d.det   = it->second[0].det;
     d.did   = did;
     d.de    = 0;
@@ -694,28 +699,35 @@ void create_digits_from_wire_hits(const SANDGeoManager& geo,
       // total time = time 2 signal propagation + drift time + hit time
       double hit_smallest_time = digitization::edep_sim::chamber::GetMinWireTime(closest2hit, wire_info);
       
-      if(hit_smallest_time < wire_time) wire_time = hit_smallest_time;
-
+      if(hit_smallest_time < wire_time){
+        wire_time   = hit_smallest_time;
+        t_hit       = closest2wire.T();
+        drift_time  = closest2hit.T() - t_hit;
+        signal_time = hit_smallest_time - closest2hit.T();
+      }
       d.de += running_hit.de;
       d.hindex.push_back(running_hit.index);
     }
-    d.tdc   = wire_time + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
-    d.adc   = d.de;
+    d.tdc         = wire_time + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
+    d.t_hit       = t_hit;
+    d.drift_time  = drift_time;
+    d.signal_time = signal_time;
+    d.adc         = d.de;
 
-    digit_vec.push_back(d);
+    wire_digits.push_back(d);
   }
 }
 
 // simulate wire responce for whole event
 void digitize_wire(TG4Event* ev, const SANDGeoManager& geo,
-                  std::vector<dg_tube>& digit_vec)
+                  std::vector<dg_wire>& wire_digits)
 {
   std::map<int, std::vector<hit> > hits2wire;
-  digit_vec.clear();
+  wire_digits.clear();
 
   group_hits_by_wire(ev, geo, hits2wire);
   digitization::edep_sim::chamber::create_digits_from_wire_hits(geo, hits2wire,
-                                                       digit_vec);
+                                                       wire_digits);
 }
 
 }// namespace chamber
@@ -776,14 +788,23 @@ void digitize(const char* finname, const char* foutname,
   sand_geo.init(geo);
 
   // vector of ECAL and STT digits
-  std::vector<dg_tube> digit_vec;
   std::vector<dg_cell> vec_cell;
+  std::vector<dg_tube> digit_vec;
+  std::vector<dg_wire> wire_digits;
 
   // output
   TFile fout(foutname, "RECREATE");
   TTree tout("tDigit", "Digitization");
+  
   tout.Branch("dg_cell", "std::vector<dg_cell>", &vec_cell);
-  tout.Branch("dg_tube", "std::vector<dg_tube>", &digit_vec);
+  
+  if(geo->FindVolumeFast("STTtracker_PV")){
+    std::cout<<"\n--- Digitize STT based simulation ---\n";
+    tout.Branch("dg_tube", "std::vector<dg_tube>", &digit_vec);
+  }else{
+    std::cout<<"\n--- Digitize Drift based simulation ---\n"; 
+    tout.Branch("dg_wire", "std::vector<dg_wire>", &wire_digits);
+  }
 
   // number of events
   const int nev = t->GetEntries();
@@ -804,18 +825,16 @@ void digitize(const char* finname, const char* foutname,
 
     if(geo->FindVolumeFast("STTtracker_PV"))
     {
-      if(i==0) std::cout<<"\n--- Digitize STT based simulation ---\n";
       sand_reco::stt::initT0(ev, sand_geo);
       digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
                                                   ecal_digi_mode);
       digitization::edep_sim::stt::digitize_stt(ev, sand_geo, digit_vec);
     }else
     {
-      if(i==0) std::cout<<"\n--- Digitize Drift based simulation ---\n"; 
       sand_reco::chamber::initT0(ev, sand_geo);
       digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
                                                   ecal_digi_mode);
-      digitization::edep_sim::chamber::digitize_wire(ev, sand_geo, digit_vec);
+      digitization::edep_sim::chamber::digitize_wire(ev, sand_geo, wire_digits);
 
     }
 

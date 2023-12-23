@@ -60,9 +60,30 @@ struct dg_tube {
   double t0;
   double de;
   double adc;
-  double tdc;
+  double tdc; 
   bool hor;
   std::vector<int> hindex;
+};
+
+struct dg_wire{
+  std::string det;
+  int did;
+  double x;
+  double y;
+  double z;
+  double t0;
+  double de;
+  double adc;
+  double tdc; 
+  // tdc = drift_time + signal_time + t_hit + gauss(1ns)
+  // added to check validity of track fitting 
+  // reconstruction method for drift chamber 
+  double drift_time;
+  double signal_time;
+  double t_hit;
+  // 
+  bool hor;
+  std::vector<int> hindex;  
 };
 
 struct cluster {
