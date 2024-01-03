@@ -141,7 +141,7 @@ class Helix
             up_lim_ = arg_up;
         }
 
-        void SetHelixRangeFromDigit(const dg_tube& digit){
+        void SetHelixRangeFromDigit(const dg_wire& digit){
         // gives the s_min and s_max values that define the portion of the
         // helix in the digit z range
 
@@ -215,7 +215,7 @@ class Line : public SANDWireInfo
             up_lim_ = arg_up;
         }
 
-        void SetLineRangeFromDigit(const dg_tube& digit){
+        void SetLineRangeFromDigit(const dg_wire& digit){
             auto wire = geo_manager.get_wire_info(digit.did);
             SetLowLim(-wire.length()/2. * 1.01); // 1.01 to be not too stringent on the limits
             SetUpLim(wire.length()/2. * 1.01);
@@ -277,7 +277,7 @@ class Line : public SANDWireInfo
 
 namespace RecoUtils{ //RecoUtils
 
-extern        std::vector<dg_tube>* event_digits;
+extern        std::vector<dg_wire>* event_digits;
 
 void          InitWireInfos(TGeoManager* g);
 
@@ -293,15 +293,15 @@ double        GetMinImpactParameter(const Helix& helix, const Line& line);
 
 double        GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized);
 
-double        GetExpectedRadiusFromDigit(const dg_tube& digit);
+double        GetExpectedRadiusFromDigit(const dg_wire& digit);
 
-Line          GetLineFromDigit(const dg_tube& digit);
+Line          GetLineFromDigit(const dg_wire& digit);
 
-double        NLL(Helix& h,const std::vector<dg_tube>& digits); // negative log likelihood function
+double        NLL(Helix& h,const std::vector<dg_wire>& digits); // negative log likelihood function
 
 double        FunctorNLL(const double* p);
 
-const double* InitHelixPars(const std::vector<dg_tube>& digits);
+const double* InitHelixPars(const std::vector<dg_wire>& digits);
 
 const double* GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus);
 
@@ -310,7 +310,7 @@ const double* GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitS
 struct RecoObject
 {
     int                         traj_edep_index;
-    std::vector<dg_tube>        fired_wires;
+    std::vector<dg_wire>        fired_wires;
     Helix                       true_helix;
     Helix                       reco_helix;
     std::vector<double>         impact_par_from_TDC;
@@ -325,7 +325,7 @@ struct EventReco
 {   
     int                         event_index;
     RecoObject                  reco_object;
-    std::vector<dg_tube>        event_fired_wires;
+    std::vector<dg_wire>        event_fired_wires;
     int                         nof_digits = event_fired_wires.size();
 };
 

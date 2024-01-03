@@ -100,6 +100,7 @@ SANDEventDisplay::SANDEventDisplay(const TGWindow *p, int w, int h) : TGMainFram
   fTreeSimData = NULL;
   fTreeDigitData = NULL;
   fTubeDigitVect = NULL;
+  fWireDigitVect = NULL;
   fCellDigitVect = NULL;
   fPDGcode = TDatabasePDG::Instance();
 
@@ -290,6 +291,22 @@ void SANDEventDisplay::FillDigitHits()
     }
   }
 
+  // DRIFT wire hits
+
+  for (auto &wire : *fWireDigitVect) {
+    hit.particle = 0;
+    hit.z = wire.z/10;
+    hit.e = wire.de;
+    if (wire.hor) {
+      hit.x = wire.y/10;
+      fWireDigitHitsZY.push_back(hit);
+    }
+    else {
+      hit.x = wire.x/10;
+      fWireDigitHitsZX.push_back(hit);
+    }
+  }
+
   // ECAL hits
 
   for (auto &cell : *fCellDigitVect) {
@@ -344,7 +361,8 @@ void SANDEventDisplay::DrawTracks()
     }
   }
   else if (fDrawHits == kDigitHits) {
-    for (auto &hit : fTubeDigitHitsZY){
+    auto DigitHitsZY = (fTubeDigitHitsZY.size()!=0) ? fTubeDigitHitsZY : fWireDigitHitsZY;
+    for (auto &hit : DigitHitsZY){
       ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
@@ -365,7 +383,8 @@ void SANDEventDisplay::DrawTracks()
     }
   }
   else if (fDrawHits == kDigitHits) {
-    for (auto &hit : fTubeDigitHitsZX){
+    auto DigitHitsZX = (fTubeDigitHitsZX.size()!=0) ? fTubeDigitHitsZX : fWireDigitHitsZX;
+    for (auto &hit : DigitHitsZX){
       ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
@@ -405,6 +424,8 @@ void SANDEventDisplay::InitObjects()
   fEventHitsZX.clear();
   fTubeDigitHitsZY.clear();
   fTubeDigitHitsZX.clear();
+  fWireDigitHitsZY.clear();
+  fWireDigitHitsZX.clear();
   fCellDigitHitsZY.clear();
   fCellDigitHitsZX.clear();
 
@@ -1171,9 +1192,16 @@ void SANDEventDisplay::SetDigitData(TString fileName)
   fRadioHitsType[fDrawHits]->SetState(kButtonDown);
 
   fTubeDigitVect = new std::vector<dg_tube>;
+  fWireDigitVect = new std::vector<dg_wire>;
   fCellDigitVect = new std::vector<dg_cell>;
-
-  fTreeDigitData->SetBranchAddress("dg_tube", &fTubeDigitVect);
+  
+  if(geo->FindVolumeFast("STTtracker_PV")){
+    //stt based digitization
+    fTreeDigitData ->SetBranchAddress("dg_tube", &fTubeDigitVect);
+  }else{
+    //drift based digitization
+    fTreeDigitData ->SetBranchAddress("dg_wire", &fWireDigitVect);
+  }
   fTreeDigitData->SetBranchAddress("dg_cell", &fCellDigitVect);
 }
 

@@ -10,7 +10,7 @@
 #include "TLegend.h"
 #include "TG4Event.h"
 
-std::vector<dg_tube>* RecoUtils::event_digits = nullptr;
+std::vector<dg_wire>* RecoUtils::event_digits = nullptr;
 
 TG4Event* evEdep = nullptr;
 
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]){
     const int nev = tDigit->GetEntries();
 
     // digits
-    tDigit->SetBranchAddress("dg_tube", &RecoUtils::event_digits);
+    tDigit->SetBranchAddress("dg_wire", &RecoUtils::event_digits);
     tEdep->SetBranchAddress("Event", &evEdep);
 
     // output file branches

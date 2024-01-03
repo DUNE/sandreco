@@ -2,7 +2,7 @@
 
 // using namespace RecoUtils;
 
-// std::vector<dg_tube>* event_digits;
+// std::vector<dg_wire>* event_digits;
 
 SANDGeoManager geo_manager;
 
@@ -84,25 +84,18 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line){
     return RecoUtils::GetMinImpactParameter(helix, line, s_min, t_min, HasMinimized);
 }
 
-double RecoUtils::GetExpectedRadiusFromDigit(const dg_tube& digit){
+double RecoUtils::GetExpectedRadiusFromDigit(const dg_wire& digit){
     // get TDC and convert it to a radius
     TRandom3 rand;
     auto wire_info = geo_manager.get_wire_info(digit.did);
-
-    // std::cout<<__FILE__<<" "<<__LINE__<<std::endl;
-    // std::cout<<"wire length : "<<wire_info.length()<<"\n";
-    // std::cout<<"signal velocity  : "<<sand_reco::stt::v_signal_inwire<<"\n";
-    // std::cout<<"drift velocity  : "<<sand_reco::stt::v_drift<<"\n";
-    // std::cout<<"tdc : "<<digit.tdc<<"\n";
-    // std::cout<<"t0 : "<<digit.t0<<"\n";
-
+    
     double guess_wire_pmt_dist     = wire_info.length()/2.;
     double signal_propagation_time = guess_wire_pmt_dist/sand_reco::stt::v_signal_inwire;
     double t0                      = 1; // assume 1 ns
     return (digit.tdc - signal_propagation_time - t0)*sand_reco::stt::v_drift;
 }
 
-Line RecoUtils::GetLineFromDigit(const dg_tube& digit){
+Line RecoUtils::GetLineFromDigit(const dg_wire& digit){
     // get Line from fired wire 
     // x = dx * t + ax
     // y = dy * t + ay
@@ -121,7 +114,7 @@ Line RecoUtils::GetLineFromDigit(const dg_tube& digit){
     }
 }
 
-double RecoUtils::NLL(Helix& h,const std::vector<dg_tube>& digits)
+double RecoUtils::NLL(Helix& h,const std::vector<dg_wire>& digits)
 {   
     static int iter    = 0;
     double nll         = 0.;
@@ -139,9 +132,11 @@ double RecoUtils::NLL(Helix& h,const std::vector<dg_tube>& digits)
         
         double r_estimated = RecoUtils::GetMinImpactParameter(h,l);
         
-        double r_measured  = RecoUtils::GetExpectedRadiusFromDigit(digit);
+        // double r_measured  = RecoUtils::GetExpectedRadiusFromDigit(digit);
+        double r_true = digit.drift_time * sand_reco::stt::v_drift;
         
-        nll += (r_estimated - r_measured) * (r_estimated - r_measured) / (sigma * sigma);
+        // nll += (r_estimated - r_measured) * (r_estimated - r_measured) / (sigma * sigma);
+        nll += (r_estimated - r_true) * (r_estimated - r_true) / (sigma * sigma);
         
         digit_index++;
     }
@@ -165,7 +160,7 @@ double RecoUtils::FunctorNLL(const double* p)
     return nll;
 }
 
-const double* RecoUtils::InitHelixPars(const std::vector<dg_tube>& digits)
+const double* RecoUtils::InitHelixPars(const std::vector<dg_wire>& digits)
 {
     double* p;
     return p;
