@@ -69,6 +69,12 @@ target_link_libraries(Reconstruct Struct Utils SANDGeoManager)
 add_executable(ReconstructNLLmethod src/reconstructionNLLmethod.cpp)
 target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
 
+# ADDED TEMPORARY FOR TESTING OF THE METHOD ----
+# Creates ReconstructNLLmethod executable.
+add_executable(test_reconstructNLL tests/test_reconstructionNLL.cpp)
+target_link_libraries(test_reconstructNLL Struct Utils SANDRecoUtils)
+# ----
+
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)
 target_link_libraries(Analyze Struct Utils ROOT::EG)

@@ -40,7 +40,6 @@ void FillRecoInfos(RecoObject& reco_obj, const Helix& helix_initial_guess){
         TVector3 x0_reco                 = {fitted_pars[4],
                                             fitted_pars[5],
                                             fitted_pars[6],};
-        reco_obj.TMinuitFinalStatus      = minimizer_status;                                            
         reco_obj.reco_helix              = Helix(R_reco, dip_reco, Phi0_reco, h_reco, x0_reco);
         reco_obj.pt_reco                 = R_reco*0.3*0.6;
         
@@ -72,7 +71,6 @@ int main(int argc, char* argv[]){
     if(geo)
     {
         RecoUtils::InitWireInfos(geo);
-
     }else{
         std::cout<<"TGeoManager null \n";
         throw "";

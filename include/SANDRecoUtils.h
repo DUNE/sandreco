@@ -133,6 +133,22 @@ class Helix
             x0_   = {p[4],p[5],p[6]};
         }
 
+        void SetR(double arg){
+            R_ = arg;
+        }
+
+        void Setdip(double arg){
+            dip_ = arg;
+        }
+
+        void SetPhi0(double arg){
+            R_ = arg;
+        }
+
+        void Setx0(TVector3 arg){
+            x0_ = arg;
+        }
+
         void SetLowLim(double arg_low){
             low_lim_ = arg_low;
         }
@@ -307,18 +323,27 @@ const double* GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitS
 
 } // RecoUtils
 
+struct MinuitFitInfos
+{
+    int                         TMinuitFinalStatus; // 0 if converged, 4 if falied
+    int                         NIterations; // number of iterations to reach the minimum
+    double                      MinValue; // value of the func to minimize at its minimum
+    std::vector<double>         parameters_errors; // error associated to the par estimate
+};
+
 struct RecoObject
 {
     int                         traj_edep_index;
     std::vector<dg_wire>        fired_wires;
     Helix                       true_helix;
+    Helix                       helix_first_guess;
     Helix                       reco_helix;
     std::vector<double>         impact_par_from_TDC;
     std::vector<double>         impact_par_estimated;
     std::vector<TLorentzVector> trj_points; // from edepsim
     double                      pt_true;
     double                      pt_reco;
-    int                         TMinuitFinalStatus;
+    MinuitFitInfos              fit_infos;
 };
 
 struct EventReco
