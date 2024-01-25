@@ -20,6 +20,18 @@ TGeoManager* geo = nullptr;
 
 TG4Event* evEdep = nullptr;
 
+// SIMULATION SETTINGS ----------------------
+
+const bool INCLUDE_SIGNAL_PROPAGATION = true;
+
+const bool INCLUDE_HIT_TIME = false;
+
+const bool INCLUDE_TDC_SMEARING = false;
+
+const double TDC_SMEARING = 10; // ns
+
+// -------------------------------------------
+
 std::vector<double> SmearVariable(double mean, double sigma, int nof_points){
 
     TRandom3 r(0);
@@ -62,6 +74,7 @@ void ReadWireInfos(const std::string& fInput, std::vector<dg_wire>& wire_infos){
         wire.x = wire_values[1];
         wire.y = wire_values[2];
         wire.z = wire_values[3];
+        wire.wire_length = wire_values[4];
         wire.hor =  (wire_values[5]==0) ? 1 : 0;
         wire_infos.push_back(wire);
     }
@@ -75,21 +88,63 @@ void CreateDigitsFromHelix(Helix& h,
         - run over wires
         - set helix range
         - callRecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line)
-        - if it is < 8 mm 
+        - if it is < 5*sqrt(2) mm (is the half diagonal of a cell size of 10 mm)
+          and the helix point is inside SAND x range
             - fill dg_wire info with
             - add to event_wire_digits
     */
+
+   // scan all the wires TDC and select only the onces with the closest impact par
    for(auto& w : wire_infos){
+
     Line l = RecoUtils::GetLineFromDigit(w);
+
     h.SetHelixRangeFromDigit(w);
-    double impact_par = RecoUtils::GetMinImpactParameter(h,l);
-    if(impact_par<=8){
+
+    /* define point on the helix and on the line corresponding to the impact parameter
+       t_min is how much do I move from the wire center to get to the line point closest to the helix.
+       It has a sign.
+    */
+    double s_min, t_min;
+
+    bool HasMinimized = false;
+
+    double impact_par = RecoUtils::GetMinImpactParameter(h,l,s_min,t_min,HasMinimized);
+
+    if((impact_par <= 5*sqrt(2)) & (fabs(t_min) <= w.wire_length)){
+
         w.drift_time = impact_par / sand_reco::stt::v_drift;
-        // w.tdc = w.drift_time;
-        w.tdc = SmearVariable(w.drift_time, 10, 1)[0]; // mean, sigma, ;
+
+        w.tdc = w.drift_time;
+
+        if(INCLUDE_TDC_SMEARING)
+            w.tdc = SmearVariable(w.drift_time, TDC_SMEARING, 1)[0];
+        
+        if(INCLUDE_SIGNAL_PROPAGATION){
+            // ATTENCTION WE ARE ASSUMING t_min CALCULATE WRT TO WIRE CENTER
+            // CHECK GetMinImpactParameter
+            w.signal_time = (t_min + w.wire_length/2.) / sand_reco::stt::v_signal_inwire;
+            w.tdc += w.signal_time;
+        }
+
+        if(INCLUDE_HIT_TIME){
+            w.tdc += 0;
+        }
+
         fired_wires.push_back(w);
     }
    }
+}
+
+Helix GetHelixFirstGuess(const Helix& input_helix){
+    Helix first_guess(SmearVariable(input_helix.R(), 100, 1)[0], 
+                      SmearVariable(input_helix.dip(), 0.1, 1)[0], 
+                      input_helix.Phi0(), 
+                       1, 
+                      {SmearVariable(input_helix.x0().X(), 10, 1)[0],
+                       input_helix.x0().Y(),
+                       input_helix.x0().Z()});
+    return first_guess;
 }
 
 void FillTrueInfos(RecoObject& reco_obj, const Helix& true_helix){
@@ -255,152 +310,6 @@ double FunctorNLL(const double* p){
     return NLL(h, *RecoUtils::event_digits);
 }
 
-// double FunctorNLL_circle(const double* p){
-
-//     double R    = p[0];
-//     double Phi0 = p[1]; // fixed
-//     double y0 = p[2]; // fixed
-//     double z0 = p[3]; // fixed
-
-//     double yc = y0 - R * sin(Phi0);
-//     double zc = z0 - R * cos(Phi0);
-
-//     double nll         = 0.;
-//     const double sigma = 0.2; // 200 mu_m = 0.2 mm
-
-//     auto digits = *RecoUtils::event_digits;
-
-//     for(auto& digit : digits){
-//         if(digit.hor==1){ // horizontal wire
-//             double r_true = digit.drift_time * sand_reco::stt::v_drift;
-//             double dist2center = sqrt((zc - digit.z)*(zc - digit.z) + (yc - digit.y)*(yc - digit.y));
-//             double r_estimated = R - dist2center;
-//             nll += (r_estimated - r_true) * (r_estimated - r_true) / (sigma * sigma);
-//         }
-//     }
-//     return sqrt(nll)/digits.size();
-// }
-
-// double GetMinDist(const std::vector<double>& X,
-//                   const std::vector<double>& Z,
-//                   double x0,
-//                   double z0){
-//     double min_dist = 1e10;
-//     for (auto i = 0u; i < X.size(); i++)
-//     {
-//         auto dist = sqrt((X[i]-x0)*(X[i]-x0) + (Z[i]-z0)*(Z[i]-z0));
-//         if(dist < min_dist) min_dist = dist;
-//     }
-//     return min_dist;
-// }
-
-// double FunctorNLL_sin(const double* p){
-
-//     double R    = p[2]; // fixed
-//     double dip  = p[0]; 
-//     double Phi0 = p[3]; // fixed
-//     int hel     = p[4]; // fixed
-//     TVector3 x0 = {p[1],p[5],p[6]}; // (z0,y0) fixed
-
-//     Helix h(R, dip, Phi0, hel, x0);
-
-//     double nll         = 0.;
-//     const double sigma = 0.2; // 200 mu_m = 0.2 mm
-
-//     auto points = h.GetHelixPoints(); // here how be sure to include the closest point to wire?
-
-//     std::vector<double> X,Z;
-
-//     for(auto& p : points){
-//         X.push_back(p.X());
-//         Z.push_back(p.Z());
-//     }
-
-//     auto digits = *RecoUtils::event_digits;
-
-//     for(auto& digit : digits){
-//         if(digit.hor==0){
-//             double r_true = digit.drift_time * sand_reco::stt::v_drift;
-//             double r_estimated = GetMinDist(X, Z, digit.x, digit.z);
-//             nll += (r_estimated - r_true) * (r_estimated - r_true) / (sigma * sigma);
-//         }
-//     }
-//     return sqrt(nll)/digits.size();
-// }
-
-// const double* NLL_bending_plane(Helix& helix_initial_guess){
-    
-//     ROOT::Math::Functor functor(&FunctorNLL_circle, 4);
-    
-//     ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
-    
-//     minimizer->SetFunction(functor);
-
-//     minimizer->SetLimitedVariable(0,    "R",    helix_initial_guess.R(), 100,  100,     1e5);
-    
-//     minimizer->SetFixedVariable(1,    "Phi0",    helix_initial_guess.Phi0());
-//     minimizer->SetFixedVariable(2,    "x0_y",    helix_initial_guess.x0().Y());
-//     minimizer->SetFixedVariable(3,    "x0_z",    helix_initial_guess.x0().Z());
-    
-//     minimizer->Minimize();
-
-//     std::cout << "\n";
-//     std::cout << "circular fit results \n";
-//     minimizer->PrintResults();
-//     std::cout << "\n";
-    
-//     const double* pars = minimizer->X();
-
-//     helix_initial_guess.SetR(pars[0]);
-
-//     delete minimizer;
-
-//     return pars;
-// }
-
-// const double* NLL_longitudinal_plane(Helix& helix_initial_guess){
-
-//     ROOT::Math::Functor functor(&FunctorNLL_sin, 7);
-
-//     ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
-
-//     minimizer->SetFunction(functor);
-
-//     minimizer->SetLimitedVariable(0,    "dip",  helix_initial_guess.dip(), 0.01,  -1.6,  1.6);
-//     minimizer->SetLimitedVariable(1,    "x0_x", helix_initial_guess.x0().X(), 1,  -1800, 1800);
-    
-//     minimizer->SetFixedVariable(2,    "R",    helix_initial_guess.R());
-//     minimizer->SetFixedVariable(3,    "Phi0",    helix_initial_guess.Phi0());
-//     minimizer->SetFixedVariable(4,    "h",    helix_initial_guess.h());
-//     minimizer->SetFixedVariable(5,    "x0_y",    helix_initial_guess.x0().Y());
-//     minimizer->SetFixedVariable(6,    "x0_z",    helix_initial_guess.x0().Z());
-
-//     minimizer->Minimize();
-    
-//     std::cout << "\n";
-//     std::cout << "sin fit results \n";
-//     std::cout << "\n";;
-//     minimizer->PrintResults();
-
-//     const double* pars = minimizer->X();
-
-//     delete minimizer;
-
-//     helix_initial_guess.Setdip(pars[0]);
-//     helix_initial_guess.Setx0({pars[1],pars[5],pars[6]});
-
-//     return pars;
-// }
-
-
-// Helix GetRecoHelix(Helix& helix_initial_guess){
-
-//     const double* circular_fit_pars = NLL_bending_plane(helix_initial_guess); // R
-//     const double* linear_fit_pars = NLL_longitudinal_plane(helix_initial_guess); // dip, x0
-
-//     return helix_initial_guess;
-// }
-
 Helix GetRecoHelix(Helix& helix_initial_guess, 
                    MinuitFitInfos& fit_infos){
     
@@ -415,17 +324,22 @@ Helix GetRecoHelix(Helix& helix_initial_guess,
     minimizer->SetLimitedVariable(4,    "x0_x", helix_initial_guess.x0().X(), 1,  -1800, 1800);
     
     minimizer->SetFixedVariable(2,    "Phi0",    helix_initial_guess.Phi0());
-    minimizer->SetFixedVariable(3,    "h",    helix_initial_guess.h());
+    minimizer->SetFixedVariable(3,    "h",       helix_initial_guess.h());
     minimizer->SetFixedVariable(5,    "x0_y",    helix_initial_guess.x0().Y());
     minimizer->SetFixedVariable(6,    "x0_z",    helix_initial_guess.x0().Z());
 
     minimizer->Minimize();
-    minimizer->PrintResults();
     const double* pars = minimizer->X();
     const double* parsErrors = minimizer->Errors();
     fit_infos.TMinuitFinalStatus = minimizer->Status();
     fit_infos.NIterations = minimizer->NIterations();
     fit_infos.MinValue = minimizer->MinValue();
+    if(fit_infos.TMinuitFinalStatus>0){
+        minimizer->SetPrintLevel(4);
+        minimizer->PrintResults();
+        minimizer->ProvidesError();
+        throw "";
+    }
     
     for (auto i = 0u; i < minimizer->NDim(); i++)
         fit_infos.parameters_errors.push_back(parsErrors[i]);
@@ -441,11 +355,7 @@ Helix Reconstruct(MinuitFitInfos& fit_infos,
                   std::vector<dg_wire>& wire_infos,
                   std::vector<dg_wire>& fired_wires){
     
-    CreateDigitsFromHelix(test_helix, wire_infos, fired_wires);
-
     RecoUtils::event_digits = &fired_wires;
-
-    std::cout << "nof of fired wires : "<< fired_wires.size() <<"\n";
 
     auto reco_helix = GetRecoHelix(helix_first_guess, fit_infos);
 
@@ -459,66 +369,75 @@ Helix Reconstruct(MinuitFitInfos& fit_infos,
 
 }
 
-int main(int argc, char* argv[]){
-
-    TFile fEDep("/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/test_drift_edep.root", "READ");
-    
-    TTree* tEdep  = (TTree*)fEDep.Get("EDepSimEvents");
-
-    tEdep->SetBranchAddress("Event", &evEdep);
-
-    TFile fout("tests/test_101_reconstruct_NLLmethod.root", "RECREATE");
-
-    TTree tout("tReco", "tReco");
-
-    EventReco event_reco;
-
-    tout.Branch("event_reco", "EventReco", &event_reco);
-
-    // TCanvas *canvas = new TCanvas("c","c" , 1000, 800);
-
-    // canvas->Print("tests/test_helix_vs_reco_helix.pdf[");
-
-    std::string fWireInfo = "/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/wireinfo.txt";
-    
-    std::vector<dg_wire> wire_infos;
-    
-    ReadWireInfos(fWireInfo, wire_infos);
-
-    std::cout << "nof of wires : "<< wire_infos.size() <<"\n";
-
-    std::vector<double> R_test = {2*1e3};
-
-    // std::vector<double> R_first_guess = {10, 100, 200, 500, 600, 700, 800, 1000, 1500, 2000, 2500, 3000, 4000, 8000, 2*1e4};    
-    // for(auto i=0u; i < tEdep->GetEntries(); i++)
-    for(auto i=0u; i < 500; i++)
-    {
-        std::cout<< "event number : " << i <<"\n";
-        tEdep->GetEntry(i);
-        // tEdep->GetEntry(6);
-
-        auto muon_trj = evEdep->Trajectories[0];
-
-        if(muon_trj.GetPDGCode()!=13) continue;
-
-        Helix test_helix(muon_trj);
-
-        Helix helix_first_guess(SmearVariable(test_helix.R(), 100, 1)[0], 
-                                SmearVariable(test_helix.dip(), 0.1, 1)[0], 
-                                test_helix.Phi0(), 
-                                1, 
-                                {SmearVariable(test_helix.x0().X(), 10, 1)[0],
-                                test_helix.x0().Y(),
-                                test_helix.x0().Z()});
-
+void PrintEventInfos(int i,
+                     const Helix& test_helix,
+                     const Helix& helix_first_guess,
+                     const std::vector<dg_wire>& fired_wires){
+        std::cout<<"\n";
+        std::cout<< "event number : " << i <<", nof of fired wires : "<<fired_wires.size()<<"\n";
         std::cout<<"\n";
         std::cout<<"test helix : \n";
         test_helix.PrintHelixPars();
         std::cout<<"\n";
         std::cout<<"first guess : \n";
         helix_first_guess.PrintHelixPars();
+        std::cout<<"\n";
+        
+}
+
+int main(int argc, char* argv[]){
+
+    // read edepsim input to create realistic muon tracks
+    TFile fEDep("/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/test_drift_edep.root", "READ");
+    
+    // file output to store reconstructed Helix
+    TFile fout("tests/test_101_reconstruct_NLLmethod.root", "RECREATE");
+
+    // text file with wire infos extrapolated from digitization
+    std::string fWireInfo = "/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/wireinfo.txt";
+    
+    TTree* tEdep  = (TTree*)fEDep.Get("EDepSimEvents");
+
+    TTree tout("tReco", "tReco");
+
+    EventReco event_reco;
+    
+    tEdep->SetBranchAddress("Event", &evEdep);
+
+    tout.Branch("event_reco", "EventReco", &event_reco);
+
+    // TCanvas *canvas = new TCanvas("c","c" , 1000, 800);
+
+    // canvas->Print("tests/test_helix_vs_reco_helix.pdf[");
+    
+    std::vector<dg_wire> wire_infos;
+    
+    ReadWireInfos(fWireInfo, wire_infos);
+
+    // for(auto i=0u; i < tEdep->GetEntries(); i++)
+    for(auto i=0u; i < 20; i++)
+    {
+        tEdep->GetEntry(i);
+
+        auto muon_trj = evEdep->Trajectories[0];
+
+        if(muon_trj.GetPDGCode()!=13) continue;
+
+        // create the ideal helix (no E loss nor MCS) from initial muon momentum and direction
+        Helix test_helix(muon_trj);
+
+        Helix helix_first_guess = GetHelixFirstGuess(test_helix);
 
         std::vector<dg_wire> fired_wires;
+
+        // define fired wires from the muon helix
+        CreateDigitsFromHelix(test_helix, wire_infos, fired_wires);
+
+        if(fired_wires.size()<2){
+            continue;
+        }else{
+            PrintEventInfos(i, test_helix, helix_first_guess, fired_wires);
+        }
 
         int TMinuitStatus = -1;
 

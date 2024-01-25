@@ -231,10 +231,15 @@ class Line : public SANDWireInfo
             up_lim_ = arg_up;
         }
 
+        void SetLineLength(double l){
+            SetLowLim(-l/2.);
+            SetUpLim(l/2.);
+        }
+
         void SetLineRangeFromDigit(const dg_wire& digit){
             auto wire = geo_manager.get_wire_info(digit.did);
-            SetLowLim(-wire.length()/2. * 1.01); // 1.01 to be not too stringent on the limits
-            SetUpLim(wire.length()/2. * 1.01);
+            SetLowLim(-wire.length()/2.);
+            SetUpLim(wire.length()/2.);
         }
 
         double x_l(double t) const {
@@ -260,11 +265,25 @@ class Line : public SANDWireInfo
         // derivatives
 
         TVector3 GetDirectionVector() const{
-            return {dx_over_dt(), dy_over_dt(), dz_over_dt()};
+            // return the normalized wire direction vector
+            TVector3 v_parallel2wire = {dx_over_dt(), dy_over_dt(), dz_over_dt()};
+            return v_parallel2wire * (1./v_parallel2wire.Mag());
         }
 
         TVector3 GetLinePointX0() const{
             return GetPointAt(0);
+        }
+
+        TVector3 GetLineUpperLimit(){
+            return GetPointAt(up_lim_);
+        }
+
+        TVector3 GetLineUpperLimit() const{
+            return GetPointAt(low_lim_);
+        }
+
+        double GetLineLength() const{
+            return (GetPointAt(up_lim_) - GetPointAt(low_lim_)).Mag();
         }
 
         double dx() const {return dx_;};
@@ -297,7 +316,7 @@ extern        std::vector<dg_wire>* event_digits;
 
 void          InitWireInfos(TGeoManager* g);
 
-double        GetDistHelix2Line(const Helix& helix, double s, const Line& line);
+double        GetDistHelix2Line(const Helix& helix, double s, const Line& line, double& t);
 
 double        GetDistHelix2LineDerivative(const Helix& helix, double s, const Line& line); // may be can be remover
 

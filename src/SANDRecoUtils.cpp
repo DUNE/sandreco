@@ -10,14 +10,15 @@ void RecoUtils::InitWireInfos(TGeoManager* g){
     geo_manager.init(g);
 }
 
-double RecoUtils::GetDistHelix2Line(const Helix& helix, double s, const Line& line){
+double RecoUtils::GetDistHelix2Line(const Helix& helix, double s, const Line& line, double& t){
     // return the distance between a point on the helix at s
-    // and a give line
+    // and a give line. The projection of the helix point on the line occurs at t
 
     auto point_h = helix.GetPointAt(s);
     auto point_l = line.GetLinePointX0();
     auto hl      = point_h - point_l;
     auto v       = line.GetDirectionVector();
+    t = hl.Dot(v)/(v.Mag()*v.Mag());
     
     return (hl.Cross(v)).Mag()/v.Mag();
 }
@@ -62,15 +63,24 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line, do
     {
         auto s_i = helix.LowLim() + s_step * i;
 
-        auto dist2wire = RecoUtils::GetDistHelix2Line(helix, s_i, line);
+        double t_i = -999;
 
-        // std::cout << "dist2wire : " << dist2wire << ", s_i : " << s_i << "\n";
+        auto dist2wire = RecoUtils::GetDistHelix2Line(helix, s_i, line, t_i);
+        // if(dist2wire < impact_parameter)
+        //     std::cout << "t_i : "                     << fabs(t_i) 
+        //               << ", "                         << ((line.GetPointAt(t_i)-line.GetLinePointX0()).Mag())
+        //               << ", line.GetLineLength()/2. " << line.GetLineLength()/2.
+        //               << ", "                         << (fabs(t_i)<=line.GetLineLength()/2.)
+        //               << ", "                         << ((dist2wire < impact_parameter)&&((line.GetPointAt(t_i)-line.GetLinePointX0()).Mag()))
+        //               <<"\n";
     
-        if(dist2wire < impact_parameter)
+        if((dist2wire < impact_parameter) && 
+           ((line.GetPointAt(t_i)-line.GetLinePointX0()).Mag()<=line.GetLineLength()/2.) // is within SAND x range
+           )
         {
             impact_parameter = dist2wire;
             s_min = s_i;
-            // what about t_min ?
+            t_min = t_i;
         }
     }
     if(s_min!=-999) HasMinimized=1;
@@ -107,9 +117,11 @@ Line RecoUtils::GetLineFromDigit(const dg_wire& digit){
         // y = y0
         // z = z0
         Line l(1., 0., digit.x, digit.y, digit.z);
+        l.SetLineLength(digit.wire_length);
         return l;
     }else{// vertical
         Line l(0., 1., digit.x, digit.y, digit.z);
+        l.SetLineLength(digit.wire_length);
         return l;
     }
 }
