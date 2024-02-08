@@ -20,15 +20,31 @@ TGeoManager* geo = nullptr;
 
 TG4Event* evEdep = nullptr;
 
+dg_wire* first_fired_wire = nullptr;
+
 // SIMULATION SETTINGS ----------------------
 
 const bool INCLUDE_SIGNAL_PROPAGATION = true;
 
-const bool INCLUDE_HIT_TIME = false;
+const bool INCLUDE_HIT_TIME = true;
 
 const bool INCLUDE_TDC_SMEARING = false;
 
+const bool _DEBUG_ = false;
+
+// CONSTANS
+
+const double SAND_CENTER_X = 0;
+
+const double SAND_CENTER_Y = -2384.73;
+
+const double SAND_CENTER_Z = 23910;
+
 const double TDC_SMEARING = 10; // ns
+
+const double NEUTRINO_INTERACTION_TIME = 1; // ns
+
+const double LIGHT_VELOCITY = 299.792458; // mm/ns
 
 // -------------------------------------------
 
@@ -42,15 +58,6 @@ std::vector<double> SmearVariable(double mean, double sigma, int nof_points){
         smeared_points.push_back(r.Gaus(mean, sigma));
     
     return smeared_points;
-}
-
-std::vector<double> npArange(double x_min,
-                             double x_max,
-                             int n_points){
-    std::vector<double> points;
-    double interval = x_max / (n_points - 1);
-    for (int i = 0; i < n_points; i++) points.push_back(i*interval);
-    return points;
 }
 
 void ReadWireInfos(const std::string& fInput, std::vector<dg_wire>& wire_infos){
@@ -81,6 +88,23 @@ void ReadWireInfos(const std::string& fInput, std::vector<dg_wire>& wire_infos){
     stream.close();
 }
 
+// double angleWithCenter(const dg_wire &a) {
+//     return std::atan2(a.y - SAND_CENTER_Y, a.z - SAND_CENTER_Z);
+// }
+
+// void SortWires(std::vector<dg_wire>& wires){
+//     // first wire is the most upstream (the lowest z)
+//     std::sort(wire_infos.begin(), wire_infos.end(), [](const dg_wire &a, const dg_wire &b) {
+//             return a.z < b.z;});
+    
+//     dg_wire firstWire = wire_infos.front();
+
+//     // following wires are sorted by clockwise criterion
+//     std::sort(wire_infos.begin() + 1, wire_infos.end(), [&firstWire](const dg_wire &a, const dg_wire &b) {
+//         return angleWithCenter(a) < angleWithCenter(b);
+//     });
+// }
+
 void CreateDigitsFromHelix(Helix& h, 
                            std::vector<dg_wire>& wire_infos, 
                            std::vector<dg_wire>& fired_wires){
@@ -93,7 +117,10 @@ void CreateDigitsFromHelix(Helix& h,
             - fill dg_wire info with
             - add to event_wire_digits
     */
-
+    // usefull in case t_hit included in TDC
+    double hit_timer = NEUTRINO_INTERACTION_TIME;
+    double last_s_min = 0.;
+    //
    // scan all the wires TDC and select only the onces with the closest impact par
    for(auto& w : wire_infos){
 
@@ -109,7 +136,7 @@ void CreateDigitsFromHelix(Helix& h,
 
     bool HasMinimized = false;
 
-    double impact_par = RecoUtils::GetMinImpactParameter(h,l,s_min,t_min,HasMinimized);
+    double impact_par = RecoUtils::GetMinImpactParameter(h, l, s_min, t_min, HasMinimized);
 
     if((impact_par <= 5*sqrt(2)) & (fabs(t_min) <= w.wire_length)){
 
@@ -128,12 +155,18 @@ void CreateDigitsFromHelix(Helix& h,
         }
 
         if(INCLUDE_HIT_TIME){
-            w.tdc += 0;
+            if(last_s_min!=0) // for first fired hit hit_timer=NEUTRINO_INTERACTION_TIME
+                hit_timer += (h.GetPointAt(s_min) - h.GetPointAt(last_s_min)).Mag() / LIGHT_VELOCITY;
+            w.t_hit = hit_timer;
+            w.tdc += w.t_hit;
+            std::cout << "hit_timer : " << hit_timer << " ns \n";
+            last_s_min = s_min;
         }
-
         fired_wires.push_back(w);
     }
    }
+   // oreder the wire hit by z and give the a hit time
+//    SortWires(fired_wires);
 }
 
 Helix GetHelixFirstGuess(const Helix& input_helix){
@@ -276,24 +309,52 @@ void Plot(TCanvas *canvas,
 
 }
 
+double TDC2ImpactPar(const dg_wire& wire){
+    
+    double assumed_signal_propagation = 0.;
+    static double assumed_hit_time = 0.;
+    static dg_wire previous_wire = *first_fired_wire;
+
+    if(&wire == first_fired_wire){ // if a new helix is being tested, reset t_hit timer
+        assumed_hit_time = NEUTRINO_INTERACTION_TIME;
+        previous_wire = *first_fired_wire;}
+
+    if(INCLUDE_SIGNAL_PROPAGATION) 
+        assumed_signal_propagation = (wire.wire_length/2.) / sand_reco::stt::v_signal_inwire;
+
+    if(INCLUDE_HIT_TIME)
+        assumed_hit_time += fabs(wire.z - previous_wire.z) / LIGHT_VELOCITY;
+    
+    std::cout
+            //  << "previous_wire.t_hit: "<<previous_wire.t_hit
+             << " assumed_hit_time: "<<assumed_hit_time
+             << " true t_hit: "<<wire.t_hit<<"\n";
+    previous_wire = wire;
+    return (wire.tdc - assumed_signal_propagation - assumed_hit_time) * sand_reco::stt::v_drift;
+}
+
 double NLL(Helix& h,
            std::vector<dg_wire>& digits){
     
-    static int iter    = 0;
+    static int calls   = 0;
     double nll         = 0.;
     const double sigma = 0.2; // 200 mu_m = 0.2 mm
-    int digit_index    = 0;
-
+    std::cout << "call number : "<<calls<<"\n";
     for (auto& digit : digits)
     {
         Line l = RecoUtils::GetLineFromDigit(digit);
+        
         h.SetHelixRangeFromDigit(digit);
+        
+        // r_estimated = impact parameter estimated as distance helix - wire
         double r_estimated = RecoUtils::GetMinImpactParameter(h,l);
-        double r_true = digit.tdc * sand_reco::stt::v_drift;
-        nll += (r_estimated - r_true) * (r_estimated - r_true) / (sigma * sigma);
-        digit_index++;
+
+        // r_observed = impact parameter from the observed tdc
+        double r_observed = TDC2ImpactPar(digit);
+        
+        nll += (r_estimated - r_observed) * (r_estimated - r_observed) / (sigma * sigma);
     }
-    iter ++;
+    calls ++;
     return sqrt(nll)/digits.size();
 }
 
@@ -311,7 +372,8 @@ double FunctorNLL(const double* p){
 }
 
 Helix GetRecoHelix(Helix& helix_initial_guess, 
-                   MinuitFitInfos& fit_infos){
+                   MinuitFitInfos& fit_infos,
+                   int FitStrategy = 1){
     
     ROOT::Math::Functor functor(&FunctorNLL, 7);
 
@@ -328,22 +390,47 @@ Helix GetRecoHelix(Helix& helix_initial_guess,
     minimizer->SetFixedVariable(5,    "x0_y",    helix_initial_guess.x0().Y());
     minimizer->SetFixedVariable(6,    "x0_z",    helix_initial_guess.x0().Z());
 
+    // minimization settings
+    if(_DEBUG_) minimizer->SetPrintLevel(4);
+
+    if(FitStrategy==1){
+    }else{
+        // relax default tolerance
+        minimizer->SetTolerance(minimizer->Tolerance()*10);
+        // change strategy
+        minimizer->SetStrategy(2);
+        std::cout<< "------------------------------\n";
+        std::cout<< "setting fitting strategy to 2 \n";
+    }
+
+    // start minimization
     minimizer->Minimize();
+    
+    // retrieve result of the minimization and errors
     const double* pars = minimizer->X();
     const double* parsErrors = minimizer->Errors();
+    
+    // fil output object fit_infos
     fit_infos.TMinuitFinalStatus = minimizer->Status();
     fit_infos.NIterations = minimizer->NIterations();
     fit_infos.MinValue = minimizer->MinValue();
-    if(fit_infos.TMinuitFinalStatus>0){
-        minimizer->SetPrintLevel(4);
-        minimizer->PrintResults();
-        minimizer->ProvidesError();
-        throw "";
+
+    // print results of the minimization
+    minimizer->PrintResults();
+    
+    if(fit_infos.TMinuitFinalStatus==4){ // failed fit
+        if(minimizer->Strategy()==2){
+            std::cout << "failed both with stratefy 1 and 2 \n";
+        }else{
+            // try to fit changing fit strategy
+            GetRecoHelix(helix_initial_guess, fit_infos, 2);
+        }
     }
     
     for (auto i = 0u; i < minimizer->NDim(); i++)
         fit_infos.parameters_errors.push_back(parsErrors[i]);
 
+    // create reconstructed helix from fitted parameters
     Helix reco_helix(pars[0], pars[1], pars[2], pars[3], {pars[4], pars[5], pars[6]});
 
     return reco_helix;
@@ -415,8 +502,10 @@ int main(int argc, char* argv[]){
     ReadWireInfos(fWireInfo, wire_infos);
 
     // for(auto i=0u; i < tEdep->GetEntries(); i++)
-    for(auto i=0u; i < 20; i++)
+    for(auto i=0u; i < 2; i++)
     {
+        // if(i!=78) continue;
+        
         tEdep->GetEntry(i);
 
         auto muon_trj = evEdep->Trajectories[0];
@@ -425,7 +514,7 @@ int main(int argc, char* argv[]){
 
         // create the ideal helix (no E loss nor MCS) from initial muon momentum and direction
         Helix test_helix(muon_trj);
-
+        
         Helix helix_first_guess = GetHelixFirstGuess(test_helix);
 
         std::vector<dg_wire> fired_wires;
@@ -433,7 +522,14 @@ int main(int argc, char* argv[]){
         // define fired wires from the muon helix
         CreateDigitsFromHelix(test_helix, wire_infos, fired_wires);
 
-        if(fired_wires.size()<2){
+        // // sort fired wires by z coordinate
+        // std::sort(fired_wires.begin(), fired_wires.end(), [](const dg_wire &a, const dg_wire &b) {
+        // return a.z < b.z;
+        // });
+
+        first_fired_wire = &fired_wires.front();
+
+        if(fired_wires.size()<3){ // at least 4 hits required
             continue;
         }else{
             PrintEventInfos(i, test_helix, helix_first_guess, fired_wires);
