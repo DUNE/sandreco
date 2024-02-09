@@ -24,13 +24,13 @@ dg_wire* first_fired_wire = nullptr;
 
 // SIMULATION SETTINGS ----------------------
 
-const bool INCLUDE_SIGNAL_PROPAGATION = true;
+bool INCLUDE_SIGNAL_PROPAGATION = false;
 
-const bool INCLUDE_HIT_TIME = true;
+bool INCLUDE_HIT_TIME = false;
 
-const bool INCLUDE_TDC_SMEARING = false;
+bool INCLUDE_TDC_SMEARING = false;
 
-const bool _DEBUG_ = false;
+bool _DEBUG_ = false;
 
 // CONSTANS
 
@@ -60,7 +60,7 @@ std::vector<double> SmearVariable(double mean, double sigma, int nof_points){
     return smeared_points;
 }
 
-void ReadWireInfos(const std::string& fInput, std::vector<dg_wire>& wire_infos){
+void ReadWireInfos(const std::string fInput, std::vector<dg_wire>& wire_infos){
     std::ifstream stream(fInput);
     std::string line;
     std::string wire_value;
@@ -159,7 +159,6 @@ void CreateDigitsFromHelix(Helix& h,
                 hit_timer += (h.GetPointAt(s_min) - h.GetPointAt(last_s_min)).Mag() / LIGHT_VELOCITY;
             w.t_hit = hit_timer;
             w.tdc += w.t_hit;
-            std::cout << "hit_timer : " << hit_timer << " ns \n";
             last_s_min = s_min;
         }
         fired_wires.push_back(w);
@@ -325,10 +324,9 @@ double TDC2ImpactPar(const dg_wire& wire){
     if(INCLUDE_HIT_TIME)
         assumed_hit_time += fabs(wire.z - previous_wire.z) / LIGHT_VELOCITY;
     
-    std::cout
-            //  << "previous_wire.t_hit: "<<previous_wire.t_hit
-             << " assumed_hit_time: "<<assumed_hit_time
-             << " true t_hit: "<<wire.t_hit<<"\n";
+    // std::cout
+    //          << " assumed_hit_time: "<<assumed_hit_time
+    //          << " true t_hit: "<<wire.t_hit<<"\n";
     previous_wire = wire;
     return (wire.tdc - assumed_signal_propagation - assumed_hit_time) * sand_reco::stt::v_drift;
 }
@@ -339,7 +337,6 @@ double NLL(Helix& h,
     static int calls   = 0;
     double nll         = 0.;
     const double sigma = 0.2; // 200 mu_m = 0.2 mm
-    std::cout << "call number : "<<calls<<"\n";
     for (auto& digit : digits)
     {
         Line l = RecoUtils::GetLineFromDigit(digit);
@@ -472,40 +469,123 @@ void PrintEventInfos(int i,
         
 }
 
+void help_input(){
+    std::cout << "./buil/bin/test_ReconstructNLLmethod -edep <EDep file> -wireinfo <WireInfo file> -o <fOuptut.root>"
+    << "[signal_propagation] [hit_time] [debug] \n";
+    std::cout << "<WireInfo file>      : see tests/wireinfo.txt\n";
+    std::cout << "--signal_propagation : include signal_propagation in digitization\n";
+    std::cout << "--hit_time           : include hit time in digitization\n";
+    std::cout << "--debug              : use higher verbosity for TMinuit\n";
+}
+
 int main(int argc, char* argv[]){
 
-    // read edepsim input to create realistic muon tracks
-    TFile fEDep("/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/test_drift_edep.root", "READ");
-    
-    // file output to store reconstructed Helix
-    TFile fout("tests/test_101_reconstruct_NLLmethod.root", "RECREATE");
+    if (argc < 3 || argc > 9) {
+        help_input();
+    return -1;
+    }
+    /* 
+       provide edepsim input to create realistic muon tracks
+       for testing used file "/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/test_drift_edep.root"
+    */
+    const char* fEDepInput;
+    // for testing used file "tests/test_101_reconstruct_NLLmethod.root"
+    const char* fOutput;
+    /* 
+       look up table previously created as csv file that contains
+       all info about wires in the geometry
+       for testing used file  "/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/wireinfo.txt"
+    */
+    const char* fWireInfo;
 
-    // text file with wire infos extrapolated from digitization
-    std::string fWireInfo = "/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/wireinfo.txt";
+    int index = 1;
+
+    while (index < argc)
+    {
+        TString opt = argv[index];
+        if(opt.CompareTo("-edep")==0){
+            try
+            {
+                fEDepInput = argv[++index];
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+                return 1;
+            }
+        }else if(opt.CompareTo("-wireinfo")==0){
+            try
+            {
+                fWireInfo = argv[++index];
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+                return 1;
+            }
+        }else if(opt.CompareTo("-o")==0){
+            try
+            {
+                fOutput = argv[++index];
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+                return 1;
+            }
+        }else if(opt.CompareTo("--signal_propagation")==0){
+            INCLUDE_SIGNAL_PROPAGATION = true;
+        }else if(opt.CompareTo("--hit_time")==0){
+            INCLUDE_HIT_TIME = true;
+        }else if(opt.CompareTo("--debug")==0){
+            _DEBUG_ = true;
+        }else{
+            auto ui = argv[++index];
+            std::cout<<"unknown input "<< ui << "\n";
+            return 1; 
+        }
+        index++;
+    }
+    
+
+    // print options
+    std::cout << "\n";
+    std::cout << "edep file       " << fEDepInput << std::endl;
+    std::cout << "wire_info file  " << fWireInfo << std::endl;
+    std::cout << "Output file     " << fOutput << std::endl;
+    std::cout << "Signal propagation..." << (INCLUDE_SIGNAL_PROPAGATION ? "enabled" : "disabled") << std::endl;
+    std::cout << "Hit time............." << (INCLUDE_HIT_TIME ? "enabled" : "disabled") << std::endl;
+    std::cout << "Debug mode..........." << (_DEBUG_ ? "enabled" : "disabled") << std::endl;
+    std::cout << "\n";
+    
+    TFile fEDep(fEDepInput, "READ");
+    
+    TFile fout(fOutput, "RECREATE");
     
     TTree* tEdep  = (TTree*)fEDep.Get("EDepSimEvents");
-
+    
     TTree tout("tReco", "tReco");
-
+    
     EventReco event_reco;
     
     tEdep->SetBranchAddress("Event", &evEdep);
-
+    
     tout.Branch("event_reco", "EventReco", &event_reco);
-
     // TCanvas *canvas = new TCanvas("c","c" , 1000, 800);
 
     // canvas->Print("tests/test_helix_vs_reco_helix.pdf[");
     
     std::vector<dg_wire> wire_infos;
-    
-    ReadWireInfos(fWireInfo, wire_infos);
+
+    std::string ff="/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/wireinfo.txt";
+
+    // ReadWireInfos(fWireInfo, wire_infos);
+    ReadWireInfos(ff, wire_infos);
 
     // for(auto i=0u; i < tEdep->GetEntries(); i++)
-    for(auto i=0u; i < 2; i++)
+    for(auto i=0u; i < 200; i++)
     {
         // if(i!=78) continue;
-        
         tEdep->GetEntry(i);
 
         auto muon_trj = evEdep->Trajectories[0];
