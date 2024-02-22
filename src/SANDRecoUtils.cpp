@@ -37,6 +37,95 @@ double RecoUtils::GetDistHelix2LineDerivative(const Helix& helix, double s, cons
     return hl_cross_v.Dot(dh_over_ds.Cross(v));
 }
 
+dg_wire  RecoUtils::Copy(const dg_wire& wire){
+    dg_wire copy;
+    copy.det = wire.did;
+    copy.did = wire.did;
+    copy.x = wire.x;
+    copy.y = wire.y;
+    copy.z = wire.z;
+    copy.t0 = wire.t0;
+    copy.de = wire.de;
+    copy.adc = wire.adc;
+    copy.tdc = wire.tdc;
+    copy.t0 = wire.t0;
+    copy.hor = wire.hor;
+    copy.hindex = wire.hindex;
+    copy.drift_time = wire.drift_time;
+    copy.signal_time = wire.signal_time;
+    copy.t_hit = wire.t_hit;
+    copy.wire_length = wire.wire_length;
+    return copy; 
+}
+
+double RecoUtils::GetSegmentSegmentDistance(const Line& l1, const Line& l2, 
+                                      double& closest2line2, double& closest2line1){
+    /*
+        Return the distance between to lines defined in a given range 
+        = distance between two segments
+    */                                        
+    auto d = GetLineLineDistance(l1, l2, closest2line2, closest2line1);
+    double seg_closest2line1, seg_closest2line2;
+    
+    // point on l1 closest to line l2 is outside l1 range
+    if(!l1.IsInLineLimits(closest2line2)){
+        // closest point is either up or low lim
+        auto d_up  = (l1.GetLineUpperLimit() - l2.GetPointAt(closest2line1)).Mag();
+        auto d_low = (l1.GetLineLowerLimit() - l2.GetPointAt(closest2line1)).Mag();
+        seg_closest2line2 = (d_up < d_low) ? l1.UpLim() : l1.LowLim();
+    }else{
+        seg_closest2line2 = closest2line2;
+    }
+
+    // point on l2 closest to line l1 is outside l2 range
+    if(!l2.IsInLineLimits(closest2line1)){
+        // closest point is either up or low lim
+        auto d_up  = (l2.GetLineUpperLimit() - l1.GetPointAt(closest2line2)).Mag();
+        auto d_low = (l2.GetLineLowerLimit() - l1.GetPointAt(closest2line2)).Mag();
+        seg_closest2line1 = (d_up < d_low) ? l2.UpLim() : l2.LowLim();
+    }else{
+        seg_closest2line1 = closest2line1;
+    }
+    
+    d = (l1.GetPointAt(seg_closest2line2) - l2.GetPointAt(seg_closest2line1)).Mag();
+    
+    closest2line1 = seg_closest2line1;
+    closest2line2 = seg_closest2line2;
+    
+    return d;
+}
+
+double RecoUtils::GetLineLineDistance(const Line& l1, const Line& l2, 
+                                      double& closest2line2, double& closest2line1){
+    /*
+        Return the (shortest) distance between 2 lines l1 and l2 and 
+        fill the values closest2line2 and closest2line1:
+        - closest2line2 : is the double that gives the point on the line 1
+                          closest to the line 2
+        - closest2line1 : is the double that gives the point on the line 2
+                          closest to the line 1
+        Reference : https://math.stackexchange.com/questions/2213165/find-shortest-distance-between-lines-in-3d                          
+    */
+
+   // define direction of the line that connects the 2 lines
+   auto e1 = l1.GetDirectionVector();
+   auto e2 = l2.GetDirectionVector(); 
+   auto n = e1.Cross(e2);
+//    n *= 1./n.Mag();
+
+   // define vector connecting the 2 lines
+   auto l21 = l2.GetLinePointX0() - l1.GetLinePointX0();
+
+   // point on l1 closest to l2
+   closest2line2 = (e2.Cross(n)).Dot(l21)/(n.Dot(n));
+   
+   // point on l2 closest to l1
+   closest2line1 = (e1.Cross(n)).Dot(l21)/(n.Dot(n));
+
+   return (l1.GetPointAt(closest2line2) - l2.GetPointAt(closest2line1)).Mag();
+
+}
+
 double RecoUtils::GetImpactParameter(const Helix& helix, const Line& line, double s, double t){
 
     TVector3 helix_point = helix.GetPointAt(s);
@@ -113,14 +202,18 @@ Line RecoUtils::GetLineFromDigit(const dg_wire& digit){
     if(digit.hor==true)
     {
         // horizontal == line along x axis
-        // x = 
+        // x = t + x0
         // y = y0
         // z = z0
-        Line l(1., 0., digit.x, digit.y, digit.z);
+        Line l(1., 0., 0., digit.x, digit.y, digit.z);
         l.SetLineLength(digit.wire_length);
         return l;
-    }else{// vertical
-        Line l(0., 1., digit.x, digit.y, digit.z);
+    }else{
+        // vertical == line along y axis
+        // x = x0
+        // y = t + y0
+        // z = z0
+        Line l(0., 1., 0., digit.x, digit.y, digit.z);
         l.SetLineLength(digit.wire_length);
         return l;
     }

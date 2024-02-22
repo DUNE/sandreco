@@ -203,24 +203,44 @@ class Helix
 class Line : public SANDWireInfo
 {
     public:
-        Line(double arg_dx, double arg_dy, double arg_ax, double arg_ay, double arg_z0, double low_lim = -999., double up_lim = -999.) : 
-                    dx_(arg_dx), dy_(arg_dy), ax_(arg_ax), ay_(arg_ay), z0_(arg_z0), low_lim_(low_lim), up_lim_(up_lim){}
-
         // (dx,dy,dz) = vector parallel to wire
         // x = dx * t + ax
         // y = dy * t + ay
-        // z = z0
-        // a,b : line intercept
+        // z = dz * t + az
+        // ax,ay,az : line intercepts
 
         // optional : low_lim_, up_lim_
         // usefull as we are interest in a portion of the line defined by the wire length
+        
+        Line(double arg_dx, double arg_dy, double arg_dz, double arg_ax, double arg_ay, double arg_az, double low_lim = -1e6, double up_lim = 1e6) : 
+                    dx_(arg_dx), dy_(arg_dy), dz_(arg_dz), ax_(arg_ax), ay_(arg_ay), az_(arg_az), low_lim_(low_lim), up_lim_(up_lim){}
+
+        Line(const TG4HitSegment& hit){
+            // define a line from hit that lies on it
+            TVector3 hit_direction = (hit.GetStop() - hit.GetStart()).Vect();
+            TVector3 middle_point = ((hit.GetStop() + hit.GetStart())*0.5).Vect();
+            double hit_length = (hit.GetStop() - hit.GetStart()).Vect().Mag();
+
+            // X0 of the line is the hit middle point
+            dx_ = hit_direction.X();
+            dy_ = hit_direction.Y();
+            dz_ = hit_direction.Z();
+
+            ax_ = middle_point.X();
+            ay_ = middle_point.Y();
+            az_ = middle_point.Z();
+
+            up_lim_ = 0.5;
+            low_lim_ = - 0.5; 
+        }
 
         void SetWireLineParam(double* p){
             dx_ = p[0];
             dy_ = p[1];
-            ax_ = p[2];
-            ay_ = p[3];
-            z0_ = p[4];
+            dz_ = p[2];
+            ax_ = p[3];
+            ay_ = p[4];
+            az_ = p[5];
         }
 
         void SetLowLim(double arg_low){
@@ -248,8 +268,8 @@ class Line : public SANDWireInfo
         double y_l(double t) const {
             return dy_ * t + ay_;
         }
-        double z_l() const {
-            return z0_;
+        double z_l(double t) const {
+            return dz_ * t + az_;
         }
 
         // first derivatives
@@ -260,25 +280,24 @@ class Line : public SANDWireInfo
             return dy_;
         }
         double dz_over_dt() const {
-            return 0.;
+            return dz_;
         }
         // derivatives
 
         TVector3 GetDirectionVector() const{
-            // return the normalized wire direction vector
-            TVector3 v_parallel2wire = {dx_over_dt(), dy_over_dt(), dz_over_dt()};
-            return v_parallel2wire * (1./v_parallel2wire.Mag());
+            // return the wire direction vector
+            return {dx_over_dt(), dy_over_dt(), dz_over_dt()};
         }
 
         TVector3 GetLinePointX0() const{
             return GetPointAt(0);
         }
 
-        TVector3 GetLineUpperLimit(){
+        TVector3 GetLineUpperLimit() const{
             return GetPointAt(up_lim_);
         }
 
-        TVector3 GetLineUpperLimit() const{
+        TVector3 GetLineLowerLimit() const{
             return GetPointAt(low_lim_);
         }
 
@@ -286,24 +305,47 @@ class Line : public SANDWireInfo
             return (GetPointAt(up_lim_) - GetPointAt(low_lim_)).Mag();
         }
 
+        bool IsInLineLimits(double t) const{
+            /*
+            find if t is a point on the line
+            between line [low_lim, up_lim]
+            */
+           double middle = (up_lim_ + low_lim_) * 0.5;
+           double delta = (up_lim_ - low_lim_) * 0.5;
+           return (fabs(t - middle) <= delta);
+        }
+
+        void PrintLineInfos(){
+            std::cout << "line X0 : (" << ax() <<
+                                   ", "<< ay() <<
+                                   ", "<< az() <<")\n";
+            std::cout << "line direction : (" << dx() <<
+                                   ", "<< dy() <<
+                                   ", "<< dz() <<")\n";
+            std::cout << "line limits t : (" << LowLim() 
+                                      << ", "<< UpLim() <<")\n";                                 
+        }
+
         double dx() const {return dx_;};
         double dy() const {return dy_;};
+        double dz() const {return dz_;};
         double ax() const {return ax_;};
         double ay() const {return ay_;};
-        double z0() const {return z0_;};
+        double az() const {return az_;};
         double LowLim() const {return low_lim_;};
         double UpLim() const {return up_lim_;};
 
         TVector3 GetPointAt(double t) const {
-            return {x_l(t), y_l(t), z_l()};
+            return {x_l(t), y_l(t), z_l(t)};
         }
 
     private:
         double dx_;
         double dy_;
+        double dz_;
         double ax_;
         double ay_;
-        double z0_;
+        double az_;
         double low_lim_;
         double up_lim_;
     
@@ -319,6 +361,10 @@ void          InitWireInfos(TGeoManager* g);
 double        GetDistHelix2Line(const Helix& helix, double s, const Line& line, double& t);
 
 double        GetDistHelix2LineDerivative(const Helix& helix, double s, const Line& line); // may be can be remover
+
+double        GetLineLineDistance(const Line& l1, const Line& l2, double& closest2line2, double& closest2line1);
+
+double        GetSegmentSegmentDistance(const Line& l1, const Line& l2, double& closest2line2, double& closest2line1);
 
 double        GetImpactParameter(const Helix& helix, const Line& line, double s, double t);
 
@@ -339,6 +385,8 @@ double        FunctorNLL(const double* p);
 const double* InitHelixPars(const std::vector<dg_wire>& digits);
 
 const double* GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus);
+
+dg_wire       Copy(const dg_wire& wire);
 
 } // RecoUtils
 
@@ -367,6 +415,9 @@ struct RecoObject
 
 struct EventReco
 {   
+    const char*                 edep_file_input;
+    const char*                 digit_file_input;
+    bool                        use_track_no_smearing = false;
     int                         event_index;
     RecoObject                  reco_object;
     std::vector<dg_wire>        event_fired_wires;

@@ -555,13 +555,13 @@ void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
 bool isInWire(SANDWireInfo& wire, TVector3& point)
 {
   TVector3 wire3  = {wire.x(),wire.y(),wire.z()};
-  return ((wire3-point).Mag()<=wire.length());
+  return ((wire3-point).Mag()<=wire.length()*0.5);
 }
 
 bool isInHit(hit& h, TVector3& point)
 {
-  TVector3 middle = {(h.x1+h.x2)/2.,(h.y1+h.y2)/2.,(h.z1+h.z2)/2.};
-  TVector3 start  = {h.x1,h.y1,h.z1};
+  TVector3 middle = {(h.x1 + h.x2)/2.,(h.y1 + h.y2)/2.,(h.z1 + h.z2)/2.};
+  TVector3 start  = {h.x1, h.y1, h.z1};
   return ((point - middle).Mag()<=(start - middle).Mag());
 }
 
