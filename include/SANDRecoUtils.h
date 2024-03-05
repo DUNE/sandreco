@@ -45,8 +45,11 @@ class Helix
             x0_           = trj.Points[0].GetPosition().Vect();
             dip_          = TMath::ATan2(pl,pt);
             R_            = (pt/(0.3*0.6)); // [m] = [GeV]/[T] or [mm] = [MeV]/[T] 
-            h_            = (charge < 0) ? 1 : -1;  // to check muon helicity consistency
+            h_            = (charge < 0) ? 1 : -1;
             Phi0_         = TMath::ATan2(momentum.Y(),momentum.Z()) + h_*TMath::Pi()*0.5; // for mu pi/2 should be added
+
+            up_lim_       = 0.; // track starts from s = low_lim to s = 0 (for s<0 tracks proceed upwards according to this parmetrization)
+            low_lim_       = -1e3;
         }
 
         Helix() {
@@ -402,8 +405,22 @@ struct RecoObject
 {
     int                         traj_edep_index;
     std::vector<dg_wire>        fired_wires;
+    /*
+    fired_wires : 
+        all the fired wires related to the reconstructed obj.
+        These should be provided by some pattern (track) reco algo.
+    */
     Helix                       true_helix;
+    /*
+    true_helix : 
+        assuming no energy loss nor MC scattering particle track would
+        be a perfect helix
+    */
     Helix                       helix_first_guess;
+    /*
+    helix_first_guess : 
+        initial seed for the algo that reconstruct the true_helix.
+    */
     Helix                       reco_helix;
     std::vector<double>         impact_par_from_TDC;
     std::vector<double>         impact_par_estimated;
@@ -411,6 +428,9 @@ struct RecoObject
     double                      pt_true;
     double                      pt_reco;
     MinuitFitInfos              fit_infos;
+    /*
+    fit_infos : fitting infos form TMinutit
+    */
 };
 
 struct EventReco
@@ -418,9 +438,19 @@ struct EventReco
     const char*                 edep_file_input;
     const char*                 digit_file_input;
     bool                        use_track_no_smearing = false;
+    /*
+    use_track_no_smearing :
+        if true edepsim is used as input to generate
+        tracks without energy loss nor multiple scattering
+    */
     int                         event_index;
     RecoObject                  reco_object;
     std::vector<dg_wire>        event_fired_wires;
+    /*
+    event_fired_wires : 
+        all the wires fired by the neutrino event. This
+        should be provided by the digitization
+    */
     int                         nof_digits = event_fired_wires.size();
 };
 

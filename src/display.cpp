@@ -622,7 +622,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   }
 
   if (showede) {
-    for (auto det : {"Straw", "EMCalSci", "LArHit"}) {
+    for (auto det : {"Straw", "EMCalSci", "LArHit","DriftVolume"}) {
       for (auto& h : ev->SegmentDetectors[det]) {
         TLine* lzx =
             new TLine(h.Start.Z(), h.Start.X(), h.Stop.Z(), h.Stop.X());

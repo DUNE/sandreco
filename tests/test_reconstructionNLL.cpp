@@ -116,6 +116,8 @@ void CreateDigitsFromHelix(Helix& h,
 
     h.SetHelixRangeFromDigit(w);
 
+    if(h.LowLim() > 0) continue;
+
     /* define point on the helix and on the line corresponding to the impact parameter
        t_min is how much do I move from the wire center to get to the line point closest to the helix.
        It has a sign.
@@ -165,38 +167,49 @@ std::vector<TG4HitSegment> FilterHits(const std::vector<TG4HitSegment>& hits, co
 
     for (auto& hit : hits)
     {
-        if(evEdep->Trajectories[hit.PrimaryId].GetPDGCode()==PDG)
-            filtered_hits.push_back(hit);
+        bool contribution = false;
+        for(auto& id : hit.Contrib){
+            if((evEdep->Trajectories[id].GetPDGCode()==PDG)&&(evEdep->Trajectories[id].GetParentId()==-1)){
+                contribution = true;
+                break;
+                }
+        }
+        if(contribution) filtered_hits.push_back(hit);
     }
     return filtered_hits;
+    // for (auto& hit : hits)
+    // {
+    //     if((evEdep->Trajectories[hit.PrimaryId].GetPDGCode()==PDG)
+    //     &&(evEdep->Trajectories[hit.PrimaryId].GetParentId()==-1))
+    //         filtered_hits.push_back(hit);
+    // }
+    // return filtered_hits;
 }
 
 double Hit2WireDistance(const dg_wire& wire,
                         const TG4HitSegment& hit,
                         double& closest2Hit,
                         double& closest2Wire){
+                        // std::ofstream& fout){
     /*
         given a hit and a wire, find the 3D distance
         and fill:
         - closest2Hit: the point on wire closest to the hit
         - closest2Wire: the point on hit line closest to the wire
     */
-   Line wire_line = RecoUtils::GetLineFromDigit(wire);
-   Line hit_line = Line(hit);
-   
-   double d = RecoUtils::GetSegmentSegmentDistance(wire_line, hit_line, closest2Hit, closest2Wire);
-   
-   if((wire.y<-3500)&&(wire.hor==true)&&(d<7)){
-    std::cout << "wire line : \n";
-    wire_line.PrintLineInfos();
-    std::cout << "hit line: \n";
-    hit_line.PrintLineInfos();
-    std::cout << "distance : "<< d << "\n";
-    std::cout << "segment length : " << (hit.GetStop() - hit.GetStart()).Vect().Mag();
-    throw "";
-   }
-
-   return d;
+    Line wire_line = RecoUtils::GetLineFromDigit(wire);
+    Line hit_line = Line(hit);
+    
+    double d = RecoUtils::GetSegmentSegmentDistance(wire_line, hit_line, closest2Hit, closest2Wire);
+    auto w_point = wire_line.GetPointAt(closest2Hit);
+    auto h_point = hit_line.GetPointAt(closest2Wire);
+    // if(d<=DRIFT_CELL_DIM * 0.5 * sqrt(2)){
+    //     fout << evEdep->EventId <<","<< hit.GetStart().X() << "," << hit.GetStart().Y() << "," << hit.GetStart().Z()<< ",";
+    //                             fout << hit.GetStop().X()  << "," << hit.GetStop().Y()  << "," << hit.GetStop().Z()<< ",";
+    //                             fout << w_point.X()  << "," << w_point.Y()  << "," << w_point.Z()<< ",";
+    //                             fout << h_point.X()  << "," << h_point.Y()  << "," << h_point.Z() << std::endl;
+    // }
+    return d;
 }
 
 void UpdateFiredWires(std::vector<dg_wire>& fired_wires, dg_wire new_fired){
@@ -215,26 +228,55 @@ void UpdateFiredWires(std::vector<dg_wire>& fired_wires, dg_wire new_fired){
     if(!found) fired_wires.push_back(new_fired);
 }
 
+void Hits2File(const std::vector<TG4HitSegment>& hits){
+    
+    std::ofstream outputFile("tests/this_event_hits.txt");
+
+    outputFile << "event_index,start_x,start_y,start_z,stop_x,stop_y,stop_z" << std::endl;
+
+    for (const auto& hit : hits) {
+        outputFile << evEdep->EventId <<","<< hit.GetStart().X() << "," << hit.GetStart().Y() << "," << hit.GetStart().Z() << ",";
+        
+        outputFile << hit.GetStop().X() << "," << hit.GetStop().Y() << "," << hit.GetStop().Z() << std::endl;
+    }
+    
+    // Chiusura del file
+    outputFile.close();
+
+}
+
 void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
                           const std::vector<dg_wire>& wire_infos, 
                           std::vector<dg_wire>& fired_wires){
     /*
     Perform digitization of edepsim hits
     */
-   fired_wires.clear();
-   // filter only muon hit segments
-   auto muon_hits = FilterHits(hits, 13);
+    fired_wires.clear();
+    
+    // filter only muon hit segments
+    auto muon_hits = FilterHits(hits, 13);
+
+    // 4 checks
+    // Hits2File(muon_hits);
+    // std::ofstream outputFile("tests/this_event_hits.txt"); // checks
+    // outputFile << "event_index,start_x,start_y,start_z,stop_x,stop_y,stop_z,wpoint_x,wpoint_y,wpoint_z,hpoint_x,hpoint_y,hpoint_z" << std::endl; // checks
+    //
 
     for(auto& hit : muon_hits){
         
         for(auto& wire : wire_infos){
+
+            auto hit_middle = (hit.GetStart()+hit.GetStop())*0.5;
             
-            if(fabs(wire.z - hit.GetStart().Z()) <= DRIFT_CELL_DIM * 0.5){//first scan along z to find the wire plane
+            if(fabs(wire.z - hit_middle.Z()) <= DRIFT_CELL_DIM * 0.5){//first scan along z to find the wire plane
 
                 double closest2Hit, closest2Wire;
-                double hit2wire_dist = Hit2WireDistance(wire, hit, closest2Hit, closest2Wire);
+                double hit2wire_dist = Hit2WireDistance(wire, hit, closest2Hit, closest2Wire, outputFile);
+
+                bool pass = (wire.hor==1) ? 
+                    (hit2wire_dist <= DRIFT_CELL_DIM * 0.5 * sqrt(2.)) : (hit2wire_dist <= DRIFT_CELL_DIM * sqrt(2.)); // due to an error on the cell dimension of vertical planes
                 
-                if((hit2wire_dist <= DRIFT_CELL_DIM * 0.5)){// find closest wire on the plane
+                if(pass){// find closest wire on the plane
 
                     auto fired = RecoUtils::Copy(wire);
                     fired.drift_time = hit2wire_dist / sand_reco::stt::v_drift;
@@ -247,10 +289,11 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
             }
         }
     }
+    outputFile.close();
 }
 
 Helix GetHelixFirstGuess(const Helix& input_helix){
-    Helix first_guess(SmearVariable(input_helix.R(), 100, 1)[0], 
+    Helix first_guess(SmearVariable(input_helix.R(), 100, 1)[0], // smear of 10 cm around true R
                       SmearVariable(input_helix.dip(), 0.1, 1)[0], 
                       input_helix.Phi0(), 
                        1, 
@@ -305,17 +348,19 @@ double TDC2ImpactPar(const dg_wire& wire){
 
     if(&wire == first_fired_wire){ // if a new helix is being tested, reset t_hit timer
         assumed_hit_time = NEUTRINO_INTERACTION_TIME;
-        previous_wire = *first_fired_wire;}
+        previous_wire = *first_fired_wire;
+    }
 
     if(INCLUDE_SIGNAL_PROPAGATION) 
         assumed_signal_propagation = (wire.wire_length/2.) / sand_reco::stt::v_signal_inwire;
 
-    if(INCLUDE_HIT_TIME)
-        assumed_hit_time += fabs(wire.z - previous_wire.z) / LIGHT_VELOCITY;
-    
-    // std::cout
-    //          << " assumed_hit_time: "<<assumed_hit_time
-    //          << " true t_hit: "<<wire.t_hit<<"\n";
+    if(INCLUDE_HIT_TIME){
+        double step = sqrt((wire.x - previous_wire.x)*(wire.x - previous_wire.x) + 
+                           (wire.y - previous_wire.y)*(wire.y - previous_wire.y) +
+                           (wire.z - previous_wire.z)*(wire.z - previous_wire.z));
+        assumed_hit_time += step / LIGHT_VELOCITY;
+    }
+
     previous_wire = wire;
     return (wire.tdc - assumed_signal_propagation - assumed_hit_time) * sand_reco::stt::v_drift;
 }
@@ -442,12 +487,46 @@ Helix Reconstruct(MinuitFitInfos& fit_infos,
 
 }
 
+bool PassEventSelection(const std::vector<dg_wire>& fired_wires){
+    /*
+      Select events that have:
+      - at least 3 hits on the banding plane (to make circular fit)
+      - at least 2 hits on the XZ plane (to make linear fit)
+    */
+   int nof_ZY_hits = 0;
+   int nof_XZ_hits = 0;
+    if(fired_wires.size()<5){
+        std::cout << "skipping event with nof fired wires: " << fired_wires.size() << "\n";
+        std::cout << "\n";
+        return false;
+    }else{
+        for(auto& f : fired_wires){
+            if(f.hor == 1){
+                nof_ZY_hits++;
+            }else{
+                nof_XZ_hits++;
+            }
+        }
+        if((nof_ZY_hits<3)|(nof_XZ_hits<2)){
+            std::cout << "skipping event, ZY_hits : " << nof_ZY_hits 
+                      << ", XZ_hits : " << nof_XZ_hits << "\n";
+            std::cout << "\n";
+            return false;
+        }else{
+            return true;
+        }
+    };
+
+}
+
 void PrintEventInfos(int i,
                      const Helix& test_helix,
                      const Helix& helix_first_guess,
                      const std::vector<dg_wire>& fired_wires){
         std::cout<<"\n";
-        std::cout<< "event number : " << i <<", nof of fired wires : "<<fired_wires.size()<<"\n";
+        std::cout<< "event number : " << i 
+                 <<", nof of fired wires : "<< fired_wires.size() 
+                 <<"\n";
         std::cout<<"\n";
         std::cout<<"test helix : \n";
         test_helix.PrintHelixPars();
@@ -462,7 +541,7 @@ void help_input(){
     std::cout << "\n";
     std::cout << "./buil/bin/test_reconstructionNLL "
               << "-edep <EDep file> "
-              << "-digit <digitization file> "
+            //   << "-digit <digitization file> "
               << "-wireinfo <WireInfo file> "
               << "-o <fOuptut.root> "
               << "[signal_propagation] [hit_time] [debug] [track_no_smear]\n";
@@ -474,38 +553,9 @@ void help_input(){
     std::cout << "--debug              : use higher verbosity for TMinuit \n";
 }
 
-void RunCheckDistance(){
-    Line l1(3, 4, -4, 2, 6, -9);
-    Line l2(2, -6, 1, -1, -2, 3);
-    auto e1 = l1.GetDirectionVector();
-    auto p1 = l1.GetPointAt(0);
-    auto e2 = l2.GetDirectionVector();
-    auto p2 = l2.GetPointAt(0);
-    double t1, t2, d;
-    auto n = e1.Cross(e2);
-    t1 = (e2.Cross(n).Dot(p2-p1)) / (n.Dot(n));
-    t2 = (e1.Cross(n).Dot(p2-p1)) / (n.Dot(n));
-    // d = (l1.GetPointAt(t1) - l2.GetPointAt(t2)).Mag();
-    // d = (p1 + t1*e1 - p2 - t2*e2).Mag();
-    d = RecoUtils::GetLineLineDistance(l1,l2,t1, t2);
-     
-    std::cout << "p1 + t1*e1 : (" << (p1 + t1*e1).X() << "," << (p1 + t1*e1).Y() << "," << (p1 + t1*e1).Z() << ")\n";
-    std::cout << "l1.GetPointAt(t1) : (" << l1.GetPointAt(t1).X() << "," << l1.GetPointAt(t1).Y() << "," << l1.GetPointAt(t1).Z() << ")\n";
-
-    std::cout << "e1 : (" << e1.X() << "," << e1.Y() << "," << e1.Z() << ")\n";
-    std::cout << "p1 : (" << p1.X() << "," << p1.Y() << "," << p1.Z() << ")\n";
-    std::cout << "e2 : (" << e2.X() << "," << e2.Y() << "," << e2.Z() << ")\n";
-    std::cout << "p2 : (" << p2.X() << "," << p2.Y() << "," << p2.Z() << ")\n";
-    std::cout << "n : (" << e1.Cross(e2).X() << "," << e1.Cross(e2).Y() << "," << e1.Cross(e2).Z() << ")\n";
-    // std::cout << "(e1 X e2).Mag() " << e1.Cross(e2).Mag() <<"\n";
-    std::cout << "t1 = "<< t1 << ", t2 = " << t2 << ", d = "<<d << "\n";
-    std::cout << "d = "<< fabs((e1.Cross(e2).Dot(p2-p1)))/(e1.Cross(e2).Mag())<<"\n";
-    throw "";
-}
-
 int main(int argc, char* argv[]){
 
-    if (argc < 3 || argc > 12) {
+    if (argc < 3 || argc > 11) {
         help_input();
     return -1;
     }
@@ -546,18 +596,6 @@ int main(int argc, char* argv[]){
                 std::cerr << e.what() << '\n';
                 return 1;
             }
-        }else if(opt.CompareTo("-digit")==0){
-            try
-            {
-                fDigitInput = argv[++index];
-                std::cout << "digit file      " << fDigitInput << std::endl;
-            }
-            catch(const std::exception& e)
-            {
-                std::cerr << e.what() << '\n';
-                return 1;
-            }
-            
         }else if(opt.CompareTo("-wireinfo")==0){
             try
             {
@@ -604,13 +642,13 @@ int main(int argc, char* argv[]){
     
     TFile fEDep(fEDepInput, "READ");
     
-    TFile fDigit(fDigitInput, "READ");
+    // TFile fDigit(fDigitInput, "READ");
     
     TFile fout(fOutput, "RECREATE");
     
     TTree* tEdep = (TTree*)fEDep.Get("EDepSimEvents");
     
-    TTree* tDigit = (TTree*)fDigit.Get("tDigit");
+    // TTree* tDigit = (TTree*)fDigit.Get("tDigit");
     
     TTree tout("tReco", "tReco");
     
@@ -624,60 +662,63 @@ int main(int argc, char* argv[]){
     
     std::vector<dg_wire> fired_wires;
 
-    std::vector<dg_wire>* fired_wires_from_file = new std::vector<dg_wire>;
-
-    tDigit->SetBranchAddress("dg_wire", &fired_wires_from_file);
-
     ReadWireInfos(fWireInfo, wire_infos);
 
-    // for(auto i=0u; i < tEdep->GetEntries(); i++)
-    for(auto i=1u; i < 2; i++)
+    // for(auto i= 0u; i < 10; i++)
+    for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
         // if(i!=78) continue;
         tEdep->GetEntry(i);
         
-        tDigit->GetEntry(i);
-
-        // RunCheckDistance();
+        // tDigit->GetEntry(i);
 
         auto muon_trj = evEdep->Trajectories[0];
+        auto vertex = evEdep->Primaries[0];
+        auto trj = evEdep->Trajectories;
 
         if(muon_trj.GetPDGCode()!=13) continue;
 
         // create the non-smeared track (no E loss nor MCS) from initial muon momentum and direction
-        Helix test_helix(muon_trj);
+        std::cout << "event : " << i 
+                  << ", muon_momentum : (" 
+                  << muon_trj.GetInitialMomentum().X() << ", " 
+                  << muon_trj.GetInitialMomentum().Y() << ", " 
+                  << muon_trj.GetInitialMomentum().Z() << ", " 
+                  << muon_trj.GetInitialMomentum().T() << ")\n";
         
+        Helix test_helix(muon_trj);
+
         Helix helix_first_guess = GetHelixFirstGuess(test_helix);
 
         if(USE_NON_SMEARED_TRACK){
-        // define fired wires from the muon helix
+            // define fired wires from the muon helix
             CreateDigitsFromHelix(test_helix, wire_infos, fired_wires);
         }else{
-        // read digits from digitization of smeared particles (edepsim)
+            // create digits from edepsim selected hits
             CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], wire_infos, fired_wires);
-            // fired_wires = *fired_wires_from_file;
         }
 
-        // sort fired wires by z coordinate
+        // sort fired wires by hit time (MC truth): usefull to subract assumed t_hit from measured TDC
         std::sort(fired_wires.begin(), fired_wires.end(), [](const dg_wire &a, const dg_wire &b) {
-        return a.z < b.z;
+        return a.t_hit < b.t_hit;
         });
 
-        first_fired_wire = &fired_wires.front();
+        bool good_event = PassEventSelection(fired_wires);
 
-        if(fired_wires.size()<3){ // at least 4 hits required
+        if(!good_event){ // at least 4 hits required
             continue;
         }else{
             PrintEventInfos(i, test_helix, helix_first_guess, fired_wires);
         }
-
-        int TMinuitStatus = -1;
-
+        
         MinuitFitInfos fit_infos;
+
+        // usefull to subract t_hit from measured TDC
+        first_fired_wire = &fired_wires.front();
 
         auto reco_helix = Reconstruct(fit_infos,         // infos on the fit
                                       test_helix,        // truth
-                                      helix_first_guess, // first gues
+                                      helix_first_guess, // first guess
                                       wire_infos,        // all wire infos
                                       fired_wires);      // wires fired by the test helix
 

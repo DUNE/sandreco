@@ -77,10 +77,12 @@ struct dg_wire{
   double tdc = 1e9;
   bool hor;
   std::vector<int> hindex;
-  // ADDENDUM
-  // tdc = drift_time + signal_time + t_hit + gauss(1ns)
-  // added to check validity of track fitting 
-  // reconstruction method for drift chamber 
+  /* 
+    ADDENDUM
+    tdc = drift_time + signal_time + t_hit + gauss(1ns)
+    added to check validity of track fitting 
+    reconstruction method for drift chamber 
+  */
   double drift_time = 1e9;
   double signal_time = 1e9;
   double t_hit = 1e9;
