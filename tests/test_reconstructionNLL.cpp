@@ -42,9 +42,25 @@ const double SAND_CENTER_Y = -2384.73;
 
 const double SAND_CENTER_Z = 23910.;
 
-const double DRIFT_CELL_DIM = 10.; // 1 cm
+// !! HARDCODED (I know you are judging me, stop it)
+const double SAND_TRACKER_X_LENGTH = 3220.0; // does not include frames
 
-const double TDC_SMEARING = 1.; // ns
+const double SAND_SUPEMOD_Z_THICK = 364.6; // mm (approx), this includes 9 C3H6 mod + 1 C mod + clearances
+
+const double SAND_TRACKER_Z_START = 22952.14;
+
+const std::vector<double> SUPERMOD_LENGTHS = {3129.97277395, // A1
+                                              3550.97659024, // B1
+                                              3755.16996258, // C1
+                                              3755.16996258, // C2
+                                              3550.97659024, // B2
+                                              3129.97277395, // A2
+                                              2466.05424949, // D
+                                              1262.30218417};// F
+
+const double DRIFT_CELL_DIM = 10.; // 1 cm
+//
+const double TDC_SMEARING = 1.; // ns, default disabled
 
 const double NEUTRINO_INTERACTION_TIME = 1.; // ns
 
@@ -271,7 +287,7 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
             if(fabs(wire.z - hit_middle.Z()) <= DRIFT_CELL_DIM * 0.5){//first scan along z to find the wire plane
 
                 double closest2Hit, closest2Wire;
-                double hit2wire_dist = Hit2WireDistance(wire, hit, closest2Hit, closest2Wire, outputFile);
+                double hit2wire_dist = Hit2WireDistance(wire, hit, closest2Hit, closest2Wire);
 
                 bool pass = (wire.hor==1) ? 
                     (hit2wire_dist <= DRIFT_CELL_DIM * 0.5 * sqrt(2.)) : (hit2wire_dist <= DRIFT_CELL_DIM * sqrt(2.)); // due to an error on the cell dimension of vertical planes
@@ -289,7 +305,7 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
             }
         }
     }
-    outputFile.close();
+    // outputFile.close();
 }
 
 Helix GetHelixFirstGuess(const Helix& input_helix){
@@ -487,7 +503,7 @@ Helix Reconstruct(MinuitFitInfos& fit_infos,
 
 }
 
-bool PassEventSelection(const std::vector<dg_wire>& fired_wires){
+bool PassSelectionNofHits(const std::vector<dg_wire>& fired_wires){
     /*
       Select events that have:
       - at least 3 hits on the banding plane (to make circular fit)
@@ -517,6 +533,20 @@ bool PassEventSelection(const std::vector<dg_wire>& fired_wires){
         }
     };
 
+}
+
+bool IsInFiducialVolume(const TG4PrimaryVertex& vertex){
+    /*
+        select events in the sand fiducial volume at 10 cm far from the frames:
+        - 5 cm along x from the frame edge;
+    */
+    auto vertex_position = vertex.GetPosition();
+    bool pass_x = (fabs(vertex_position.X() - SAND_CENTER_X) <= SAND_TRACKER_X_LENGTH/2. - 50);
+    // get supermod number
+    int smod = (vertex_position.Z() - SAND_TRACKER_Z_START)/SAND_SUPEMOD_Z_THICK;
+    // event should be 5 cm far from supermod frame
+    bool pass_zy = (fabs(vertex_position.Y() - SAND_CENTER_Y) <= SUPERMOD_LENGTHS[smod]/2. - 50);
+    return pass_x * pass_zy;
 }
 
 void PrintEventInfos(int i,
@@ -664,7 +694,7 @@ int main(int argc, char* argv[]){
 
     ReadWireInfos(fWireInfo, wire_infos);
 
-    // for(auto i= 0u; i < 10; i++)
+    // for(auto i= 582u; i < 583; i++)
     for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
         // if(i!=78) continue;
@@ -678,7 +708,6 @@ int main(int argc, char* argv[]){
 
         if(muon_trj.GetPDGCode()!=13) continue;
 
-        // create the non-smeared track (no E loss nor MCS) from initial muon momentum and direction
         std::cout << "event : " << i 
                   << ", muon_momentum : (" 
                   << muon_trj.GetInitialMomentum().X() << ", " 
@@ -686,6 +715,14 @@ int main(int argc, char* argv[]){
                   << muon_trj.GetInitialMomentum().Z() << ", " 
                   << muon_trj.GetInitialMomentum().T() << ")\n";
         
+        bool event_in_fiducial_volume = IsInFiducialVolume(vertex);
+        
+        if(!event_in_fiducial_volume){
+            std::cout << "skipping event, not in fiducial volume \n";
+            continue;
+        }
+        
+        // create the non-smeared track (no E loss nor MCS) from initial muon momentum and direction
         Helix test_helix(muon_trj);
 
         Helix helix_first_guess = GetHelixFirstGuess(test_helix);
@@ -703,7 +740,7 @@ int main(int argc, char* argv[]){
         return a.t_hit < b.t_hit;
         });
 
-        bool good_event = PassEventSelection(fired_wires);
+        bool good_event = PassSelectionNofHits(fired_wires);
 
         if(!good_event){ // at least 4 hits required
             continue;
@@ -736,7 +773,6 @@ int main(int argc, char* argv[]){
                        event_reco);
 
         tout.Fill();
-
     }
     fout.cd();
 
