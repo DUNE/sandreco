@@ -14,15 +14,19 @@
 #include "TG4Event.h"
 #include "TH1D.h"
 
-std::vector<dg_wire>* RecoUtils::event_digits = nullptr;
+/*
+    CODE SKELETON:
+    - DEFAULT SIMULATION SETTINGS
+    - CONSTANS
+    - GLOBAL VARIABLES
+    - INPUT/OUTPUT FUNCTIONS
+    - EVENT SELECTION
+    - DIGITIZATION
+    - EDEP DIGITIZATION
+    - FITTING
+*/
 
-TGeoManager* geo = nullptr;
-
-TG4Event* evEdep = nullptr;
-
-dg_wire* first_fired_wire = nullptr;
-
-// SIMULATION SETTINGS ----------------------
+// DEFAULT SIMULATION SETTINGS_________________________________________________
 
 bool INCLUDE_SIGNAL_PROPAGATION = false;
 
@@ -34,7 +38,20 @@ bool _DEBUG_ = false;
 
 bool USE_NON_SMEARED_TRACK = false;
 
-// CONSTANS
+int FITTING_STRATEGY = 0;
+/*
+    0 : fit TDCs on the XZ plane
+        with an sin function and 
+        on the ZY with a circle. 
+        The fits are done separa
+        tely.
+    
+    1 : fit TDCs simultaneously 
+        on XZ and ZY plane using
+        an Helix
+*/ 
+
+// CONSTANS____________________________________________________________________
 
 const double SAND_CENTER_X = 0.;
 
@@ -43,9 +60,11 @@ const double SAND_CENTER_Y = -2384.73;
 const double SAND_CENTER_Z = 23910.;
 
 // !! HARDCODED (I know you are judging me, stop it)
-const double SAND_TRACKER_X_LENGTH = 3220.0; // does not include frames
+// does not include frames
+const double SAND_TRACKER_X_LENGTH = 3220.0;
 
-const double SAND_SUPEMOD_Z_THICK = 364.6; // mm (approx), this includes 9 C3H6 mod + 1 C mod + clearances
+// mm (approx), this includes 9 C3H6 mod + 1 C mod + clearances
+const double SAND_SUPEMOD_Z_THICK = 364.6;
 
 const double SAND_TRACKER_Z_START = 22952.14;
 
@@ -66,18 +85,50 @@ const double NEUTRINO_INTERACTION_TIME = 1.; // ns
 
 const double LIGHT_VELOCITY = 299.792458; // mm/ns
 
-// -------------------------------------------
+// GLOBAL VARIABLES____________________________________________________________
 
-std::vector<double> SmearVariable(double mean, double sigma, int nof_points){
+std::vector<dg_wire>* RecoUtils::event_digits = nullptr;
 
-    TRandom3 r(0);
+TGeoManager* geo = nullptr;
 
-    std::vector<double> smeared_points;
+TG4Event* evEdep = nullptr;
 
-    for (int i = 0; i < nof_points; ++i) 
-        smeared_points.push_back(r.Gaus(mean, sigma));
-    
-    return smeared_points;
+dg_wire* first_fired_wire = nullptr;
+
+// INPUT/OUTPUT FUNCTIONS_______________________________________________________
+
+void help_input(){
+    std::cout << "\n";
+    std::cout << "./buil/bin/test_reconstructionNLL "
+              << "-edep <EDep file> "
+            //   << "-digit <digitization file> "
+              << "-wireinfo <WireInfo file> "
+              << "-o <fOuptut.root> "
+              << "[signal_propagation] [hit_time] [debug] [track_no_smear]\n";
+    std::cout << "\n";
+    std::cout << "<WireInfo file>      : see tests/wireinfo.txt \n";
+    std::cout << "--signal_propagation : include signal_propagation in digitization \n";
+    std::cout << "--hit_time           : include hit time in digitization \n";
+    std::cout << "--track_no_smear     : reconstruct non smeared track (NO E_LOSS NO MCS)\n";
+    std::cout << "--debug              : use higher verbosity for TMinuit \n";
+}
+
+void PrintEventInfos(int i,
+                     const Helix& test_helix,
+                     const Helix& helix_first_guess,
+                     const std::vector<dg_wire>& fired_wires){
+        std::cout<<"\n";
+        std::cout<< "event number : " << i 
+                 <<", nof of fired wires : "<< fired_wires.size() 
+                 <<"\n";
+        std::cout<<"\n";
+        std::cout<<"test helix : \n";
+        test_helix.PrintHelixPars();
+        std::cout<<"\n";
+        std::cout<<"first guess : \n";
+        helix_first_guess.PrintHelixPars();
+        std::cout<<"\n";
+        
 }
 
 void ReadWireInfos(const std::string fInput, std::vector<dg_wire>& wire_infos){
@@ -102,11 +153,103 @@ void ReadWireInfos(const std::string fInput, std::vector<dg_wire>& wire_infos){
         wire.y = wire_values[2];
         wire.z = wire_values[3];
         wire.wire_length = wire_values[4];
+        /*
+            if on txt file you read hor(ientation) == 0,
+            means horizontal. Here I invert the values
+            to give to hor the mmeaning of horizontal
+        */
         wire.hor =  (wire_values[5]==0) ? 1 : 0;
         wire_infos.push_back(wire);
     }
     stream.close();
 }
+
+void FillTrueInfos(const Helix& true_helix, RecoObject& reco_obj){
+    reco_obj.true_helix = true_helix;
+    reco_obj.pt_true = true_helix.R()*0.3*0.6;
+}
+
+void FillRecoInfos(const Helix& test_helix, const Helix& reco_helix, RecoObject& reco_object){
+    for(auto& w : *RecoUtils::event_digits){
+            reco_object.impact_par_from_TDC.push_back(w.tdc * sand_reco::stt::v_drift);
+            auto l = RecoUtils::GetLineFromDigit(w);
+            reco_object.impact_par_estimated.push_back(RecoUtils::GetMinImpactParameter(test_helix, l));
+    }
+    reco_object.reco_helix = reco_helix;
+    reco_object.pt_reco = reco_helix.R()*0.3*0.6;
+}
+
+void FillEventInfos(int ev_index, const RecoObject& reco_object, EventReco& event_reco){
+        event_reco.event_index = ev_index;
+        event_reco.event_fired_wires = *RecoUtils::event_digits;
+        event_reco.nof_digits = RecoUtils::event_digits->size();
+        event_reco.reco_object = reco_object;
+}
+
+void FillTreeOut(int ev_index, 
+                 const Helix& test_helix,
+                 const Helix& helix_first_guess,
+                 const Helix& reco_helix,
+                 RecoObject& reco_object,
+                 EventReco& event_reco){
+    
+    reco_object.fired_wires = *RecoUtils::event_digits;
+    reco_object.helix_first_guess = helix_first_guess;
+    
+    FillTrueInfos(test_helix, reco_object);
+    FillRecoInfos(test_helix, reco_helix, reco_object);
+    FillEventInfos(ev_index, reco_object, event_reco);
+}
+
+// EVENT SELECTION_____________________________________________________________
+
+bool PassSelectionNofHits(const std::vector<dg_wire>& fired_wires){
+    /*
+      Select events that have:
+      - at least 3 hits on the banding plane (to make circular fit)
+      - at least 2 hits on the XZ plane (to make linear fit)
+    */
+   int nof_ZY_hits = 0;
+   int nof_XZ_hits = 0;
+    if(fired_wires.size()<5){
+        std::cout << "skipping event with nof fired wires: " << fired_wires.size() << "\n";
+        std::cout << "\n";
+        return false;
+    }else{
+        for(auto& f : fired_wires){
+            if(f.hor == true){
+                nof_ZY_hits++;
+            }else{
+                nof_XZ_hits++;
+            }
+        }
+        if((nof_ZY_hits<3)|(nof_XZ_hits<3)){
+            std::cout << "skipping event, ZY_hits : " << nof_ZY_hits 
+                      << ", XZ_hits : " << nof_XZ_hits << "\n";
+            std::cout << "\n";
+            return false;
+        }else{
+            return true;
+        }
+    };
+
+}
+
+bool IsInFiducialVolume(const TG4PrimaryVertex& vertex){
+    /*
+        select events in the sand fiducial volume at 10 cm far from the frames:
+        - 5 cm along x from the frame edge;
+    */
+    auto vertex_position = vertex.GetPosition();
+    bool pass_x = (fabs(vertex_position.X() - SAND_CENTER_X) <= SAND_TRACKER_X_LENGTH/2. - 50);
+    // get supermod number
+    int smod = (vertex_position.Z() - SAND_TRACKER_Z_START)/SAND_SUPEMOD_Z_THICK;
+    // event should be 5 cm far from supermod frame
+    bool pass_zy = (fabs(vertex_position.Y() - SAND_CENTER_Y) <= SUPERMOD_LENGTHS[smod]/2. - 50);
+    return pass_x * pass_zy;
+}
+
+// DIGITIZATION________________________________________________________________
 
 void CreateDigitsFromHelix(Helix& h, 
                            std::vector<dg_wire>& wire_infos, 
@@ -151,7 +294,7 @@ void CreateDigitsFromHelix(Helix& h,
         w.tdc = w.drift_time;
 
         if(INCLUDE_TDC_SMEARING)
-            w.tdc = SmearVariable(w.drift_time, TDC_SMEARING, 1)[0];
+            w.tdc = RecoUtils::SmearVariable(w.drift_time, TDC_SMEARING, 1)[0];
         
         if(INCLUDE_SIGNAL_PROPAGATION){
             // ATTENCTION WE ARE ASSUMING t_min CALCULATE WRT TO WIRE CENTER
@@ -244,22 +387,7 @@ void UpdateFiredWires(std::vector<dg_wire>& fired_wires, dg_wire new_fired){
     if(!found) fired_wires.push_back(new_fired);
 }
 
-void Hits2File(const std::vector<TG4HitSegment>& hits){
-    
-    std::ofstream outputFile("tests/this_event_hits.txt");
-
-    outputFile << "event_index,start_x,start_y,start_z,stop_x,stop_y,stop_z" << std::endl;
-
-    for (const auto& hit : hits) {
-        outputFile << evEdep->EventId <<","<< hit.GetStart().X() << "," << hit.GetStart().Y() << "," << hit.GetStart().Z() << ",";
-        
-        outputFile << hit.GetStop().X() << "," << hit.GetStop().Y() << "," << hit.GetStop().Z() << std::endl;
-    }
-    
-    // Chiusura del file
-    outputFile.close();
-
-}
+// EDEP DIGITIZATION___________________________________________________________
 
 void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
                           const std::vector<dg_wire>& wire_infos, 
@@ -271,12 +399,6 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
     
     // filter only muon hit segments
     auto muon_hits = FilterHits(hits, 13);
-
-    // 4 checks
-    // Hits2File(muon_hits);
-    // std::ofstream outputFile("tests/this_event_hits.txt"); // checks
-    // outputFile << "event_index,start_x,start_y,start_z,stop_x,stop_y,stop_z,wpoint_x,wpoint_y,wpoint_z,hpoint_x,hpoint_y,hpoint_z" << std::endl; // checks
-    //
 
     for(auto& hit : muon_hits){
         
@@ -305,55 +427,19 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
             }
         }
     }
-    // outputFile.close();
 }
 
+// FITTING_____________________________________________________________________
+
 Helix GetHelixFirstGuess(const Helix& input_helix){
-    Helix first_guess(SmearVariable(input_helix.R(), 100, 1)[0], // smear of 10 cm around true R
-                      SmearVariable(input_helix.dip(), 0.1, 1)[0], 
+    Helix first_guess(RecoUtils::SmearVariable(input_helix.R(), 100, 1)[0], // smear of 10 cm around true R
+                      RecoUtils::SmearVariable(input_helix.dip(), 0.1, 1)[0], 
                       input_helix.Phi0(), 
                        1, 
-                      {SmearVariable(input_helix.x0().X(), 10, 1)[0],
+                      {RecoUtils::SmearVariable(input_helix.x0().X(), 10, 1)[0],
                        input_helix.x0().Y(),
                        input_helix.x0().Z()});
     return first_guess;
-}
-
-void FillTrueInfos(const Helix& true_helix, RecoObject& reco_obj){
-    reco_obj.true_helix = true_helix;
-    reco_obj.pt_true = true_helix.R()*0.3*0.6;
-}
-
-void FillRecoInfos(const Helix& test_helix, const Helix& reco_helix, RecoObject& reco_object){
-    for(auto& w : *RecoUtils::event_digits){
-            reco_object.impact_par_from_TDC.push_back(w.tdc * sand_reco::stt::v_drift);
-            auto l = RecoUtils::GetLineFromDigit(w);
-            reco_object.impact_par_estimated.push_back(RecoUtils::GetMinImpactParameter(test_helix, l));
-    }
-    reco_object.reco_helix = reco_helix;
-    reco_object.pt_reco = reco_helix.R()*0.3*0.6;
-}
-
-void FillEventInfos(int ev_index, const RecoObject& reco_object, EventReco& event_reco){
-        event_reco.event_index = ev_index;
-        event_reco.event_fired_wires = *RecoUtils::event_digits;
-        event_reco.nof_digits = RecoUtils::event_digits->size();
-        event_reco.reco_object = reco_object;
-}
-
-void FillTreeOut(int ev_index, 
-                 const Helix& test_helix,
-                 const Helix& helix_first_guess,
-                 const Helix& reco_helix,
-                 RecoObject& reco_object,
-                 EventReco& event_reco){
-    
-    reco_object.fired_wires = *RecoUtils::event_digits;
-    reco_object.helix_first_guess = helix_first_guess;
-    
-    FillTrueInfos(test_helix, reco_object);
-    FillRecoInfos(test_helix, reco_helix, reco_object);
-    FillEventInfos(ev_index, reco_object, event_reco);
 }
 
 double TDC2ImpactPar(const dg_wire& wire){
@@ -367,8 +453,43 @@ double TDC2ImpactPar(const dg_wire& wire){
         previous_wire = *first_fired_wire;
     }
 
-    if(INCLUDE_SIGNAL_PROPAGATION) 
+    if(INCLUDE_SIGNAL_PROPAGATION){
         assumed_signal_propagation = (wire.wire_length/2.) / sand_reco::stt::v_signal_inwire;
+        /*
+            the coordinate on the (horizontal / vertical) wire from 
+            which the signal propagates is approximatively given by  
+            the previous (vertical / horizontal) wire.
+        */
+        size_t wire_index=-1;
+        for (size_t i = 0u; i < RecoUtils::event_digits->size(); i++)
+        {
+            if(RecoUtils::event_digits->at(i).did == wire.did){
+                wire_index = i;
+                break;
+            }
+        }
+        size_t i = wire_index;
+        if(wire_index!=0){ // not the first wire
+             // run backward until you find a wire with different orientation
+             while(i > 0 && RecoUtils::event_digits->at(i).hor == wire.hor){
+                 --i;
+            }
+        }else{ // first wire
+             // same logic as before but run afterward
+            while(i > RecoUtils::event_digits->size() && RecoUtils::event_digits->at(i).hor == wire.hor){
+                ++i;
+            }
+        }
+        if(wire.hor==1){ // horizontal
+             assumed_signal_propagation = fabs(RecoUtils::event_digits->at(i).x - wire.wire_length*0.5) / sand_reco::stt::v_signal_inwire;
+        }else{ // vertucal
+             assumed_signal_propagation = fabs(RecoUtils::event_digits->at(i).y + wire.wire_length*0.5) / sand_reco::stt::v_signal_inwire;
+        }
+        std::cout << "wire index " << wire_index 
+                  << ", is hor " << wire.hor
+                  << ", t_signal true : " << wire.signal_time 
+                  << ", t_signal assumed : " << assumed_signal_propagation << "\n";
+    } 
 
     if(INCLUDE_HIT_TIME){
         double step = sqrt((wire.x - previous_wire.x)*(wire.x - previous_wire.x) + 
@@ -418,7 +539,8 @@ double FunctorNLL(const double* p){
     return NLL(h, *RecoUtils::event_digits);
 }
 
-Helix GetRecoHelix(Helix& helix_initial_guess, 
+Helix GetRecoHelix(Helix& helix_initial_guess,
+                   std::vector<dg_wire>& fired_wires, 
                    MinuitFitInfos& fit_infos,
                    int FitStrategy = 1){
     
@@ -428,9 +550,14 @@ Helix GetRecoHelix(Helix& helix_initial_guess,
 
     minimizer->SetFunction(functor);
     
-    minimizer->SetLimitedVariable(0,    "R",    helix_initial_guess.R(), 100,  100,     1e5);
-    minimizer->SetLimitedVariable(1,    "dip",  helix_initial_guess.dip(), 0.01,  -1.6,  1.6);
-    minimizer->SetLimitedVariable(4,    "x0_x", helix_initial_guess.x0().X(), 1,  -1800, 1800);
+    minimizer->SetLimitedVariable(0,    "R",    helix_initial_guess.R(), 
+                                        10, helix_initial_guess.R()*0.8, helix_initial_guess.R()*1.2); // R fit range
+    
+    minimizer->SetLimitedVariable(1,    "dip",  helix_initial_guess.dip(), 
+                                        0.01, helix_initial_guess.dip()*0.8, helix_initial_guess.dip()*1.2); // dip fit range
+    
+    minimizer->SetLimitedVariable(4,    "x0_x", helix_initial_guess.x0().X(), 
+                                        1, helix_initial_guess.x0().X() - 20, helix_initial_guess.x0().X() + 20); // x0 fit range
     
     minimizer->SetFixedVariable(2,    "Phi0",    helix_initial_guess.Phi0());
     minimizer->SetFixedVariable(3,    "h",       helix_initial_guess.h());
@@ -470,7 +597,7 @@ Helix GetRecoHelix(Helix& helix_initial_guess,
             std::cout << "failed both with stratefy 1 and 2 \n";
         }else{
             // try to fit changing fit strategy
-            GetRecoHelix(helix_initial_guess, fit_infos, 2);
+            GetRecoHelix(helix_initial_guess, fired_wires, fit_infos, 2);
         }
     }
     
@@ -489,9 +616,9 @@ Helix Reconstruct(MinuitFitInfos& fit_infos,
                   std::vector<dg_wire>& wire_infos,
                   std::vector<dg_wire>& fired_wires){
     
-    RecoUtils::event_digits = &fired_wires;
+    RecoUtils::event_digits = &fired_wires; // you may delete later, leave here for the moment
 
-    auto reco_helix = GetRecoHelix(helix_first_guess, fit_infos);
+    auto reco_helix = GetRecoHelix(helix_first_guess, fired_wires, fit_infos);
 
     std::cout<<"\n";
     std::cout<< "true helix - reco helix \n";
@@ -503,85 +630,7 @@ Helix Reconstruct(MinuitFitInfos& fit_infos,
 
 }
 
-bool PassSelectionNofHits(const std::vector<dg_wire>& fired_wires){
-    /*
-      Select events that have:
-      - at least 3 hits on the banding plane (to make circular fit)
-      - at least 2 hits on the XZ plane (to make linear fit)
-    */
-   int nof_ZY_hits = 0;
-   int nof_XZ_hits = 0;
-    if(fired_wires.size()<5){
-        std::cout << "skipping event with nof fired wires: " << fired_wires.size() << "\n";
-        std::cout << "\n";
-        return false;
-    }else{
-        for(auto& f : fired_wires){
-            if(f.hor == 1){
-                nof_ZY_hits++;
-            }else{
-                nof_XZ_hits++;
-            }
-        }
-        if((nof_ZY_hits<3)|(nof_XZ_hits<2)){
-            std::cout << "skipping event, ZY_hits : " << nof_ZY_hits 
-                      << ", XZ_hits : " << nof_XZ_hits << "\n";
-            std::cout << "\n";
-            return false;
-        }else{
-            return true;
-        }
-    };
-
-}
-
-bool IsInFiducialVolume(const TG4PrimaryVertex& vertex){
-    /*
-        select events in the sand fiducial volume at 10 cm far from the frames:
-        - 5 cm along x from the frame edge;
-    */
-    auto vertex_position = vertex.GetPosition();
-    bool pass_x = (fabs(vertex_position.X() - SAND_CENTER_X) <= SAND_TRACKER_X_LENGTH/2. - 50);
-    // get supermod number
-    int smod = (vertex_position.Z() - SAND_TRACKER_Z_START)/SAND_SUPEMOD_Z_THICK;
-    // event should be 5 cm far from supermod frame
-    bool pass_zy = (fabs(vertex_position.Y() - SAND_CENTER_Y) <= SUPERMOD_LENGTHS[smod]/2. - 50);
-    return pass_x * pass_zy;
-}
-
-void PrintEventInfos(int i,
-                     const Helix& test_helix,
-                     const Helix& helix_first_guess,
-                     const std::vector<dg_wire>& fired_wires){
-        std::cout<<"\n";
-        std::cout<< "event number : " << i 
-                 <<", nof of fired wires : "<< fired_wires.size() 
-                 <<"\n";
-        std::cout<<"\n";
-        std::cout<<"test helix : \n";
-        test_helix.PrintHelixPars();
-        std::cout<<"\n";
-        std::cout<<"first guess : \n";
-        helix_first_guess.PrintHelixPars();
-        std::cout<<"\n";
-        
-}
-
-void help_input(){
-    std::cout << "\n";
-    std::cout << "./buil/bin/test_reconstructionNLL "
-              << "-edep <EDep file> "
-            //   << "-digit <digitization file> "
-              << "-wireinfo <WireInfo file> "
-              << "-o <fOuptut.root> "
-              << "[signal_propagation] [hit_time] [debug] [track_no_smear]\n";
-    std::cout << "\n";
-    std::cout << "<WireInfo file>      : see tests/wireinfo.txt \n";
-    std::cout << "--signal_propagation : include signal_propagation in digitization \n";
-    std::cout << "--hit_time           : include hit time in digitization \n";
-    std::cout << "--track_no_smear     : reconstruct non smeared track (NO E_LOSS NO MCS)\n";
-    std::cout << "--debug              : use higher verbosity for TMinuit \n";
-}
+// MAIN________________________________________________________________________
 
 int main(int argc, char* argv[]){
 
@@ -694,8 +743,9 @@ int main(int argc, char* argv[]){
 
     ReadWireInfos(fWireInfo, wire_infos);
 
-    // for(auto i= 582u; i < 583; i++)
-    for(auto i=0u; i < tEdep->GetEntries(); i++)
+    // for(auto i= 69u; i < 70; i++)
+    for(auto i= 9u; i < 10; i++)
+    // for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
         // if(i!=78) continue;
         tEdep->GetEntry(i);
@@ -740,18 +790,18 @@ int main(int argc, char* argv[]){
         return a.t_hit < b.t_hit;
         });
 
+        first_fired_wire = &fired_wires.front();
+
         bool good_event = PassSelectionNofHits(fired_wires);
 
-        if(!good_event){ // at least 4 hits required
+        if(!good_event){ // at least 6 hits required
             continue;
         }else{
+            RecoUtils::InitHelixPars(fired_wires, helix_first_guess);
             PrintEventInfos(i, test_helix, helix_first_guess, fired_wires);
         }
         
         MinuitFitInfos fit_infos;
-
-        // usefull to subract t_hit from measured TDC
-        first_fired_wire = &fired_wires.front();
 
         auto reco_helix = Reconstruct(fit_infos,         // infos on the fit
                                       test_helix,        // truth

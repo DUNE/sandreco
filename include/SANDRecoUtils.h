@@ -3,6 +3,8 @@
 
 #include <cmath>
 #include <TRandom3.h>
+#include <TStyle.h>
+
 // #include "utils.h"
 #include "struct.h"
 #include "utils.h"
@@ -14,6 +16,10 @@
 #include "Math/Minimizer.h"
 #include "Math/Factory.h"
 #include "TDatabasePDG.h"
+#include "TGraph.h"
+#include "TF1.h"
+#include "TCanvas.h"
+#include "TFitResult.h"
 
 extern TGeoManager* geo;
 
@@ -381,15 +387,25 @@ double        GetExpectedRadiusFromDigit(const dg_wire& digit);
 
 Line          GetLineFromDigit(const dg_wire& digit);
 
+void          WiresLinearFit(const std::vector<dg_wire>& wires);
+
+TF1*          WiresSinFit(const std::vector<dg_wire>& wires);
+
+TF1*          WiresCircleFit(const std::vector<dg_wire>& wires);
+
+TF1*          InvertSin(TF1* fSin);
+
 double        NLL(Helix& h,const std::vector<dg_wire>& digits); // negative log likelihood function
 
 double        FunctorNLL(const double* p);
 
-const double* InitHelixPars(const std::vector<dg_wire>& digits);
+void          InitHelixPars(const std::vector<dg_wire>& digits, Helix& helix_initial_guess);
 
 const double* GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus);
 
 dg_wire       Copy(const dg_wire& wire);
+
+std::vector<double> SmearVariable(double mean, double sigma, int nof_points);
 
 } // RecoUtils
 
