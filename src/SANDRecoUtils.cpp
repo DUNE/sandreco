@@ -194,6 +194,37 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line, do
     return impact_parameter;
 }
 
+double RecoUtils::NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess, 
+                                  double tol, int max_iterations){
+    /*
+        given a function f and its derivative fprime
+        find the point x_sol such that fprime(x_sol) 
+        approx 0 (within a given tollerance tol and 
+        with a max number of iterations max_iterations).
+        Return f(x_sol)
+    */
+    // std::cout << "x_guess " << x_guess << "f->Eval(x_guess) "<< f->Eval(x_guess) << "\n";
+    double min_sofar = 1e6;
+    int iter = 0;
+    for (auto i = 0u; i < max_iterations; i++)
+    {
+        double f_at_x = f->Eval(x_guess);
+        double fprime_at_x = fprime->Eval(x_guess);
+        if(f_at_x < min_sofar) min_sofar = f_at_x;
+        // std::cout << "i : " << i 
+        //   << ", x : " << x_guess
+        //   << ", distance : " << f_at_x
+        //   << ", fprime_at_x : " << fprime_at_x 
+        //   << "\n";
+        if(fabs(fprime_at_x) < tol) break;
+        x_guess -= f_at_x / fprime_at_x;
+        if (fabs(f_at_x) < tol) break;
+        iter++;
+    }
+    if(iter==max_iterations-1) return min_sofar;
+    return f->Eval(x_guess);
+}
+
 double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line){
     double s_min = -999;
     double t_min = -999;
@@ -549,36 +580,36 @@ double RecoUtils::FunctorNLL(const double* p)
 void RecoUtils::InitHelixPars(const std::vector<dg_wire>& fired_wires,
                               Helix& helix_initial_guess)
 {
-    /*
-        !!! ASSUMPTION !!! : 
-            - WIRES CONFIGURATION XXY
-            - WIRES ARE ORDERED
-        constrain helix parameter first guess using fired wires
-        - x0 form fit of vertical wires coordinates with a sin function 
-    */
-    std::vector<dg_wire> hor_wires, ver_wires;
+    // /*
+    //     !!! ASSUMPTION !!! : 
+    //         - WIRES CONFIGURATION XXY
+    //         - WIRES ARE ORDERED
+    //     constrain helix parameter first guess using fired wires
+    //     - x0 form fit of vertical wires coordinates with a sin function 
+    // */
+    // std::vector<dg_wire> hor_wires, ver_wires;
 
-    for (auto& wire : fired_wires)
-    {
-        if(wire.hor==true){ // horizontal
-            hor_wires.push_back(wire);
-        }else{// (wire.hor==false) // vertical
-            ver_wires.push_back(wire);
-        }
-    }
+    // for (auto& wire : fired_wires)
+    // {
+    //     if(wire.hor==true){ // horizontal
+    //         hor_wires.push_back(wire);
+    //     }else{// (wire.hor==false) // vertical
+    //         ver_wires.push_back(wire);
+    //     }
+    // }
     
-    TF1* SinFit = RecoUtils::WiresSinFit(ver_wires);
-    TF1* CircleFit = RecoUtils::WiresCircleFit(hor_wires);
-    /*
-        first gues of (x0,z0) is the value of the fitted function
-        around the first fired wire
-    */
-    TVector3 x0 = {fired_wires.front().x, 
-                   helix_initial_guess.x0().Y(), 
-                   helix_initial_guess.x0().Z()};
+    // TF1* SinFit = RecoUtils::WiresSinFit(ver_wires);
+    // TF1* CircleFit = RecoUtils::WiresCircleFit(hor_wires);
+    // /*
+    //     first gues of (x0,z0) is the value of the fitted function
+    //     around the first fired wire
+    // */
+    // TVector3 x0 = {fired_wires.front().x, 
+    //                helix_initial_guess.x0().Y(), 
+    //                helix_initial_guess.x0().Z()};
 
-    helix_initial_guess.Setx0(x0);
-    helix_initial_guess.SetR(CircleFit->GetParameter(1));
+    // helix_initial_guess.Setx0(x0);
+    // helix_initial_guess.SetR(CircleFit->GetParameter(1));
 }
 
 const double* RecoUtils::GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus)

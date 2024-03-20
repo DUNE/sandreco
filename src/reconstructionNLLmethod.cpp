@@ -143,8 +143,6 @@ int main(int argc, char* argv[]){
         }// run over digits
 
         event_reco.event_index       = i;
-        event_reco.event_fired_wires = *RecoUtils::event_digits;
-        event_reco.nof_digits        = RecoUtils::event_digits->size();
         event_reco.reco_object       = reco_object;
 
         tout.Fill();

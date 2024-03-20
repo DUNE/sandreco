@@ -78,7 +78,7 @@ const std::vector<double> SUPERMOD_LENGTHS = {3129.97277395, // A1
                                               1262.30218417};// F
 
 const double DRIFT_CELL_DIM = 10.; // 1 cm
-//
+
 const double TDC_SMEARING = 1.; // ns, default disabled
 
 const double NEUTRINO_INTERACTION_TIME = 1.; // ns
@@ -89,11 +89,15 @@ const double LIGHT_VELOCITY = 299.792458; // mm/ns
 
 std::vector<dg_wire>* RecoUtils::event_digits = nullptr;
 
+std::vector<dg_wire>* vertical_fired_digits = nullptr;
+
+std::vector<dg_wire>* horizontal_fired_digits = nullptr;
+
+dg_wire* first_fired_wire = nullptr;
+
 TGeoManager* geo = nullptr;
 
 TG4Event* evEdep = nullptr;
-
-dg_wire* first_fired_wire = nullptr;
 
 // INPUT/OUTPUT FUNCTIONS_______________________________________________________
 
@@ -181,8 +185,6 @@ void FillRecoInfos(const Helix& test_helix, const Helix& reco_helix, RecoObject&
 
 void FillEventInfos(int ev_index, const RecoObject& reco_object, EventReco& event_reco){
         event_reco.event_index = ev_index;
-        event_reco.event_fired_wires = *RecoUtils::event_digits;
-        event_reco.nof_digits = RecoUtils::event_digits->size();
         event_reco.reco_object = reco_object;
 }
 
@@ -389,6 +391,13 @@ void UpdateFiredWires(std::vector<dg_wire>& fired_wires, dg_wire new_fired){
 
 // EDEP DIGITIZATION___________________________________________________________
 
+void SortWiresByTime(std::vector<dg_wire>& wires){
+    // sort fired wires by hit time (MC truth): usefull to subract assumed t_hit from measured TDC
+    std::sort(wires.begin(), wires.end(), [](const dg_wire &w1, const dg_wire &w2) {
+    return w1.t_hit < w2.t_hit;
+    });
+}
+
 void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
                           const std::vector<dg_wire>& wire_infos, 
                           std::vector<dg_wire>& fired_wires){
@@ -485,25 +494,316 @@ double TDC2ImpactPar(const dg_wire& wire){
         }else{ // vertucal
              assumed_signal_propagation = fabs(RecoUtils::event_digits->at(i).y + wire.wire_length*0.5) / sand_reco::stt::v_signal_inwire;
         }
-        std::cout << "wire index " << wire_index 
-                  << ", is hor " << wire.hor
-                  << ", t_signal true : " << wire.signal_time 
-                  << ", t_signal assumed : " << assumed_signal_propagation << "\n";
     } 
 
     if(INCLUDE_HIT_TIME){
-        double step = sqrt((wire.x - previous_wire.x)*(wire.x - previous_wire.x) + 
-                           (wire.y - previous_wire.y)*(wire.y - previous_wire.y) +
-                           (wire.z - previous_wire.z)*(wire.z - previous_wire.z));
-        assumed_hit_time += step / LIGHT_VELOCITY;
+        // double step = sqrt((wire.x - previous_wire.x)*(wire.x - previous_wire.x) + 
+        //                    (wire.y - previous_wire.y)*(wire.y - previous_wire.y) +
+        //                    (wire.z - previous_wire.z)*(wire.z - previous_wire.z));
+        // assumed_hit_time += step / LIGHT_VELOCITY;
+        assumed_hit_time = wire.t_hit;
     }
 
     previous_wire = wire;
+    // std::cout << "wire index " << wire.did 
+    //        << ", is hor " << wire.hor
+    //        << ", tdc : " << wire.tdc 
+    //        << ", t_signal true : " << wire.signal_time 
+    //        << ", t_signal assumed : " << assumed_signal_propagation 
+    //        << ", t_hit true : " << wire.t_hit 
+    //        << ", t_hit assumed : " << assumed_hit_time << "\n"
+    //        << "\n";
     return (wire.tdc - assumed_signal_propagation - assumed_hit_time) * sand_reco::stt::v_drift;
 }
 
-double NLL(Helix& h,
-           std::vector<dg_wire>& digits){
+// FITTING STRATEGY 0__________________________________________________________
+
+// FITTING ON ZY PLANE_________________________________________________________
+
+double FunctorNLL_Circle(const double* p){
+    
+    double yc = p[0];
+    double R = p[1];
+    double zc = p[2];
+    double z_min = p[3];
+    double z_max = p[4];
+
+    double nll         = 0.;
+    const double sigma = 0.2; // 200 mu_m = 0.2 mm
+
+    for(auto& wire : *horizontal_fired_digits){
+
+        // r_estimated = impact parameter estimated as distance sin function - wire
+        double r_estimated = fabs(R - sqrt((wire.z-zc)*(wire.z-zc)+(wire.y-yc)*(wire.y-yc)));
+
+        // r_observed = impact parameter from the observed tdc
+        double r_observed = TDC2ImpactPar(wire);
+
+        nll += (r_estimated - r_observed) * (r_estimated - r_observed) / (sigma * sigma);
+
+        // std::cout << "impact par : true " << wire.drift_time * sand_reco::stt::v_drift
+        //                << ", r_observed : " << r_observed
+        //                << ", r_estimated : " << r_estimated << "\n";
+    }
+    return sqrt(nll)/horizontal_fired_digits->size();
+}
+
+TF1* GetRecoZYTrack(TF1* first_guess,
+                    MinuitFitInfos& fit_infos){
+    /*
+        Fit observed TDCs on ZY plane with a Circle.
+        Parameter of the circle:
+        y(z) = yc +/- sqrt(R**2 - (z-zc)**2)
+        - (zc, yc) center of the fitted circle
+        - R radius of the circle
+    */
+    double yc = first_guess->GetParameter(0);
+    double R = first_guess->GetParameter(1);
+    double zc = first_guess->GetParameter(2);
+    double z_min = first_guess->GetXmin();
+    double z_max = first_guess->GetXmax();
+
+    ROOT::Math::Functor functor(&FunctorNLL_Circle, 3);
+    
+    ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
+
+    minimizer->SetFunction(functor);
+
+    // yc
+    minimizer->SetLimitedVariable(0, "yc", yc, yc*0.01, yc*0.8, yc*1.2);
+    // R
+    minimizer->SetLimitedVariable(1, "R", R, R*0.01, R*0.8, R*1.2);
+    // zc
+    minimizer->SetLimitedVariable(2, "zc", zc, zc*0.01, zc*0.8, zc*1.2);
+
+    // extreme [z_min, z_max]
+    minimizer->SetFixedVariable(3, "z_min", z_min);
+    minimizer->SetFixedVariable(4, "z_max", z_max);
+
+    // minimization settings
+    if(_DEBUG_) minimizer->SetPrintLevel(4);
+
+    // start minimization
+    minimizer->Minimize();
+
+    // retrieve result of the minimization and errors
+    const double* pars = minimizer->X();
+    const double* parsErrors = minimizer->Errors();
+    
+    // fill output object fit_infos
+    Parameter center_y("yc", 0, false, yc, pars[0], parsErrors[0]);
+    Parameter radius("R", 1, false, R, pars[1], parsErrors[1]);
+    Parameter center_z("zc", 2, false, zc, pars[2], parsErrors[2]);
+    fit_infos.fitted_parameters = {center_y, radius, center_z};
+    fit_infos.TMinuitFinalStatus = minimizer->Status();
+    fit_infos.NIterations = minimizer->NIterations();
+    fit_infos.MinValue = minimizer->MinValue();
+
+    // track from final fit
+    TF1* FinalcircleFit = new TF1("circleFit", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))", z_min-20, z_max+20);
+    FinalcircleFit->SetParameters(pars[0], pars[1], pars[2]);
+
+    // print results of the minimization
+    minimizer->PrintResults();
+
+    return FinalcircleFit;
+}
+
+// FITTING ON XZ PLANE_________________________________________________________
+
+double GetImpactParameterSin(TF1* TestSin, const dg_wire& wire){
+    /*
+        Use numerical Newton method to find distance sin function to a point 
+        in (wire.x, wire.z) in 2D space. TestSin = A sin(Bx + C) + D, functi
+        on to be minimized is the euclidian distance: 
+        - D(x) = (x_wire - x)**2 + (z_wire - TestSin(x))**2
+        - D_prime(x) = 2(x_wire - x) + 2(z_wire - TestSin(x))*TestSin_prime(x)
+        - TestSin_prime(x) = A B cos(Bx + C)
+    */
+    double x_wire = wire.x;
+    double z_wire = wire.z;
+    double x_min = TestSin->GetXmin();
+    double x_max = TestSin->GetXmax();
+
+    TF1* TestSin_prime = new TF1("TestSin_prime", "[0]*[1]*cos([1]*x + [2])", x_min, x_max);
+
+    TestSin_prime->SetParameters(TestSin->GetParameter(0),
+                                 TestSin->GetParameter(1),
+                                 TestSin->GetParameter(2));
+    /*
+        distance_sin_wire : distance curve TestSin to a point (x_wire, z_wire)
+        - variable x (space coordinate)
+        - parameter (x_wire, z_wire) coordinate f the wire to which the distace
+          is calculated
+    */
+    TF1* distance_sin_wire = new TF1("distance_sin_wire", [&](double*x, double *par){
+        double sin_at_x = TestSin->Eval(x[0]);
+        double x_w = par[0];
+        double z_w = par[1];
+        return sqrt((x[0] - x_w)*(x[0] - x_w) + (sin_at_x - z_w)*(sin_at_x - z_w));
+    }, x_min, x_max, 2);              
+    distance_sin_wire->SetParameters(x_wire, z_wire);
+    
+    // derivative of distance
+    TF1* distance_sin_wire_prime = new TF1("distance_sin_wire_prime", [&](double*x, double *par){
+        double distance = distance_sin_wire->Eval(x[0]);
+        double sin_at_x = TestSin->Eval(x[0]);
+        double derivative_at_x = TestSin_prime->Eval(x[0]);
+        double x_w = par[0];
+        double z_w = par[1];
+        return 1./(2.*distance)*(2*(x[0] - x_w) + 2*(sin_at_x - z_w)*derivative_at_x);
+    }, x_min, x_max, 2);
+    distance_sin_wire_prime->SetParameters(x_wire, z_wire);
+
+    double x_guess = x_wire;
+
+    double impact_par = RecoUtils::NewtonRaphson2D(distance_sin_wire, distance_sin_wire_prime, x_guess, 0.2, 1000);
+
+    return impact_par;
+}
+
+// void FillImpactParInfo_Sin(RecoObject& reco_obj, 
+//                            TF1* TestSin, 
+//                            std::vector<dg_wire>& wires){
+//     /*
+//         Function to fill info about the impact parameter given
+//         the sin function of the final minimization
+//     */
+//    std::vector<double> ip_true, ip_TDC, ip_estimated;
+//     for(auto& wire : wires){
+//         ip_true.push_back(wire.drift_time*sand_reco::stt::v_drift);
+//         ip_TDC.push_back(TDC2ImpactPar(wire));
+//         ip_estimated.push_back(GetImpactParameterSin(TestSin, wire));
+//     }
+//     reco_obj.true_impact_par = ip_true;
+//     reco_obj.impact_par_from_TDC = ip_TDC;
+//     reco_obj.impact_par_estimated = ip_estimated;
+// }
+
+double NLL_Sin(TF1* TestSin, std::vector<dg_wire>& wires){
+    /*
+        run over vertical fired wires
+        - get impact par from TDC
+        - compare it with wire - track 
+          min distance
+    */
+    static int calls   = 0;
+    double nll         = 0.;
+    const double sigma = 0.2; // 200 mu_m = 0.2 mm
+    
+    for(auto& wire : wires){
+
+        // r_estimated = impact parameter estimated as distance sin function - wire
+        double r_estimated = GetImpactParameterSin(TestSin, wire);
+
+        // r_observed = impact parameter from the observed tdc
+        double r_observed = TDC2ImpactPar(wire);
+
+        nll += (r_estimated - r_observed) * (r_estimated - r_observed) / (sigma * sigma);
+
+        // std::cout << "impact par : true " << wire.drift_time * sand_reco::stt::v_drift
+        //                << ", r_observed : " << r_observed
+        //                << ", r_estimated : " << r_estimated << "\n";
+
+    }
+    // throw "";
+    calls ++;
+    return sqrt(nll)/wires.size();
+}
+
+double FunctorNLL_Sin(const double* p){
+    
+    double amplitude = p[0];
+    double frequency = p[1];
+    double phase = p[2];
+    double offset = p[3];
+    // fixed
+    double x_min = p[4];
+    double x_max = p[5];
+    
+    TF1* TestSin = new TF1("TestSin", "[0]*sin([1]*x + [2]) + [3]", x_min, x_max);
+    
+    // Set initial parameters for the fit
+    TestSin->SetParameters(amplitude, 
+                           frequency, 
+                           phase, 
+                           offset);
+    
+    return NLL_Sin(TestSin, *vertical_fired_digits);
+}
+
+TF1* GetRecoXZTrack(TF1* first_guess,
+                    MinuitFitInfos& fit_infos){
+    /*
+        Fit TDCs on XZ plane using a sin function.
+        Parameter of the sin function:
+        A * sin(B * x + C) + D
+        - A: amplitude 
+        - B: frequency
+        - C: phase
+        - D: offset
+    */
+    double amplitude = first_guess->GetParameter(0); // A
+    double frequency = first_guess->GetParameter(1); // B
+    double phase = first_guess->GetParameter(2); // C
+    double offset = first_guess->GetParameter(3); // D
+    double x_min = first_guess->GetXmin();
+    double x_max = first_guess->GetXmax();
+    
+    ROOT::Math::Functor functor(&FunctorNLL_Sin, 6);                  
+
+    ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
+
+    minimizer->SetFunction(functor);
+
+    // A
+    minimizer->SetLimitedVariable(0, "A", amplitude, amplitude*0.01, amplitude*0.8,amplitude*1.2);
+    // B
+    minimizer->SetLimitedVariable(1, "B", frequency, frequency*0.01, frequency*0.8, frequency*1.2);
+    // C
+    // minimizer->SetLimitedVariable(2, "C", phase, phase*0.01, phase*0.8, phase*1.2);
+    // D
+    // minimizer->SetLimitedVariable(3, "D", offset, offset*0.01, offset*0.8, offset*1.2);
+
+    // extreme [x_min, x_max]
+    minimizer->SetFixedVariable(2, "C", phase);
+    minimizer->SetFixedVariable(3, "D", offset);
+    minimizer->SetFixedVariable(4, "x_min", x_min);
+    minimizer->SetFixedVariable(5, "x_max", x_max);
+
+    // minimization settings
+    if(_DEBUG_) minimizer->SetPrintLevel(4);
+
+    // start minimization
+    minimizer->Minimize();
+
+    // retrieve result of the minimization and errors
+    const double* pars = minimizer->X();
+    const double* parsErrors = minimizer->Errors();
+    
+    // fill output object fit_infos
+    Parameter A("amplitude", 0, false, amplitude, pars[0], parsErrors[0]);                                        
+    Parameter B("frequency", 1, false, frequency, pars[1], parsErrors[1]);                                        
+    Parameter C("phase", 2, true, phase, pars[2], parsErrors[2]);                                        
+    Parameter D("offset", 3, true, offset, pars[3], parsErrors[3]);
+    fit_infos.fitted_parameters = {A,B,C,D};                                
+    fit_infos.TMinuitFinalStatus = minimizer->Status();
+    fit_infos.NIterations = minimizer->NIterations();
+    fit_infos.MinValue = minimizer->MinValue();
+
+    // final fit
+    TF1* SinFinalFit = new TF1("SinFinalFit", "[0]*sin([1]*x + [2]) + [3]", x_min, x_max);
+    SinFinalFit->SetParameters(pars[0],pars[1],pars[2],pars[3]);
+
+    // print results of the minimization
+    minimizer->PrintResults();
+
+    return SinFinalFit;
+}
+
+// HELIX FITTING (FITTING STRATEGY 1)__________________________________________
+
+double NLL(Helix& h, std::vector<dg_wire>& digits){
     
     static int calls   = 0;
     double nll         = 0.;
@@ -543,7 +843,16 @@ Helix GetRecoHelix(Helix& helix_initial_guess,
                    std::vector<dg_wire>& fired_wires, 
                    MinuitFitInfos& fit_infos,
                    int FitStrategy = 1){
-    
+    /*
+        Fit measured TDCs from fired wires assuming
+        helicoidal track.
+        Helix is described by the parameters :
+        - R: helix radius
+        - dip: dip angle
+        - x0: TVector3 vertex of the track
+        - Phi0: angle between x0 and the heli center
+    */
+
     ROOT::Math::Functor functor(&FunctorNLL, 7);
 
     ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
@@ -583,16 +892,11 @@ Helix GetRecoHelix(Helix& helix_initial_guess,
     // retrieve result of the minimization and errors
     const double* pars = minimizer->X();
     const double* parsErrors = minimizer->Errors();
-    
-    // fil output object fit_infos
-    fit_infos.TMinuitFinalStatus = minimizer->Status();
-    fit_infos.NIterations = minimizer->NIterations();
-    fit_infos.MinValue = minimizer->MinValue();
 
     // print results of the minimization
     minimizer->PrintResults();
     
-    if(fit_infos.TMinuitFinalStatus==4){ // failed fit
+    if(minimizer->Status()){ // failed fit
         if(minimizer->Strategy()==2){
             std::cout << "failed both with stratefy 1 and 2 \n";
         }else{
@@ -601,8 +905,18 @@ Helix GetRecoHelix(Helix& helix_initial_guess,
         }
     }
     
-    for (auto i = 0u; i < minimizer->NDim(); i++)
-        fit_infos.parameters_errors.push_back(parsErrors[i]);
+    // fill output object fit_infos
+    Parameter R_("R", 0, false, helix_initial_guess.R(), pars[0], parsErrors[0]);
+    Parameter dip_("dip", 1, false, helix_initial_guess.dip(), pars[1], parsErrors[1]);
+    Parameter Phi0_("Phi0", 2, true, helix_initial_guess.Phi0(), pars[2], parsErrors[2]);
+    Parameter h_("h", 3, true, helix_initial_guess.h(), pars[3], parsErrors[3]);
+    Parameter x0_("x0", 4, false, helix_initial_guess.x0().X(), pars[4], parsErrors[4]);
+    Parameter y0_("y0", 5, true, helix_initial_guess.x0().Y(), pars[5], parsErrors[5]);
+    Parameter z0_("z0", 6, true, helix_initial_guess.x0().Z(), pars[6], parsErrors[6]);
+    fit_infos.fitted_parameters = {R_,dip_,Phi0_,h_,x0_,y0_,z0_};
+    fit_infos.TMinuitFinalStatus = minimizer->Status();
+    fit_infos.NIterations = minimizer->NIterations();
+    fit_infos.MinValue = minimizer->MinValue();
 
     // create reconstructed helix from fitted parameters
     Helix reco_helix(pars[0], pars[1], pars[2], pars[3], {pars[4], pars[5], pars[6]});
@@ -610,15 +924,73 @@ Helix GetRecoHelix(Helix& helix_initial_guess,
     return reco_helix;
 }
 
+Helix Reconstruct(TF1* FittedCircle,
+                  TF1* FittedSin,
+                  const std::vector<dg_wire>& hor_wires,
+                  const std::vector<dg_wire>& ver_wires
+                  ){
+    /*
+        Define the reconstructed helix from
+        the separate reconstruction of the 
+        track in the XZ plane and ZY plane
+    */
+    double yc = FittedCircle->GetParameter(0);
+    double R = FittedCircle->GetParameter(1);
+    double zc = FittedCircle->GetParameter(2);
+    double amplitude = FittedSin->GetParameter(0);
+    double frequency = FittedSin->GetParameter(1);
+    double phase = FittedSin->GetParameter(2);
+    /*
+        vertex of the track on the ZY plane is
+        given by the point (z0,y0) on the fitted
+        circle where z0 1 cm far from the first wire
+        and y0=y0(z0).
+    */
+    bool forward_track = (hor_wires[0].z < hor_wires[1].z) ? true : false;
+    double z0 = (forward_track) ? hor_wires[0].z - 10 : hor_wires[0].z + 10;
+    double y0 = FittedCircle->Eval(z0);
+    double x0 = (forward_track) ? ver_wires[0].x - 10 : ver_wires[0].x + 10;
+    // std::cout << "vertex reco (x0,y0,z0) : (" 
+    //           << x0 <<","<< y0 << "," << z0 << ")\n";
+    double Phi0 = TMath::Pi() - asin((y0-yc)/R);
+    double pt = R*0.3*0.6;
+    // std::cout << "Phi0 reco : " << Phi0 << "\n";
+    /*
+        reconstructed pt is the value of the tangent 
+        to the circle in the first point of the curve
+    */
+    TF1* FittedCircle_derivative = new TF1("FittedCircle_derivative",
+                                           "(x-[0]) / sqrt([1]*[1] - (x-[0])*(x-[0]))");
+    FittedCircle_derivative->SetParameters(zc, R);
+    double pz = pt * cos(atan2(FittedCircle_derivative->Eval(z0), z0));
+    std::cout << "FittedCircle_derivative at z0 : " << FittedCircle_derivative->Eval(z0) << "\n";
+    std::cout << "pz_reco : " << pz << "\n";
+    std::cout << "\n";
+
+    TF1* FittedSin_derivative = new TF1("FittedSin_derivative",
+                                        "[0]*[1]*cos([1]*x + [2])");
+    FittedSin_derivative->SetParameters(amplitude, frequency, phase);
+    auto pz_over_px = FittedSin_derivative->Eval(x0);
+    auto px = pz / pz_over_px;
+    std::cout << "FittedSin_derivative at x0 : " << pz_over_px << "\n";
+    std::cout << "px_reco : " << px << "\n";
+    double dip = atan2(px, pt);
+    std::cout << "dip_reco : " << atan2(px, pt) << "\n";
+    
+    Helix h(R, dip, Phi0, 1, {x0, y0, z0});
+    
+    return h;
+}
+
 Helix Reconstruct(MinuitFitInfos& fit_infos,
                   Helix& test_helix,
                   Helix& helix_first_guess,
                   std::vector<dg_wire>& wire_infos,
                   std::vector<dg_wire>& fired_wires){
-    
-    RecoUtils::event_digits = &fired_wires; // you may delete later, leave here for the moment
 
-    auto reco_helix = GetRecoHelix(helix_first_guess, fired_wires, fit_infos);
+    Helix reco_helix;
+
+    reco_helix = GetRecoHelix(helix_first_guess, fired_wires, fit_infos);
 
     std::cout<<"\n";
     std::cout<< "true helix - reco helix \n";
@@ -627,7 +999,6 @@ Helix Reconstruct(MinuitFitInfos& fit_infos,
     std::cout<<"x0_true - x0_reco   : "<< test_helix.x0().X() - reco_helix.x0().X() << "\n";
 
     return reco_helix;
-
 }
 
 // MAIN________________________________________________________________________
@@ -747,11 +1118,8 @@ int main(int argc, char* argv[]){
     for(auto i= 9u; i < 10; i++)
     // for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
-        // if(i!=78) continue;
         tEdep->GetEntry(i);
         
-        // tDigit->GetEntry(i);
-
         auto muon_trj = evEdep->Trajectories[0];
         auto vertex = evEdep->Primaries[0];
         auto trj = evEdep->Trajectories;
@@ -775,8 +1143,6 @@ int main(int argc, char* argv[]){
         // create the non-smeared track (no E loss nor MCS) from initial muon momentum and direction
         Helix test_helix(muon_trj);
 
-        Helix helix_first_guess = GetHelixFirstGuess(test_helix);
-
         if(USE_NON_SMEARED_TRACK){
             // define fired wires from the muon helix
             CreateDigitsFromHelix(test_helix, wire_infos, fired_wires);
@@ -785,35 +1151,74 @@ int main(int argc, char* argv[]){
             CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], wire_infos, fired_wires);
         }
 
-        // sort fired wires by hit time (MC truth): usefull to subract assumed t_hit from measured TDC
-        std::sort(fired_wires.begin(), fired_wires.end(), [](const dg_wire &a, const dg_wire &b) {
-        return a.t_hit < b.t_hit;
-        });
+        SortWiresByTime(fired_wires);
+
+        RecoUtils::event_digits = &fired_wires;
 
         first_fired_wire = &fired_wires.front();
 
         bool good_event = PassSelectionNofHits(fired_wires);
 
-        if(!good_event){ // at least 6 hits required
-            continue;
-        }else{
-            RecoUtils::InitHelixPars(fired_wires, helix_first_guess);
-            PrintEventInfos(i, test_helix, helix_first_guess, fired_wires);
-        }
-        
-        MinuitFitInfos fit_infos;
+        if(!good_event) continue;
 
-        auto reco_helix = Reconstruct(fit_infos,         // infos on the fit
-                                      test_helix,        // truth
-                                      helix_first_guess, // first guess
-                                      wire_infos,        // all wire infos
-                                      fired_wires);      // wires fired by the test helix
+        Helix helix_first_guess = GetHelixFirstGuess(test_helix);
+
+        MinuitFitInfos fit_infos, fit_XZ, fit_ZY;
 
         RecoObject reco_object;
 
-        reco_object.fit_infos = fit_infos;
+        std::vector<dg_wire> hor_wires, ver_wires;
+        for (auto& wire : fired_wires){
+            if(wire.hor==true){ // horizontal
+                hor_wires.push_back(wire);
+            }else{// (wire.hor==false) // vertical
+                ver_wires.push_back(wire);
+            }}
+
+        // sort wires (they should be already sorted)
+        SortWiresByTime(hor_wires);
+        SortWiresByTime(ver_wires);
+
+        horizontal_fired_digits = &hor_wires;
+        vertical_fired_digits = &ver_wires;
+
+        Helix reco_helix;
+
+        if(FITTING_STRATEGY==0){
+            /*
+                Fit the coordinate of the fired wires to
+                provide an initial guess of the NLL method
+            */
+            PrintEventInfos(i, test_helix, helix_first_guess, fired_wires);
+            TF1* SinFit = RecoUtils::WiresSinFit(*vertical_fired_digits);
+            TF1* CircleFit = RecoUtils::WiresCircleFit(*horizontal_fired_digits);
+            TF1* RecoXZTrack = GetRecoXZTrack(SinFit, fit_XZ);
+            TF1* RecoZYTrack = GetRecoZYTrack(CircleFit, fit_ZY);
+            // fill infos on impacta pars separately
+            // ....
+            // get reconstructed helix from separate fit
+            reco_helix = Reconstruct(RecoZYTrack, 
+                                     RecoXZTrack,
+                                     *horizontal_fired_digits,
+                                     *vertical_fired_digits);
+            reco_object.fit_XZ = fit_XZ;
+            reco_object.fit_ZY = fit_ZY;
+            // throw "";
+
+        }else if(FITTING_STRATEGY==1){
+            // RecoUtils::InitHelixPars(fired_wires, helix_first_guess);
+            PrintEventInfos(i, test_helix, helix_first_guess, fired_wires);
+            reco_helix = Reconstruct(fit_infos,         // infos on the fit
+                                     test_helix,        // truth
+                                     helix_first_guess, // first guess
+                                     wire_infos,        // all wire infos
+                                     fired_wires);      // wires fired by the test helix
+            reco_object.fit_infos = fit_infos;
+        }
+
         event_reco.edep_file_input = fEDepInput;
         event_reco.digit_file_input = fDigitInput;
+        
         if(USE_NON_SMEARED_TRACK) event_reco.use_track_no_smearing = true;
 
         FillTreeOut(i, test_helix,

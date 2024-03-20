@@ -383,6 +383,8 @@ double        GetMinImpactParameter(const Helix& helix, const Line& line);
 
 double        GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized);
 
+double        NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess, double tol, int max_iterations);
+
 double        GetExpectedRadiusFromDigit(const dg_wire& digit);
 
 Line          GetLineFromDigit(const dg_wire& digit);
@@ -409,18 +411,33 @@ std::vector<double> SmearVariable(double mean, double sigma, int nof_points);
 
 } // RecoUtils
 
+struct Parameter
+{
+    std::string name;
+    int id;
+    bool fixed_in_fit;
+    double initial_guess;
+    double value;
+    double error;
+    Parameter() 
+        : name(""), fixed_in_fit(false), initial_guess(0.0), value(0.0), error(0.0) {}
+    Parameter(std::string n, int i, bool f, double ig, double v, double e) 
+        : name(n), id(i), fixed_in_fit(f), initial_guess(ig), value(v), error(e) {}
+};
+
 struct MinuitFitInfos
 {
     int                         TMinuitFinalStatus; // 0 if converged, 4 if falied
     int                         NIterations; // number of iterations to reach the minimum
     double                      MinValue; // value of the func to minimize at its minimum
-    std::vector<double>         parameters_errors; // error associated to the par estimate
+    std::vector<Parameter>      fitted_parameters;
 };
 
 struct RecoObject
 {
-    int                         traj_edep_index;
-    std::vector<dg_wire>        fired_wires;
+    int                         traj_edep_index; // from edepsim
+    std::vector<TLorentzVector> trj_points; // from edepsim
+    std::vector<dg_wire>        fired_wires; // digitization
     /*
     fired_wires : 
         all the fired wires related to the reconstructed obj.
@@ -438,15 +455,29 @@ struct RecoObject
         initial seed for the algo that reconstruct the true_helix.
     */
     Helix                       reco_helix;
+    /*
+        true_impact_par : distance TG4HitSegment (with the
+        smallest TDC among all the hit int the cell) to the
+        signal wire
+    */
+    std::vector<double>         true_impact_par;
+    /*
+        impact_par_from_TDC : (TDC - t_signa - t_hit)
+    */
     std::vector<double>         impact_par_from_TDC;
+    /*
+        impact_par_estimated : distance track (helix, 
+        circle or sin) to the wire center.  
+    */
     std::vector<double>         impact_par_estimated;
-    std::vector<TLorentzVector> trj_points; // from edepsim
     double                      pt_true;
     double                      pt_reco;
+    // from TMinuit
+    // fit strategy 0
+    MinuitFitInfos              fit_XZ; // fit on XZ plane
+    MinuitFitInfos              fit_ZY; // fit on ZY plane
+    // fit strategy 1
     MinuitFitInfos              fit_infos;
-    /*
-    fit_infos : fitting infos form TMinutit
-    */
 };
 
 struct EventReco
@@ -461,14 +492,6 @@ struct EventReco
     */
     int                         event_index;
     RecoObject                  reco_object;
-    std::vector<dg_wire>        event_fired_wires;
-    /*
-    event_fired_wires : 
-        all the wires fired by the neutrino event. This
-        should be provided by the digitization
-    */
-    int                         nof_digits = event_fired_wires.size();
 };
-
 
 #endif
