@@ -456,13 +456,13 @@ TF1* RecoUtils::WiresCircleFit(const std::vector<dg_wire>& wires){
     // Create a TGraph object and fill it with the data
     TGraph* graph = new TGraph(z.size(), &z[0], &y[0]);
 
-    double z_min = *std::min_element(z.begin(), z.end());
-    double z_max = *std::max_element(z.begin(), z.end());
-    double y_min = *std::min_element(y.begin(), y.end());
-    double y_max = *std::max_element(y.begin(), y.end());
+    // double z_min = *std::min_element(z.begin(), z.end());
+    // double z_max = *std::max_element(z.begin(), z.end());
+    // double y_min = *std::min_element(y.begin(), y.end());
+    // double y_max = *std::max_element(y.begin(), y.end());
 
     // Define a circle function
-    TF1* circleFit = new TF1("circleFit", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))", z_min-20, z_max+20); // Adjust range as needed
+    TF1* circleFit = new TF1("circleFit", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))");
 
     double centerZ, centerY, radius, err, chi2;
 
@@ -650,4 +650,173 @@ const double* RecoUtils::GetHelixParameters(const Helix& helix_initial_guess, in
     const double* pars = minimizer->X();
 
     return pars;
+}
+
+std::vector<double> CardanoSolutions(double a, double b, double c, double d) {
+    double f, g, h;
+    std::complex<double> x1, x2, x3;
+
+    // Calculate intermediate values
+    f = ((3 * c / a) - ((b * b) / (a * a))) / 3;
+    g = ((2 * (b * b * b) / (a * a * a)) - (9 * b * c / (a * a)) + (27 * d / a)) / 27;
+    h = ((g * g) / 4) + ((f * f * f) / 27);
+    std::cout << "h : " << h << "\n";
+    if (f == 0 && g == 0 && h == 0) {
+        // All roots are real and equal
+        double root = pow(d / a, 1.0 / 3.0);
+        std::cout << "x = " << root << std::endl;
+    } else if (h <= 0) {
+        // All 3 roots are real
+        double i = sqrt(((g * g) / 4) - h);
+        double j = pow(i, 1.0 / 3.0);
+        double k = acos(-g / (2 * i));
+        double l = -j;
+        double m = cos(k / 3);
+        double n = sqrt(3) * sin(k / 3);
+        double p = -b / (3 * a);
+
+        x1 = 2 * j * m - p;
+        x2 = l * (m + n) + p;
+        x3 = l * (m - n) + p;
+
+        std::cout << "x1 = " << x1 << std::endl;
+        std::cout << "x2 = " << x2 << std::endl;
+        std::cout << "x3 = " << x3 << std::endl;
+    } else if (h > 0) {
+        // One real root and two complex roots
+        double r = -g / 2 + sqrt(h);
+        double s = pow(r, 1.0 / 3.0);
+        double t = -g / 2 - sqrt(h);
+        double u = pow(t, 1.0 / 3.0);
+
+        x1 = s + u - b / (3 * a);
+        x2 = std::complex<double>((s + u) / 2, -(s - u) * sqrt(3) / 2) - b / (3 * a);
+        x3 = std::complex<double>((s + u) / 2, (s - u) * sqrt(3) / 2) - b / (3 * a);
+
+        std::cout << "x1 = " << x1 << std::endl;
+        std::cout << "x2 = " << x2 << std::endl;
+        std::cout << "x3 = " << x3 << std::endl;
+    }
+    return {x1.real(), x2.real(), x3.real()};
+}
+
+Line RecoUtils::GetTangent2NCircles(const std::vector<Circle>& circles){
+    /*
+        An analytical solution to the problem of linear track segment
+        reconstruction in drift tube chamber.
+        author : Zbisław Tabor
+        
+        notation:
+        - (x,z) tube center of radius r
+        - tangent of equation x = Az + B
+    */
+   
+    double X=0, Z=0, R=0, XZ=0, XR=0, ZR=0, X2=0, Z2=0;
+    double N=circles.size();
+    for(auto& circle : circles){
+        double x = circle.center_x();
+        double z = circle.center_y();
+        double r = circle.R();
+        
+        X += x;
+        Z += z;
+        R += r;
+        XZ += x*z;
+        XR += x*r;
+        ZR += z*r;
+        X2 += x*x;
+        Z2 += z*z;
+    }
+    double a0 = X*Z - N*XZ + Z*R - N*ZR;
+    double a1 = N*Z2 - Z*Z - N*X2 + X*X - N*XR + X*R;
+    double a2 = N*XZ - X*Z - N*0.5*ZR + 0.5*Z*R;
+    double a3 = 0.5*(X*R - N*XR);
+    std::cout << a0 << "\n";
+    std::cout << a1 << "\n";
+    std::cout << a2 << "\n";
+    std::cout << a3 << "\n";
+    std::vector<double> A = CardanoSolutions(a3, a2, a1, a0);
+    for(auto a : A){
+        std::cout << "for solution: " << a << ", B : " <<(X + sqrt(1 + a*a)*R - a*Z)/N << std::endl;
+    }
+    // double B = (X + sqrt(1 + A*A)*R - A*Y)/N;
+    // throw "";
+    // std::cout << "A : " << A << ", B : " << B << "\n";
+    Line l;
+    return l;
+}
+
+// funziona per tangente interna
+// // std::vector<Line> RecoUtils::GetTangentTo2Circles(const Circle& c1, const Circle& c2){
+// void RecoUtils::GetTangentTo2Circles(const Circle& c1, const Circle& c2){
+//     double x1 = c1.center_x(), x2 = c2.center_x();
+//     double y1 = c1.center_y(), y2 = c2.center_y();
+//     double r1 = c1.R(), r2 = c2.R();
+//     double dx = x2 - x1;
+//     double dy = y2 - y1;
+//     double dr = r1 + r2;
+//     double d = sqrt(dx*dx + dy*dy);
+//     double gamma = atan2(dy, dx);
+//     double beta = asin(dr/d);
+//     double alpha = gamma - beta;
+
+//     double x3 = x1 - r1*sin(alpha);
+//     double y3 = y1 + r1*cos(alpha);
+//     double x4 = x2 + r2*sin(alpha);
+//     double y4 = y2 - r2*cos(alpha);
+
+//     double m = (y4-y3)/(x4-x3);
+//     double q = y3 - m*x3;
+//     std::cout << "m : " << m << ", q : " << q << "\n";
+//     // std::cout << "center 1, radius : (" << c1.center_x() <<", "<< c1.center_y() <<") "<<c1.R() <<"\n";
+//     // std::cout << "center 2, radius : (" << c2.center_x() <<", "<< c2.center_y() <<") "<<c2.R() <<"\n";
+// }
+
+// void RecoUtils::GetTangentTo2Circles(const Circle& c1, const Circle& c2){
+//     double x1 = c1.center_x(), x2 = c2.center_x();
+//     double y1 = c1.center_y(), y2 = c2.center_y();
+//     double r1 = c1.R(), r2 = c2.R();
+//     double dx = x2 - x1;
+//     double dy = y2 - y1;
+//     double dr = r1 + r2;
+//     double d = sqrt(dx*dx + dy*dy);
+//     double gamma = atan2(dy, dx);
+//     double beta = asin(dr/d);
+//     double alpha = gamma + beta;
+
+//     double x3 = x1 + r1*sin(alpha);
+//     double y3 = y1 - r1*cos(alpha);
+//     double x4 = x2 - r2*sin(alpha);
+//     double y4 = y2 + r2*cos(alpha);
+
+//     double m = (y4-y3)/(x4-x3);
+//     double q = y3 - m*x3;
+//     std::cout << "m : " << m << ", q : " << q << "\n";
+//     // std::cout << "center 1, radius : (" << c1.center_x() <<", "<< c1.center_y() <<") "<<c1.R() <<"\n";
+//     // std::cout << "center 2, radius : (" << c2.center_x() <<", "<< c2.center_y() <<") "<<c2.R() <<"\n";
+// }
+void RecoUtils::GetTangentTo2Circles(const Circle& c1, const Circle& c2){
+    double x1 = c1.center_x(), x2 = c2.center_x();
+    double y1 = c1.center_y(), y2 = c2.center_y();
+    double r1 = c1.R(), r2 = c2.R();
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+    double dr = r1 + r2;
+    double d = sqrt(dx*dx + dy*dy);
+    double gamma = atan2(dy, dx);
+    double beta = asin(dr/d);
+    for(auto k : {-1.,1.}){ // inner tangents
+        double alpha = gamma + k*beta;
+        // tangent point to circle 1
+        double x3 = x1 + k*r1*sin(alpha);
+        double y3 = y1 - k*r1*cos(alpha);
+        // tangent point to circle 2
+        double x4 = x2 - k*r2*sin(alpha);
+        double y4 = y2 + k*r2*cos(alpha);
+        double m = (y4-y3)/(x4-x3);
+        double q = y3 - m*x3;
+        std::cout << "m : " << m << ", q : " << q << "\n";
+    }
+    // std::cout << "center 1, radius : (" << c1.center_x() <<", "<< c1.center_y() <<") "<<c1.R() <<"\n";
+    // std::cout << "center 2, radius : (" << c2.center_x() <<", "<< c2.center_y() <<") "<<c2.R() <<"\n";
 }

@@ -118,7 +118,7 @@ void help_input(){
 }
 
 void PrintEventInfos(int i,
-                     const Helix& test_helix,
+                     const Helix& true_helix,
                      const Helix& helix_first_guess,
                      const std::vector<dg_wire>& fired_wires){
         std::cout<<"\n";
@@ -127,7 +127,7 @@ void PrintEventInfos(int i,
                  <<"\n";
         std::cout<<"\n";
         std::cout<<"test helix : \n";
-        test_helix.PrintHelixPars();
+        true_helix.PrintHelixPars();
         std::cout<<"\n";
         std::cout<<"first guess : \n";
         helix_first_guess.PrintHelixPars();
@@ -166,41 +166,6 @@ void ReadWireInfos(const std::string fInput, std::vector<dg_wire>& wire_infos){
         wire_infos.push_back(wire);
     }
     stream.close();
-}
-
-void FillTrueInfos(const Helix& true_helix, RecoObject& reco_obj){
-    reco_obj.true_helix = true_helix;
-    reco_obj.pt_true = true_helix.R()*0.3*0.6;
-}
-
-void FillRecoInfos(const Helix& test_helix, const Helix& reco_helix, RecoObject& reco_object){
-    for(auto& w : *RecoUtils::event_digits){
-            reco_object.impact_par_from_TDC.push_back(w.tdc * sand_reco::stt::v_drift);
-            auto l = RecoUtils::GetLineFromDigit(w);
-            reco_object.impact_par_estimated.push_back(RecoUtils::GetMinImpactParameter(test_helix, l));
-    }
-    reco_object.reco_helix = reco_helix;
-    reco_object.pt_reco = reco_helix.R()*0.3*0.6;
-}
-
-void FillEventInfos(int ev_index, const RecoObject& reco_object, EventReco& event_reco){
-        event_reco.event_index = ev_index;
-        event_reco.reco_object = reco_object;
-}
-
-void FillTreeOut(int ev_index, 
-                 const Helix& test_helix,
-                 const Helix& helix_first_guess,
-                 const Helix& reco_helix,
-                 RecoObject& reco_object,
-                 EventReco& event_reco){
-    
-    reco_object.fired_wires = *RecoUtils::event_digits;
-    reco_object.helix_first_guess = helix_first_guess;
-    
-    FillTrueInfos(test_helix, reco_object);
-    FillRecoInfos(test_helix, reco_helix, reco_object);
-    FillEventInfos(ev_index, reco_object, event_reco);
 }
 
 // EVENT SELECTION_____________________________________________________________
@@ -516,36 +481,57 @@ double TDC2ImpactPar(const dg_wire& wire){
     return (wire.tdc - assumed_signal_propagation - assumed_hit_time) * sand_reco::stt::v_drift;
 }
 
+void FillImpactParInfo(RecoObject& reco_obj, 
+                           TF1* fitted_curve, 
+                           std::vector<dg_wire>& wires,
+                           double (*IPestimator)(TF1*,const dg_wire&)){
+
+    for(auto& wire : wires){
+        reco_obj.true_impact_par.push_back(wire.drift_time*sand_reco::stt::v_drift);
+        reco_obj.impact_par_from_TDC.push_back(TDC2ImpactPar(wire));
+        reco_obj.impact_par_estimated.push_back(IPestimator(fitted_curve, wire));
+    }
+}
 // FITTING STRATEGY 0__________________________________________________________
 
 // FITTING ON ZY PLANE_________________________________________________________
+
+double GetImpactParamiterCircle(TF1* Circle, const dg_wire& wire){
+    double yc = Circle->GetParameter(0);
+    double R = Circle->GetParameter(1);
+    double zc = Circle->GetParameter(2);
+    return  fabs(R - sqrt((wire.z-zc)*(wire.z-zc)+(wire.y-yc)*(wire.y-yc)));
+}
 
 double FunctorNLL_Circle(const double* p){
     
     double yc = p[0];
     double R = p[1];
     double zc = p[2];
-    double z_min = p[3];
-    double z_max = p[4];
 
     double nll         = 0.;
     const double sigma = 0.2; // 200 mu_m = 0.2 mm
 
+    TF1* Circle = new TF1("Circle", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))");
+    Circle->SetParameters(yc,R,zc);
+    double i = 1;
     for(auto& wire : *horizontal_fired_digits){
 
         // r_estimated = impact parameter estimated as distance sin function - wire
-        double r_estimated = fabs(R - sqrt((wire.z-zc)*(wire.z-zc)+(wire.y-yc)*(wire.y-yc)));
+        double r_estimated = GetImpactParamiterCircle(Circle, wire);
 
         // r_observed = impact parameter from the observed tdc
         double r_observed = TDC2ImpactPar(wire);
 
         nll += (r_estimated - r_observed) * (r_estimated - r_observed) / (sigma * sigma);
+        // nll += (r_estimated - r_observed) * (r_estimated - r_observed) * 1/i;
 
         // std::cout << "impact par : true " << wire.drift_time * sand_reco::stt::v_drift
         //                << ", r_observed : " << r_observed
         //                << ", r_estimated : " << r_estimated << "\n";
+        i++;
     }
-    return sqrt(nll)/horizontal_fired_digits->size();
+    return sqrt(nll)/(horizontal_fired_digits->size());
 }
 
 TF1* GetRecoZYTrack(TF1* first_guess,
@@ -560,9 +546,7 @@ TF1* GetRecoZYTrack(TF1* first_guess,
     double yc = first_guess->GetParameter(0);
     double R = first_guess->GetParameter(1);
     double zc = first_guess->GetParameter(2);
-    double z_min = first_guess->GetXmin();
-    double z_max = first_guess->GetXmax();
-
+ 
     ROOT::Math::Functor functor(&FunctorNLL_Circle, 3);
     
     ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "Migrad");
@@ -570,19 +554,20 @@ TF1* GetRecoZYTrack(TF1* first_guess,
     minimizer->SetFunction(functor);
 
     // yc
-    minimizer->SetLimitedVariable(0, "yc", yc, yc*0.01, yc*0.8, yc*1.2);
+    // minimizer->SetLimitedVariable(0, "yc", yc, yc*0.01, yc*0.8, yc*1.2);
+    minimizer->SetVariable(0, "yc", yc, yc*0.01);
     // R
-    minimizer->SetLimitedVariable(1, "R", R, R*0.01, R*0.8, R*1.2);
+    // minimizer->SetLimitedVariable(1, "R", R, R*0.01, R*0.8, R*1.2);
+    minimizer->SetVariable(1, "R", R, 200); // 200 mm -> 35 MeV difference
     // zc
-    minimizer->SetLimitedVariable(2, "zc", zc, zc*0.01, zc*0.8, zc*1.2);
-
-    // extreme [z_min, z_max]
-    minimizer->SetFixedVariable(3, "z_min", z_min);
-    minimizer->SetFixedVariable(4, "z_max", z_max);
+    // minimizer->SetLimitedVariable(2, "zc", zc, zc*0.01, zc*0.8, zc*1.2);
+    minimizer->SetVariable(2, "zc", zc, zc*0.01);
 
     // minimization settings
     if(_DEBUG_) minimizer->SetPrintLevel(4);
 
+    // precision
+    // minimizer->SetTolerance(minimizer->Tolerance()*10);
     // start minimization
     minimizer->Minimize();
 
@@ -600,7 +585,7 @@ TF1* GetRecoZYTrack(TF1* first_guess,
     fit_infos.MinValue = minimizer->MinValue();
 
     // track from final fit
-    TF1* FinalcircleFit = new TF1("circleFit", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))", z_min-20, z_max+20);
+    TF1* FinalcircleFit = new TF1("circleFit", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))");
     FinalcircleFit->SetParameters(pars[0], pars[1], pars[2]);
 
     // print results of the minimization
@@ -661,24 +646,6 @@ double GetImpactParameterSin(TF1* TestSin, const dg_wire& wire){
 
     return impact_par;
 }
-
-// void FillImpactParInfo_Sin(RecoObject& reco_obj, 
-//                            TF1* TestSin, 
-//                            std::vector<dg_wire>& wires){
-//     /*
-//         Function to fill info about the impact parameter given
-//         the sin function of the final minimization
-//     */
-//    std::vector<double> ip_true, ip_TDC, ip_estimated;
-//     for(auto& wire : wires){
-//         ip_true.push_back(wire.drift_time*sand_reco::stt::v_drift);
-//         ip_TDC.push_back(TDC2ImpactPar(wire));
-//         ip_estimated.push_back(GetImpactParameterSin(TestSin, wire));
-//     }
-//     reco_obj.true_impact_par = ip_true;
-//     reco_obj.impact_par_from_TDC = ip_TDC;
-//     reco_obj.impact_par_estimated = ip_estimated;
-// }
 
 double NLL_Sin(TF1* TestSin, std::vector<dg_wire>& wires){
     /*
@@ -983,7 +950,7 @@ Helix Reconstruct(TF1* FittedCircle,
 }
 
 Helix Reconstruct(MinuitFitInfos& fit_infos,
-                  Helix& test_helix,
+                  Helix& true_helix,
                   Helix& helix_first_guess,
                   std::vector<dg_wire>& wire_infos,
                   std::vector<dg_wire>& fired_wires){
@@ -994,9 +961,9 @@ Helix Reconstruct(MinuitFitInfos& fit_infos,
 
     std::cout<<"\n";
     std::cout<< "true helix - reco helix \n";
-    std::cout<<"R_true - R_reco     : "<< test_helix.R() - reco_helix.R() << "\n";
-    std::cout<<"dip_true - dip_reco : "<< test_helix.dip() - reco_helix.dip() << "\n";
-    std::cout<<"x0_true - x0_reco   : "<< test_helix.x0().X() - reco_helix.x0().X() << "\n";
+    std::cout<<"R_true - R_reco     : "<< true_helix.R() - reco_helix.R() << "\n";
+    std::cout<<"dip_true - dip_reco : "<< true_helix.dip() - reco_helix.dip() << "\n";
+    std::cout<<"x0_true - x0_reco   : "<< true_helix.x0().X() - reco_helix.x0().X() << "\n";
 
     return reco_helix;
 }
@@ -1141,11 +1108,11 @@ int main(int argc, char* argv[]){
         }
         
         // create the non-smeared track (no E loss nor MCS) from initial muon momentum and direction
-        Helix test_helix(muon_trj);
+        Helix true_helix(muon_trj);
 
         if(USE_NON_SMEARED_TRACK){
             // define fired wires from the muon helix
-            CreateDigitsFromHelix(test_helix, wire_infos, fired_wires);
+            CreateDigitsFromHelix(true_helix, wire_infos, fired_wires);
         }else{
             // create digits from edepsim selected hits
             CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], wire_infos, fired_wires);
@@ -1161,7 +1128,7 @@ int main(int argc, char* argv[]){
 
         if(!good_event) continue;
 
-        Helix helix_first_guess = GetHelixFirstGuess(test_helix);
+        Helix helix_first_guess = GetHelixFirstGuess(true_helix);
 
         MinuitFitInfos fit_infos, fit_XZ, fit_ZY;
 
@@ -1181,6 +1148,20 @@ int main(int argc, char* argv[]){
 
         horizontal_fired_digits = &hor_wires;
         vertical_fired_digits = &ver_wires;
+        
+        // std::vector<Circle> circles;
+        // for(auto i=0u; i<4; i++){
+        //     auto circle = Circle(hor_wires[i].z, hor_wires[i].y, TDC2ImpactPar(hor_wires[i]));
+        //     circles.push_back(circle);
+        // }
+        // RecoUtils::GetTangent2NCircles(circles);
+        Circle c0(hor_wires[0].z, hor_wires[0].y, TDC2ImpactPar(hor_wires[0]));
+        Circle c1(hor_wires[1].z, hor_wires[1].y, TDC2ImpactPar(hor_wires[1]));
+        Circle c2(hor_wires[2].z, hor_wires[2].y, TDC2ImpactPar(hor_wires[2]));
+        RecoUtils::GetTangentTo2Circles(c0, c1);
+        RecoUtils::GetTangentTo2Circles(c1, c2);
+        // throw "";
+        //
 
         Helix reco_helix;
 
@@ -1189,13 +1170,20 @@ int main(int argc, char* argv[]){
                 Fit the coordinate of the fired wires to
                 provide an initial guess of the NLL method
             */
-            PrintEventInfos(i, test_helix, helix_first_guess, fired_wires);
+            PrintEventInfos(i, true_helix, helix_first_guess, fired_wires);
             TF1* SinFit = RecoUtils::WiresSinFit(*vertical_fired_digits);
             TF1* CircleFit = RecoUtils::WiresCircleFit(*horizontal_fired_digits);
             TF1* RecoXZTrack = GetRecoXZTrack(SinFit, fit_XZ);
             TF1* RecoZYTrack = GetRecoZYTrack(CircleFit, fit_ZY);
+            double radius = true_helix.R();
+            double ycenter = true_helix.x0().Y() - radius*sin(true_helix.Phi0());
+            double zcenter = true_helix.x0().Z() - radius*cos(true_helix.Phi0());
+            double truth[3] = {ycenter,radius, zcenter};
+            std::cout <<"true center : (" << ycenter<<", "<<zcenter<<")\n";                         
             // fill infos on impacta pars separately
-            // ....
+            FillImpactParInfo(reco_object, RecoXZTrack, *vertical_fired_digits, GetImpactParameterSin);
+            FillImpactParInfo(reco_object, RecoZYTrack, *horizontal_fired_digits, GetImpactParamiterCircle);
+            // throw "";
             // get reconstructed helix from separate fit
             reco_helix = Reconstruct(RecoZYTrack, 
                                      RecoXZTrack,
@@ -1207,25 +1195,26 @@ int main(int argc, char* argv[]){
 
         }else if(FITTING_STRATEGY==1){
             // RecoUtils::InitHelixPars(fired_wires, helix_first_guess);
-            PrintEventInfos(i, test_helix, helix_first_guess, fired_wires);
+            PrintEventInfos(i, true_helix, helix_first_guess, fired_wires);
             reco_helix = Reconstruct(fit_infos,         // infos on the fit
-                                     test_helix,        // truth
+                                     true_helix,        // truth
                                      helix_first_guess, // first guess
                                      wire_infos,        // all wire infos
                                      fired_wires);      // wires fired by the test helix
             reco_object.fit_infos = fit_infos;
         }
 
+        reco_object.fired_wires = *RecoUtils::event_digits;
+        reco_object.true_helix = true_helix;
+        reco_object.pt_true = true_helix.R()*0.3*0.6;
+        reco_object.reco_helix = reco_helix;
+        reco_object.pt_reco = reco_helix.R()*0.3*0.6;
+        
         event_reco.edep_file_input = fEDepInput;
         event_reco.digit_file_input = fDigitInput;
-        
+        event_reco.event_index = i;
+        event_reco.reco_object = reco_object;
         if(USE_NON_SMEARED_TRACK) event_reco.use_track_no_smearing = true;
-
-        FillTreeOut(i, test_helix,
-                       helix_first_guess,
-                       reco_helix,
-                       reco_object, 
-                       event_reco);
 
         tout.Fill();
     }

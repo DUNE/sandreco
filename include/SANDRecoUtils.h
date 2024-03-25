@@ -2,6 +2,7 @@
 #define SANDRECOUTILS_H
 
 #include <cmath>
+#include <complex>
 #include <TRandom3.h>
 #include <TStyle.h>
 
@@ -209,6 +210,52 @@ class Helix
     ClassDef(Helix, 1);
 };
 
+class Circle : public SANDWireInfo
+{
+    public:
+        Circle(double arg_center_x, double arg_center_y, double arg_R) :
+            center_x_(arg_center_x), center_y_(arg_center_y), R_(arg_R) {}
+
+        Circle() :
+            center_x_(0), center_y_(0), R_(1) {}
+        
+        double x_l(double angle) const {
+            // angle should be in [0, 2pi)
+            return center_x_ + R_ * cos(angle);
+        }
+        double y_l(double angle) const {
+            // angle should be in [0, 2pi)
+            return center_y_ + R_ * sin(angle);
+        }
+
+        double dx_derivative(double angle) const {
+            return -1. * R_ * sin(angle);
+        }
+        
+        double dy_derivative(double angle) const {
+            return R_ * cos(angle);
+        }
+
+        TVector2 GetPointAt(double angle) const {
+            return {x_l(angle), y_l(angle)};
+        }
+
+        TVector2 GetDerivativeAt(double angle) const {
+            return {dx_derivative(angle), dy_derivative(angle)};
+        }
+
+        double center_x() const {return center_x_;};
+        double center_y() const {return center_y_;};
+        double R() const {return R_;};
+
+    private:
+        double center_x_;
+        double center_y_;
+        double R_;
+    
+    ClassDef(Circle, 1);
+};
+
 class Line : public SANDWireInfo
 {
     public:
@@ -241,6 +288,16 @@ class Line : public SANDWireInfo
 
             up_lim_ = 0.5;
             low_lim_ = - 0.5; 
+        }
+
+        Line(){
+            dx_ = 0.;
+            dy_ = 0.;
+            dz_ = 0.;
+
+            ax_ = 0.;
+            ay_ = 0.;
+            az_ = 0.;
         }
 
         void SetWireLineParam(double* p){
@@ -409,6 +466,10 @@ dg_wire       Copy(const dg_wire& wire);
 
 std::vector<double> SmearVariable(double mean, double sigma, int nof_points);
 
+Line          GetTangent2NCircles(const std::vector<Circle>& circles);
+
+void          GetTangentTo2Circles(const Circle& c1, const Circle& c2);
+
 } // RecoUtils
 
 struct Parameter
@@ -445,12 +506,6 @@ struct RecoObject
     */
     Helix                       true_helix;
     /*
-    true_helix : 
-        assuming no energy loss nor MC scattering particle track would
-        be a perfect helix
-    */
-    Helix                       helix_first_guess;
-    /*
     helix_first_guess : 
         initial seed for the algo that reconstruct the true_helix.
     */
@@ -462,7 +517,7 @@ struct RecoObject
     */
     std::vector<double>         true_impact_par;
     /*
-        impact_par_from_TDC : (TDC - t_signa - t_hit)
+        impact_par_from_TDC : (TDC - t_signal - t_hit)
     */
     std::vector<double>         impact_par_from_TDC;
     /*

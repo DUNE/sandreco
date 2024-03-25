@@ -6,8 +6,10 @@
 #pragma link off all functions;
 
 #pragma link C++ class std::vector < RecoObject> + ;
+#pragma link C++ class std::vector < Circle> + ;
 #pragma link C++ class std::vector < Parameter> + ;
 #pragma link C++ class Helix + ;
+#pragma link C++ class Circle + ;
 #pragma link C++ class Line + ;
 #pragma link C++ class Parameter + ;
 #pragma link C++ class MinuitFitInfos +;
