@@ -187,7 +187,12 @@ class Helix
             std::cout<<std::setprecision(8)<<"dip -> "<<dip_<<"\n";
             std::cout<<std::setprecision(8)<<"phi -> "<<Phi0_<<"\n";
             std::cout<<std::setprecision(8)<<"h   -> "<<h_<<"\n";
-            std::cout<<std::setprecision(8)<<"x0, y0, z0 -> "<<x0_.X()<<" "<<x0_.Y()<<" "<<x0_.Z()<<"\n";
+            std::cout<<std::setprecision(8)<<"x0, y0, z0 -> "<< x0_.X() << " " 
+                                                             << x0_.Y() << " " 
+                                                             << x0_.Z() <<"\n";
+            std::cout<<std::setprecision(8)<<"zc, yc     -> "<< x0_.Z() - R_*cos(Phi0_) <<" "
+                                                             << x0_.Y() - R_*sin(Phi0_) <<"\n";
+            std::cout << "\n";                                                             
         }
 
         double   R()      const {return R_;};
@@ -197,6 +202,7 @@ class Helix
         TVector3 x0()     const {return x0_;};
         double   LowLim() const {return low_lim_;};
         double   UpLim()  const {return up_lim_;};
+        TVector2 Center() const {return {x0_.Z()-R_*cos(Phi0_), x0_.Y()-R_*sin(Phi0_)};};   
 
     private:
         double   R_;
@@ -244,6 +250,43 @@ class Circle : public SANDWireInfo
             return {dx_derivative(angle), dy_derivative(angle)};
         }
 
+        TVector2 GetDerivativeAt(double arg_x, double arg_y) const {
+            double angle = GetAngleFromPoint(arg_x, arg_y);
+            return {dx_derivative(angle), dy_derivative(angle)};
+        }
+
+        double GetAngleFromPoint(double arg_x, double arg_y) const {
+            // return the angle [0, 2pi) corresponding to the point (x,y)
+            if(arg_y -  center_y_ > 0){
+                return atan2(arg_y - center_y_, arg_x - center_x_);
+            }else{
+                return atan2(arg_y - center_y_, arg_x - center_x_) + 2 * TMath::Pi();
+            }
+        }
+
+        TF1* GetUpperSemiCircle() const {
+            // y as function of the x coordinate
+            TF1* up_circle = new TF1("UpperCircle", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))");
+            up_circle->SetParameters(center_y_, R_, center_x_);
+            return up_circle;
+        }
+
+        TF1* GetLowerSemiCircle() const {
+            // y as function of the x coordinate
+            TF1* up_circle = new TF1("LowerCircle", "[0] - sqrt([1]*[1] - (x-[2])*(x-[2]))");
+            up_circle->SetParameters(center_y_, R_, center_x_);
+            return up_circle;
+        }
+
+        double Distance2Point(TVector2 point) const {
+            return fabs((center() - point).Mod() - R());
+        }
+
+        TVector2 center() const {
+            TVector2 c = {center_x_, center_y_};
+            return c;
+        }
+
         double center_x() const {return center_x_;};
         double center_y() const {return center_y_;};
         double R() const {return R_;};
@@ -254,6 +297,138 @@ class Circle : public SANDWireInfo
         double R_;
     
     ClassDef(Circle, 1);
+};
+
+class Spiral2D : public SANDWireInfo
+{
+    /*
+        (arg_center_x, arg_center_y) : spiral center
+        arg_R0 : Spiral starting radius
+        theta0 : angle offset
+        k : rate of radius decrease
+    */
+    public:
+        Spiral2D(double arg_center_x, double arg_center_y, double arg_R0, double arg_theta0, double arg_k) : 
+        center_x_(arg_center_x), center_y_(arg_center_y), R0_(arg_R0), k_(arg_k) {}
+
+        Spiral2D(){
+            center_x_ = 0.;
+            center_y_ = 0.;
+            R0_ = 1.;
+            k_ = 0.1;
+        }
+
+        double x_l(double angle) const {
+            // angle should be in [0, 2pi)
+            return center_x_ + (R0_ - k_ * angle) * cos(angle);
+        }
+
+        double y_l(double angle) const {
+            // angle should be in [0, inf)
+            return center_y_ + (R0_ - k_ * angle) * sin(angle);
+        }
+
+        TVector2 center() const {
+            TVector2 c = {center_x_, center_y_};
+            return c;
+        }
+
+        double center_x() const {return center_x_;};
+        double center_y() const {return center_y_;};
+        double R0() const {return R0_;};
+        double kequazione() const {return k_;};
+
+    private:
+        double center_x_;
+        double center_y_;
+        double R0_;
+        double k_;
+};
+
+class Line2D : public SANDWireInfo
+{
+    public:
+    /*
+        parametric equation : 
+            x = dx * t + ax
+            y = dy * t + ay
+        cartesian equation : 
+            y = m * x + q
+    */ 
+        Line2D(double arg_dx, double arg_dy, double arg_ax, double arg_ay){
+            dx_ = arg_dx;
+            dy_ = arg_dy;
+            ax_ = arg_ax;
+            ay_ = arg_ay;
+            m_ = dy_ / dx_;
+            q_ = arg_ay - m_ * arg_ax;
+            direction_ = {dx_, dy_};
+            p0_ = {ax_, ay_};
+        }
+
+        Line2D(double arg_m, double arg_q, double arg_ax = 0.){
+            m_ = arg_m;
+            q_ = arg_q;
+            dx_ = 1.;
+            dy_ = arg_m;
+            ax_ = arg_ax;
+            ay_ = arg_q + arg_m * arg_ax;
+            direction_ = {dx_, dy_};
+            p0_ = {ax_, ay_};
+        }
+
+        Line2D(TVector2 arg_direction, TVector2 arg_p0){
+            direction_ = arg_direction;
+            p0_ = arg_p0;
+            dx_ = arg_direction.X();
+            dy_ = arg_direction.Y();
+            ax_ = arg_p0.X();
+            ay_ = arg_p0.Y();
+            m_ = dy_ / dx_;
+            q_ = arg_p0.Y() - m_ * arg_p0.X();
+        }
+
+        Line2D(){
+            dx_ = 1.;
+            dy_ = 1.;
+            ax_ = 0.;
+            ay_ = 0.;
+            m_ = 1.;
+            q_ = 0.;
+            direction_ = {1.,1.};
+            p0_ = {0.,0.};
+        }
+
+        double Distance2Point(TVector2 p1) const {
+            TVector2 diff = p1 - p0_;
+
+            double projection_length = diff * direction_.Unit();
+            TVector2 projection = projection_length * direction_.Unit();
+
+            TVector2 diff_projection = diff - projection;
+            return diff_projection.Mod();
+        }
+
+        double dx() const {return dx_;};
+        double dy() const {return dy_;};
+        double ax() const {return ax_;};
+        double ay() const {return ay_;};
+        double m() const {return m_;};
+        double q() const {return q_;};
+        TVector2 direction() const {return direction_;};
+        TVector2 p0() const {return p0_;};
+
+    private:
+        double dx_;
+        double dy_;
+        double ax_;
+        double ay_;
+        double m_;
+        double q_;
+        TVector2 direction_;
+        TVector2 p0_;
+    
+    ClassDef(Line2D, 1);
 };
 
 class Line : public SANDWireInfo
@@ -269,7 +444,7 @@ class Line : public SANDWireInfo
         // usefull as we are interest in a portion of the line defined by the wire length
         
         Line(double arg_dx, double arg_dy, double arg_dz, double arg_ax, double arg_ay, double arg_az, double low_lim = -1e6, double up_lim = 1e6) : 
-                    dx_(arg_dx), dy_(arg_dy), dz_(arg_dz), ax_(arg_ax), ay_(arg_ay), az_(arg_az), low_lim_(low_lim), up_lim_(up_lim){}
+                    dx_(arg_dx), dy_(arg_dy), dz_(arg_dz), ax_(arg_ax), ay_(arg_ay), az_(arg_az), low_lim_(low_lim), up_lim_(up_lim) {}
 
         Line(const TG4HitSegment& hit){
             // define a line from hit that lies on it
@@ -420,55 +595,57 @@ class Line : public SANDWireInfo
 
 namespace RecoUtils{ //RecoUtils
 
-extern        std::vector<dg_wire>* event_digits;
+extern              std::vector<dg_wire>* event_digits;
 
-void          InitWireInfos(TGeoManager* g);
+void                InitWireInfos(TGeoManager* g);
 
-double        GetDistHelix2Line(const Helix& helix, double s, const Line& line, double& t);
+double              GetDistHelix2Line(const Helix& helix, double s, const Line& line, double& t);
 
-double        GetDistHelix2LineDerivative(const Helix& helix, double s, const Line& line); // may be can be remover
+double              GetDistHelix2LineDerivative(const Helix& helix, double s, const Line& line); // may be can be remover
 
-double        GetLineLineDistance(const Line& l1, const Line& l2, double& closest2line2, double& closest2line1);
+double              GetLinePointDistance(const Line& l, TVector3 point);
 
-double        GetSegmentSegmentDistance(const Line& l1, const Line& l2, double& closest2line2, double& closest2line1);
+double              GetLineLineDistance(const Line& l1, const Line& l2, double& closest2line2, double& closest2line1);
 
-double        GetImpactParameter(const Helix& helix, const Line& line, double s, double t);
+double              GetSegmentSegmentDistance(const Line& l1, const Line& l2, double& closest2line2, double& closest2line1);
 
-double        FunctorImpactParameter(const double* p);
+double              GetImpactParameter(const Helix& helix, const Line& line, double s, double t);
 
-double        GetMinImpactParameter(const Helix& helix, const Line& line);
+double              FunctorImpactParameter(const double* p);
 
-double        GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized);
+double              GetMinImpactParameter(const Helix& helix, const Line& line);
 
-double        NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess, double tol, int max_iterations);
+double              GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized);
 
-double        GetExpectedRadiusFromDigit(const dg_wire& digit);
+double              NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess, double tol, int max_iterations);
 
-Line          GetLineFromDigit(const dg_wire& digit);
+double              GetExpectedRadiusFromDigit(const dg_wire& digit);
 
-void          WiresLinearFit(const std::vector<dg_wire>& wires);
+Line                GetLineFromDigit(const dg_wire& digit);
 
-TF1*          WiresSinFit(const std::vector<dg_wire>& wires);
+TF1*                WiresLinearFit(const std::vector<dg_wire>& wires);
 
-TF1*          WiresCircleFit(const std::vector<dg_wire>& wires);
+TF1*                WiresSinFit(const std::vector<dg_wire>& wires);
 
-TF1*          InvertSin(TF1* fSin);
+Circle              WiresCircleFit(const std::vector<dg_wire>& wires);
 
-double        NLL(Helix& h,const std::vector<dg_wire>& digits); // negative log likelihood function
+TF1*                InvertSin(TF1* fSin);
 
-double        FunctorNLL(const double* p);
+double              NLL(Helix& h,const std::vector<dg_wire>& digits); // negative log likelihood function
 
-void          InitHelixPars(const std::vector<dg_wire>& digits, Helix& helix_initial_guess);
+double              FunctorNLL(const double* p);
 
-const double* GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus);
+void                InitHelixPars(const std::vector<dg_wire>& digits, Helix& helix_initial_guess);
 
-dg_wire       Copy(const dg_wire& wire);
+const double*       GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus);
+
+dg_wire             Copy(const dg_wire& wire);
 
 std::vector<double> SmearVariable(double mean, double sigma, int nof_points);
 
-Line          GetTangent2NCircles(const std::vector<Circle>& circles);
+std::vector<Line2D> GetTangentsTo2Circles(const Circle& c1, const Circle& c2);
 
-void          GetTangentTo2Circles(const Circle& c1, const Circle& c2);
+Line2D              GetTangetTo3Circles(const Circle& c1, const Circle& c2, const Circle& c3);
 
 } // RecoUtils
 
@@ -488,6 +665,7 @@ struct Parameter
 
 struct MinuitFitInfos
 {
+    std::string                 Auxiliary_name;
     int                         TMinuitFinalStatus; // 0 if converged, 4 if falied
     int                         NIterations; // number of iterations to reach the minimum
     double                      MinValue; // value of the func to minimize at its minimum
@@ -525,14 +703,18 @@ struct RecoObject
         circle or sin) to the wire center.  
     */
     std::vector<double>         impact_par_estimated;
+        /*
+        track_segments : vector of segments tangent to the
+        measured impact parameters
+    */
+    std::vector<Line2D>         track_segments_ZY;
+    std::vector<Line2D>         track_segments_XZ;
+    
     double                      pt_true;
     double                      pt_reco;
+
     // from TMinuit
-    // fit strategy 0
-    MinuitFitInfos              fit_XZ; // fit on XZ plane
-    MinuitFitInfos              fit_ZY; // fit on ZY plane
-    // fit strategy 1
-    MinuitFitInfos              fit_infos;
+    std::vector<MinuitFitInfos> fit_infos;
 };
 
 struct EventReco

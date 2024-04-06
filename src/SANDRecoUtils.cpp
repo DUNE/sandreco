@@ -76,6 +76,43 @@ dg_wire  RecoUtils::Copy(const dg_wire& wire){
     return copy; 
 }
 
+double RecoUtils::GetLinePointDistance(const Line& l, TVector3 point){
+    auto x = l.GetPointAt(0);
+    auto v = l.GetDirectionVector();
+    auto xp = x - point;
+    return (xp.Cross(v)).Mag()/v.Mag();
+}
+
+double RecoUtils::GetLineLineDistance(const Line& l1, const Line& l2, 
+                                      double& closest2line2, double& closest2line1){
+    /*
+        Return the (shortest) distance between 2 lines l1 and l2 and 
+        fill the values closest2line2 and closest2line1:
+        - closest2line2 : is the double that gives the point on the line 1
+                          closest to the line 2
+        - closest2line1 : is the double that gives the point on the line 2
+                          closest to the line 1
+        Reference : https://math.stackexchange.com/questions/2213165/find-shortest-distance-between-lines-in-3d                          
+    */
+
+   // define direction of the line that connects the 2 lines
+   auto e1 = l1.GetDirectionVector();
+   auto e2 = l2.GetDirectionVector(); 
+   auto n = e1.Cross(e2);
+//    n *= 1./n.Mag();
+
+   // define vector connecting the 2 lines
+   auto l21 = l2.GetLinePointX0() - l1.GetLinePointX0();
+
+   // point on l1 closest to l2
+   closest2line2 = (e2.Cross(n)).Dot(l21)/(n.Dot(n));
+   
+   // point on l2 closest to l1
+   closest2line1 = (e1.Cross(n)).Dot(l21)/(n.Dot(n));
+
+   return (l1.GetPointAt(closest2line2) - l2.GetPointAt(closest2line1)).Mag();
+}
+
 double RecoUtils::GetSegmentSegmentDistance(const Line& l1, const Line& l2, 
                                       double& closest2line2, double& closest2line1){
     /*
@@ -111,37 +148,6 @@ double RecoUtils::GetSegmentSegmentDistance(const Line& l1, const Line& l2,
     closest2line2 = seg_closest2line2;
     
     return d;
-}
-
-double RecoUtils::GetLineLineDistance(const Line& l1, const Line& l2, 
-                                      double& closest2line2, double& closest2line1){
-    /*
-        Return the (shortest) distance between 2 lines l1 and l2 and 
-        fill the values closest2line2 and closest2line1:
-        - closest2line2 : is the double that gives the point on the line 1
-                          closest to the line 2
-        - closest2line1 : is the double that gives the point on the line 2
-                          closest to the line 1
-        Reference : https://math.stackexchange.com/questions/2213165/find-shortest-distance-between-lines-in-3d                          
-    */
-
-   // define direction of the line that connects the 2 lines
-   auto e1 = l1.GetDirectionVector();
-   auto e2 = l2.GetDirectionVector(); 
-   auto n = e1.Cross(e2);
-//    n *= 1./n.Mag();
-
-   // define vector connecting the 2 lines
-   auto l21 = l2.GetLinePointX0() - l1.GetLinePointX0();
-
-   // point on l1 closest to l2
-   closest2line2 = (e2.Cross(n)).Dot(l21)/(n.Dot(n));
-   
-   // point on l2 closest to l1
-   closest2line1 = (e1.Cross(n)).Dot(l21)/(n.Dot(n));
-
-   return (l1.GetPointAt(closest2line2) - l2.GetPointAt(closest2line1)).Mag();
-
 }
 
 double RecoUtils::GetImpactParameter(const Helix& helix, const Line& line, double s, double t){
@@ -339,7 +345,7 @@ TF1* RecoUtils::WiresSinFit(const std::vector<dg_wire>& wires){
     // Define a sine function with parameters p0, p1, p2, and p3
     TF1* sineFit = new TF1("sineFit", "[0]*sin([1]*x + [2]) + [3]", x_min, x_max);
 
-    std::cout << "sinFit [x_min, x_max] : [" << x_min << ", " << x_max << "]\n";
+    // std::cout << "sinFit [x_min, x_max] : [" << x_min << ", " << x_max << "]\n";
 
     // Set initial parameters for the fit
     sineFit->SetParameters(initial_amplitude_guess, 
@@ -362,11 +368,11 @@ TF1* RecoUtils::WiresSinFit(const std::vector<dg_wire>& wires){
     sineFit->Draw("same");
 
     // Print out the fit parameters
-    std::cout << "Fit parameters:" << std::endl;
-    std::cout << "Amplitude: " << amplitude << std::endl;
-    std::cout << "Frequency: " << frequency << std::endl;
-    std::cout << "Phase: " << phase << std::endl;
-    std::cout << "Offset: " << offset << std::endl;
+    // std::cout << "Fit parameters:" << std::endl;
+    // std::cout << "Amplitude: " << amplitude << std::endl;
+    // std::cout << "Frequency: " << frequency << std::endl;
+    // std::cout << "Phase: " << phase << std::endl;
+    // std::cout << "Offset: " << offset << std::endl;
  
     // Optionally save the plot and parameters to a file
     c1->SaveAs("sine_function_fit.png");
@@ -443,7 +449,7 @@ int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y,
   return 0;
 }
 
-TF1* RecoUtils::WiresCircleFit(const std::vector<dg_wire>& wires){
+Circle RecoUtils::WiresCircleFit(const std::vector<dg_wire>& wires){
     /*
         Perform a 2D circular fit of the ZY coordinates
         of the horizontal wires 
@@ -453,45 +459,19 @@ TF1* RecoUtils::WiresCircleFit(const std::vector<dg_wire>& wires){
         z.push_back(wire.z);
         y.push_back(wire.y);
     }
-    // Create a TGraph object and fill it with the data
-    TGraph* graph = new TGraph(z.size(), &z[0], &y[0]);
-
-    // double z_min = *std::min_element(z.begin(), z.end());
-    // double z_max = *std::max_element(z.begin(), z.end());
-    // double y_min = *std::min_element(y.begin(), y.end());
-    // double y_max = *std::max_element(y.begin(), y.end());
-
-    // Define a circle function
-    TF1* circleFit = new TF1("circleFit", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))");
 
     double centerZ, centerY, radius, err, chi2;
 
     fitCircle(z.size(), z, y, centerZ, centerY, radius, err, chi2);
-    // Imposta i parametri della funzione circolare
-    circleFit->SetParameter(0, centerY);
-    circleFit->SetParameter(1, radius);
-    circleFit->SetParameter(2, centerZ);
 
-    // Print the fitted parameters
-    std::cout << "Fitted Circle Parameters:" << std::endl;
-    std::cout << "Center (z, y): (" << centerZ << ", " << centerY << ")" << std::endl;
-    std::cout << "Radius: " << radius << std::endl;
-    std::cout << "err: " << err << std::endl;
-    std::cout << "chi2: " << chi2 << std::endl;
+    Circle c(centerZ, centerY, radius);
 
-    // Create a canvas to draw the graph and the fitted circle
-    TCanvas *canvas = new TCanvas("canvas", "Fitted Circle", 800, 600);
-    // gStyle->SetOptFit(1111); // Show fit results on the graph
-    graph->Draw("AP");
-    circleFit->Draw("same");
+    std::cout << " Circle center : (" << centerZ << "," << centerY << "), R : " << radius << "\n";
 
-    // Save the canvas to a file if needed
-    canvas->SaveAs("fitted_circle.png");
-
-    return circleFit;
+    return c;
 }
 
-void  RecoUtils::WiresLinearFit(const std::vector<dg_wire>& wires){
+TF1* RecoUtils::WiresLinearFit(const std::vector<dg_wire>& wires){
     /*
         Perform a 2D linear fit of the XZ coordinates
         of the vertical wire 
@@ -503,13 +483,11 @@ void  RecoUtils::WiresLinearFit(const std::vector<dg_wire>& wires){
         z.push_back(wire.z);
     }
    }
-   std::cout << "number of hits : " << z.size() << "\n";
-    
     // Create a TGraph object and fill it with the data
-    TGraph *graph = new TGraph(z.size(), &x[0], &z[0]);
+    TGraph* graph = new TGraph(z.size(), &x[0], &z[0]);
 
     // Define a linear function with parameters p0 (slope) and p1 (intercept)
-    TF1 *linearFit = new TF1("linearFit", "[0]*x + [1]", wires.front().z - 20, wires.front().z + 20); // Adjust xmin and xmax
+    TF1* linearFit = new TF1("linearFit", "[0]*x + [1]");
 
     // Perform the fit using chi-square minimization method
     graph->Fit(linearFit, "Q"); // "Q" option suppresses the fit statistics output
@@ -519,16 +497,17 @@ void  RecoUtils::WiresLinearFit(const std::vector<dg_wire>& wires){
     double intercept = linearFit->GetParameter(1);
 
     // Visualize the fit
-    TCanvas *c1 = new TCanvas("c1", "Linear Fit", 800, 600);
-    graph->Draw("AP");
-    linearFit->Draw("same");
-
-    // Print out the fit parameters
-    std::cout << "Slope: " << slope << std::endl;
-    std::cout << "Intercept: " << intercept << std::endl;
+    // TCanvas *c1 = new TCanvas("c1", "Linear Fit", 800, 600);
+    // graph->Draw("AP");
+    // linearFit->Draw("same");
 
     // Optionally save the plot and parameters to a file
-    c1->SaveAs("linear_fit.png");
+    // c1->SaveAs("linear_fit.png");
+
+    // Print out the fit parameters
+    std::cout << " Slope (m): " << slope << ", Intercept (q): " << intercept << std::endl;
+
+    return linearFit;
 }
 
 double RecoUtils::NLL(Helix& h,const std::vector<dg_wire>& digits)
@@ -700,123 +679,52 @@ std::vector<double> CardanoSolutions(double a, double b, double c, double d) {
     return {x1.real(), x2.real(), x3.real()};
 }
 
-Line RecoUtils::GetTangent2NCircles(const std::vector<Circle>& circles){
+std::vector<Line2D> RecoUtils::GetTangentsTo2Circles(const Circle& c1, const Circle& c2){
     /*
-        An analytical solution to the problem of linear track segment
-        reconstruction in drift tube chamber.
-        author : Zbisław Tabor
-        
-        notation:
-        - (x,z) tube center of radius r
-        - tangent of equation x = Az + B
+        Get the 4 tangents tangent to 2 separate circles;
     */
-   
-    double X=0, Z=0, R=0, XZ=0, XR=0, ZR=0, X2=0, Z2=0;
-    double N=circles.size();
-    for(auto& circle : circles){
-        double x = circle.center_x();
-        double z = circle.center_y();
-        double r = circle.R();
-        
-        X += x;
-        Z += z;
-        R += r;
-        XZ += x*z;
-        XR += x*r;
-        ZR += z*r;
-        X2 += x*x;
-        Z2 += z*z;
-    }
-    double a0 = X*Z - N*XZ + Z*R - N*ZR;
-    double a1 = N*Z2 - Z*Z - N*X2 + X*X - N*XR + X*R;
-    double a2 = N*XZ - X*Z - N*0.5*ZR + 0.5*Z*R;
-    double a3 = 0.5*(X*R - N*XR);
-    std::cout << a0 << "\n";
-    std::cout << a1 << "\n";
-    std::cout << a2 << "\n";
-    std::cout << a3 << "\n";
-    std::vector<double> A = CardanoSolutions(a3, a2, a1, a0);
-    for(auto a : A){
-        std::cout << "for solution: " << a << ", B : " <<(X + sqrt(1 + a*a)*R - a*Z)/N << std::endl;
-    }
-    // double B = (X + sqrt(1 + A*A)*R - A*Y)/N;
-    // throw "";
-    // std::cout << "A : " << A << ", B : " << B << "\n";
-    Line l;
-    return l;
-}
-
-// funziona per tangente interna
-// // std::vector<Line> RecoUtils::GetTangentTo2Circles(const Circle& c1, const Circle& c2){
-// void RecoUtils::GetTangentTo2Circles(const Circle& c1, const Circle& c2){
-//     double x1 = c1.center_x(), x2 = c2.center_x();
-//     double y1 = c1.center_y(), y2 = c2.center_y();
-//     double r1 = c1.R(), r2 = c2.R();
-//     double dx = x2 - x1;
-//     double dy = y2 - y1;
-//     double dr = r1 + r2;
-//     double d = sqrt(dx*dx + dy*dy);
-//     double gamma = atan2(dy, dx);
-//     double beta = asin(dr/d);
-//     double alpha = gamma - beta;
-
-//     double x3 = x1 - r1*sin(alpha);
-//     double y3 = y1 + r1*cos(alpha);
-//     double x4 = x2 + r2*sin(alpha);
-//     double y4 = y2 - r2*cos(alpha);
-
-//     double m = (y4-y3)/(x4-x3);
-//     double q = y3 - m*x3;
-//     std::cout << "m : " << m << ", q : " << q << "\n";
-//     // std::cout << "center 1, radius : (" << c1.center_x() <<", "<< c1.center_y() <<") "<<c1.R() <<"\n";
-//     // std::cout << "center 2, radius : (" << c2.center_x() <<", "<< c2.center_y() <<") "<<c2.R() <<"\n";
-// }
-
-// void RecoUtils::GetTangentTo2Circles(const Circle& c1, const Circle& c2){
-//     double x1 = c1.center_x(), x2 = c2.center_x();
-//     double y1 = c1.center_y(), y2 = c2.center_y();
-//     double r1 = c1.R(), r2 = c2.R();
-//     double dx = x2 - x1;
-//     double dy = y2 - y1;
-//     double dr = r1 + r2;
-//     double d = sqrt(dx*dx + dy*dy);
-//     double gamma = atan2(dy, dx);
-//     double beta = asin(dr/d);
-//     double alpha = gamma + beta;
-
-//     double x3 = x1 + r1*sin(alpha);
-//     double y3 = y1 - r1*cos(alpha);
-//     double x4 = x2 - r2*sin(alpha);
-//     double y4 = y2 + r2*cos(alpha);
-
-//     double m = (y4-y3)/(x4-x3);
-//     double q = y3 - m*x3;
-//     std::cout << "m : " << m << ", q : " << q << "\n";
-//     // std::cout << "center 1, radius : (" << c1.center_x() <<", "<< c1.center_y() <<") "<<c1.R() <<"\n";
-//     // std::cout << "center 2, radius : (" << c2.center_x() <<", "<< c2.center_y() <<") "<<c2.R() <<"\n";
-// }
-void RecoUtils::GetTangentTo2Circles(const Circle& c1, const Circle& c2){
+    std::vector<Line2D> tangents;
     double x1 = c1.center_x(), x2 = c2.center_x();
     double y1 = c1.center_y(), y2 = c2.center_y();
     double r1 = c1.R(), r2 = c2.R();
     double dx = x2 - x1;
     double dy = y2 - y1;
-    double dr = r1 + r2;
     double d = sqrt(dx*dx + dy*dy);
-    double gamma = atan2(dy, dx);
-    double beta = asin(dr/d);
-    for(auto k : {-1.,1.}){ // inner tangents
-        double alpha = gamma + k*beta;
-        // tangent point to circle 1
-        double x3 = x1 + k*r1*sin(alpha);
-        double y3 = y1 - k*r1*cos(alpha);
-        // tangent point to circle 2
-        double x4 = x2 - k*r2*sin(alpha);
-        double y4 = y2 + k*r2*cos(alpha);
-        double m = (y4-y3)/(x4-x3);
-        double q = y3 - m*x3;
-        std::cout << "m : " << m << ", q : " << q << "\n";
+    for(auto i : {-1., 1.}){ // outer tangents, inner tangents
+        double dr = r2 + i*r1;
+        double gamma = i*atan2(dy, dx);
+        double beta = asin(dr/d);
+        for(auto k : {-1.,1.}){
+            double alpha = gamma + k*beta;
+            // tangent point to circle 1
+            double x3 = x1 + k*r1*sin(alpha);
+            double y3 = y1 - i*k*r1*cos(alpha);
+            // tangent point to circle 2
+            double x4 = x2 - i*k*r2*sin(alpha);
+            double y4 = y2 + k*r2*cos(alpha);
+            // direction, p0
+            Line2D tangent({x4-x3, y4-y3}, {x3, y3});
+            tangents.push_back(tangent);
+        }
     }
-    // std::cout << "center 1, radius : (" << c1.center_x() <<", "<< c1.center_y() <<") "<<c1.R() <<"\n";
-    // std::cout << "center 2, radius : (" << c2.center_x() <<", "<< c2.center_y() <<") "<<c2.R() <<"\n";
+    return tangents;
+}
+
+Line2D RecoUtils::GetTangetTo3Circles(const Circle& c1, const Circle& c2, const Circle& c3){
+    // get 4 tangets to 2 circles
+    Line2D tangent_3_circles;
+    auto min_radius_difference = 999.;
+    auto tangents = RecoUtils::GetTangentsTo2Circles(c1, c2);
+    for(auto& t : tangents){
+        // TVector3 point = {0, c3.center_y(), c3.center_x()};
+        // double expected_radius = RecoUtils::GetLinePointDistance(t, point);
+        double expected_radius = t.Distance2Point({c3.center_x(), c3.center_y()});
+        double measured_radius = c3.R();
+        double radius_difference = fabs(expected_radius - measured_radius);
+        if(radius_difference < min_radius_difference){
+            tangent_3_circles = t;
+            min_radius_difference = radius_difference;
+        }
+    }
+    return tangent_3_circles;
 }
