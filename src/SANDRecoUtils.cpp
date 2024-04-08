@@ -471,7 +471,7 @@ Circle RecoUtils::WiresCircleFit(const std::vector<dg_wire>& wires){
     return c;
 }
 
-TF1* RecoUtils::WiresLinearFit(const std::vector<dg_wire>& wires){
+Line2D RecoUtils::WiresLinearFit(const std::vector<dg_wire>& wires){
     /*
         Perform a 2D linear fit of the XZ coordinates
         of the vertical wire 
@@ -505,9 +505,11 @@ TF1* RecoUtils::WiresLinearFit(const std::vector<dg_wire>& wires){
     // c1->SaveAs("linear_fit.png");
 
     // Print out the fit parameters
-    std::cout << " Slope (m): " << slope << ", Intercept (q): " << intercept << std::endl;
-
-    return linearFit;
+    Line2D fitted_line(slope, intercept);
+    
+    std::cout << " Slope (m): " << fitted_line.m() << ", Intercept (q): " << fitted_line.q() << std::endl;
+    
+    return fitted_line;
 }
 
 double RecoUtils::NLL(Helix& h,const std::vector<dg_wire>& digits)

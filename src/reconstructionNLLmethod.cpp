@@ -88,8 +88,8 @@ int main(int argc, char* argv[]){
     tEdep->SetBranchAddress("Event", &evEdep);
 
     // output file branches
-    EventReco event_reco;
-    tout.Branch("event_reco",               "EventReco",                 &event_reco);
+    // EventReco event_reco;
+    // tout.Branch("event_reco",               "EventReco",                 &event_reco);
     
     for (auto i = 0; i < nev; i++)
     {
@@ -142,8 +142,8 @@ int main(int argc, char* argv[]){
             reco_object.fired_wires.push_back(digit);
         }// run over digits
 
-        event_reco.event_index       = i;
-        event_reco.reco_object       = reco_object;
+        // event_reco.event_index       = i;
+        // event_reco.reco_object       = reco_object;
 
         tout.Fill();
     }// run over event

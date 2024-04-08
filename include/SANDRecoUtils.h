@@ -623,7 +623,7 @@ double              GetExpectedRadiusFromDigit(const dg_wire& digit);
 
 Line                GetLineFromDigit(const dg_wire& digit);
 
-TF1*                WiresLinearFit(const std::vector<dg_wire>& wires);
+Line2D              WiresLinearFit(const std::vector<dg_wire>& wires);
 
 TF1*                WiresSinFit(const std::vector<dg_wire>& wires);
 
@@ -657,10 +657,10 @@ struct Parameter
     double initial_guess;
     double value;
     double error;
-    Parameter() 
-        : name(""), fixed_in_fit(false), initial_guess(0.0), value(0.0), error(0.0) {}
-    Parameter(std::string n, int i, bool f, double ig, double v, double e) 
-        : name(n), id(i), fixed_in_fit(f), initial_guess(ig), value(v), error(e) {}
+    // Parameter() 
+    //     : name(""), fixed_in_fit(false), initial_guess(0.0), value(0.0), error(0.0) {}
+    // Parameter(std::string n, int i, bool f, double ig, double v, double e) 
+    //     : name(n), id(i), fixed_in_fit(f), initial_guess(ig), value(v), error(e) {}
 };
 
 struct MinuitFitInfos
@@ -674,14 +674,43 @@ struct MinuitFitInfos
 
 struct RecoObject
 {
-    int                         traj_edep_index; // from edepsim
-    std::vector<TLorentzVector> trj_points; // from edepsim
-    std::vector<dg_wire>        fired_wires; // digitization
+    // edepsim info of the reconstructed track_____________________
+    const char*                 edep_file_input;
+    const char*                 digit_file_input;
+    int                         event_index;
+    int                         traj_edep_index;
+    std::vector<TLorentzVector> trj_points;
+    
+    // digitization info___________________________________________
+    bool                        use_track_no_smearing = false;
     /*
-    fired_wires : 
+      fired_wires : 
         all the fired wires related to the reconstructed obj.
         These should be provided by some pattern (track) reco algo.
     */
+    std::vector<dg_wire>        fired_wires;
+
+    // TDC to drift radius conversion______________________________
+    std::vector<double>         true_impact_par;
+    /*
+        impact_par_from_TDC : (TDC - t_signal - t_hit)
+    */
+    std::vector<double>         impact_par_from_TDC;
+    /*
+        impact_par_estimated : distance track (helix, 
+        circle or sin) to the wire center.  
+    */
+    std::vector<double>         impact_par_estimated;
+
+    /* local fit of 3 circles (segmented track)____________________   
+        track_segments : vector of segments tangent to the
+        measured impact parameters
+    */
+    
+    std::vector<Line2D>         track_segments_ZY;
+    std::vector<Line2D>         track_segments_XZ;
+    
+    // reconstructed helix ________________________________________
     Helix                       true_helix;
     /*
     helix_first_guess : 
@@ -693,42 +722,27 @@ struct RecoObject
         smallest TDC among all the hit int the cell) to the
         signal wire
     */
-    std::vector<double>         true_impact_par;
-    /*
-        impact_par_from_TDC : (TDC - t_signal - t_hit)
-    */
-    std::vector<double>         impact_par_from_TDC;
-    /*
-        impact_par_estimated : distance track (helix, 
-        circle or sin) to the wire center.  
-    */
-    std::vector<double>         impact_par_estimated;
-        /*
-        track_segments : vector of segments tangent to the
-        measured impact parameters
-    */
-    std::vector<Line2D>         track_segments_ZY;
-    std::vector<Line2D>         track_segments_XZ;
     
     double                      pt_true;
     double                      pt_reco;
 
-    // from TMinuit
+    // fitting info TMinuit _______________________________________
+    std::vector<Parameter>      fitted_parameters;
     std::vector<MinuitFitInfos> fit_infos;
 };
 
-struct EventReco
-{   
-    const char*                 edep_file_input;
-    const char*                 digit_file_input;
-    bool                        use_track_no_smearing = false;
-    /*
-    use_track_no_smearing :
-        if true edepsim is used as input to generate
-        tracks without energy loss nor multiple scattering
-    */
-    int                         event_index;
-    RecoObject                  reco_object;
-};
+// struct EventReco
+// {   
+//     const char*                 edep_file_input;
+//     const char*                 digit_file_input;
+//     bool                        use_track_no_smearing = false;
+//     /*
+//     use_track_no_smearing :
+//         if true edepsim is used as input to generate
+//         tracks without energy loss nor multiple scattering
+//     */
+//     int                         event_index;
+//     RecoObject                  reco_object;
+// };
 
 #endif
