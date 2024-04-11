@@ -202,7 +202,9 @@ class Helix
         TVector3 x0()     const {return x0_;};
         double   LowLim() const {return low_lim_;};
         double   UpLim()  const {return up_lim_;};
-        TVector2 Center() const {return {x0_.Z()-R_*cos(Phi0_), x0_.Y()-R_*sin(Phi0_)};};   
+        TVector2 Center() const {return {x0_.Z()-R_*cos(Phi0_), x0_.Y()-R_*sin(Phi0_)};};
+
+        virtual ~Helix() {}
 
     private:
         double   R_;
@@ -216,7 +218,7 @@ class Helix
     ClassDef(Helix, 1);
 };
 
-class Circle : public SANDWireInfo
+class Circle
 {
     public:
         Circle(double arg_center_x, double arg_center_y, double arg_R) :
@@ -287,9 +289,18 @@ class Circle : public SANDWireInfo
             return c;
         }
 
+        void PrintCircleInfo() const {
+            std::cout << "circle center (x,y) : ("
+                      << center_x_ << ", "
+                      << center_y_ << "), R : "
+                      << R_ << "\n";
+        }
+
         double center_x() const {return center_x_;};
         double center_y() const {return center_y_;};
         double R() const {return R_;};
+
+        virtual ~Circle() {}
 
     private:
         double center_x_;
@@ -299,7 +310,7 @@ class Circle : public SANDWireInfo
     ClassDef(Circle, 1);
 };
 
-class Spiral2D : public SANDWireInfo
+class Spiral2D
 {
     /*
         (arg_center_x, arg_center_y) : spiral center
@@ -345,7 +356,7 @@ class Spiral2D : public SANDWireInfo
         double k_;
 };
 
-class Line2D : public SANDWireInfo
+class Line2D
 {
     public:
     /*
@@ -417,6 +428,8 @@ class Line2D : public SANDWireInfo
         double q() const {return q_;};
         TVector2 direction() const {return direction_;};
         TVector2 p0() const {return p0_;};
+
+        virtual ~Line2D() {}
 
     private:
         double dx_;
@@ -580,6 +593,8 @@ class Line : public SANDWireInfo
             return {x_l(t), y_l(t), z_l(t)};
         }
 
+    virtual ~Line() {}
+
     private:
         double dx_;
         double dy_;
@@ -691,11 +706,11 @@ struct RecoObject
     std::vector<dg_wire>        fired_wires;
 
     // TDC to drift radius conversion______________________________
-    std::vector<double>         true_impact_par;
-    /*
-        impact_par_from_TDC : (TDC - t_signal - t_hit)
-    */
-    std::vector<double>         impact_par_from_TDC;
+    // std::vector<double>         true_impact_par;
+    // /*
+    //     impact_par_from_TDC : (TDC - t_signal - t_hit)
+    // */
+    // std::vector<double>         impact_par_from_TDC;
     /*
         impact_par_estimated : distance track (helix, 
         circle or sin) to the wire center.  
@@ -744,5 +759,27 @@ struct RecoObject
 //     int                         event_index;
 //     RecoObject                  reco_object;
 // };
+
+namespace Color {
+    enum Code {
+        FG_RED      = 31,
+        FG_GREEN    = 32,
+        FG_BLUE     = 34,
+        FG_DEFAULT  = 39,
+        BG_RED      = 41,
+        BG_GREEN    = 42,
+        BG_BLUE     = 44,
+        BG_DEFAULT  = 49
+    };
+    class Modifier {
+        Code code;
+    public:
+        Modifier(Code pCode) : code(pCode) {}
+        friend std::ostream&
+        operator<<(std::ostream& os, const Modifier& mod) {
+            return os << "\033[" << mod.code << "m";
+        }
+    };
+}
 
 #endif

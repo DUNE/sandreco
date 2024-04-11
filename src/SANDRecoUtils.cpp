@@ -466,8 +466,6 @@ Circle RecoUtils::WiresCircleFit(const std::vector<dg_wire>& wires){
 
     Circle c(centerZ, centerY, radius);
 
-    std::cout << " Circle center : (" << centerZ << "," << centerY << "), R : " << radius << "\n";
-
     return c;
 }
 
@@ -507,7 +505,7 @@ Line2D RecoUtils::WiresLinearFit(const std::vector<dg_wire>& wires){
     // Print out the fit parameters
     Line2D fitted_line(slope, intercept);
     
-    std::cout << " Slope (m): " << fitted_line.m() << ", Intercept (q): " << fitted_line.q() << std::endl;
+    // std::cout << " Slope (m): " << fitted_line.m() << ", Intercept (q): " << fitted_line.q() << std::endl;
     
     return fitted_line;
 }
@@ -718,8 +716,6 @@ Line2D RecoUtils::GetTangetTo3Circles(const Circle& c1, const Circle& c2, const 
     auto min_radius_difference = 999.;
     auto tangents = RecoUtils::GetTangentsTo2Circles(c1, c2);
     for(auto& t : tangents){
-        // TVector3 point = {0, c3.center_y(), c3.center_x()};
-        // double expected_radius = RecoUtils::GetLinePointDistance(t, point);
         double expected_radius = t.Distance2Point({c3.center_x(), c3.center_y()});
         double measured_radius = c3.R();
         double radius_difference = fabs(expected_radius - measured_radius);
