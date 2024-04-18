@@ -711,6 +711,7 @@ std::vector<Line2D> RecoUtils::GetTangentsTo2Circles(const Circle& c1, const Cir
 }
 
 Line2D RecoUtils::GetTangetTo3Circles(const Circle& c1, const Circle& c2, const Circle& c3){
+    // !! bug to be fixed
     // get 4 tangets to 2 circles
     Line2D tangent_3_circles;
     auto min_radius_difference = 999.;
@@ -725,4 +726,30 @@ Line2D RecoUtils::GetTangetTo3Circles(const Circle& c1, const Circle& c2, const 
         }
     }
     return tangent_3_circles;
+}
+
+Line2D RecoUtils::GetBestTangent2NCircles(const std::vector<Circle>& circles){
+  if(circles.size()<4){
+    std::cout << "too few circles to fit in function " << __FILE__ << ", " << __LINE__ << "\n";
+    std::cout << "try use RecoUtils::GetTangetTo3Circles \n";
+    throw ""; 
+  }
+  auto guess_tangents = RecoUtils::GetTangentsTo2Circles(circles[0], circles[1]);
+  double best_score = 999.;
+  double sigma = 0.2;
+  Line2D best_tangent;
+  for(auto& tangent : guess_tangents){
+    double tangent_score = 0.;
+    for(auto i = 2u; i<circles.size(); i++){
+      double expected_radius = tangent.Distance2Point({circles[i].center_x(), circles[i].center_y()});
+      double measured_radius = circles[i].R();
+      tangent_score += (expected_radius - measured_radius)*(expected_radius - measured_radius) / sigma*sigma;
+    }
+    tangent_score = sqrt(tangent_score)/(circles.size()-2);
+    if(tangent_score < best_score){
+      best_tangent = tangent;
+      best_score = tangent_score;
+    }
+  }
+  return best_tangent;
 }

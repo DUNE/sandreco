@@ -38,6 +38,10 @@ bool _DEBUG_ = false;
 
 bool USE_NON_SMEARED_TRACK = false;
 
+int MIN_NOF_XZ_HITS = 5;
+
+int MIN_NOF_ZY_HITS = 5;
+
 int FITTING_STRATEGY = 0;
 /*
     0 : fit TDCs on the XZ plane
@@ -196,12 +200,13 @@ void ReadWireInfos(const std::string fInput, std::vector<dg_wire>& wire_infos){
 bool PassSelectionNofHits(const std::vector<dg_wire>& fired_wires){
     /*
       Select events that have:
-      - at least 3 hits on the banding plane (to make circular fit)
-      - at least 2 hits on the XZ plane (to make linear fit)
+      - at least 5 hits on the banding plane (to make circular fit)
+      - at least 3 hits on the XZ plane (to make linear fit)
     */
+   LOG("i", TString::Format("Requiring at least %d hits on ZY bending plane and %d on XZ plane", MIN_NOF_ZY_HITS, MIN_NOF_XZ_HITS).Data());
    int nof_ZY_hits = 0;
    int nof_XZ_hits = 0;
-    if(fired_wires.size()<5){
+    if(fired_wires.size() < MIN_NOF_ZY_HITS + MIN_NOF_XZ_HITS){
         std::cout << "nof fired wires: " << fired_wires.size() << "\n";
         LOG("W", "skipping event");
         std::cout << "\n";
@@ -214,7 +219,7 @@ bool PassSelectionNofHits(const std::vector<dg_wire>& fired_wires){
                 nof_XZ_hits++;
             }
         }
-        if((nof_ZY_hits<5)|(nof_XZ_hits<3)){
+        if((nof_ZY_hits < MIN_NOF_ZY_HITS )|(nof_XZ_hits < MIN_NOF_XZ_HITS)){
             std::cout << "ZY_hits : " << nof_ZY_hits << ", XZ_hits : " << nof_XZ_hits << "\n";
             LOG("W", "skipping event");
             return false;
@@ -542,6 +547,18 @@ std::vector<Circle> Wire2DriftCircle(const std::vector<dg_wire>& wires){
 
 // SEGMENT FITTING_____________________________________________________________
 
+std::vector<Line2D> GetTrackSegments(const std::vector<Circle>& drift_circles, int nof_circle_used){
+  
+  std::vector<Line2D> track_segments;
+  std::vector<Circle> first_n_circles;
+  for(auto i=0u; i < nof_circle_used; i++){
+    const Circle& c = drift_circles[i];
+    first_n_circles.push_back(c);
+  }
+  track_segments.push_back(RecoUtils::GetBestTangent2NCircles(first_n_circles));
+  return track_segments;
+}
+
 std::vector<Line2D> GetTrackSegments(const std::vector<Circle>& drift_circles){
     std::vector<Line2D> track_segments;
     unsigned int nof_circles = drift_circles.size();
@@ -581,10 +598,10 @@ double FunctorNLL_Circle(const double* p){
     Circle c(zc, yc, R);
 
     // circle has to be "perfectly" tangent to the first 2 circles
-    auto first_point = (*track_segments_ZY)[0].p0();
-    auto second_point = (*track_segments_ZY)[1].p0();
-    auto dist2first = c.Distance2Point({first_point.X(), first_point.Y()});
-    auto dist2second = c.Distance2Point({second_point.X(), second_point.Y()});
+    //auto first_point = (*track_segments_ZY)[0].p0();
+    //auto second_point = (*track_segments_ZY)[1].p0();
+    //auto dist2first = c.Distance2Point({first_point.X(), first_point.Y()});
+    //auto dist2second = c.Distance2Point({second_point.X(), second_point.Y()});
     double i = 1;
     for(auto& wire : *horizontal_fired_digits){
 
@@ -598,8 +615,9 @@ double FunctorNLL_Circle(const double* p){
 
         i++;
     }
-    double nll_epsilon = (dist2first*dist2second)/(sigma*sigma);
-    return sqrt(nll + nll_epsilon)/(horizontal_fired_digits->size());
+    //double nll_epsilon = (dist2first*dist2second)/(sigma*sigma);
+    //return sqrt(nll + nll_epsilon)/(horizontal_fired_digits->size());
+    return sqrt(nll)/(horizontal_fired_digits->size());
 }
 
 Circle GetRecoZYTrack(Circle& first_guess,
@@ -1058,44 +1076,38 @@ Helix Reconstruct(Circle FittedCircle,
     double R = FittedCircle.R();
     double m = FittedLine.m();
     double q = FittedLine.q();
-    /*
-        vertex of the track on the ZY plane is
-        given by the point (z0,y0) on the fitted
-        circle where z0 1 cm far from the first wire
-        and y0=y0(z0).
-    */
-    bool forward_track = (hor_wires[0].z < hor_wires[1].z) ? true : false;
-    auto first_point_XZ = (*track_segments_XZ)[0];
-    TVector2 track_direction_XZ = first_point_XZ.direction() * (1./first_point_XZ.direction().Mod());
     
-    // move 1 cm backwards (or forwards) in the direction of the line from the line starting point
-    TVector2 vertex_XZ = (forward_track) ? first_point_XZ.p0() - track_direction_XZ * 10. : first_point_XZ.p0() + track_direction_XZ * 10.;
-    // std::cout << "first point on XZ plane : (" << first_point_XZ.p0().X() << ", " << first_point_XZ.p0().Y() << ")\n";
-    // std::cout << "x0, z0  = (" << vertex_XZ.X() << "," << vertex_XZ.Y() << ")\n";
+    bool forward_track = (ver_wires[0].z < ver_wires[1].z) ? 1 : 0;
 
-    // reconstruct vertex yz starting from the tangent to the first 3 circles
-    auto first_point_ZY = (*track_segments_ZY)[0];
-    auto track_direction_ZY = first_point_ZY.direction() * (1./first_point_ZY.direction().Mod());
-    TVector2 vertex_ZY = (forward_track) ? first_point_ZY.p0() - track_direction_ZY * 10. : first_point_ZY.p0() + track_direction_ZY * 10.;
-    // std::cout << "z0, y0  = (" << vertex_ZY.X() << "," << vertex_ZY.Y() << ")\n";
+    TVector2 vertex_XZ = {ver_wires[0].x, ver_wires[0].x * m + q};
 
+    TVector2 vertex_ZY;
+    double upper_y = FittedCircle.GetUpperSemiCircle()->Eval(hor_wires[0].z);
+    double lower_y = FittedCircle.GetLowerSemiCircle()->Eval(hor_wires[0].z);
+    if(fabs(upper_y - hor_wires[0].y) < fabs(lower_y - hor_wires[0].y)){
+       vertex_ZY = {hor_wires[0].z, upper_y};
+     }else{
+       vertex_ZY = {hor_wires[0].z, lower_y};
+     }
+    
+    
     double Phi0 = FittedCircle.GetAngleFromPoint(vertex_ZY.X(), vertex_ZY.Y());
+    auto track_direction_ZY = FittedCircle.GetDerivativeAt(vertex_ZY.X(), vertex_ZY.Y()).Unit();
     TVector2 pt = R*0.3*0.6 * track_direction_ZY;
     /*
         reconstructed pt is the value of the tangent0 
         to the circle in the first point of the curve
     */
-    double pz = pt.X();
+    double pz = (forward_track) ? -1. * fabs(pt.X()) : fabs(pt.X());
     double py = pt.Y();
     double px = pz / FittedLine.m();
-    // std::cout << "pz_reco : " << pz << "\n";
-    // std::cout << "pz_reco : " << py << "\n";
-    // std::cout << "px_reco : " << px << "\n";
     
+    LOG("R", TString::Format("Reconstructed muon (px, py, pz) : (%f, %f, %f)",px,py,pz).Data());
+
     double dip = atan2(px, pt.Mod());
     
     Helix h(R, dip, Phi0, 1, {vertex_XZ.X(), vertex_ZY.Y(), vertex_XZ.Y()});
-    
+
     return h;
 }
 
@@ -1236,9 +1248,7 @@ int main(int argc, char* argv[]){
     LOG("I","Loading wires lookup table");
     ReadWireInfos(fWireInfo, wire_infos);
 
-    for(auto i= 992u; i < 993; i++)
-    // for(auto i= 9u; i < 10; i++)
-    // for(auto i=0u; i < tEdep->GetEntries(); i++)
+    for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
         tEdep->GetEntry(i);
         
@@ -1324,12 +1334,14 @@ int main(int argc, char* argv[]){
         std::vector<Circle> vertical_drift_circles = Wire2DriftCircle(*vertical_fired_digits);
         std::vector<Circle> horizontal_drift_circles = Wire2DriftCircle(*horizontal_fired_digits);
 
-        LOG("I","Find local tangets to drift circles in XZ plane");
-        auto segmentsXZ = GetTrackSegments(vertical_drift_circles);
+        // LOG("I","Find local tangets to drift circles in XZ plane");
+        LOG("I","Find local tangets to first 3 drift circles in XZ plane");
+        auto segmentsXZ = GetTrackSegments(vertical_drift_circles, MIN_NOF_XZ_HITS);
         track_segments_XZ = &segmentsXZ;
         LOG("R", TString::Format("Tangent to first TDC XZ plane m = %f, q = %f", segmentsXZ[0].m(), segmentsXZ[0].q()).Data());
-
-        auto segmentsZY = GetTrackSegments(horizontal_drift_circles);
+        
+        LOG("I","Find local tangets to first 5 drift circles in XZ plane");
+        auto segmentsZY = GetTrackSegments(horizontal_drift_circles, MIN_NOF_ZY_HITS);
         track_segments_ZY = &segmentsZY;
         LOG("R", TString::Format("Tangent to first TDC XZ plane m = %f, q = %f", segmentsZY[0].m(), segmentsZY[0].q()).Data());
 
@@ -1366,6 +1378,8 @@ int main(int argc, char* argv[]){
             reco_object.fit_infos.push_back(fit_ZY);
             reco_object.track_segments_ZY = *track_segments_ZY;
             reco_object.track_segments_XZ = *track_segments_XZ;
+            
+            LOG("I","Getting Reconstructed Helix from Circle (ZY plane) and Line (XZ plane)");
 
             reco_helix = Reconstruct(RecoZYTrack, 
                                      RecoXZTrack,
@@ -1396,6 +1410,7 @@ int main(int argc, char* argv[]){
         if(USE_NON_SMEARED_TRACK) reco_object.use_track_no_smearing = true;
 
         tout.Fill();
+        reco_object.fit_infos.clear();
     }
     fout.cd();
 

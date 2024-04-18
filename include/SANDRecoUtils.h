@@ -89,7 +89,7 @@ class Helix
         }
 
         // first derivatives
-        double dx_over_ds(double s) const{
+        double dx_over_ds() const{
             return -sin(dip_);
         }
 
@@ -106,7 +106,7 @@ class Helix
         }
 
         TVector3 GetTangentVector(double s) const {
-            return {dx_over_ds(s), dy_over_ds(s), dz_over_ds(s)};
+            return {dx_over_ds(), dy_over_ds(s), dz_over_ds(s)};
         }
 
         double GetPhiFromZ(double z) const {
@@ -319,7 +319,7 @@ class Spiral2D
         k : rate of radius decrease
     */
     public:
-        Spiral2D(double arg_center_x, double arg_center_y, double arg_R0, double arg_theta0, double arg_k) : 
+        Spiral2D(double arg_center_x, double arg_center_y, double arg_R0, double arg_k) : 
         center_x_(arg_center_x), center_y_(arg_center_y), R0_(arg_R0), k_(arg_k) {}
 
         Spiral2D(){
@@ -463,7 +463,7 @@ class Line : public SANDWireInfo
             // define a line from hit that lies on it
             TVector3 hit_direction = (hit.GetStop() - hit.GetStart()).Vect();
             TVector3 middle_point = ((hit.GetStop() + hit.GetStart())*0.5).Vect();
-            double hit_length = (hit.GetStop() - hit.GetStart()).Vect().Mag();
+            // double hit_length = (hit.GetStop() - hit.GetStart()).Vect().Mag();
 
             // X0 of the line is the hit middle point
             dx_ = hit_direction.X();
@@ -660,7 +660,9 @@ std::vector<double> SmearVariable(double mean, double sigma, int nof_points);
 
 std::vector<Line2D> GetTangentsTo2Circles(const Circle& c1, const Circle& c2);
 
-Line2D              GetTangetTo3Circles(const Circle& c1, const Circle& c2, const Circle& c3);
+Line2D              GetTangetTo3Circles(const Circle& c1, const Circle& c2, const Circle& c3); // bug to be fixed
+
+Line2D              GetBestTangent2NCircles(const std::vector<Circle>& circles);
 
 } // RecoUtils
 
@@ -704,13 +706,6 @@ struct RecoObject
         These should be provided by some pattern (track) reco algo.
     */
     std::vector<dg_wire>        fired_wires;
-
-    // TDC to drift radius conversion______________________________
-    // std::vector<double>         true_impact_par;
-    // /*
-    //     impact_par_from_TDC : (TDC - t_signal - t_hit)
-    // */
-    // std::vector<double>         impact_par_from_TDC;
     /*
         impact_par_estimated : distance track (helix, 
         circle or sin) to the wire center.  
@@ -737,7 +732,6 @@ struct RecoObject
         smallest TDC among all the hit int the cell) to the
         signal wire
     */
-    
     double                      pt_true;
     double                      pt_reco;
 
