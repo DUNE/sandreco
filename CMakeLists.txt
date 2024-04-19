@@ -7,7 +7,7 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(SandReco LANGUAGES CXX VERSION 01.00.00)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
@@ -48,6 +48,11 @@ target_include_directories(Utils PUBLIC
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Utils PUBLIC SANDGeoManager EDepSim::edepsim_io)
 
+# Create libClustering shared library
+add_library(SANDClustering SHARED src/SANDClustering.cpp)
+target_link_libraries(SANDClustering PUBLIC Utils)
+ROOT_GENERATE_DICTIONARY(SANDClusteringDict SANDClustering.h MODULE SANDClustering LINKDEF include/SANDClusteringLinkDef.h)
+
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp src/SANDDigitization.cpp src/SANDDigitizationEDEPSIM.cpp src/SANDDigitizationFLUKA.cpp)
 target_link_libraries(Digitize Struct SANDGeoManager Utils)
@@ -80,6 +85,10 @@ ROOT_GENERATE_DICTIONARY(SANDEventDisplayDict SANDEventDisplay.h LINKDEF include
 add_executable(eventDisplay src/eventDisplay.cpp)
 target_link_libraries(eventDisplay PUBLIC Utils SANDEventDisplay "-lEG -lGui")
 
+# Creates SANDECALClustering executable.
+add_executable(SANDECALClustering src/SANDECALClustering.cpp)
+target_link_libraries(SANDECALClustering PUBLIC Utils SANDClustering)
+
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
 endif()
@@ -87,7 +96,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay
+install(TARGETS Utils Struct SANDEventDisplay SANDClustering SANDECALClustering SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"

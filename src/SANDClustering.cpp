@@ -1,113 +1,37 @@
-#include "TFile.h"
-#include "TLeaf.h"
-#include "TTree.h"
-#include <complex>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <tuple>
-#include <utility>
-#include <vector>
+// #include "TFile.h"
+// #include "TLeaf.h"
+// #include "TTree.h"
+// #include <complex>
+// #include <fstream>
+// #include <iostream>
+// #include <string>
+// #include <tuple>
+// #include <utility>
+// #include <std::vector>
 
 
-#include "../include/Linkdef.h"
-#include "../include/struct.h"
-#include "../include/utils.h"
-#include "TSystem.h"
+// #include "../include/Linkdef.h"
+// #include "../include/struct.h"
+// #include "../include/utils.h"
+// #include "TSystem.h"
 
-using namespace std;
-
-std::ofstream infofile;
-std::ofstream info_new; 
-std::tuple<double, double, double, double> fit_ls(int, double[], double[],
-                                                  double[]);
-
-std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
-    std::vector<dg_cell>, std::vector<dg_cell>);
-std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
-    std::vector<dg_cell>, int, std::vector<int>, std::vector<dg_cell>);
-
-std::vector<cluster> Clusterize(std::vector<dg_cell>*);
-std::vector<cluster> TrackFit(std::vector<cluster>);
-std::vector<cluster> Merge(std::vector<cluster>);
-std::vector<cluster> Split(std::vector<cluster>);
-std::vector<cluster> RecoverIncomplete(std::vector<cluster>,
-                                       std::vector<dg_cell>);
-cluster Calc_variables(std::vector<dg_cell>);
-
-bool RepetitionCheck(std::vector<int>, int);
-bool isNeighbour(int, int);
-
-double TfromTDC(double t1, double t2, double L);
-double AttenuationFactor(double d, int planeID);
-double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
-double EfromADCsingle(double adc, double f);
-double DfromTDC(double, double);
-
-void Clust_info(cluster);
-
-int clustering(std::string const& input)
-{
-    // TH1F* ClusterEnergy = new TH1F("ClusterEnergy", "Total Energy reconstructed
-    // in the ECal;Energy [MeV];Entries/bins", 100, 0., 1500.);
-    //gROOT->ProcessLine("gInterpreter->AddIncludePath("-I/opt/exp_software/neutrino/EDEPSIM/include/EDepSim")");
-    gSystem->Load("libStruct.so");
-    const char* finname = input.c_str();
-    TFile f(finname, "READ");
-    TTree* t = (TTree*)f.Get("tDigit");
-    int nEvents = t->GetEntries();
-    std::vector<dg_cell>* cell = new std::vector<dg_cell>;
-    std::vector<cluster> f_clust, og_clust;
-    TString output = input;
-    output.ReplaceAll(".root", ".Clusters.root");
-    TFile fout(output, "RECREATE");
-    TTree tout("tCluster", "Clustering");
-    tout.Branch("cluster", "std::vector<cluster>", &f_clust);
-    t->SetBranchAddress("dg_cell", &cell);
-    //infofile.open("info.txt");
-    info_new.open("muon_6marzo.txt");
-    //nEvents = 10; //DC
-    for (int i = 0; i < nEvents; i++) {
-        //infofile<< "-----------" << endl;
-        infofile<< "Entry " << i << endl;
-        t->GetEntry(i);
-        std::vector<cluster> clust = Clusterize(std::move(cell));
-        double CluEn = 0;
-        for (auto const& clu_info : clust) {
-            Clust_info(clu_info);
-            
-            if(clu_info.sy >0.2){
-                info_new<< "Entry with cluster.sy> 0.2 : " << i << std::endl;  
-            }
-        }
-        f_clust = clust;
-        tout.Fill();
-        clust.clear();
-        f_clust.clear();
-        og_clust.clear();
-    }
-    fout.cd();
-    tout.Write();
-    fout.Close();
-    delete cell;
-    return 0;
-}
+#include "SANDClustering.h"
 
 std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 {
     std::vector<dg_cell> complete_cells, broken_cells, multicomplete_cells;
     std::vector<cluster> vec_clust;
-    // Create vector of complete (signal on both the photosensors) and incomplete cells
+    // Create std::vector of complete (signal on both the photosensors) and incomplete cells
     for (auto const& cell : *vec_cellraw) {
         if (cell.ps1.size() == 0 && cell.ps2.size() == 0) {
-            ////infofile<< "In Clusterize: Found empty cell with id: " << cell.id << endl;
+            ////infofile<< "In Clusterize: Found empty cell with id: " << cell.id << std::endl;
             continue;
         } else if (cell.ps1.size() == 0 || cell.ps2.size() == 0) {
-            ////infofile<< "In Clusterize: Found borken cell with id: " << cell.id << " and ps size:" << cell.ps1.size() << " "<<  cell.ps2.size() << endl;
+            ////infofile<< "In Clusterize: Found borken cell with id: " << cell.id << " and ps size:" << cell.ps1.size() << " "<<  cell.ps2.size() << std::endl;
             broken_cells.push_back(cell);
         } else if((cell.ps1.size() != 0 && cell.ps2.size() != 0)) {
             // Complete cell
-            ////infofile<< "In Clusterize: Found complete cell with id: " << cell.id << " and ps size:" << cell.ps1.size() << " "<<  cell.ps2.size() << endl;
+            ////infofile<< "In Clusterize: Found complete cell with id: " << cell.id << " and ps size:" << cell.ps1.size() << " "<<  cell.ps2.size() << std::endl;
             complete_cells.push_back(cell);
         }
     }
@@ -197,11 +121,11 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
                 std::vector<dg_cell> og_cell, std::vector<dg_cell> incomplete_cells)
                 {
                     
-        ////infofile<< "IN PROCESS MULTI HITS"<< endl;
+        ////infofile<< "IN PROCESS MULTI HITS"<< std::endl;
         std::vector<dg_cell> complete_cells;
         for (auto const& cell : og_cell) {
-            double delta = cell.l * kloe_simu::vlfb / kloe_simu::m_to_mm; 
-            ////infofile<< delta << " -> "<<cell.l<< endl;
+            double delta = cell.l * sand_reco::ecal::scintillation::vlfb / sand_reco::conversion::m_to_mm; 
+            ////infofile<< delta << " -> "<<cell.l<< std::endl;
             for (int i = 0; i < cell.ps1.size(); i++) {
                 int found = 0;
                 for (int j = 0; j < cell.ps2.size(); j++) {
@@ -218,7 +142,7 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
                         good_cell.ps1.push_back(cell.ps1.at(i));
                         good_cell.ps2.push_back(cell.ps2.at(j));
                         complete_cells.push_back(good_cell);
-                        //infofile<< " cell id " << good_cell.id << " [ " << good_cell.ps1.at(0).tdc << " " << good_cell.ps2.at(0).tdc << " ] " << endl;
+                        //infofile<< " cell id " << good_cell.id << " [ " << good_cell.ps1.at(0).tdc << " " << good_cell.ps2.at(0).tdc << " ] " << std::endl;
                         found++;
                         break;
                     }
@@ -236,7 +160,7 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
                     ps1bad_cell.cel = cell.cel;
                     ps1bad_cell.ps1.push_back(cell.ps1.at(i));
                     incomplete_cells.push_back(ps1bad_cell);
-                    //infofile<<" ps1 - Brok cell id "<<ps1bad_cell.id<<" ("  <<ps1bad_cell.ps1.at(0).tdc <<" ) "<<endl;
+                    //infofile<<" ps1 - Brok cell id "<<ps1bad_cell.id<<" ("  <<ps1bad_cell.ps1.at(0).tdc <<" ) "<<std::endl;
                 }
             }
             
@@ -262,7 +186,7 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
                     ps2bad_cell.cel = cell.cel;
                     ps2bad_cell.ps2.push_back(cell.ps2.at(k));
                     incomplete_cells.push_back(ps2bad_cell);
-                    //infofile<< " ps2 - Brok cell id " << ps2bad_cell.id << " ( " << ps2bad_cell.ps2.at(0).tdc << " ) " << endl;
+                    //infofile<< " ps2 - Brok cell id " << ps2bad_cell.id << " ( " << ps2bad_cell.ps2.at(0).tdc << " ) " << std::endl;
                 }
             }
         }
@@ -274,25 +198,25 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
     {
         
         for (auto const& brok_cells : incomplete_cells) {
-            //infofile<< "Broken cells found: " << brok_cells.id << " and ps size: " << brok_cells.ps1.size() << " " << brok_cells.ps2.size() << endl;
+            //infofile<< "Broken cells found: " << brok_cells.id << " and ps size: " << brok_cells.ps1.size() << " " << brok_cells.ps2.size() << std::endl;
             if(brok_cells.ps1.size() > 1){
                 for(auto ps1: brok_cells.ps1){
-                    //infofile<< "tdc for ps1: " << ps1.tdc << endl;
+                    //infofile<< "tdc for ps1: " << ps1.tdc << std::endl;
                 }
             } else if(brok_cells.ps2.size() > 1) {
                 for(auto ps2: brok_cells.ps2){
-                    //infofile<< "tdc for ps2: " << ps2.tdc << endl;
+                    //infofile<< "tdc for ps2: " << ps2.tdc << std::endl;
                 }
             }
         }
-        vector<double> tAvec;
-        vector<double> tBvec;
+        std::vector<double> tAvec;
+        std::vector<double> tBvec;
         for(auto cl: clus){
             int splitted = 0;
             double tA = 0, tB = 0, tA2 = 0, tB2 = 0;
             double EA, EB, EAtot = 0, EBtot = 0, EA2tot = 0, EB2tot = 0;
             double tRMS_A, tRMS_B, dist;
-            vector<dg_cell>all_cells = cl.cells;
+            std::vector<dg_cell>all_cells = cl.cells;
             for (int q = 0; q < all_cells.size(); q++) {
                 EA = all_cells.at(q).ps1.at(0).adc;
                 EB = all_cells.at(q).ps2.at(0).adc;
@@ -332,19 +256,19 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
             //infofile<< "Itering with broken cell " << brok_cells.id << " with tdc: ";
             if(brok_cells.ps1.size() > 0){
                 for(auto ps1: brok_cells.ps1){
-                    //infofile<< "ps1 ->" << ps1.tdc << endl;
+                    //infofile<< "ps1 ->" << ps1.tdc << std::endl;
                 }
             } else {
                 for(auto ps2: brok_cells.ps2){
-                    //infofile<< "ps2 ->" << ps2.tdc << endl;
+                    //infofile<< "ps2 ->" << ps2.tdc << std::endl;
                 }
             }
-            vector<int> clus_index;
+            std::vector<int> clus_index;
             for (int j = 0; j < clus.size(); j++) {
                 double rec_en = 0;
                 bool hasNeigh = false;
                 int nclusterC = 0;
-                //infofile<< "Cluster "<< j <<" tdc ps1 mean " << tAvec.at(j) << " and tdc ps2 mean " << tBvec.at(j) << endl; 
+                //infofile<< "Cluster "<< j <<" tdc ps1 mean " << tAvec.at(j) << " and tdc ps2 mean " << tBvec.at(j) << std::endl; 
                 for(int i = 0; i < clus.at(j).cells.size(); i++){
                     
                     if(isNeighbour(brok_cells.id, clus.at(j).cells.at(i).id)){
@@ -357,13 +281,13 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
                         }
                         
                         
-                        //infofile<< "Broken Cell with id: " << brok_cells.id << " is neighbour of cell with id: " <<  clus.at(j).cells.at(i).id << " with PS size: " << clus.at(j).cells.at(i).ps1.size() << " ," <<clus.at(j).cells.at(i).ps2.size() <<" in cluster " << j << endl;
+                        //infofile<< "Broken Cell with id: " << brok_cells.id << " is neighbour of cell with id: " <<  clus.at(j).cells.at(i).id << " with PS size: " << clus.at(j).cells.at(i).ps1.size() << " ," <<clus.at(j).cells.at(i).ps2.size() <<" in cluster " << j << std::endl;
                         
                         for(auto ps1: brok_cells.ps1){
                             for(auto cps1:clus.at(j).cells.at(i).ps1){
                                 //infofile<< "ps1 size and time of broken cell: " << brok_cells.ps1.size() << ", " <<  ps1.tdc << " time of complete neighbour cell: " << cps1.tdc;
                                 for(auto cps2: clus.at(j).cells.at(i).ps2){
-                                    //infofile<< ", for ps2 " << cps2.tdc << endl;
+                                    //infofile<< ", for ps2 " << cps2.tdc << std::endl;
                                 }
                             }
                         }
@@ -371,7 +295,7 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
                             for(auto cps1:clus.at(j).cells.at(i).ps1){
                                 //infofile<< "ps2 size and time of broken cell: " << brok_cells.ps2.size() << ", " <<  ps2.tdc << " time of complete neighbour cell: " << cps1.tdc;
                                 for(auto cps2: clus.at(j).cells.at(i).ps2){
-                                    //infofile<< ", for ps2 " << cps2.tdc << endl;
+                                    //infofile<< ", for ps2 " << cps2.tdc << std::endl;
                                 }
                             }
                         }
@@ -383,23 +307,23 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
                     
                     minentry = j;
                     found = 1;
-                    //infofile<< endl;
+                    //infofile<< std::endl;
                     //infofile<< "RECOVER INCOMPLETE -> BROKEN CELL WITH ID: " << brok_cells.id << " associated with cluster: ";
                     //for(auto index: clus_index){
-                        //infofile<< index << endl;
+                        //infofile<< index << std::endl;
                         //}
                         //if(clus_index.size() > 1){
-                            //infofile<< "HELP! MORE CLUSTER CANDIDATES FOR THE BROKE CELL!" << endl;
+                            //infofile<< "HELP! MORE CLUSTER CANDIDATES FOR THE BROKE CELL!" << std::endl;
                             //}
                             
                         } else if(found == 0) {
                             double clus_phi =
                             atan((clus.at(j).z - 23910.00) / (clus.at(j).y + 2384.73)) * 180 /
                             TMath::Pi();
-                            // if (isbarrel != 0) cout << "Cluster Phi: " << clus_phi << endl;
+                            // if (isbarrel != 0) cout << "Cluster Phi: " << clus_phi << std::endl;
                             double clus_theta =
                             atan((clus.at(j).z - 23910.00) / (clus.at(j).x)) * 180 / TMath::Pi();
-                            // if (isbarrel == 0) cout << "Cluster Theta: " << clus_theta << endl;
+                            // if (isbarrel == 0) cout << "Cluster Theta: " << clus_theta << std::endl;
                             double minphi = 999, mintheta = 999;
                             int isbarrelc = 0;
                             if (clus.at(j).cells[0].mod == 30) isbarrelc = 1;
@@ -413,11 +337,11 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
                                 if (abs(cell_phi - clus_phi) < minphi && dist < 2000) {
                                     // cout << "Barrel found 1: Clus Theta/Phi " << clus_theta << " / " <<
                                     // clus_phi << " VS Cell Theta/Phi: " << cell_theta << " " << cell_phi
-                                    // << endl; cout << " Cluster: " << clus.at(j).x << " " << clus.at(j).y
+                                    // << std::endl; cout << " Cluster: " << clus.at(j).x << " " << clus.at(j).y
                                     // << " " << clus.at(j).z << " VS Cell: " << brok_cells.x << " " <<
                                     // brok_cells.y << " " << brok_cells.z << "  ->  Clus-cell: " <<
                                     // clus.at(j).cells.at(0).id << " and cell id: " << brok_cells.id << "
-                                    // -> " << dist << endl;
+                                    // -> " << dist << std::endl;
                                     minphi = abs(cell_phi - clus_phi);
                                     minentry = j;
                                 }
@@ -427,11 +351,11 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
                                 if (abs(cell_theta - clus_theta) < 3) {
                                     // cout << "EndCap found 1: Clus Theta/Phi " << clus_theta << " / " <<
                                     // clus_phi << " VS Cell Theta/Phi: " << cell_theta << " " << cell_phi
-                                    // << endl; cout << " Cluster: " << clus.at(j).x << " " << clus.at(j).y
+                                    // << std::endl; cout << " Cluster: " << clus.at(j).x << " " << clus.at(j).y
                                     // << " " << clus.at(j).z << " VS Cell: " << brok_cells.x << " " <<
                                     // brok_cells.y << " " << brok_cells.z << "  ->  Clus-cell: " <<
                                     // clus.at(j).cells.at(0).id << "-" << clus.at(j).cells.at(0).mod << "
-                                    // and cell id: " << brok_cells.id << endl;
+                                    // and cell id: " << brok_cells.id << std::endl;
                                     found = 1;
                         mintheta = abs(cell_theta - clus_theta);
                         minentry = j;
@@ -447,18 +371,18 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
             if (brok_cells.ps1.size() != 0 && brok_cells.ps2.size() != 0) {
                 double Ea = brok_cells.ps1.at(0).adc;
                 double Eb = brok_cells.ps2.at(0).adc;
-                rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
+                rec_en = sand_reco::ecal::reco::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(brok_cells);
             } else if (brok_cells.ps1.size() != 0) {
                 int laycell = brok_cells.lay;
-                double f = kloe_simu::AttenuationFactor(DpmA, laycell);
+                double f = sand_reco::ecal::attenuation::AttenuationFactor(DpmA, laycell);
                 rec_en = EfromADCsingle(brok_cells.ps1.at(0).adc, f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(brok_cells);
             } else if (brok_cells.ps2.size() != 0) {
                 int laycell = brok_cells.lay;
-                double f = kloe_simu::AttenuationFactor(DpmB, laycell);
+                double f = sand_reco::ecal::attenuation::AttenuationFactor(DpmB, laycell);
                 rec_en = EfromADCsingle(brok_cells.ps2.at(0).adc, f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(brok_cells);
@@ -472,18 +396,18 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
             if (brok_cells.ps1.size() != 0 && brok_cells.ps2.size() != 0) {
                 double Ea = brok_cells.ps1.at(0).adc;
                 double Eb = brok_cells.ps2.at(0).adc;
-                rec_en = kloe_simu::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
+                rec_en = sand_reco::ecal::reco::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(brok_cells);
             } else if (brok_cells.ps1.size() != 0) {
                 int laycell = brok_cells.lay;
-                double f = kloe_simu::AttenuationFactor(DpmA, laycell);
+                double f = sand_reco::ecal::attenuation::AttenuationFactor(DpmA, laycell);
                 rec_en = EfromADCsingle(brok_cells.ps1.at(0).adc, f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(brok_cells);
             } else if (brok_cells.ps2.size() != 0) {
                 int laycell = brok_cells.lay;
-                double f = kloe_simu::AttenuationFactor(DpmB, laycell);
+                double f = sand_reco::ecal::attenuation::AttenuationFactor(DpmB, laycell);
                 rec_en = EfromADCsingle(brok_cells.ps2.at(0).adc, f);
                 clus.at(minentry).e = clus.at(minentry).e + rec_en;
                 clus.at(minentry).cells.push_back(brok_cells);
@@ -497,36 +421,36 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 
 /*void Clust_info(cluster clus)
 {
-    cout << "=O=O=O=O=O=O=O=O=O=O=O=O=O" << endl;
-    cout << "cluster: Energy " << clus.e << " MeV" << endl;
+    cout << "=O=O=O=O=O=O=O=O=O=O=O=O=O" << std::endl;
+    cout << "cluster: Energy " << clus.e << " MeV" << std::endl;
   cout << "Coordinate centroide: " << clus.x << " [X] " << clus.y << " [Y] "
-       << clus.z << " [z] e tempo di arrivo medio " << clus.t << " ns" << endl;
+       << clus.z << " [z] e tempo di arrivo medio " << clus.t << " ns" << std::endl;
   cout << "Varianza: " << clus.varx << " [X] " << clus.vary << " [Y] "
-       << clus.varz << " [z]" << endl;
+       << clus.varz << " [z]" << std::endl;
   cout << "Composto dalle seguenti celle: ";
   for (int i = 0; i < clus.cells.size(); i++) {
     cout << "Cell: " << clus.cells.at(i).id << " X: " << clus.cells.at(i).x
          << " Y: " << clus.cells.at(i).y << " Z: " << clus.cells.at(i).z
-         << endl;
+         << std::endl;
   }
-  cout << endl;
+  cout << std::endl;
 }
 */
 
-void Clust_info(cluster clus){
-    infofile<< "Energy " << clus.e << " MeV" << endl; 
-    infofile<< "Coordinate centroide: " << clus.x << " [X] " << clus.y << " [Y] "
-    << clus.z << " [z] e tempo di arrivo medio " << clus.t << " ns" << endl;
-    infofile<< "Varianza: " << clus.varx << " [X] " << clus.vary << " [Y] "
-    << clus.varz << " [z]" << endl;
-    infofile<< "Composto dalle seguenti celle: ";
-    //for (int i = 0; i < clus.cells.size(); i++) {
-      //  infofile<< "Cell: " << clus.cells.at(i).id << " X: " << clus.cells.at(i).x
-        //<< " Y: " << clus.cells.at(i).y << " Z: " << clus.cells.at(i).z
-        //<< endl;
-   //}
-    infofile<< endl;    
-}
+// void Clust_info(cluster clus){
+//     // infofile<< "Energy " << clus.e << " MeV" << std::endl; 
+//     // infofile<< "Coordinate centroide: " << clus.x << " [X] " << clus.y << " [Y] "
+//     // << clus.z << " [z] e tempo di arrivo medio " << clus.t << " ns" << std::endl;
+//     // infofile<< "Varianza: " << clus.varx << " [X] " << clus.vary << " [Y] "
+//     // << clus.varz << " [z]" << std::endl;
+//     // infofile<< "Composto dalle seguenti celle: ";
+//     //for (int i = 0; i < clus.cells.size(); i++) {
+//       //  infofile<< "Cell: " << clus.cells.at(i).id << " X: " << clus.cells.at(i).x
+//         //<< " Y: " << clus.cells.at(i).y << " Z: " << clus.cells.at(i).z
+//         //<< std::endl;
+//    //}
+//     // infofile<< std::endl;    
+// }
 
 std::vector<cluster> Split(std::vector<cluster> original_clu_vec)
 {
@@ -550,21 +474,21 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec)
       double d1, d2, d3;
       d1 = 0.5 * all_cells[j].l + d;
       d2 = 0.5 * all_cells[j].l - d;
-      double cell_E = kloe_simu::EfromADC(all_cells[j].ps1.at(0).adc,
+      double cell_E = sand_reco::ecal::reco::EfromADC(all_cells[j].ps1.at(0).adc,
                                           all_cells[j].ps2.at(0).adc, d1, d2,
                                           all_cells[j].lay);
       tA += (all_cells.at(j).ps1.at(0).tdc -
-             kloe_simu::vlfb * d1 / kloe_simu::m_to_mm) *
+             sand_reco::ecal::scintillation::vlfb * d1 / sand_reco::conversion::m_to_mm) *
             EA;
       tA2 += std::pow(all_cells.at(j).ps1.at(0).tdc -
-                          kloe_simu::vlfb * d1 / kloe_simu::m_to_mm,
+                          sand_reco::ecal::scintillation::vlfb * d1 / sand_reco::conversion::m_to_mm,
                       2) *
              EA;
       tB += (all_cells.at(j).ps2.at(0).tdc -
-             kloe_simu::vlfb * d2 / kloe_simu::m_to_mm) *
+             sand_reco::ecal::scintillation::vlfb * d2 / sand_reco::conversion::m_to_mm) *
             EB;
       tB2 += std::pow(all_cells.at(j).ps2.at(0).tdc -
-                          kloe_simu::vlfb * d2 / kloe_simu::m_to_mm,
+                          sand_reco::ecal::scintillation::vlfb * d2 / sand_reco::conversion::m_to_mm,
                       2) *
              EB;
     }
@@ -680,14 +604,14 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
       double dx = sqrt(std::pow(xi - xj, 2));
       double dy = sqrt(std::pow(yi-yj, 2));
       double dz = sqrt(std::pow(zi -zj, 2));
-      // //infofile<< dx << " " << dy << " " << dz << endl;
-      // //infofile<< "Variance " << 2*(varxi + varxj) << " " <<  2*(varyi + varyj) << " " << 2*(varzi + varzj) << endl;
+      // //infofile<< dx << " " << dy << " " << dz << std::endl;
+      // //infofile<< "Variance " << 2*(varxi + varxj) << " " <<  2*(varyi + varyj) << " " << 2*(varzi + varzj) << std::endl;
 
-      ////infofile<< "D " << D << " DT " << DT << endl; 
+      ////infofile<< "D " << D << " DT " << DT << std::endl; 
 
       if (D < 40 && DT < 2.5) {
       // if (dx <= 3*(varxi + varxj) && dy <= 3*(varyi + varyj) && dz <= 3*(varzi + varzj) && DT < 2.5) {
-        //infofile<< "IT'S MERGIN' TIME!" << endl;
+        //infofile<< "IT'S MERGIN' TIME!" << std::endl;
         bool endcap = false;
         if (clust.cells[0].id > 25000) {
           endcap = true;
@@ -750,20 +674,20 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
     Lay3 = Calc_variables(cell_vec_3);
     Lay4 = Calc_variables(cell_vec_4);
     double LayE[5] = {Lay0.e, Lay1.e, Lay2.e, Lay3.e, Lay4.e};
-    infofile << "Layer 0 : "<< std::endl;
-    Clust_info(Lay0); 
+    // infofile << "Layer 0 : "<< std::endl;
+    // Clust_info(Lay0); 
     
-    infofile << "Layer 1 : "<< std::endl;
-    Clust_info(Lay1); 
+    // infofile << "Layer 1 : "<< std::endl;
+    // Clust_info(Lay1); 
 
-    infofile << "Layer 2 : "<< std::endl;
-    Clust_info(Lay2);
+    // infofile << "Layer 2 : "<< std::endl;
+    // Clust_info(Lay2);
 
-    infofile << "Layer 3 : "<< std::endl;
-    Clust_info(Lay3); 
+    // infofile << "Layer 3 : "<< std::endl;
+    // Clust_info(Lay3); 
 
-    infofile << "Layer 4 : "<< std::endl;
-    Clust_info(Lay4); 
+    // infofile << "Layer 4 : "<< std::endl;
+    // Clust_info(Lay4); 
 
     bool isBarrel = true;
     double yx[5] = {0, 0, 0, 0, 0}, yy[5] = {0, 0, 0, 0, 0},
@@ -892,8 +816,8 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
       continue;
     }
 
-    infofile << "lay cross: " << lay_cross << std::endl; 
-    infofile << "first layer: " << first_lay << std::endl; 
+    // infofile << "lay cross: " << lay_cross << std::endl; 
+    // infofile << "first layer: " << first_lay << std::endl; 
 
     // D = D - 0.5 * xl[lay_cross];
     int Q = 0, L = 0;
@@ -903,14 +827,14 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
       }
       L++; // DC, L is the number of layers with some deposited energy. 
     }
-    infofile << "Q: " << Q << std::endl; 
+    // infofile << "Q: " << Q << std::endl; 
     double E1 = 0, E2 = 0;
     if (lay_cross > 1) {
       for (int k_i = 5; k_i >= Q; k_i--) {
         E2 = E1;
         E1 = E1 + LayE[k_i - 1];
       }
-      infofile << "E1: " << E1 << ", E2: " << E2 <<std::endl; 
+      // infofile << "E1: " << E1 << ", E2: " << E2 <<std::endl; 
 
       double Rk = E2 / E1;
       double B = 3;
@@ -962,42 +886,42 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
       }
       for (int j = 0; j < lay_cross; j++) {
         X[j] = XFix[j] - Zapx; //apex position in module height direction???
-        infofile << "X[" << j << "]: " << X[j] << ", yx[" << j << "] : " << yx[j] << ", yy[" << j << "] : " << yy[j] << ", yz[" << j << "] : " << yz[j] << ", Zapx: " << Zapx << ", wx[" << j << "] : " << wx[j] << ", wy[" << j << "] : " << wy[j] << ", wz[" << j << "] : " << wz[j] << std::endl; 
+        // infofile << "X[" << j << "]: " << X[j] << ", yx[" << j << "] : " << yx[j] << ", yy[" << j << "] : " << yy[j] << ", yz[" << j << "] : " << yz[j] << ", Zapx: " << Zapx << ", wx[" << j << "] : " << wx[j] << ", wy[" << j << "] : " << wy[j] << ", wz[" << j << "] : " << wz[j] << std::endl; 
       }
 
-      infofile << "fit_ls x: " << std::endl; 
+      // infofile << "fit_ls x: " << std::endl; 
       std::tuple<double, double, double, double> fit_varx =
           fit_ls(lay_cross, X, yx, wx); //num layer crossed, apex position in module height direction??, positions of layer centroids in x coordinate, constant to understand
-      infofile << "fit_ls y: " << std::endl;
+      // infofile << "fit_ls y: " << std::endl;
       std::tuple<double, double, double, double> fit_vary =
           fit_ls(lay_cross, X, yy, wy);
-          infofile << "fit_ls z: " << std::endl;
+          // infofile << "fit_ls z: " << std::endl;
       std::tuple<double, double, double, double> fit_varz =
           fit_ls(lay_cross, X, yz, wz);
-      double trktot = sqrt(get<1>(fit_varx) * get<1>(fit_varx) +
-                           get<1>(fit_vary) * get<1>(fit_vary) +
-                           get<1>(fit_varz) * get<1>(fit_varz));
-      ctrk[0] = get<1>(fit_varx) / trktot;
-      ctrk[1] = get<1>(fit_vary) / trktot;
-      ctrk[2] = get<1>(fit_varz) / trktot;
-      ectrk[0] = get<3>(fit_varx) / trktot;
-      ectrk[1] = get<3>(fit_vary) / trktot;
-      ectrk[2] = get<3>(fit_varz) / trktot;
-      apx[0] = get<0>(fit_varx);
-      apx[1] = get<0>(fit_vary);
-      apx[2] = get<0>(fit_varz);
-      eapx[0] = get<2>(fit_varx);
-      eapx[1] = get<2>(fit_vary);
-      eapx[2] = get<2>(fit_varz);
+      double trktot = sqrt(std::get<1>(fit_varx) * std::get<1>(fit_varx) +
+                           std::get<1>(fit_vary) * std::get<1>(fit_vary) +
+                           std::get<1>(fit_varz) * std::get<1>(fit_varz));
+      ctrk[0] = std::get<1>(fit_varx) / trktot;
+      ctrk[1] = std::get<1>(fit_vary) / trktot;
+      ctrk[2] = std::get<1>(fit_varz) / trktot;
+      ectrk[0] = std::get<3>(fit_varx) / trktot;
+      ectrk[1] = std::get<3>(fit_vary) / trktot;
+      ectrk[2] = std::get<3>(fit_varz) / trktot;
+      apx[0] = std::get<0>(fit_varx);
+      apx[1] = std::get<0>(fit_vary);
+      apx[2] = std::get<0>(fit_varz);
+      eapx[0] = std::get<2>(fit_varx);
+      eapx[1] = std::get<2>(fit_vary);
+      eapx[2] = std::get<2>(fit_varz);
       // cout << "Apx: [" << apx[0] << "; " << apx[1] << "; " << apx[2] << "] "
       //<< " e direzione vettore: [" << ctrk[0] << "; " << ctrk[1] << "; " <<
-      // ctrk[2] << "] " << endl;
+      // ctrk[2] << "] " << std::endl;
     }
     if (lay_cross == 1) {
       // cout << "apx(x)=" << yx[0] << " apx(y)=" << yy[0] << " apx(z)=" <<
-      // yz[0] << endl;
+      // yz[0] << std::endl;
       // cout << "e_apx(x)=" << sqrt(1/wx[0]) << " e_apx(y)=" << sqrt(1 / wy[0])
-      //<< " e_apx(z)=" << sqrt(1 / wz[0]) << endl;
+      //<< " e_apx(z)=" << sqrt(1 / wz[0]) << std::endl;
       apx[0] = yx[0];
       apx[1] = yy[0];
       apx[2] = yz[0];
@@ -1038,8 +962,8 @@ std::tuple<double, double, double, double> fit_ls(int lay, double* X,double* Y, 
   A = ya / norm - B * xa / norm;
   dB = 1 / sqrt(lay * det);
   dA = sqrt(x2a / (lay * det));
-  infofile << "xa: " << xa << "ya: "<< ya << std::endl; 
-  infofile << "A : " << A <<  ", B : " << B << ", dA : " << dA <<  ", dB : " << dB <<  std::endl; 
+  // infofile << "xa: " << xa << "ya: "<< ya << std::endl; 
+  // infofile << "A : " << A <<  ", B : " << B << ", dA : " << dA <<  ", dB : " << dB <<  std::endl; 
   return std::make_tuple(A, B, dA, dB);
 }
 
@@ -1056,10 +980,10 @@ cluster Calc_variables(std::vector<dg_cell> cells)
     double d1, d2, d3;
     d1 = 0.5 * cell.l + d; // distance pmt1 - module center -> middle of the layer + distance module center-hit 
     d2 = 0.5 * cell.l - d;
-    double cell_E = kloe_simu::EfromADC(cell.ps1.at(0).adc, cell.ps2.at(0).adc,
+    double cell_E = sand_reco::ecal::reco::EfromADC(cell.ps1.at(0).adc, cell.ps2.at(0).adc,
                                         d1, d2, cell.lay);
     double cell_T =
-        kloe_simu::TfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell.l); // time of the photosignal 
+        sand_reco::ecal::reco::TfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell.l); // time of the photosignal 
         ////infofile<<"time of the photosignal: " << cell_T << "in the cell with id: " << cell.id << std::endl;
     if (cell.mod > 25) { //endcap  
       d3 = cell.y - d;
@@ -1174,11 +1098,11 @@ bool isNeighbour(int id, int c_id)
 
 // std::vector<int> GetNeighCells(int id)
 // {
-//     std::string strNumber = std::to_string(id);
+//     std::string strNumber = std::to_std::string(id);
 //     int module;
 //     int layer;
 //     int cell;
-//     // Extract substrings
+//     // Extract substd::strings
 //     if(id < 1000){
 //         module = std::stoi("00");
 //         layer = std::stoi(strNumber.substr(0, 1));
@@ -1247,7 +1171,7 @@ std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
 {
   for (int i = 0; i < cells.size(); i++) {
     // //infofile<<"Id Cells start: " << cells.at(start).id << ", id Cell i: " << cells.at(i).id <<std::endl;
-    // //infofile<< "Position in original multicell vector -> start: " << start << " , i: " << i << std::endl;
+    // //infofile<< "Position in original multicell std::vector -> start: " << start << " , i: " << i << std::endl;
     if (RepetitionCheck(checked, i) == true) continue;
     bool check = isNeighbour(cells.at(start).id, cells.at(i).id);
     
@@ -1257,7 +1181,7 @@ std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
     if (check == true) {
       neigh_chain.push_back(cells.at(i));
       checked.push_back(i);
-      // //infofile<< "Cell with id: " << cells.at(i).id << " was put in the checked vector." << std::endl;
+      // //infofile<< "Cell with id: " << cells.at(i).id << " was put in the checked std::vector." << std::endl;
       std::pair<std::vector<dg_cell>, std::vector<int>> find_chain = GetNeighbours(cells, i, checked, neigh_chain);
       neigh_chain = find_chain.first;
       checked = find_chain.second;
@@ -1266,7 +1190,7 @@ std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
   return std::make_pair(neigh_chain, checked);
 }
 
-double kloe_simu::AttenuationFactor(double d, int planeID)
+double AttenuationFactor(double d, int planeID)
 {
   /*
        dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
@@ -1281,22 +1205,22 @@ double kloe_simu::AttenuationFactor(double d, int planeID)
 
   switch (planeID) {
     case 0:
-    atl2 = kloe_simu::atl2_01;
+    atl2 = sand_reco::ecal::attenuation::atl2_01;
     break; //TO CHECK DC 
     case 1:
-    atl2 = kloe_simu::atl2_01;
+    atl2 = sand_reco::ecal::attenuation::atl2_01;
     break;
     
     case 2:
-    atl2 = kloe_simu::atl2_2;
+    atl2 = sand_reco::ecal::attenuation::atl2_2;
     break;
     
     case 3:
-    atl2 = kloe_simu::atl2_34;
+    atl2 = sand_reco::ecal::attenuation::atl2_34;
     break;
     
     case 4:
-    atl2 = kloe_simu::atl2_34;
+    atl2 = sand_reco::ecal::attenuation::atl2_34;
     break;
     
     default:
@@ -1305,19 +1229,19 @@ double kloe_simu::AttenuationFactor(double d, int planeID)
       break;
   }
   
-  return kloe_simu::p1 * TMath::Exp(-d / kloe_simu::atl1) +
-         (1. - kloe_simu::p1) * TMath::Exp(-d / atl2);
+  return sand_reco::ecal::attenuation::p1 * TMath::Exp(-d / sand_reco::ecal::attenuation::atl1) +
+         (1. - sand_reco::ecal::attenuation::p1) * TMath::Exp(-d / atl2);
 }
 
 // reconstruct t of the hit from tdc1 and tdc2
-double kloe_simu::TfromTDC(double t1, double t2, double L)
+double sand_reco::ecal::reco::TfromTDC(double t1, double t2, double L)
 {
-  return 0.5 * (t1 + t2 - kloe_simu::vlfb * L / kloe_simu::m_to_mm);
+  return 0.5 * (t1 + t2 - sand_reco::ecal::scintillation::vlfb * L / sand_reco::conversion::m_to_mm);
 }
 
 // energy deposit of the hit from adc1 and adc2 and
 // reconstructed longidutinal coordinate
-double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2,
+double sand_reco::ecal::reco::EfromADC(double adc1, double adc2, double d1, double d2,
                            int planeID)
 {
   double f1 = AttenuationFactor(d1, planeID);
@@ -1325,18 +1249,18 @@ double kloe_simu::EfromADC(double adc1, double adc2, double d1, double d2,
 
   double const attpassratio = 0.187;
   return 0.5 * (adc1 / f1 + adc2 / f2) /
-         (attpassratio * kloe_simu::pe2ADC * kloe_simu::e2p2);
+         (attpassratio * sand_reco::ecal::acquisition::pe2ADC * sand_reco::ecal::photo_sensor::e2pe);
 }
 
 double EfromADCsingle(double adc, double f)
 {
   double const attpassratio = 0.187;
-  return adc / (f * attpassratio * kloe_simu::pe2ADC * kloe_simu::e2p2);
+  return adc / (f * attpassratio * sand_reco::ecal::acquisition::pe2ADC * sand_reco::ecal::photo_sensor::e2pe);
 }
 
 double DfromTDC(double ta, double tb)
 {
-  return 0.5 * (ta - tb) / kloe_simu::vlfb * kloe_simu::m_to_mm;
+  return 0.5 * (ta - tb) / sand_reco::ecal::scintillation::vlfb * sand_reco::conversion::m_to_mm;
 }
 
 bool endsWith(const std::string& fullString, const std::string& ending) {
@@ -1345,48 +1269,4 @@ bool endsWith(const std::string& fullString, const std::string& ending) {
     } else {
         return false;
     }
-}
-bool initializeFiles(int argc, char* argv[], std::string& digitFileName) {
-    // Process command-line arguments to build the file names
-    for (int i = 1; i < argc; i += 2) {
-        std::string flag = argv[i];
-        std::string fileName = argv[i + 1];
-
-        if (flag == "-d") {
-            digitFileName = fileName;
-        } else {
-            std::cerr << "Error: Unknown flag: " << flag << std::endl;
-            return false;
-        }
-    }
-
-    // Check if the required files are present
-    if (digitFileName.empty()) {
-        std::cerr << "Error: Missing required flags. Please use '-d' with corresponding file name." << std::endl;
-        return false;
-    }
-
-    // Validate file names
-    if (!endsWith(digitFileName, "edep.digit.root")) {
-        std::cerr << "Error: Invalid arguments. Please use '-d' before the edep.digit.root file" << std::endl;
-        return false;
-    }
-
-    return true; // Files initialized successfully
-}
-
-
-
-int main(int argc, char* argv[]){
-     if (argc < 2) {
-        std::cerr << "Usage: Clustering" << " -d <file.edep.digit.root>" << std::endl;
-        return 1; // Exit with an error code
-    }
-    string digitFileName;
-    if (!initializeFiles(argc, argv, digitFileName)) {
-        return 1; // Exit with an error code
-    }
-    
-    clustering(digitFileName);
-  return 0;
 }
