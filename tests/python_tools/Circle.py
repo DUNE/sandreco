@@ -42,19 +42,17 @@ class Circle:
         else:
             return math.atan2(arg_y - self.center_y, arg_x - self.center_x) + 2 * math.pi
     
-    def get_upper_semi_circle(self):
-        # y as function of the x coordinate
-        def up_circle(x, p):
-            return p[0] + math.sqrt(p[1] * p[1] - (x - p[2]) * (x - p[2]))
-        
-        return up_circle
-    
-    def get_lower_semi_circle(self):
-        # y as function of the x coordinate
-        def low_circle(x, p):
-            return p[0] - math.sqrt(p[1] * p[1] - (x - p[2]) * (x - p[2]))
-        
-        return low_circle
+    def get_upper_semi_circle_points(self, n_points = 5000):
+        angles = np.linspace(0, np.pi, n_points)
+        x = [self.x_l(i) for i in angles]
+        y = [self.y_l(i) for i in angles]
+        return (x,y)
+
+    def get_lower_semi_circle_points(self, n_points = 5000):
+        angles = np.linspace(np.pi, 2 * np.pi, n_points)
+        x = [self.x_l(i) for i in angles]
+        y = [self.y_l(i) for i in angles]
+        return (x,y)
     
     def distance_to_point(self, point):
         return abs(((self.center_x - point[0]) ** 2 + (self.center_y - point[1]) ** 2) ** 0.5 - self.R)

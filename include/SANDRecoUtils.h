@@ -551,6 +551,10 @@ class Line : public SANDWireInfo
             return {dx_over_dt(), dy_over_dt(), dz_over_dt()};
         }
 
+        TVector3 GetPointAt(double t) const {
+            return {x_l(t), y_l(t), z_l(t)};
+        }
+
         TVector3 GetLinePointX0() const{
             return GetPointAt(0);
         }
@@ -599,10 +603,6 @@ class Line : public SANDWireInfo
         double az() const {return az_;};
         double LowLim() const {return low_lim_;};
         double UpLim() const {return up_lim_;};
-
-        TVector3 GetPointAt(double t) const {
-            return {x_l(t), y_l(t), z_l(t)};
-        }
 
     virtual ~Line() {}
 
@@ -737,16 +737,10 @@ struct RecoObject
         measured impact parameters
     */
     
-    std::vector<Line2D>         track_segments_ZY;
-    std::vector<Line2D>         track_segments_XZ;
+    // std::vector<Line2D>         track_segments_ZY;
+    // std::vector<Line2D>         track_segments_XZ;
     
-    // reconstructed helix ________________________________________
     Helix                       true_helix;
-    /*
-    helix_first_guess : 
-        initial seed for the algo that reconstruct the true_helix.
-    */
-    Helix                       first_guess_helix;
     Helix                       reco_helix;
 
     double                      pt_true;

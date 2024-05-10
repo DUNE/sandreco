@@ -7,10 +7,9 @@ from matplotlib.axes._axes import Axes
 import re
 
 from dg_wire import dg_wire
+from Line2D import Line2D
 from Circle import Circle
 from Helix import Helix
-
-import numpy as np
 
 class EventDisplay:
     sand_center = [0, -2384.73, 23910]
@@ -18,6 +17,9 @@ class EventDisplay:
     default_x_range = (-1700, 1700)
     default_y_range = (-4500, -300)
     default_z_range = (21500, 26000)
+    zoom_x_range = default_x_range
+    zoom_y_range = default_y_range
+    zoom_z_range = default_z_range
     theta = np.linspace(0, 2*np.pi, 100000)
     z_sand = sand_center[2] + sand_radius * np.cos(theta)
     y_sand = sand_center[1] + sand_radius * np.sin(theta)
@@ -86,7 +88,6 @@ class EventDisplay:
 
         raise ValueError("The shape of the points array is invalid. It must be (3, n), (2, n), (n, 3), or (n, 2).")
 
-
     def _is_wire_in_zoom_(self, wire, 
                       coordinate_to_check='x', 
                       zoom_x_range = default_x_range, 
@@ -129,41 +130,47 @@ class EventDisplay:
 
         return (abs(wire_coordinate - range_middle) <= range_half_length)
     
+    @classmethod
+    def set_zoom(cls, zoom_x_range = None, zoom_y_range = None, zoom_z_range = None):
+        if zoom_x_range is not None:
+            cls.zoom_x_range = zoom_x_range
+        if zoom_y_range is not None:
+            cls.zoom_y_range = zoom_y_range
+        if zoom_z_range is not None:
+            cls.zoom_z_range = zoom_z_range
+    
     def get_wires_in_zoom(self,
                           df_wires,
                           coordinate_1 = "z",
-                          coordinate_2 = None,
+                          coordinate_2 = "x",
                           zoom_x_range = default_x_range,
                           zoom_y_range = default_y_range,
                           zoom_z_range = default_z_range):
         df_wires_ = df_wires.loc[df_wires.apply(self._is_wire_in_zoom_, 
-                                    axis = 1, 
-                                    args=(coordinate_1, zoom_x_range, zoom_y_range, zoom_z_range,))]
-        if coordinate_2 == None:
+                                                axis = 1, 
+                                                args=(coordinate_1, zoom_x_range, zoom_y_range, zoom_z_range,))]
+        if coordinate_1 == coordinate_2:
             return df_wires_
         else:
             df_wires__ = df_wires_.loc[df_wires_.apply(self._is_wire_in_zoom_, 
-                                    axis = 1, 
-                                    args=(coordinate_2, zoom_x_range, zoom_y_range, zoom_z_range,))]
+                                                       axis = 1, 
+                                                       args=(coordinate_2, zoom_x_range, zoom_y_range, zoom_z_range,))]
             return df_wires__
 
     def plot_wires(self, 
-                   zoom_x_range = default_x_range,
-                   zoom_y_range = default_y_range,
-                   zoom_z_range = default_z_range,
                    color = 'blue',
                    alpha = 0.5,
                    plot_drift_circles = False,
                    plot_opposit_view = False):
-        
+
         hor_wires_in_zoom = self.get_wires_in_zoom(self.hor_fired_wires_info, "z", "y", 
-                                                   zoom_x_range, 
-                                                   zoom_y_range, 
-                                                   zoom_z_range)
+                                                   self.zoom_x_range, 
+                                                   self.zoom_y_range,
+                                                   self.zoom_z_range)
         ver_wires_in_zoom = self.get_wires_in_zoom(self.ver_fired_wires_info, "x", "z", 
-                                                   zoom_x_range, 
-                                                   zoom_y_range,    
-                                                   zoom_z_range)
+                                                   self.zoom_x_range, 
+                                                   self.zoom_y_range,    
+                                                   self.zoom_z_range)
 
         self.ax_0.scatter(x=ver_wires_in_zoom['x'], y=ver_wires_in_zoom['z'], 
                           s=15, marker="x", label='Vertical Wires', color=color, alpha=alpha)
@@ -174,16 +181,33 @@ class EventDisplay:
             self.plot_drift_circles(hor_wires_in_zoom, ver_wires_in_zoom, color=color, alpha=alpha)
 
         if plot_opposit_view:
-            hor_wires_in_zoom_z = self.get_wires_in_zoom(self.hor_fired_wires_info, "z", 
+            hor_wires_in_zoom_z = self.get_wires_in_zoom(self.hor_fired_wires_info, "z", "z",
                                                          self.default_x_range, 
-                                                         self.default_y_range, 
-                                                         zoom_z_range)
-            ver_wires_in_zoom_z = self.get_wires_in_zoom(self.ver_fired_wires_info, "z", 
+                                                         self.default_y_range,
+                                                         self.zoom_z_range)
+            ver_wires_in_zoom_z = self.get_wires_in_zoom(self.ver_fired_wires_info, "z", "z",
                                                          self.default_x_range, 
-                                                         self.default_y_range, 
-                                                         zoom_z_range)
-            self.ax_0.hlines(hor_wires_in_zoom_z['z'], zoom_x_range[0], zoom_x_range[1], color=color, linewidth=0.005)
-            self.ax_1.vlines(ver_wires_in_zoom_z['z'], zoom_y_range[0], zoom_y_range[1], color=color, linewidth=0.005)
+                                                         self.default_y_range,
+                                                         self.zoom_z_range)
+            self.ax_0.hlines(hor_wires_in_zoom_z['z'], self.zoom_x_range[0], self.zoom_x_range[1], color="blue", linewidth=0.5)
+            self.ax_1.vlines(ver_wires_in_zoom_z['z'], self.zoom_y_range[0], self.zoom_y_range[1], color="blue", linewidth=0.5)
+            
+            # add signal time axes
+            ax_0_second_y = self.ax_0.twinx()
+            ax_0_second_y.set_ylim(self.zoom_z_range)
+            ax_0_second_y.set_yticks(hor_wires_in_zoom_z['z'])
+            assumed_signal_time_hor = [f'{value:.2f} ns' for value in hor_wires_in_zoom_z['signal_time_measured']]
+            ax_0_second_y.set_yticklabels(assumed_signal_time_hor)
+            # ax_0_second_y.set_ylabel('Assumed signal time for hor wires')
+            ax_0_second_y.tick_params(axis='y', labelcolor='b', labelrotation=-30)
+
+            ax_1_second_x = self.ax_1.twiny()
+            ax_1_second_x.set_xlim(self.zoom_z_range)
+            ax_1_second_x.set_xticks(ver_wires_in_zoom_z['z'])
+            assumed_signal_time_ver = [f'{value:.2f} ns' for value in ver_wires_in_zoom_z['signal_time_measured']]
+            ax_1_second_x.set_xticklabels(assumed_signal_time_ver)
+            # ax_0_second_y.set_ylabel('Assumed signal time for ver wires')
+            ax_1_second_x.tick_params(axis='x', labelcolor='b', labelrotation=-30)
 
     def plot_sand(self):
         self.ax_0.vlines(-1650, self.sand_center[2] - self.sand_radius, self.sand_center[2] + self.sand_radius, color='red', label='sand')
@@ -191,7 +215,7 @@ class EventDisplay:
         self.ax_0.hlines(self.sand_center[2] - self.sand_radius, -1650, 1650, color='red')
         self.ax_0.hlines(self.sand_center[2] + self.sand_radius, -1650, 1650, color='red')
         self.ax_1.plot(self.z_sand, self.y_sand, linestyle='-', color='red')
-    
+
     def plot_wires_from_csv_table(self, df, color = 'blue', alpha = 0.5):
         if not isinstance(df, pd.DataFrame):
             raise ValueError("Input must be a Pandas DataFrame.")
@@ -237,14 +261,21 @@ class EventDisplay:
                 self.ax_0.plot(circle_points[0], circle_points[1], linestyle = 'dashed',
                                color=color, alpha = alpha)
     
-    def plot(self, points, ax = 0, label = '', linestyle = 'dashed'):
+    def plot(self, points, ax = 0, color = 'blue', label = '', linestyle = 'dashed'):
         self._handle_shape_(points)
         if ax == 0:
-            self.ax_0.plot(points[0], points[1], 'b-', label = label, linestyle = linestyle)
+            self.ax_0.plot(points[0], points[1], 'b-', color = color, label = label, linestyle = linestyle)
         elif ax == 1:
-            self.ax_1.plot(points[0], points[1], 'b-', label = label, linestyle = linestyle)
+            self.ax_1.plot(points[0], points[1], 'b-', color == color, label = label, linestyle = linestyle)
         else:
             raise ValueError(f"Cannot plot line on specified axis: {ax}")
+    
+    def plot_line(self, line : Line2D,  ax = 0, color = 'blue', label = '', linestyle = 'dashed'):
+        self.plot(line.get_points(np.linspace(self.zoom_x_range[0], self.zoom_x_range[1])),
+                  ax = ax, label = label, color = color, linestyle = linestyle)
+    
+    def plot_circle(self, circle : Circle,  ax = 1, color = 'blue', label = '', linestyle = 'dashed'):
+        self.plot(circle.get_points(n_points=5000), ax = ax, label = label, color = color, linestyle = linestyle)
     
     def set_sand_range(self):
         self.ax_0.set_xlim(self.default_x_range)
@@ -252,11 +283,11 @@ class EventDisplay:
         self.ax_1.set_xlim(self.default_z_range)
         self.ax_1.set_ylim(self.default_y_range)
     
-    def set_ax_ranges(self, zoom_x_range, zoom_y_range, zoom_z_range):
-        self.ax_0.set_xlim(zoom_x_range)
-        self.ax_0.set_ylim(zoom_z_range)
-        self.ax_1.set_xlim(zoom_z_range)
-        self.ax_1.set_ylim(zoom_y_range)
+    def set_ax_ranges(self):
+        self.ax_0.set_xlim(self.zoom_x_range)
+        self.ax_0.set_ylim(self.zoom_z_range)
+        self.ax_1.set_xlim(self.zoom_z_range)
+        self.ax_1.set_ylim(self.zoom_y_range)
     
     def set_ax_labels(self):
         self.ax_0.set_xlabel("X [mm]")
@@ -287,11 +318,8 @@ class EventDisplay:
             #  f'dip reco : {df[(df.edep_file==file_name)&(df.event_index==event_number)].dip_reco[0]:.3f}'
              ,fontsize=16)
 
-    def set_figure(self, 
-                   zoom_x_range = default_x_range, 
-                   zoom_y_range = default_y_range, 
-                   zoom_z_range = default_z_range):
+    def set_figure(self):
         self.set_title()
         self.set_ax_labels()
-        self.set_ax_ranges(zoom_x_range, zoom_y_range, zoom_z_range)
+        self.set_ax_ranges()
         plt.legend()

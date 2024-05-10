@@ -146,5 +146,5 @@ class Reader:
         df_wire_ev = self.dataframe_wires[self.dataframe_wires.event_index==ev_index]
         df_wire_ev['drift_circle'] = [self._define_drift_circle_(wire) for _, wire in df_wire_ev.iterrows()]
         return df_wire_ev
-
+    
     

@@ -42,19 +42,6 @@ int MIN_NOF_XZ_HITS = 5;
 
 int MIN_NOF_ZY_HITS = 5;
 
-int FITTING_STRATEGY = 0;
-/*
-    0 : fit TDCs on the XZ plane
-        with an sin function and 
-        on the ZY with a circle. 
-        The fits are done separa
-        tely.
-    
-    1 : fit TDCs simultaneously 
-        on XZ and ZY plane using
-        an Helix
-*/ 
-
 // CONSTANS____________________________________________________________________
 
 const double SAND_CENTER_X = 0.;
@@ -81,7 +68,9 @@ const std::vector<double> SUPERMOD_LENGTHS = {3129.97277395, // A1
                                               2466.05424949, // D
                                               1262.30218417};// F
 
-const double DRIFT_CELL_DIM = 10.; // 1 cm
+const double MYLAR_2_MYLAR_DIST = 10.02; // mm
+
+const double SENSE_2_SENSE_DIST = 20.28; // mm
 
 const double TDC_SMEARING = 1.; // ns, default disabled
 
@@ -93,11 +82,11 @@ const double LIGHT_VELOCITY = 299.792458; // mm/ns
 
 std::vector<dg_wire>* RecoUtils::event_digits = nullptr;
 
-std::vector<dg_wire>* vertical_fired_digits = nullptr;
+// pointer to vertical wires of event_digits
+std::vector<dg_wire*> vertical_fired_digits;
 
-std::vector<dg_wire>* horizontal_fired_digits = nullptr;
-
-dg_wire* first_fired_wire = nullptr;
+// pointer to horizontal wires of event_digits
+std::vector<dg_wire*> horizontal_fired_digits;
 
 std::vector<Line2D>* track_segments_ZY = nullptr;
 
@@ -282,7 +271,7 @@ void CreateDigitsFromHelix(Helix& h,
 
     double impact_par = RecoUtils::GetMinImpactParameter(h, l, s_min, t_min, HasMinimized);
 
-    if((impact_par <= DRIFT_CELL_DIM*0.5*sqrt(2)) & (fabs(t_min)*l.GetDirectionVector().Mag() <= w.wire_length)){ // conditions for fired_wire
+    if((impact_par <= SENSE_2_SENSE_DIST * 0.5 * sqrt(2)) & (fabs(t_min)*l.GetDirectionVector().Mag() <= w.wire_length)){ // conditions for fired_wire
 
         w.drift_time = impact_par / sand_reco::stt::v_drift;
 
@@ -333,32 +322,6 @@ std::vector<TG4HitSegment> FilterHits(const std::vector<TG4HitSegment>& hits, co
     return filtered_hits;
 }
 
-double Hit2WireDistance(const dg_wire& wire,
-                        const TG4HitSegment& hit,
-                        double& closest2Hit,
-                        double& closest2Wire){
-                        // std::ofstream& fout){
-    /*
-        given a hit and a wire, find the 3D distance
-        and fill:
-        - closest2Hit: the point on wire closest to the hit
-        - closest2Wire: the point on hit line closest to the wire
-    */
-    Line wire_line = RecoUtils::GetLineFromDigit(wire);
-    Line hit_line = Line(hit);
-    
-    double d = RecoUtils::GetSegmentSegmentDistance(wire_line, hit_line, closest2Hit, closest2Wire);
-    auto w_point = wire_line.GetPointAt(closest2Hit);
-    auto h_point = hit_line.GetPointAt(closest2Wire);
-    // if(d<=DRIFT_CELL_DIM * 0.5 * sqrt(2)){
-    //     fout << evEdep->EventId <<","<< hit.GetStart().X() << "," << hit.GetStart().Y() << "," << hit.GetStart().Z()<< ",";
-    //                             fout << hit.GetStop().X()  << "," << hit.GetStop().Y()  << "," << hit.GetStop().Z()<< ",";
-    //                             fout << w_point.X()  << "," << w_point.Y()  << "," << w_point.Z()<< ",";
-    //                             fout << h_point.X()  << "," << h_point.Y()  << "," << h_point.Z() << std::endl;
-    // }
-    return d;
-}
-
 void UpdateFiredWires(std::vector<dg_wire>& fired_wires, dg_wire new_fired){
     
     bool found = false;
@@ -404,21 +367,40 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
         for(auto& wire : wire_infos){
 
             auto hit_middle = (hit.GetStart()+hit.GetStop())*0.5;
+
+            // first scan along z to find the wire plane
+            bool is_hit_in_wire_plane = fabs(wire.z - hit_middle.Z()) < MYLAR_2_MYLAR_DIST * 0.5;
             
-            if(fabs(wire.z - hit_middle.Z()) <= DRIFT_CELL_DIM * 0.5){//first scan along z to find the wire plane
+            if(is_hit_in_wire_plane){ // pass if hit z coodinate is found in the wire plane
 
-                double closest2Hit, closest2Wire;
-                double hit2wire_dist = Hit2WireDistance(wire, hit, closest2Hit, closest2Wire);
-
-                bool pass = (wire.hor==true) ? 
-                    (hit2wire_dist <= DRIFT_CELL_DIM * 0.5 * sqrt(2.)) : (hit2wire_dist <= DRIFT_CELL_DIM * sqrt(2.)); // due to an error on the cell dimension of vertical planes
+                Line wire_line = RecoUtils::GetLineFromDigit(wire);
                 
-                if(pass){// find closest wire on the plane
+                Line hit_line = Line(hit);
+
+                double closest_2_hit, closest_2_wire;
+
+                double hit_2_wire_dist = RecoUtils::GetSegmentSegmentDistance(wire_line, hit_line, closest_2_hit, closest_2_wire);
+
+                TVector3 w_point = wire_line.GetPointAt(closest_2_hit);
+                
+                TVector3 h_point = hit_line.GetPointAt(closest_2_wire);
+
+                bool is_hit_in_cell = (wire.hor == true) ? 
+                    fabs(w_point.Y() - h_point.Y()) < SENSE_2_SENSE_DIST * 0.5 : fabs(w_point.X() - h_point.X()) <= SENSE_2_SENSE_DIST * 0.5;
+
+                if(is_hit_in_cell){ // // pass if hit y (or x) coodinate is found in the hor (or vertical) wire cell
+
                     auto fired = RecoUtils::Copy(wire);
-                    fired.drift_time = hit2wire_dist / sand_reco::stt::v_drift;
-                    fired.signal_time = fabs(closest2Hit - fired.wire_length*0.5) / sand_reco::stt::v_signal_inwire;
-                    fired.t_hit = ((hit.GetStop() + hit.GetStart())*0.5 + (hit.GetStop() - hit.GetStart())*closest2Wire).T();
-                    fired.tdc = fired.drift_time + fired.signal_time +fired.t_hit;
+                    
+                    fired.drift_time = hit_2_wire_dist / sand_reco::stt::v_drift;
+
+                    // closest to hit has a sign wrt the wire center
+                    fired.signal_time = fabs(closest_2_hit - fired.wire_length * 0.5) / sand_reco::stt::v_signal_inwire;
+                    
+                    fired.t_hit = ((hit.GetStop() + hit.GetStart())*0.5 + (hit.GetStop() - hit.GetStart())*closest_2_wire).T();
+
+                    fired.tdc = fired.drift_time + fired.signal_time + fired.t_hit;
+                    
                     UpdateFiredWires(fired_wires, fired);
                 }
             }
@@ -444,15 +426,30 @@ Parameter CreateParam(std::string name,
     return p;
 }
 
-Helix GetHelixFirstGuess(const Helix& input_helix){
-    Helix first_guess(RecoUtils::SmearVariable(input_helix.R(), 100, 1)[0], // smear of 10 cm around true R
-                      RecoUtils::SmearVariable(input_helix.dip(), 0.1, 1)[0], 
-                      input_helix.Phi0(), 
-                       1, 
-                      {RecoUtils::SmearVariable(input_helix.x0().X(), 10, 1)[0],
-                       input_helix.x0().Y(),
-                       input_helix.x0().Z()});
-    return first_guess;
+TVector3 GetTrackVertex(){
+    return {0.,0.,0.};
+}
+
+void GetTrackFirstGuess(Circle& circle, Line2D& line){
+    /*
+        First Guess for particle trajectory is give by a fit of the 
+        wires coordinates (circle fit in the ZY bending plane and
+        linear fit on the XZ plane)
+    */
+    LOG("i", "Track First Guess : fitting wire coordinates on XZ PLANE");
+    line = RecoUtils::WiresLinearFit(vertical_fired_digits);
+    LOG("R", TString::Format("first guess : Slope (m) = %f, Intercept (q) =  %f", 
+                            line.m(), line.q()).Data());
+
+    LOG("i", "Track First Guess : fitting wire coordinates on ZY PLANE");
+    circle = RecoUtils::WiresCircleFit(horizontal_fired_digits);
+    LOG("R", TString::Format("first guess : Center = (%f, %f), R =  %f", 
+                            circle.center_x(), circle.center_y(), circle.R()).Data());
+    
+    // LOG("R", TString::Format("track vertex (x, y, z) : (%f, %f, %f)", x0.X(), x0.Y(), x0.Z()).Data());
+    // LOG("R", TString::Format("Momentum (px, py, pz) : (%f, %f, %f)", momentum.X(), momentum.Y(), momentum.Z()).Data());
+    
+    // return RecoUtils::GetHelixFromCircleLine(circle, line, x0, momentum);
 }
 
 double WireZdistance(const dg_wire& wire1, const dg_wire& wire2) {
@@ -460,7 +457,7 @@ double WireZdistance(const dg_wire& wire1, const dg_wire& wire2) {
 }
 
 dg_wire FindClosestZWire(const dg_wire& input_wire, 
-                                       const std::vector<dg_wire>& wires){
+                        const std::vector<dg_wire*>& wires){
     /*
         return wire with opposit orientation 
         closest to the input_wire along
@@ -470,17 +467,38 @@ dg_wire FindClosestZWire(const dg_wire& input_wire,
     double minDistance = std::numeric_limits<double>::max();
     for(const auto& w : wires){
         // compute input_wire - w distance
-        double dist = WireZdistance(input_wire, w);
+        double dist = WireZdistance(input_wire, *w);
         if(dist < minDistance){
             // closest wire on the right
             minDistance = dist;
-            closest = w;
+            closest = *w;
         }
     }
     return closest;
 }
 
-void TDC2ImpactPar(dg_wire& wire){
+double GetMissingCoordinate(dg_wire& horizontal_wire, const Line2D& track_guess){
+    // get horizontal wire x coordinate from line first guess
+    return track_guess.GetXFromY(horizontal_wire.z);
+}
+
+double GetMissingCoordinate(dg_wire& vertical_wire, const Circle& track_guess){
+    // get vertical wire y coordinate from circle first guess
+    // circle intersect the vertical wire in two points
+    double y1 = track_guess.GetUpperSemiCircle()->Eval(vertical_wire.z);
+    double y2 = track_guess.GetLowerSemiCircle()->Eval(vertical_wire.z);
+    // to decide which one of the two is the one we are looking for
+    // consider the closest horizontal fired wires
+    dg_wire closest_horizontal = FindClosestZWire(vertical_wire, horizontal_fired_digits);
+    if(fabs(closest_horizontal.y - y1) < fabs(closest_horizontal.y - y2)){
+        return y1;
+    }else{
+        return y2;
+    }
+}
+
+template<typename T>
+void TDC2ImpactPar(dg_wire& wire, const T& track_guess){
     /*
         Covert the measure TDC into a impact
         parameter (distance track - wire) that
@@ -499,51 +517,57 @@ void TDC2ImpactPar(dg_wire& wire){
         the closest (vertical / horizontal) fired wire in space.
     */
         if(wire.hor==true){ // horizontal
-            // find closest vertical wire along z
-            auto ClosestFiredWire = FindClosestZWire(wire, *vertical_fired_digits);
-            
-            wire.signal_time_measured = fabs(ClosestFiredWire.x - wire.wire_length*0.5) / sand_reco::stt::v_signal_inwire;
-        }else{ // vertical
-            // find closest horizontal wires along z
-            auto ClosestFiredWire = FindClosestZWire(wire, *horizontal_fired_digits);
 
-            wire.signal_time_measured = fabs(ClosestFiredWire.y + wire.wire_length*0.5) / sand_reco::stt::v_signal_inwire;
+            double x_coordinate = GetMissingCoordinate(wire, track_guess);
+            // wire.signal_time_measured = fabs(x_coordinate - wire.wire_length * 0.5) / sand_reco::stt::v_signal_inwire;
+            wire.signal_time_measured = (wire.wire_length * 0.5 - fabs(x_coordinate - wire.x)) / sand_reco::stt::v_signal_inwire;
+        }else{ // vertical
+
+            double y_coordinate = GetMissingCoordinate(wire, track_guess);
+            wire.signal_time_measured = (wire.wire_length * 0.5 - fabs(y_coordinate - wire.y)) / sand_reco::stt::v_signal_inwire;
+            // std::cout<<"missing coordinate : "<< y_coordinate
+            //          <<" signal time assumed : " << wire.signal_time_measured 
+            //          <<" wire length : " << wire.wire_length 
+            //          << std::endl;
         }
    }
    wire.drift_time_measured = wire.tdc - wire.signal_time_measured - wire.t_hit_measured;
 }
 
-void TDC2DriftDistance(std::vector<dg_wire>& fired_wires){
+template<typename T>
+void TDC2DriftDistance(std::vector<dg_wire*>& fired_wires, const T& first_guess){
     /*
         Convert the observed TDC into a drift distance
         for each fired_wires. Store the infos in the wire
         attributes: t_hit_measured, signal_time_measured,
-        drift_time_measured
+        drift_time_measured.
+        
+        NOTE : Used the track guess to infer signal time
     */
    for (auto& wire : fired_wires)
    {
-        TDC2ImpactPar(wire);
-        // std::cout << "wire id " << wire.did << " is horizontal : " << wire.hor <<"\n";
-        // LOG("R", TString::Format("drift time: true %f, measured %f", wire.drift_time, wire.drift_time_measured).Data());
-        // std::cout << "\n";
+        TDC2ImpactPar(*wire, first_guess);
+        if(_DEBUG_){
+            std::cout << "wire id " << wire->did << " is horizontal : " << wire->hor <<"\n";
+            LOG("R", TString::Format("SIGNAL time: true %f, measured %f", wire->signal_time, wire->signal_time_measured).Data());
+            std::cout << "\n";
+        }
    }
 }
 
-std::vector<Circle> Wire2DriftCircle(const std::vector<dg_wire>& wires){
+std::vector<Circle> Wire2DriftCircle(const std::vector<dg_wire*>& wires){
     std::vector<Circle> drift_cirlces;
     for(const auto& wire : wires){
-        if(wire.hor == true){ // horizontal
-            Circle c(wire.z, wire.y, wire.drift_time_measured * sand_reco::stt::v_drift);
+        if(wire->hor == true){ // horizontal
+            Circle c(wire->z, wire->y, wire->drift_time_measured * sand_reco::stt::v_drift);
             drift_cirlces.push_back(c);
         }else{ // vertical
-            Circle c(wire.x, wire.z, wire.drift_time_measured * sand_reco::stt::v_drift);
+            Circle c(wire->x, wire->z, wire->drift_time_measured * sand_reco::stt::v_drift);
             drift_cirlces.push_back(c);
         }
     }
     return drift_cirlces;
 }
-
-// FITTING STRATEGY 0__________________________________________________________
 
 // SEGMENT FITTING_____________________________________________________________
 
@@ -603,13 +627,13 @@ double FunctorNLL_Circle(const double* p){
     //auto dist2first = c.Distance2Point({first_point.X(), first_point.Y()});
     //auto dist2second = c.Distance2Point({second_point.X(), second_point.Y()});
     double i = 1;
-    for(auto& wire : *horizontal_fired_digits){
+    for(auto& wire : horizontal_fired_digits){
 
         // r_estimated = impact parameter estimated as distance sin function - wire
-        double r_estimated = GetImpactParamiterCircle(c, wire);
+        double r_estimated = GetImpactParamiterCircle(c, *wire);
 
         // r_observed = impact parameter from the observed tdc
-        double r_observed = wire.drift_time_measured * sand_reco::stt::v_drift;
+        double r_observed = wire->drift_time_measured * sand_reco::stt::v_drift;
 
         nll += (r_estimated - r_observed) * (r_estimated - r_observed) / (sigma * sigma);
 
@@ -617,10 +641,10 @@ double FunctorNLL_Circle(const double* p){
     }
     //double nll_epsilon = (dist2first*dist2second)/(sigma*sigma);
     //return sqrt(nll + nll_epsilon)/(horizontal_fired_digits->size());
-    return sqrt(nll)/(horizontal_fired_digits->size());
+    return sqrt(nll)/(horizontal_fired_digits.size());
 }
 
-Circle GetRecoZYTrack(Circle& first_guess,
+Circle FitZYDriftCircles(Circle& first_guess,
                       MinuitFitInfos& fit_infos){
     /*
         Fit observed TDCs on ZY plane with a Circle.
@@ -695,13 +719,13 @@ double FunctorNLL_Line(const double* p){
     double dist2first = 0.;
     double dist2second = 0.;
     double i = 1;
-    for(auto& wire : *vertical_fired_digits){
+    for(auto& wire : vertical_fired_digits){
 
         // r_estimated = impact parameter estimated as 2D distance line - wire
-        double r_estimated = test_line.Distance2Point({wire.x, wire.z});
+        double r_estimated = test_line.Distance2Point({wire->x, wire->z});
 
         // r_observed = impact parameter from the observed tdc
-        double r_observed = wire.drift_time_measured * sand_reco::stt::v_drift;
+        double r_observed = wire->drift_time_measured * sand_reco::stt::v_drift;
 
         nll += (r_estimated - r_observed) * (r_estimated - r_observed) / (sigma * sigma);
 
@@ -713,11 +737,11 @@ double FunctorNLL_Line(const double* p){
         i++;
     }
     double nll_epsilon = (dist2first*dist2second)/(sigma*sigma);
-    return sqrt(nll+nll_epsilon)/(horizontal_fired_digits->size());
+    return sqrt(nll+nll_epsilon)/(horizontal_fired_digits.size());
     // return sqrt(nll)/(horizontal_fired_digits->size());
 }
 
-Line2D GetLineFitXZPlane(Line2D first_guess,
+Line2D FitXZDriftCircles(Line2D first_guess,
                        MinuitFitInfos& fit_infos){
     /*
         Fit observed TDCs on XZ plane with a Line.
@@ -760,6 +784,22 @@ Line2D GetLineFitXZPlane(Line2D first_guess,
     Line2D l(m.value, q.value);
 
     return l;
+}
+
+void FitDriftCircles(Circle& circle_ZY_plane, 
+                     Line2D& line_XZ_plane,
+                     MinuitFitInfos& fit_ZY,
+                     MinuitFitInfos& fit_XZ
+                     ){
+        LOG("ii", "Fitting drift circles starting from first guess");
+        std::cout << blue << "\n";
+        line_XZ_plane = FitXZDriftCircles(line_XZ_plane, fit_XZ);
+        std::cout << def << "\n";
+            
+        LOG("ii", "Fitting drift circles starting from first guess");
+        std::cout << blue << "\n";
+        circle_ZY_plane = FitZYDriftCircles(circle_ZY_plane, fit_ZY);
+        std::cout << def << "\n";
 }
 
 // sin fit
@@ -815,7 +855,7 @@ double GetImpactParameterSin(TF1* TestSin, const dg_wire& wire){
     return impact_par;
 }
 
-double NLL_Sin(TF1* TestSin, std::vector<dg_wire>& wires){
+double NLL_Sin(TF1* TestSin, std::vector<dg_wire*>& wires){
     /*
         run over vertical fired wires
         - get impact par from TDC
@@ -829,10 +869,10 @@ double NLL_Sin(TF1* TestSin, std::vector<dg_wire>& wires){
     for(auto& wire : wires){
 
         // r_estimated = impact parameter estimated as distance sin function - wire
-        double r_estimated = GetImpactParameterSin(TestSin, wire);
+        double r_estimated = GetImpactParameterSin(TestSin, *wire);
 
         // r_observed = impact parameter from the observed tdc
-        double r_observed = wire.drift_time_measured * sand_reco::stt::v_drift;
+        double r_observed = wire->drift_time_measured * sand_reco::stt::v_drift;
 
         nll += (r_estimated - r_observed) * (r_estimated - r_observed) / (sigma * sigma);
 
@@ -864,7 +904,7 @@ double FunctorNLL_Sin(const double* p){
                            phase, 
                            offset);
     
-    return NLL_Sin(TestSin, *vertical_fired_digits);
+    return NLL_Sin(TestSin, vertical_fired_digits);
 }
 
 TF1* GetRecoXZTrack(TF1* first_guess,
@@ -1063,8 +1103,8 @@ Helix GetRecoHelix(Helix& helix_initial_guess,
 
 Helix Reconstruct(Circle FittedCircle,
                   Line2D FittedLine,
-                  const std::vector<dg_wire>& hor_wires,
-                  const std::vector<dg_wire>& ver_wires
+                  const std::vector<dg_wire*>& hor_wires,
+                  const std::vector<dg_wire*>& ver_wires
                   ){
     /*
         Define the reconstructed helix from
@@ -1077,17 +1117,17 @@ Helix Reconstruct(Circle FittedCircle,
     double m = FittedLine.m();
     double q = FittedLine.q();
     
-    bool forward_track = (ver_wires[0].z < ver_wires[1].z) ? 1 : 0;
+    bool forward_track = (ver_wires[0]->z < ver_wires[1]->z) ? 1 : 0;
 
-    TVector2 vertex_XZ = {ver_wires[0].x, ver_wires[0].x * m + q};
+    TVector2 vertex_XZ = {ver_wires[0]->x, ver_wires[0]->x * m + q};
 
     TVector2 vertex_ZY;
-    double upper_y = FittedCircle.GetUpperSemiCircle()->Eval(hor_wires[0].z);
-    double lower_y = FittedCircle.GetLowerSemiCircle()->Eval(hor_wires[0].z);
-    if(fabs(upper_y - hor_wires[0].y) < fabs(lower_y - hor_wires[0].y)){
-       vertex_ZY = {hor_wires[0].z, upper_y};
+    double upper_y = FittedCircle.GetUpperSemiCircle()->Eval(hor_wires[0]->z);
+    double lower_y = FittedCircle.GetLowerSemiCircle()->Eval(hor_wires[0]->z);
+    if(fabs(upper_y - hor_wires[0]->y) < fabs(lower_y - hor_wires[0]->y)){
+       vertex_ZY = {hor_wires[0]->z, upper_y};
      }else{
-       vertex_ZY = {hor_wires[0].z, lower_y};
+       vertex_ZY = {hor_wires[0]->z, lower_y};
      }
     
     
@@ -1238,7 +1278,6 @@ int main(int argc, char* argv[]){
     
     tEdep->SetBranchAddress("Event", &evEdep);
     
-    // tout.Branch("event_reco", "EventReco", &event_reco);
     tout.Branch("reco_object", "reco_object", &reco_object);
     
     std::vector<dg_wire> wire_infos;
@@ -1248,7 +1287,8 @@ int main(int argc, char* argv[]){
     LOG("I","Loading wires lookup table");
     ReadWireInfos(fWireInfo, wire_infos);
 
-    for(auto i=0u; i < tEdep->GetEntries(); i++)
+    // for(auto i=0u; i < tEdep->GetEntries(); i++)
+    for(auto i=9u; i < 10; i++)
     {
         tEdep->GetEntry(i);
         
@@ -1286,7 +1326,6 @@ int main(int argc, char* argv[]){
             // create digits from edepsim selected hits
             LOG("I", "Digitization of edepsim TG4HitSegments");
             CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], wire_infos, fired_wires);
-            // throw "";
         }
 
         LOG("i", "Sort wires by true hit time");
@@ -1294,109 +1333,60 @@ int main(int argc, char* argv[]){
 
         RecoUtils::event_digits = &fired_wires;
 
-        first_fired_wire = &fired_wires.front();
-
         LOG("I", "Check event with enough hits");
         bool good_event = PassSelectionNofHits(fired_wires);
 
         if(!good_event) continue;
+        
+        // clear vectors from previous events
+        horizontal_fired_digits.clear();
+        vertical_fired_digits.clear();
 
-        Helix helix_first_guess = GetHelixFirstGuess(true_helix);
-
-        MinuitFitInfos fit_infos, fit_XZ, fit_ZY;
-
-        LOG("I", "Split wires in vertical and horizontal");
-        std::vector<dg_wire> hor_wires, ver_wires;
+        // group wires into vertical and horizontal
+        LOG("I", "Group wires in vertical and horizontal");
         for (auto& wire : fired_wires){
             if(wire.hor==true){ // horizontal
-                hor_wires.push_back(wire);
-            }else{// (wire.hor==false) // vertical
-                ver_wires.push_back(wire);
-            }}
-
-        // sort wires (they should be already sorted)
-        LOG("I","Sorting wire in time (MC truth)");
-        SortWiresByTime(hor_wires);
-        SortWiresByTime(ver_wires);
-
-        horizontal_fired_digits = &hor_wires;
-        vertical_fired_digits = &ver_wires;
+                horizontal_fired_digits.push_back(&wire);
+            }else{//vertical
+                vertical_fired_digits.push_back(&wire);
+            }
+        }
         
-        // convert measured TDC into drift distance (i.e dift circles)
-        LOG("I","Converting measured TDC into drift time ");
-        TDC2DriftDistance(fired_wires);
-        LOG("ii","Converting horizontal wires");
-        TDC2DriftDistance(*horizontal_fired_digits);
-        LOG("ii","Converting vertical wires");
-        TDC2DriftDistance(*vertical_fired_digits);
-
-        LOG("I", "Creating drift circles from drift time");
-        std::vector<Circle> vertical_drift_circles = Wire2DriftCircle(*vertical_fired_digits);
-        std::vector<Circle> horizontal_drift_circles = Wire2DriftCircle(*horizontal_fired_digits);
-
-        // LOG("I","Find local tangets to drift circles in XZ plane");
-        LOG("I","Find local tangets to first 3 drift circles in XZ plane");
-        auto segmentsXZ = GetTrackSegments(vertical_drift_circles, MIN_NOF_XZ_HITS);
-        track_segments_XZ = &segmentsXZ;
-        LOG("R", TString::Format("Tangent to first TDC XZ plane m = %f, q = %f", segmentsXZ[0].m(), segmentsXZ[0].q()).Data());
-        
-        LOG("I","Find local tangets to first 5 drift circles in XZ plane");
-        auto segmentsZY = GetTrackSegments(horizontal_drift_circles, MIN_NOF_ZY_HITS);
-        track_segments_ZY = &segmentsZY;
-        LOG("R", TString::Format("Tangent to first TDC XZ plane m = %f, q = %f", segmentsZY[0].m(), segmentsZY[0].q()).Data());
-
+        MinuitFitInfos fit_XZ, fit_ZY;
+        Circle circle_ZY_plane;
+        Line2D line_XZ_plane;
+        TVector3 particle_momentum;
         Helix reco_helix;
 
-        if(FITTING_STRATEGY==0){
-            /*
-                Fit the coordinate of the fired wires to
-                provide an initial guess of the NLL method
-            */
-            PrintEventInfos(true_helix, helix_first_guess, fired_wires);
-            
-            LOG("I", "Fitting drift circles with NLL method on XZ PLANE");
-            LOG("i", "Track First Guess : fitting wire coordinates on XZ PLANE");
-            Line2D LineFit = RecoUtils::WiresLinearFit(*vertical_fired_digits);
-            LOG("R", TString::Format("first guess : Slope (m) = %f, Intercept (q) =  %f", LineFit.m(), LineFit.q()).Data());
-            LOG("i", "Fitting drift circles starting from first guess");
-            std::cout << blue << "\n";
-            Line2D RecoXZTrack = GetLineFitXZPlane(LineFit, fit_XZ);
-            std::cout << def << "\n";
-            
-            LOG("I", "Fitting drift circles with NLL method on ZY PLANE");
-            LOG("i", "Track First Guess : fitting wire coordinates on ZY PLANE");
-            Circle CircleFit = RecoUtils::WiresCircleFit(*horizontal_fired_digits);
-            LOG("R", TString::Format("first guess : Center = (%f, %f), R =  %f", 
-                                            CircleFit.center_x(), CircleFit.center_y(), CircleFit.R()).Data());
-            LOG("i", "Fitting drift circles starting from first guess");
-            std::cout << blue << "\n";
-            Circle RecoZYTrack = GetRecoZYTrack(CircleFit, fit_ZY);
-            std::cout << def << "\n";
+        LOG("I", "Track First Guess (seed): fitting wire coordinates");
+        GetTrackFirstGuess(circle_ZY_plane, line_XZ_plane);
 
-            // get reconstructed helix from separate fit
-            reco_object.fit_infos.push_back(fit_XZ);
-            reco_object.fit_infos.push_back(fit_ZY);
-            reco_object.track_segments_ZY = *track_segments_ZY;
-            reco_object.track_segments_XZ = *track_segments_XZ;
+        LOG("I","Converting measured TDC into drift time ");
+        LOG("ii","Converting horizontal wires");
+        TDC2DriftDistance<Line2D>(horizontal_fired_digits, line_XZ_plane);
+        LOG("ii","Converting vertical wires");
+        TDC2DriftDistance<Circle>(vertical_fired_digits, circle_ZY_plane);
+
+        LOG("I", "Creating drift circles from drift time");
+        std::vector<Circle> vertical_drift_circles = Wire2DriftCircle(vertical_fired_digits);
+        std::vector<Circle> horizontal_drift_circles = Wire2DriftCircle(horizontal_fired_digits);
+
+        PrintEventInfos(true_helix, reco_helix, fired_wires);
             
-            LOG("I","Getting Reconstructed Helix from Circle (ZY plane) and Line (XZ plane)");
+        LOG("I", "Fitting drift circles with a NLL method");
+        FitDriftCircles(circle_ZY_plane, line_XZ_plane, fit_ZY, fit_XZ);
 
-            reco_helix = Reconstruct(RecoZYTrack, 
-                                     RecoXZTrack,
-                                     *horizontal_fired_digits,
-                                     *vertical_fired_digits);
+        LOG("I","Reconstructed Helix from Circle (ZY plane) and Line (XZ plane)");
+        reco_helix.Setx0(true_helix.x0());
+        reco_helix.Seth(true_helix.h());
+        reco_helix = RecoUtils::GetHelixFromCircleLine(circle_ZY_plane, line_XZ_plane, reco_helix.x0(), particle_momentum);
+        reco_helix.PrintHelixPars();                                     
 
-            reco_helix.PrintHelixPars();                                     
-        }else if(FITTING_STRATEGY==1){
-            // RecoUtils::InitHelixPars(fired_wires, helix_first_guess);
-            // PrintEventInfos(true_helix, helix_first_guess, fired_wires);
-            reco_helix = Reconstruct(fit_infos,         // infos on the fit
-                                     true_helix,        // truth
-                                     helix_first_guess, // first guess
-                                     wire_infos,        // all wire infos
-                                     fired_wires);      // wires fired by the test helix
-            reco_object.fit_infos.push_back(fit_infos);
-        }
+        LOG("R", TString::Format("Reconstruncted total momentum: (%f, %f, %f)", particle_momentum.X(), particle_momentum.Y(), particle_momentum.Z()));
+
+        LOG("I", "Filling output tree");
+        reco_object.fit_infos_xz = fit_XZ;
+        reco_object.fit_infos_zy = fit_ZY;
 
         reco_object.fired_wires = *RecoUtils::event_digits;
         reco_object.true_helix = true_helix;
@@ -1410,7 +1400,6 @@ int main(int argc, char* argv[]){
         if(USE_NON_SMEARED_TRACK) reco_object.use_track_no_smearing = true;
 
         tout.Fill();
-        reco_object.fit_infos.clear();
     }
     fout.cd();
 
@@ -1418,3 +1407,17 @@ int main(int argc, char* argv[]){
 
     fout.Close();
 }
+
+// reco_object.track_segments_ZY = *track_segments_ZY;
+// reco_object.track_segments_XZ = *track_segments_XZ;
+
+// LOG("I","Find local tangets to drift circles in XZ plane");
+// LOG("I","Find local tangets to first 3 drift circles in XZ plane");
+// auto segmentsXZ = GetTrackSegments(vertical_drift_circles, MIN_NOF_XZ_HITS);
+// track_segments_XZ = &segmentsXZ;
+// LOG("R", TString::Format("Tangent to first TDC XZ plane m = %f, q = %f", segmentsXZ[0].m(), segmentsXZ[0].q()).Data());
+
+// LOG("I","Find local tangets to first 5 drift circles in XZ plane");
+// auto segmentsZY = GetTrackSegments(horizontal_drift_circles, MIN_NOF_ZY_HITS);
+// track_segments_ZY = &segmentsZY;
+// LOG("R", TString::Format("Tangent to first TDC XZ plane m = %f, q = %f", segmentsZY[0].m(), segmentsZY[0].q()).Data());
