@@ -92,7 +92,13 @@ double RecoUtils::GetLineLineDistance(const Line& l1, const Line& l2,
                           closest to the line 2
         - closest2line1 : is the double that gives the point on the line 2
                           closest to the line 1
-        Reference : https://math.stackexchange.com/questions/2213165/find-shortest-distance-between-lines-in-3d                          
+        
+        Reference : https://math.stackexchange.com/questions/2213165/find-shortest-distance-between-lines-in-3d
+
+        NOTE : the direction vector of the lines l1 and l2 are not supposed to be 
+               necessarely unitary. So closest2line1 and closest2line2 are NOT
+               necessarely the distance from the lines X0 point (usually taken
+               as the line center.
     */
 
    // define direction of the line that connects the 2 lines
@@ -449,15 +455,15 @@ int fitCircle(int n, const std::vector<double>& x, const std::vector<double>& y,
   return 0;
 }
 
-Circle RecoUtils::WiresCircleFit(const std::vector<dg_wire>& wires){
+Circle RecoUtils::WiresCircleFit(const std::vector<dg_wire*>& wires){
     /*
         Perform a 2D circular fit of the ZY coordinates
         of the horizontal wires 
     */
     std::vector<double> z,y;
     for(auto& wire : wires){
-        z.push_back(wire.z);
-        y.push_back(wire.y);
+        z.push_back(wire->z);
+        y.push_back(wire->y);
     }
 
     double centerZ, centerY, radius, err, chi2;
@@ -469,16 +475,16 @@ Circle RecoUtils::WiresCircleFit(const std::vector<dg_wire>& wires){
     return c;
 }
 
-Line2D RecoUtils::WiresLinearFit(const std::vector<dg_wire>& wires){
+Line2D RecoUtils::WiresLinearFit(const std::vector<dg_wire*>& wires){
     /*
         Perform a 2D linear fit of the XZ coordinates
         of the vertical wire 
     */
    std::vector<double> z,x;
    for(auto& wire : wires){
-    if(wire.hor==false){ // vertical
-        x.push_back(wire.x);
-        z.push_back(wire.z);
+    if(wire->hor==false){ // vertical
+        x.push_back(wire->x);
+        z.push_back(wire->z);
     }
    }
     // Create a TGraph object and fill it with the data
@@ -556,39 +562,60 @@ double RecoUtils::FunctorNLL(const double* p)
     return nll;
 }
 
-void RecoUtils::InitHelixPars(const std::vector<dg_wire>& fired_wires,
-                              Helix& helix_initial_guess)
-{
-    // /*
-    //     !!! ASSUMPTION !!! : 
-    //         - WIRES CONFIGURATION XXY
-    //         - WIRES ARE ORDERED
-    //     constrain helix parameter first guess using fired wires
-    //     - x0 form fit of vertical wires coordinates with a sin function 
-    // */
-    // std::vector<dg_wire> hor_wires, ver_wires;
+double RecoUtils::GetDipAngleFromCircleLine(const Circle& circle, 
+                                            const Line2D& line, 
+                                            double Phi0,
+                                            TVector3& momentum){
+    /*
+        input:
+            circle : fitted trajectory in the ZY bending plane
+            line : fitted trajectory in the XZ plane
+            Phi0 : angle corresponding to the trajecotry starting point
+            Momentum : reference TVector3 that will be filled with particle
+                       total momentum
+        NOTE: a guess for the initial vertex is needed because related to the dip angle
+    */
+    TVector2 tangent_zy = circle.GetDerivativeAt(Phi0);
+    double angle_of_direction_zy = atan(tangent_zy.Y()/tangent_zy.X());
+    double p_zy_module = circle.R() * 0.3 * 0.6;
+    double pz = p_zy_module * cos(angle_of_direction_zy);
+    double py = p_zy_module * sin(angle_of_direction_zy);
+    // direction_zy = tangent_zy.Unit();
 
-    // for (auto& wire : fired_wires)
-    // {
-    //     if(wire.hor==true){ // horizontal
-    //         hor_wires.push_back(wire);
-    //     }else{// (wire.hor==false) // vertical
-    //         ver_wires.push_back(wire);
-    //     }
-    // }
+    // // p_yz momentum on the bending plane (transverse to magnetic fiels)
+    // double p_zy_module = circle.R() * 0.3 * 0.6;
+    // TVector2 p_zy = direction_zy * p_zy_module;
+    // double pz = -p_zy.X();
+    // double py = -p_zy.Y();
+
+    // slope of the tangent in the zx plane
+    double pz_over_px = line.m();
+    double px = pz / pz_over_px;
+
+    // fill momentum
+    momentum = {px, py, pz};
+
+    return atan2(px, p_zy_module);
+}
+
+Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle, 
+                                        const Line2D& line, 
+                                        const TVector3 x0,
+                                        TVector3& momentum){
+    /*
+        input:
+            circle : fitted trajectory in the ZY bending plane
+            line : fitted trajectory in the XZ plane
+            point x0 : trajectory stariting point (x0 <-> Phi0)
+            momentum : passed as reference to be filled
+        construct a helix from these inputs
+        NOTE: a guess for the initial vertex is needed because related to the dip angle
+    */
+    double Phi0 = circle.GetAngleFromPoint(x0.Z(),x0.Y());
     
-    // TF1* SinFit = RecoUtils::WiresSinFit(ver_wires);
-    // TF1* CircleFit = RecoUtils::WiresCircleFit(hor_wires);
-    // /*
-    //     first gues of (x0,z0) is the value of the fitted function
-    //     around the first fired wire
-    // */
-    // TVector3 x0 = {fired_wires.front().x, 
-    //                helix_initial_guess.x0().Y(), 
-    //                helix_initial_guess.x0().Z()};
+    double dip_angle = RecoUtils::GetDipAngleFromCircleLine(circle, line, Phi0, momentum);
 
-    // helix_initial_guess.Setx0(x0);
-    // helix_initial_guess.SetR(CircleFit->GetParameter(1));
+    return Helix(circle.R(), dip_angle, Phi0, 1, x0);
 }
 
 const double* RecoUtils::GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus)

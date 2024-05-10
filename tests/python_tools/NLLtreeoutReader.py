@@ -1,11 +1,13 @@
 import uproot4 as upr
 import numpy as np
 import pandas as pd
-from dg_wire import dg_wire
 
+from dg_wire import dg_wire
 from Helix import Helix
+from Circle import Circle
 
 class Reader:
+    drift_velocity = 0.05
     def __init__(self, arg_file_name, arg_tree_name):
         self.file_name = arg_file_name
         self.tree_name = arg_tree_name
@@ -80,6 +82,32 @@ class Reader:
                                 'reco_object/fired_wires/fired_wires.hor'                  : 'hor',
                                 'reco_object/fired_wires/fired_wires.wire_length'          : 'wire_length'
                                 })
+        self.dataframe_fitted_values_xz = self.tree_upr.arrays([
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.name',
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.id',
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.initial_guess',
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.value',
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.error',
+                                ], library='pd').rename(columns={
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.name'          : "name",
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.id'            : "id",
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.initial_guess' : "initial_guess",
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.value'         : "value",
+                                'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.error'         : "error"
+                                })
+        self.dataframe_fitted_values_zy = self.tree_upr.arrays([
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.name',
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.id',
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.initial_guess',
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.value',
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.error',
+                                ], library='pd').rename(columns={
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.name'          : "name",
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.id'            : "id",
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.initial_guess' : "initial_guess",
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.value'         : "value",
+                                'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.error'         : "error"
+                                })
     
     def get_true_helix(self, ev_index):
         row =  self.dataframe_helix[self.dataframe_helix.event_index==ev_index]
@@ -88,7 +116,7 @@ class Reader:
     def get_reco_helix(self, ev_index):
         row =  self.dataframe_helix[self.dataframe_helix.event_index==ev_index]
         return Helix(row.R_reco[0], row.dip_reco[0], row.Phi0_reco[0], 1, (row.x0_reco[0], row.y0_reco[0], row.z0_reco[0]))
-
+    
     def get_track_segmants_dataframe(self, plane = "XZ"):
         df = self.tree_upr.arrays([f'reco_object/track_segments_{plane}/track_segments_{plane}.dx_',
                                    f'reco_object/track_segments_{plane}/track_segments_{plane}.dy_',
@@ -106,11 +134,17 @@ class Reader:
                                     })
         return df
     
-    def get_wire_info(self, ev_index, return_type = 'pd_series'):
-        if return_type == 'dg_wire':
-            return [dg_wire("", r.did, r.x, r.y, r.z, 0, 0, 0, r.hor, r.wire_length, 0) 
-                    for _, r in self.dataframe_wires[self.dataframe_wires.event_index==ev_index].iterrows()]
+    def _define_drift_circle_(self, wire):
+        if wire.hor == 1:
+            return Circle(wire.z, wire.y, wire.drift_time_measured * self.drift_velocity)
+        elif wire.hor == 0:
+            return Circle(wire.x, wire.z, wire.drift_time_measured * self.drift_velocity)
         else:
-           return self.dataframe_wires[self.dataframe_wires.event_index==ev_index]
+            raise ValueError(f"cannot define a wire circle for {wire.hor}")
+
+    def get_wire_info(self, ev_index):
+        df_wire_ev = self.dataframe_wires[self.dataframe_wires.event_index==ev_index]
+        df_wire_ev['drift_circle'] = [self._define_drift_circle_(wire) for _, wire in df_wire_ev.iterrows()]
+        return df_wire_ev
 
     

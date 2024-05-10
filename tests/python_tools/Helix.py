@@ -19,23 +19,22 @@ class Helix:
         
         dip = math.atan2(pl, pt)
         R = pt / (0.3 * 0.6)  # [m] = [GeV]/[T] or [mm] = [MeV]/[T]
-        # h = 1 if charge < 0 else -1
-        h = -1 if charge < 0 else 1
+        h = 1 if charge < 0 else -1
         Phi0 = math.atan2(momentum.Y(), momentum.Z()) + h * math.pi * 0.5
         
         return cls(R, dip, Phi0, h, x0)
     
     def x_h(self, s):
-        return self.x0[0] + s * math.sin(self.dip)
+        return self.x0[0] - s * math.sin(self.dip)
     
     def y_h(self, s):
-        return self.x0[1] + self.R * (math.sin(self.Phi0 - self.h * s * math.cos(self.dip) / self.R) - math.sin(self.Phi0))
+        return self.x0[1] + self.R * (math.sin(self.Phi0 + self.h * s * math.cos(self.dip) / self.R) - math.sin(self.Phi0))
     
     def z_h(self, s):
-        return self.x0[2] + self.R * (math.cos(self.Phi0 - self.h * s * math.cos(self.dip) / self.R) - math.cos(self.Phi0))
+        return self.x0[2] + self.R * (math.cos(self.Phi0 + self.h * s * math.cos(self.dip) / self.R) - math.cos(self.Phi0))
     
     def dx_over_ds(self):
-        return -math.sin(self.dip)
+        return math.sin(self.dip)
     
     def dy_over_ds(self, s):
         return math.cos(self.Phi0 + self.h * s * math.cos(self.dip) / self.R) * self.h * math.cos(self.dip)
@@ -55,7 +54,7 @@ class Helix:
     def get_s_from_phi(self, Phi):
         return Phi * self.R / self.h / math.cos(self.dip)
     
-    def get_helix_points(self, s_min=0, s_max=2e3, step=10.):
+    def get_helix_points(self, s_min=-2e3, s_max=0, step=10.):
         if s_min >= s_max:
             print("s_min cannot be larger than s_max")
             raise ValueError

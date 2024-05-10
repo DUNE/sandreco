@@ -11,6 +11,16 @@ class Line2D:
         self.direction = (arg_dx, arg_dy)
         self.p0 = (arg_ax, arg_ay)
     
+    @classmethod
+    def from_mq(cls, arg_m, arg_q, arg_ax=0.):
+        dy_ = arg_m
+        dx_ = 1.
+        ax_ = arg_ax
+        ay_ = arg_q + arg_m * arg_ax
+        direction_ = (dx_, dy_)
+        p0_ = (ax_, ay_)
+        return cls(dx_, dy_, ax_, ay_)
+    
     def distance_to_point(self, p1):
         diff = (p1[0] - self.p0[0], p1[1] - self.p0[1])
         projection_length = diff[0] * self.direction[0] + diff[1] * self.direction[1]
@@ -44,3 +54,6 @@ class Line2D:
     
     def p0(self):
         return self.p0
+    
+    def get_points(self, x):
+        return (x, self.m * x + self.q)

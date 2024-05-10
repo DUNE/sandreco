@@ -5,6 +5,7 @@
 #include <complex>
 #include <TRandom3.h>
 #include <TStyle.h>
+#include <type_traits>
 
 // #include "utils.h"
 #include "struct.h"
@@ -33,7 +34,7 @@ class Helix
         // dip : dip angle 
         // Phi0 : is the azimuth angle of the starting point with respect to the helix axis
         // h : +/- sense of rotation
-        // x0 : track starting point
+        // x0 : track starting pofint
 
         // optionsl : low_lim, up_lim 
         // lower and upper limit for linear parameter s to be used in case we want restrict the helix to a portion
@@ -56,7 +57,7 @@ class Helix
             Phi0_         = TMath::ATan2(momentum.Y(),momentum.Z()) + h_*TMath::Pi()*0.5; // for mu pi/2 should be added
 
             up_lim_       = 0.; // track starts from s = low_lim to s = 0 (for s<0 tracks proceed upwards according to this parmetrization)
-            low_lim_       = -1e3;
+            low_lim_      = -1e3;
         }
 
         Helix() {
@@ -149,6 +150,10 @@ class Helix
 
         void Setdip(double arg){
             dip_ = arg;
+        }
+
+        void Seth(double arg){
+            h_ = arg;
         }
 
         void SetPhi0(double arg){
@@ -420,6 +425,10 @@ class Line2D
             return diff_projection.Mod();
         }
 
+        double GetXFromY(double arg_y) const {
+            return (arg_y - q_)/m_;
+        }
+
         double dx() const {return dx_;};
         double dy() const {return dy_;};
         double ax() const {return ax_;};
@@ -465,11 +474,11 @@ class Line : public SANDWireInfo
             TVector3 middle_point = ((hit.GetStop() + hit.GetStart())*0.5).Vect();
             // double hit_length = (hit.GetStop() - hit.GetStart()).Vect().Mag();
 
-            // X0 of the line is the hit middle point
             dx_ = hit_direction.X();
             dy_ = hit_direction.Y();
             dz_ = hit_direction.Z();
 
+            // X0 of the line is the hit middle point
             ax_ = middle_point.X();
             ay_ = middle_point.Y();
             az_ = middle_point.Z();
@@ -511,9 +520,8 @@ class Line : public SANDWireInfo
         }
 
         void SetLineRangeFromDigit(const dg_wire& digit){
-            auto wire = geo_manager.get_wire_info(digit.did);
-            SetLowLim(-wire.length()/2.);
-            SetUpLim(wire.length()/2.);
+            SetLowLim(-digit.wire_length/2./GetDirectionVector().Mag());
+            SetUpLim(digit.wire_length/2./GetDirectionVector().Mag());
         }
 
         double x_l(double t) const {
@@ -563,10 +571,13 @@ class Line : public SANDWireInfo
             /*
             find if t is a point on the line
             between line [low_lim, up_lim]
+            x----------------x----------------x
+            low_lim          X0           up_lim
             */
-           double middle = (up_lim_ + low_lim_) * 0.5;
-           double delta = (up_lim_ - low_lim_) * 0.5;
-           return (fabs(t - middle) <= delta);
+           auto point = GetPointAt(t);
+           auto line_center = GetLinePointX0();
+           auto pointDist2Center = (point - line_center).Mag();
+           return (pointDist2Center < GetLineLength()/2.);
         }
 
         void PrintLineInfos(){
@@ -638,11 +649,11 @@ double              GetExpectedRadiusFromDigit(const dg_wire& digit);
 
 Line                GetLineFromDigit(const dg_wire& digit);
 
-Line2D              WiresLinearFit(const std::vector<dg_wire>& wires);
+Line2D              WiresLinearFit(const std::vector<dg_wire*>& wires);
 
 TF1*                WiresSinFit(const std::vector<dg_wire>& wires);
 
-Circle              WiresCircleFit(const std::vector<dg_wire>& wires);
+Circle              WiresCircleFit(const std::vector<dg_wire*>& wires);
 
 TF1*                InvertSin(TF1* fSin);
 
@@ -650,7 +661,15 @@ double              NLL(Helix& h,const std::vector<dg_wire>& digits); // negativ
 
 double              FunctorNLL(const double* p);
 
-void                InitHelixPars(const std::vector<dg_wire>& digits, Helix& helix_initial_guess);
+double              GetDipAngleFromCircleLine(const Circle& circle, 
+                                             const Line2D& line, 
+                                             double Phi0,
+                                             TVector3& Momentum);
+
+Helix               GetHelixFromCircleLine(const Circle& circle, 
+                                           const Line2D& line, 
+                                           const TVector3 x0,
+                                           TVector3& momentum);
 
 const double*       GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus);
 
@@ -682,7 +701,8 @@ struct Parameter
 
 struct MinuitFitInfos
 {
-    std::string                 Auxiliary_name;
+    // std::string                 Auxiliary_name;
+    const char*                 Auxiliary_name;
     int                         TMinuitFinalStatus; // 0 if converged, 4 if falied
     int                         NIterations; // number of iterations to reach the minimum
     double                      MinValue; // value of the func to minimize at its minimum
@@ -726,33 +746,16 @@ struct RecoObject
     helix_first_guess : 
         initial seed for the algo that reconstruct the true_helix.
     */
+    Helix                       first_guess_helix;
     Helix                       reco_helix;
-    /*
-        true_impact_par : distance TG4HitSegment (with the
-        smallest TDC among all the hit int the cell) to the
-        signal wire
-    */
+
     double                      pt_true;
     double                      pt_reco;
 
     // fitting info TMinuit _______________________________________
-    std::vector<Parameter>      fitted_parameters;
-    std::vector<MinuitFitInfos> fit_infos;
+    MinuitFitInfos              fit_infos_xz;
+    MinuitFitInfos              fit_infos_zy;
 };
-
-// struct EventReco
-// {   
-//     const char*                 edep_file_input;
-//     const char*                 digit_file_input;
-//     bool                        use_track_no_smearing = false;
-//     /*
-//     use_track_no_smearing :
-//         if true edepsim is used as input to generate
-//         tracks without energy loss nor multiple scattering
-//     */
-//     int                         event_index;
-//     RecoObject                  reco_object;
-// };
 
 namespace Color {
     enum Code {
