@@ -515,13 +515,13 @@ class Line : public SANDWireInfo
         }
 
         void SetLineLength(double l){
-            SetLowLim(-l/2.);
-            SetUpLim(l/2.);
+            SetLowLim(-l/2./GetDirectionVector().Mag());
+            SetUpLim(l/2./GetDirectionVector().Mag());
         }
-
+ 
         void SetLineRangeFromDigit(const dg_wire& digit){
             SetLowLim(-digit.wire_length/2./GetDirectionVector().Mag());
-            SetUpLim(digit.wire_length/2./GetDirectionVector().Mag());
+            SetUpLim(digit.wire_length/2./ GetDirectionVector().Mag());
         }
 
         double x_l(double t) const {
@@ -645,9 +645,7 @@ double              GetMinImpactParameter(const Helix& helix, const Line& line, 
 
 double              NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess, double tol, int max_iterations);
 
-double              GetExpectedRadiusFromDigit(const dg_wire& digit);
-
-Line                GetLineFromDigit(const dg_wire& digit);
+Line                GetLineFromWire(const dg_wire& digit);
 
 Line2D              WiresLinearFit(const std::vector<dg_wire*>& wires);
 

@@ -244,38 +244,27 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line){
     return RecoUtils::GetMinImpactParameter(helix, line, s_min, t_min, HasMinimized);
 }
 
-double RecoUtils::GetExpectedRadiusFromDigit(const dg_wire& digit){
-    // get TDC and convert it to a radius
-    TRandom3 rand;
-    auto wire_info = geo_manager.get_wire_info(digit.did);
-    
-    double guess_wire_pmt_dist     = wire_info.length()/2.;
-    double signal_propagation_time = guess_wire_pmt_dist/sand_reco::stt::v_signal_inwire;
-    double t0                      = 1; // assume 1 ns
-    return (digit.tdc - signal_propagation_time - t0)*sand_reco::stt::v_drift;
-}
-
-Line RecoUtils::GetLineFromDigit(const dg_wire& digit){
+Line RecoUtils::GetLineFromWire(const dg_wire& wire){
     // get Line from fired wire 
     // x = dx * t + ax
     // y = dy * t + ay
     // z = z0
-    if(digit.hor==true)
+    if(wire.hor==true)
     {
         // horizontal == line along x axis
         // x = t + x0
         // y = y0
         // z = z0
-        Line l(1., 0., 0., digit.x, digit.y, digit.z);
-        l.SetLineLength(digit.wire_length);
+        Line l(1., 0., 0., wire.x, wire.y, wire.z);
+        l.SetLineLength(wire.wire_length);
         return l;
     }else{
         // vertical == line along y axis
         // x = x0
         // y = t + y0
         // z = z0
-        Line l(0., 1., 0., digit.x, digit.y, digit.z);
-        l.SetLineLength(digit.wire_length);
+        Line l(0., 1., 0., wire.x, wire.y, wire.z);
+        l.SetLineLength(wire.wire_length);
         return l;
     }
 }
@@ -526,7 +515,7 @@ double RecoUtils::NLL(Helix& h,const std::vector<dg_wire>& digits)
     for(auto& digit : digits) 
     {
         // each digit define a line completly
-        Line l = RecoUtils::GetLineFromDigit(digit);
+        Line l = RecoUtils::GetLineFromWire(digit);
 
         /* find s_lower and s_upper that gives the portion of the helix 
         in the plane containing the wire */
