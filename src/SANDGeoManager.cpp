@@ -2,10 +2,14 @@
 
 #include <iostream>
 #include <fstream>
+
+#include <iomanip>
+
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
 #include <TObjString.h>
 #include <TRandom3.h>
+
 
 Counter counter_;
 
@@ -477,7 +481,7 @@ void SANDGeoManager::decode_stt_plane_id(int stt_plane_global_id,
 
 bool SANDGeoManager::is_stt_tube(const TString& volume_name) const
 {
-  return volume_name.Contains(stt_single_tube_regex_);
+  return volume_name.Contains(stt_tube_regex_);
 }
 
 bool SANDGeoManager::is_stt_plane(const TString& volume_name) const
@@ -506,7 +510,7 @@ int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
       (reinterpret_cast<TObjString*>(plane_matches->At(5)))->GetString().Atoi();
   int plane_type = (reinterpret_cast<TObjString*>(plane_matches->At(4)))
                            ->GetString()
-                           .EqualTo("hh")
+                           .EqualTo("XX")
                        ? 2
                        : 1;
   int module_replica_id = (reinterpret_cast<TObjString*>(module_matches->At(3)))
@@ -612,67 +616,53 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
               << std::endl;
 
   for (int i = 0; i < node->GetNdaughters(); i++) {
-    auto two_tubes_node = node->GetDaughter(i);
-    auto two_tubes_matches =
-        stt_two_tubes_regex_.MatchS(two_tubes_node->GetName());
+    auto tube_node = node->GetDaughter(i);
+    auto tube_matches = stt_tube_regex_.MatchS(tube_node->GetName());
 
-    int two_tubes_id = (reinterpret_cast<TObjString*>(two_tubes_matches->At(5)))
-                           ->GetString()
-                           .Atoi();
-    delete two_tubes_matches;
+//      std::cout<<tube_node->GetName()<<" -- "<<tube<a_matches->GetEntries()<< " --  "<<reinterpret_cast<TObjString*>(tube_matches->At(4))->GetString()<<"\n";
+    int tube_id = (reinterpret_cast<TObjString*>(tube_matches->At(4)))
+                      ->GetString()
+                      .Atoi();
+    delete tube_matches;
 
-    TGeoMatrix* two_tubes_matrix = two_tubes_node->GetMatrix();
-    TGeoHMatrix two_tubes_hmatrix = matrix * (*two_tubes_matrix);
+    int tube_unique_id = encode_stt_tube_id(stt_plane_id, tube_id);
 
-    for (int j = 0; j < two_tubes_node->GetNdaughters(); j++) {
-      TGeoNode* tube_node = two_tubes_node->GetDaughter(j);
-      TGeoTube* tube_shape = (TGeoTube*)tube_node->GetVolume()->GetShape();
-      double tube_length = 2 * tube_shape->GetDz();
-      TString tube_volume_name = tube_node->GetName();
+    TGeoMatrix* tube_matrix = tube_node->GetMatrix();
+    TGeoHMatrix tube_hmatrix = matrix * (*tube_matrix);
 
-      if (!is_stt_tube(tube_volume_name))
-        std::cout << "Error: expected ST but not -> " << tube_volume_name.Data()
-                  << std::endl;
+    TGeoTube* tube_shape = (TGeoTube*)tube_node->GetVolume()->GetShape();
+    double tube_length = 2 * tube_shape->GetDz();
+    TString tube_volume_name = tube_node->GetName();
 
-      TGeoMatrix* tube_matrix = two_tubes_node->GetDaughter(j)->GetMatrix();
-      TGeoHMatrix tube_hmatrix = two_tubes_hmatrix * (*tube_matrix);
+    if (!is_stt_tube(tube_volume_name))
+      std::cout << "Error: expected ST but not -> " << tube_volume_name.Data()
+                << std::endl;
 
-      auto tube_matches = stt_single_tube_regex_.MatchS(tube_volume_name);
+    TVector3 tube_position;
+    tube_position.SetX(tube_hmatrix.GetTranslation()[0]);
+    tube_position.SetY(tube_hmatrix.GetTranslation()[1]);
+    tube_position.SetZ(tube_hmatrix.GetTranslation()[2]);
 
-      int tube_id = (reinterpret_cast<TObjString*>(
-                         tube_matches->At(tube_matches->GetEntries() - 2)))
-                        ->GetString()
-                        .Atoi();
-      delete tube_matches;
+    double transverse_coord =
+        stt_plane_type == 1 ? tube_position.X() : tube_position.Y();
 
-      int tube_local_id = two_tubes_id * 2 + tube_id;
-      int tube_unique_id = encode_stt_tube_id(stt_plane_id, tube_local_id);
+    this_plane_stt_tube_tranverse_position_map[transverse_coord] =
+        tube_unique_id;
 
-      TVector3 tube_position;
-      tube_position.SetX(tube_hmatrix.GetTranslation()[0]);
-      tube_position.SetY(tube_hmatrix.GetTranslation()[1]);
-      tube_position.SetZ(tube_hmatrix.GetTranslation()[2]);
-
-      double transverse_coord =
-          stt_plane_type == 1 ? tube_position.Y() : tube_position.X();
-
-      this_plane_stt_tube_tranverse_position_map[transverse_coord] =
-          tube_unique_id;
-
-      // here we fill STT tube info
-      sttmap_[tube_unique_id] = SANDWireInfo(
-          tube_unique_id, tube_position.X(), tube_position.Y(),
-          tube_position.Z(), tube_length,
-          stt_plane_type == 1 ? SANDWireInfo::Orient::kVertical
-                              : SANDWireInfo::Orient::kHorizontal,
-          stt_plane_type == 1 ? SANDWireInfo::ReadoutEnd::kPlus
-                              : SANDWireInfo::ReadoutEnd::kPlus);
-    }
+    // here we fill STT tube info
+    sttmap_[tube_unique_id] = SANDWireInfo(
+        tube_unique_id, tube_position.X(), tube_position.Y(), tube_position.Z(),
+        tube_length,
+        stt_plane_type == 1 ? SANDWireInfo::Orient::kVertical
+                            : SANDWireInfo::Orient::kHorizontal,
+        stt_plane_type == 1 ? SANDWireInfo::ReadoutEnd::kPlus
+                            : SANDWireInfo::ReadoutEnd::kPlus);
   }
 
   stt_tube_tranverse_position_map_[stt_plane_id] =
       this_plane_stt_tube_tranverse_position_map;
 }
+
 void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
                                          const TGeoHMatrix& matrix,
                                          int drift_plane_unique_id)
@@ -900,8 +890,8 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
     std::cout<<"invalid current node (is not ecal active layer): "<<node->GetName()<<"\n";
     throw "";
   }
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  std::cout<<"\n";
+  //std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+  //std::cout<<"\n";
   if (check_and_process_ecal_path(volume_path) == false) return -999;
   //////
 
@@ -930,8 +920,8 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 
   int cell_unique_id =
       encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
-  std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  std::cout<<"\n";
+  //std::cout<<__FILE__<<" "<<__LINE__<<"\n";
+  //std::cout<<"\n";
   return cell_unique_id;
 }
 
@@ -941,7 +931,7 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
     std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
     return -999;
   }
-
+  
   TGeoNode* node = geo_->FindNode(x, y, z);
   TString volume_name = node->GetName();
 
@@ -970,6 +960,7 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
   } else if (it == stt_tube_tranverse_position_map_.at(plane_id).end()) {
     tube_id = stt_tube_tranverse_position_map_.at(plane_id).rbegin()->second;
   } else {
+
     SANDWireInfo tube1 = sttmap_.at(it->second);
     SANDWireInfo tube2 = sttmap_.at(std::prev(it)->second);
 
@@ -1003,6 +994,19 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
   }
 
   return tube_id;
+}
+
+int SANDGeoManager::print_stt_tube_id(double x, double y, double z) const
+{
+  if (geo_ == 0) {
+    std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
+    return -999;
+  }
+
+  TGeoNode* node = geo_->FindNode(x, y, z);
+  TString volume_name = node->GetName();
+  std::cout<<volume_name<<"\n";
+  return -1;
 }
 
 int SANDGeoManager::get_wire_id(int drift_plane_id, double z, double transverse_coord) const
