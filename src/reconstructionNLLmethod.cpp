@@ -1345,7 +1345,7 @@ int main(int argc, char* argv[]){
         Line2D line_XZ_plane;
         TVector3 particle_momentum;
         Helix reco_helix;
-        unsigned int nof_cycles = 1;
+        unsigned int nof_cycles = 3;
 
         LOG("I", "Track First Guess (seed): fitting wire coordinates");
         GetTrackFirstGuess(circle_ZY_plane, line_XZ_plane);
