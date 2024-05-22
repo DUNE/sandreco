@@ -139,6 +139,12 @@ class EventDisplay:
         if zoom_z_range is not None:
             cls.zoom_z_range = zoom_z_range
     
+    @classmethod
+    def reset_zoom(cls):
+        cls.zoom_x_range = cls.default_x_range
+        cls.zoom_y_range = cls.default_y_range
+        cls.zoom_z_range = cls.default_z_range
+    
     def get_wires_in_zoom(self,
                           df_wires,
                           coordinate_1 = "z",
@@ -160,8 +166,12 @@ class EventDisplay:
     def plot_wires(self, 
                    color = 'blue',
                    alpha = 0.5,
+                   label = "wires",
+                   marker_size = 40,
+                   marker_line_width = 2,
                    plot_drift_circles = False,
-                   plot_opposit_view = False):
+                   plot_opposit_view = False,
+                   add_assumed_signal_time_axis = False):
 
         hor_wires_in_zoom = self.get_wires_in_zoom(self.hor_fired_wires_info, "z", "y", 
                                                    self.zoom_x_range, 
@@ -173,9 +183,9 @@ class EventDisplay:
                                                    self.zoom_z_range)
 
         self.ax_0.scatter(x=ver_wires_in_zoom['x'], y=ver_wires_in_zoom['z'], 
-                          s=15, marker="x", label='Vertical Wires', color=color, alpha=alpha)
+                          s=marker_size, marker="x", label=label, color=color, alpha=alpha, linewidth=marker_line_width)
         self.ax_1.scatter(x=hor_wires_in_zoom['z'], y=hor_wires_in_zoom['y'], 
-                          s=15, marker="x", label='Horizontal Wires', color=color, alpha=alpha)
+                          s=marker_size, marker="x", label=label, color=color, alpha=alpha, linewidth=marker_line_width)
         
         if plot_drift_circles:
             self.plot_drift_circles(hor_wires_in_zoom, ver_wires_in_zoom, color=color, alpha=alpha)
@@ -189,9 +199,10 @@ class EventDisplay:
                                                          self.default_x_range, 
                                                          self.default_y_range,
                                                          self.zoom_z_range)
-            self.ax_0.hlines(hor_wires_in_zoom_z['z'], self.zoom_x_range[0], self.zoom_x_range[1], color="blue", linewidth=0.5)
-            self.ax_1.vlines(ver_wires_in_zoom_z['z'], self.zoom_y_range[0], self.zoom_y_range[1], color="blue", linewidth=0.5)
-            
+            self.ax_0.hlines(hor_wires_in_zoom_z['z'], self.zoom_x_range[0], self.zoom_x_range[1], color="blue", linewidth=1)
+            self.ax_1.vlines(ver_wires_in_zoom_z['z'], self.zoom_y_range[0], self.zoom_y_range[1], color="blue", linewidth=1)
+        
+        if add_assumed_signal_time_axis:    
             # add signal time axes
             ax_0_second_y = self.ax_0.twinx()
             ax_0_second_y.set_ylim(self.zoom_z_range)
@@ -199,7 +210,7 @@ class EventDisplay:
             assumed_signal_time_hor = [f'{value:.2f} ns' for value in hor_wires_in_zoom_z['signal_time_measured']]
             ax_0_second_y.set_yticklabels(assumed_signal_time_hor)
             # ax_0_second_y.set_ylabel('Assumed signal time for hor wires')
-            ax_0_second_y.tick_params(axis='y', labelcolor='b', labelrotation=-30)
+            ax_0_second_y.tick_params(axis='y', labelcolor='b', labelrotation=-30, labelsize = 20)
 
             ax_1_second_x = self.ax_1.twiny()
             ax_1_second_x.set_xlim(self.zoom_z_range)
@@ -207,16 +218,16 @@ class EventDisplay:
             assumed_signal_time_ver = [f'{value:.2f} ns' for value in ver_wires_in_zoom_z['signal_time_measured']]
             ax_1_second_x.set_xticklabels(assumed_signal_time_ver)
             # ax_0_second_y.set_ylabel('Assumed signal time for ver wires')
-            ax_1_second_x.tick_params(axis='x', labelcolor='b', labelrotation=-30)
+            ax_1_second_x.tick_params(axis='x', labelcolor='b', labelrotation=-30, labelsize = 20)
 
     def plot_sand(self):
-        self.ax_0.vlines(-1650, self.sand_center[2] - self.sand_radius, self.sand_center[2] + self.sand_radius, color='red', label='sand')
+        self.ax_0.vlines(-1650, self.sand_center[2] - self.sand_radius, self.sand_center[2] + self.sand_radius, color='red', label='SAND')
         self.ax_0.vlines(+1650, self.sand_center[2] - self.sand_radius, self.sand_center[2] + self.sand_radius, color='red')
         self.ax_0.hlines(self.sand_center[2] - self.sand_radius, -1650, 1650, color='red')
         self.ax_0.hlines(self.sand_center[2] + self.sand_radius, -1650, 1650, color='red')
-        self.ax_1.plot(self.z_sand, self.y_sand, linestyle='-', color='red')
+        self.ax_1.plot(self.z_sand, self.y_sand, linestyle='-', color='red', label = 'SAND')
 
-    def plot_wires_from_csv_table(self, df, color = 'blue', alpha = 0.5):
+    def plot_wires_from_csv_table(self, df, color = 'blue', alpha = 0.5, size = 10):
         if not isinstance(df, pd.DataFrame):
             raise ValueError("Input must be a Pandas DataFrame.")
         required_columns = {"x", "y", "z", "orientation"}
@@ -225,16 +236,16 @@ class EventDisplay:
             missing_columns = required_columns - set(df.columns)
             raise ValueError(f"DataFrame must contain columns: {missing_columns}")
         
-        self.ax_0.scatter(x=df[df.orientation==1]['x'], y=df[df.orientation==1]['z'], s=1, label='Horizontal Wires', color=color, alpha=alpha)
-        self.ax_1.scatter(x=df[df.orientation==0]['z'], y=df[df.orientation==0]['y'], s=1, label='Vertical Wires', color=color, alpha=alpha)
+        self.ax_0.scatter(x=df[df.orientation==1]['x'], y=df[df.orientation==1]['z'], s=size, label='Wires', color=color, alpha=alpha)
+        self.ax_1.scatter(x=df[df.orientation==0]['z'], y=df[df.orientation==0]['y'], s=size, label='Wires', color=color, alpha=alpha)
 
-    def plot_helix_points(self, helix_points, label = 'helix', color = 'blue'):
+    def plot_helix_points(self, helix_points, label, color, linewidth):
         helix_points = self._handle_shape_(helix_points)
-        self.ax_0.plot(helix_points[0], helix_points[2], linewidth = 1, label = label, color = color)
-        self.ax_1.plot(helix_points[2], helix_points[1], linewidth = 1, label = label, color = color)
+        self.ax_0.plot(helix_points[0], helix_points[2], linewidth = linewidth, label = label, color = color)
+        self.ax_1.plot(helix_points[2], helix_points[1], linewidth = linewidth, label = label, color = color)
     
-    def plot_helix(self, helix : Helix, label = 'helix', color = 'blue'):
-        self.plot_helix_points(helix.get_helix_points(), label, color)
+    def plot_helix(self, helix : Helix, label = 'helix', color = 'blue', linewidth = 3):
+        self.plot_helix_points(helix.get_helix_points(), label, color, linewidth)
 
     def plot_drift_circles(self,
                    hor_wires_in_zoom,
@@ -247,35 +258,36 @@ class EventDisplay:
             circle_points = self._handle_shape_(wire['drift_circle'].get_points())
             if(i==0):
                 self.ax_1.plot(circle_points[0], circle_points[1], 
-                               color=color, alpha = alpha, label = label, linestyle = 'dashed')
+                               color = color, alpha = alpha, label = label, linestyle = 'dashed')
             else:    
                 self.ax_1.plot(circle_points[0], circle_points[1], 
-                               color=color, alpha = alpha, linestyle = 'dashed')
+                               color = color, alpha = alpha, linestyle = 'dashed')
         
         for i, wire in ver_wires_in_zoom.iterrows():
             circle_points = self._handle_shape_(wire['drift_circle'].get_points())
             if(i==0):
                 self.ax_0.plot(circle_points[0], circle_points[1], 
-                               color=color, alpha = alpha, label = label, linestyle = 'dashed')
+                               color = color, alpha = alpha, label = label, linestyle = 'dashed')
             else:
                 self.ax_0.plot(circle_points[0], circle_points[1], linestyle = 'dashed',
-                               color=color, alpha = alpha)
+                               color = color, alpha = alpha)
     
-    def plot(self, points, ax = 0, color = 'blue', label = '', linestyle = 'dashed'):
+    def plot(self, points, ax, color, label, linestyle, linewidth):
         self._handle_shape_(points)
         if ax == 0:
-            self.ax_0.plot(points[0], points[1], 'b-', color = color, label = label, linestyle = linestyle)
+            self.ax_0.plot(points[0], points[1], color = color, label = label, linestyle = linestyle, linewidth = linewidth)
         elif ax == 1:
-            self.ax_1.plot(points[0], points[1], 'b-', color == color, label = label, linestyle = linestyle)
+            self.ax_1.plot(points[0], points[1], color = color, label = label, linestyle = linestyle, linewidth = linewidth)
         else:
-            raise ValueError(f"Cannot plot line on specified axis: {ax}")
+            raise ValueError(f"Cannot plot line on specified axis: {ax}"    )
     
-    def plot_line(self, line : Line2D,  ax = 0, color = 'blue', label = '', linestyle = 'dashed'):
-        self.plot(line.get_points(np.linspace(self.zoom_x_range[0], self.zoom_x_range[1])),
-                  ax = ax, label = label, color = color, linestyle = linestyle)
+    def plot_line(self, line : Line2D,  ax = 0, color = 'blue', label = '', linestyle = 'dashed', linewidth = 3):
+        self.plot(points = line.get_points(np.linspace(self.zoom_x_range[0], self.zoom_x_range[1])),
+                  ax = ax, color = color, label = label, linestyle = linestyle, linewidth = linewidth)
     
-    def plot_circle(self, circle : Circle,  ax = 1, color = 'blue', label = '', linestyle = 'dashed'):
-        self.plot(circle.get_points(n_points=5000), ax = ax, label = label, color = color, linestyle = linestyle)
+    def plot_circle(self, circle : Circle,  ax = 1, color = 'blue', label = '', linestyle = 'dashed', linewidth = 3):
+        self.plot(points = circle.get_points(n_points=5000), 
+                  ax = ax, color = color, label = label, linestyle = linestyle, linewidth = linewidth)
     
     def set_sand_range(self):
         self.ax_0.set_xlim(self.default_x_range)
@@ -289,11 +301,15 @@ class EventDisplay:
         self.ax_1.set_xlim(self.zoom_z_range)
         self.ax_1.set_ylim(self.zoom_y_range)
     
-    def set_ax_labels(self):
-        self.ax_0.set_xlabel("X [mm]")
-        self.ax_0.set_ylabel(r"Z [mm] $\nu$ beam axis")
-        self.ax_1.set_xlabel(r"Z [mm] $\nu$ beam axis")
-        self.ax_1.set_ylabel("Y [mm]")
+    def set_ax_labels(self, 
+                      labelsize = 30,
+                      numbersize = 30):
+        self.ax_0.set_xlabel("X [mm]", fontsize=labelsize)
+        self.ax_0.set_ylabel(r"Z [mm] $\nu$ beam axis", fontsize=labelsize)
+        self.ax_0.tick_params(labelsize=numbersize)
+        self.ax_1.set_xlabel(r"Z [mm] $\nu$ beam axis", fontsize=labelsize)
+        self.ax_1.set_ylabel("Y [mm]", fontsize=labelsize)
+        self.ax_1.tick_params(labelsize=numbersize)
     
     def extract_number_from_filename(self, filename):
         # Definisci il pattern regex per estrarre il numero dal nome del file
@@ -307,19 +323,19 @@ class EventDisplay:
             # Se non trovi nessun match, restituisci None o gestisci l'errore come preferisci
             return None
     
-    def set_title(self):
+    def set_title(self, titlesize = 30):
         self.fig.suptitle(
              f'file number : {self.extract_number_from_filename(self.file_name)}, '+
-             f'Event number : {self.event_idx}, '
+             f'Event number : {self.event_idx} '
             #  +
             #  f'pt true : {df[(df.edep_file==file_name)&(df.event_index==event_number)].pt_true[0]/1e3:.3f} GeV, '+
             #  f'pt reco : {df[(df.edep_file==file_name)&(df.event_index==event_number)].pt_reco[0]/1e3:.3f} GeV, '+
             #  f'dip true : {df[(df.edep_file==file_name)&(df.event_index==event_number)].dip_true[0]:.3f}'+
             #  f'dip reco : {df[(df.edep_file==file_name)&(df.event_index==event_number)].dip_reco[0]:.3f}'
-             ,fontsize=16)
+             ,fontsize=titlesize)
 
-    def set_figure(self):
-        self.set_title()
-        self.set_ax_labels()
+    def set_figure(self, titlesize = 30, labelsize = 30, numbersize = 30, legend_fontsize = 30):
+        self.set_title(titlesize)
+        self.set_ax_labels(labelsize, numbersize)
         self.set_ax_ranges()
-        plt.legend()
+        plt.legend(fontsize=legend_fontsize)
