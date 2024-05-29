@@ -7,7 +7,7 @@
 ### Get the code
 
 ```console
-$ git clone https://baltig.infn.it/dune/sand-reco.git
+$ git clone git@github.com:DUNE/sandreco.git
 ```
 
 ### Build the binaries
