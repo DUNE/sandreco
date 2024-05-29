@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+#include <iomanip>
+
 #include "TFile.h"
 #include "TTree.h"
 
@@ -229,8 +231,8 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
     } else {
       c->ps2 = it->second;
     }
-    std::cout<<__FILE__<<" : "<<__LINE__<<"\n";
-    std::cout<<"c->id : "<<c->id<<"\n";
+    if(debug) std::cout<<__FILE__<<" : "<<__LINE__<<"\n";
+    if(debug) std::cout<<"c->id : "<<c->id<<"\n";
     if(c->id==214294) continue;
     auto cell_info = geo.get_ecal_cell_info(c->id);
     c->x = cell_info.x();
@@ -289,6 +291,9 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
 {
   hits2Tube.clear();
 
+  int skipped_hit = 0;
+  int all_hit = ev->SegmentDetectors["Straw"].size();
+
   for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
     const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
 
@@ -297,6 +302,14 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
     int stid = geo.get_stt_tube_id(x, y, z);
+
+    if (stid == -999) {
+      // std::cout << std::setprecision(12) << x << " " << y << " " << z <<
+      // std::endl;
+      //geo.print_stt_tube_id(x,y,z);
+      skipped_hit++;
+      continue;
+    };
 
     // std::string sttname = "NULL";
     // int stid = -999;  // should be implemented for FLUKA
@@ -322,6 +335,10 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
     h.index = j;
 
     hits2Tube[stid].push_back(h);
+  }
+  if (skipped_hit != 0) {
+    std::cout << "WARNING: " << skipped_hit << " out of " << all_hit
+              << " hits skipped due to unexpected volume path!!" << std::endl;
   }
 }
 
@@ -353,7 +370,6 @@ void create_digits_from_hits(const SANDGeoManager& geo,
     d.hor = (type % 2 == 0);
     d.t0 = sand_reco::t0[pla];
     TVector2 wire;
-
     if (d.hor == true) {
       d.x = sand_reco::stt::stt_center[0];
       d.y = stt_info.y();
