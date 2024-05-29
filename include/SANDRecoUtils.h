@@ -744,6 +744,9 @@ struct RecoObject
     double                      pt_true;
     double                      pt_reco;
 
+    TVector3                    p_true;
+    TVector3                    p_reco;
+
     // fitting info TMinuit _______________________________________
     MinuitFitInfos              fit_infos_xz;
     MinuitFitInfos              fit_infos_zy;

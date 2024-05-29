@@ -1391,6 +1391,8 @@ int main(int argc, char* argv[]){
         reco_object.pt_true = true_helix.R()*0.3*0.6;
         reco_object.reco_helix = reco_helix;
         reco_object.pt_reco = reco_helix.R()*0.3*0.6;
+        reco_object.p_true = {muon_trj.GetInitialMomentum().X(), muon_trj.GetInitialMomentum().Y(), muon_trj.GetInitialMomentum().Z()};
+        reco_object.p_reco = {particle_momentum.X(), particle_momentum.Y(), particle_momentum.Z()};
         
         reco_object.edep_file_input = fEDepInput;
         reco_object.digit_file_input = fDigitInput;
