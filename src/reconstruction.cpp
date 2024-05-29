@@ -435,6 +435,7 @@ enum class TrackFilter { all_tracks, only_primaries };
 
 void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
                std::vector<track>& vec_tr,
+               std::string const trackerType = "Straw",
                TrackFilter const track_filter = TrackFilter::all_tracks)
 {
   vec_tr.clear();
@@ -464,7 +465,7 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
 
       for (unsigned int m = 0; m < vec_digi->at(k).hindex.size(); m++) {
         const TG4HitSegment& hseg =
-            ev->SegmentDetectors["Straw"].at(vec_digi->at(k).hindex.at(m));
+            ev->SegmentDetectors[trackerType.c_str()].at(vec_digi->at(k).hindex.at(m));
 
         if (hseg.PrimaryId == tr.tid)
           if (ishitok(ev, tr.tid, hseg)) vhits.push_back(hseg);
@@ -1622,7 +1623,24 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
               << (tDigit == nullptr ? "tDigit " : "") << '\n';
     exit(-1);
   }
+    
+  std::string trackerType="";
 
+  if(geo->FindVolumeFast("STTtracker_PV")){
+      std::cout<<"\n--- STT based simulation ---\n";
+      trackerType="Straw";
+  }
+  else{
+      std::cout<<"\n--- Drift based simulation ---\n";
+      trackerType="DriftVolume";
+  }
+
+  if(trackerType == ""){
+      std::cout<<"Error in retriving volume information from Geo Manager, exiting...\n";
+      exit(-1);
+  }
+    
+    
   std::vector<double> sampling;
 
   DetermineModulesPosition(geo, sampling);
@@ -1676,11 +1694,11 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 
     switch (stt_mode) {
       case STT_Mode::fast_only_primaries:
-        TrackFind(ev, vec_digi, vec_tr, TrackFilter::only_primaries);
+        TrackFind(ev, vec_digi, vec_tr, trackerType, TrackFilter::only_primaries);
         TrackFit(vec_tr);
         break;
       case STT_Mode::fast:
-        TrackFind(ev, vec_digi, vec_tr);
+        TrackFind(ev, vec_digi, vec_tr, trackerType);
         TrackFit(vec_tr);
         break;
       case STT_Mode::full:
@@ -1747,7 +1765,7 @@ int main(int argc, char* argv[])
   } else {
     std::cout << "STT_Mode: fast_only_primaries\n";
   }
-
+    
   Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast);
   return 0;
 }
