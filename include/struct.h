@@ -92,6 +92,8 @@ struct dg_wire{
   double t_hit_measured = 1e9; // via global trigger
   double signal_time_measured = 1e9; // exploit different wire orientation 
   double drift_time_measured = 1e9; // tdc - signal_time_measured - t_hit_measured
+  
+  double missing_coordinate = 1e9;
 };
 
 struct cluster {

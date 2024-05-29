@@ -508,27 +508,15 @@ void TDC2ImpactPar(dg_wire& wire, const T& track_guess){
         if(wire.hor==true){ // horizontal
             double x_coordinate = GetMissingCoordinate(wire, track_guess);
             TVector3 signal_origin_on_wire = {x_coordinate, wire.y, wire.z};
+            wire.missing_coordinate = x_coordinate;
             Line wire_line = RecoUtils::GetLineFromWire(wire);
             wire.signal_time_measured = (signal_origin_on_wire - wire_line.GetLineUpperLimit()).Mag() / sand_reco::stt::v_signal_inwire;
-            // wire.signal_time_measured = (wire.wire_length * 0.5 + fabs(x_coordinate - wire.x)) / sand_reco::stt::v_signal_inwire;
-            // double r1 = (wire.wire_length * 0.5 - fabs(x_coordinate - wire.x))/ sand_reco::stt::v_signal_inwire;
-            // double r2 = (wire.wire_length * 0.5 + fabs(x_coordinate - wire.x))/ sand_reco::stt::v_signal_inwire;
-            // double sum = r1 + r2;
-            // std::cout << "r1 : " << r1 << "\n";
-            // std::cout << "r2 : " << r2 << "\n";
-            // std::cout << "sum : " << sum << "\n";
         }else{ // vertical
             double y_coordinate = GetMissingCoordinate(wire, track_guess);
             TVector3 signal_origin_on_wire = {wire.x, y_coordinate, wire.z};
+            wire.missing_coordinate = y_coordinate;
             Line wire_line = RecoUtils::GetLineFromWire(wire);
             wire.signal_time_measured = (signal_origin_on_wire - wire_line.GetLineUpperLimit()).Mag() / sand_reco::stt::v_signal_inwire;
-            // wire.signal_time_measured = (wire.wire_length * 0.5 + fabs(y_coordinate - wire.y)) / sand_reco::stt::v_signal_inwire;
-            // double r1 = (wire.wire_length * 0.5 - fabs(y_coordinate - wire.y))/ sand_reco::stt::v_signal_inwire;
-            // double r2 = (wire.wire_length * 0.5 + fabs(y_coordinate - wire.y))/ sand_reco::stt::v_signal_inwire;
-            // double sum = r1 + r2;
-            // std::cout << "r1 : " << r1 << "\n";
-            // std::cout << "r2 : " << r2 << "\n";
-            // std::cout << "sum : " << sum << "\n";
         }
    }
    wire.drift_time_measured = wire.tdc - wire.signal_time_measured - wire.t_hit_measured;
