@@ -16,7 +16,7 @@ $ git clone https://baltig.infn.it/dune/sand-reco.git
 $ cd sand-reco
 $ mkdir build
 $ cd build
-$ cmake -DCMAKE_INSTALL_PREFIX=./.. ./..
+$ cmake -DCMAKE_INSTALL_PREFIX=./.. -DCMAKE_PREFIX_PATH=/path/to/edepsim/lib/cmake/EDepSim/ ./..
 $ make
 $ make install
 ```
