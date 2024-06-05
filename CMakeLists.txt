@@ -66,8 +66,8 @@ add_executable(Reconstruct src/reconstruction.cpp)
 target_link_libraries(Reconstruct Struct Utils SANDGeoManager)
 
 # Creates ReconstructNLLmethod executable.
-# add_executable(ReconstructNLLmethod src/reconstructionNLLmethod.cpp)
-# target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
+add_executable(ReconstructNLLmethod src/reconstructionNLLmethod.cpp)
+target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
 
 # ADDED TEMPORARY FOR TESTING OF THE METHOD ----
 # Creates ReconstructNLLmethod executable.

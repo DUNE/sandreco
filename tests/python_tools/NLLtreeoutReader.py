@@ -31,6 +31,8 @@ class Reader:
                                 'reco_object/reco_helix/reco_helix.x0_',
                                 'pt_true',
                                 'pt_reco',
+                                'p_true',
+                                'p_reco',
                                 ], library='pd').rename(columns={
                                 'edep_file_input'                         : "edep_file",
                                 'event_index'                             : "event_index",
@@ -65,7 +67,8 @@ class Reader:
                                 'reco_object/fired_wires/fired_wires.t_hit_measured',
                                 'reco_object/fired_wires/fired_wires.signal_time_measured',
                                 'reco_object/fired_wires/fired_wires.drift_time_measured',
-                                'reco_object/fired_wires/fired_wires.t_hit'],library='pd').rename(columns={
+                                'reco_object/fired_wires/fired_wires.missing_coordinate',
+                                ],library='pd').rename(columns={
                                 'edep_file_input'                                          : "edep_file",
                                 'event_index'                                              : "event_index",
                                 'reco_object/fired_wires/fired_wires.did'                  : "did",
@@ -81,7 +84,7 @@ class Reader:
                                 'reco_object/fired_wires/fired_wires.signal_time_measured' : 'signal_time_measured',
                                 'reco_object/fired_wires/fired_wires.t_hit_measured'       : 't_hit_measured',
                                 'reco_object/fired_wires/fired_wires.drift_time_measured'  : 'drift_time_measured',
-                                'reco_object/fired_wires/fired_wires.t_hit'                : 't_hit',
+                                'reco_object/fired_wires/fired_wires.missing_coordinate'   : 'missing_coordinate',
                                 'reco_object/fired_wires/fired_wires.hor'                  : 'hor',
                                 'reco_object/fired_wires/fired_wires.wire_length'          : 'wire_length'
                                 })
