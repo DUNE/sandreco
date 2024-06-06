@@ -1630,12 +1630,11 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
       std::cout<<"\n--- STT based simulation ---\n";
       trackerType="Straw";
   }
-  else{
+  else if (geo->FindVolumeFast("SANDtracker_PV")){
       std::cout<<"\n--- Drift based simulation ---\n";
       trackerType="DriftVolume";
   }
-
-  if(trackerType == ""){
+  else{
       std::cout<<"Error in retriving volume information from Geo Manager, exiting...\n";
       exit(-1);
   }
