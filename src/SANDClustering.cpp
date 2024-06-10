@@ -16,6 +16,7 @@
 // #include "TSystem.h"
 
 #include "SANDClustering.h"
+#include "utils.h"
 
 std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 {
@@ -1234,14 +1235,14 @@ double AttenuationFactor(double d, int planeID)
 }
 
 // reconstruct t of the hit from tdc1 and tdc2
-double sand_reco::ecal::reco::TfromTDC(double t1, double t2, double L)
+double TfromTDC(double t1, double t2, double L)
 {
   return 0.5 * (t1 + t2 - sand_reco::ecal::scintillation::vlfb * L / sand_reco::conversion::m_to_mm);
 }
 
 // energy deposit of the hit from adc1 and adc2 and
 // reconstructed longidutinal coordinate
-double sand_reco::ecal::reco::EfromADC(double adc1, double adc2, double d1, double d2,
+double EfromADC(double adc1, double adc2, double d1, double d2,
                            int planeID)
 {
   double f1 = AttenuationFactor(d1, planeID);
