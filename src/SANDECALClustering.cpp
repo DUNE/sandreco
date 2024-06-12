@@ -5,7 +5,7 @@ int clustering(std::string const& input)
     // TH1F* ClusterEnergy = new TH1F("ClusterEnergy", "Total Energy reconstructed
     // in the ECal;Energy [MeV];Entries/bins", 100, 0., 1500.);
     //gROOT->ProcessLine("gInterpreter->AddIncludePath("-I/opt/exp_software/neutrino/EDEPSIM/include/EDepSim")");
-    gSystem->Load("libStruct.so");
+  // gSystem->Load("libStruct.so");
     const char* finname = input.c_str();
     TFile f(finname, "READ");
     TTree* t = (TTree*)f.Get("tDigit");
@@ -68,8 +68,8 @@ bool initializeFiles(int argc, char* argv[], std::string& digitFileName) {
     }
 
     // Validate file names
-    if (!endsWith(digitFileName, "edep.digit.root")) {
-        std::cerr << "Error: Invalid arguments. Please use '-d' before the edep.digit.root file" << std::endl;
+    if (!endsWith(digitFileName, ".digit.root")) {
+        std::cerr << "Error: Invalid arguments. Please use '-d' before the .digit.root file" << std::endl;
         return false;
     }
 
@@ -77,8 +77,9 @@ bool initializeFiles(int argc, char* argv[], std::string& digitFileName) {
 }
 
 int main(int argc, char* argv[]){
-     if (argc < 2) {
-        std::cerr << "Usage: Clustering" << " -d <file.edep.digit.root>" << std::endl;
+  
+  if (argc < 2) {
+        std::cerr << "Usage: Clustering" << " -d <file.digit.root>" << std::endl;
         return 1; // Exit with an error code
     }
     std::string digitFileName;

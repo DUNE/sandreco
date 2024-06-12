@@ -453,7 +453,7 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 //     // infofile<< std::endl;    
 // }
 
-std::vector<cluster> Split(std::vector<cluster> original_clu_vec)
+/*std::vector<cluster> Split(std::vector<cluster> original_clu_vec)
 {
   std::vector<cluster> clu_vec;
   std::vector<dg_cell> all_cells;
@@ -555,6 +555,150 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec)
   }
   original_clu_vec.clear();
   return clu_vec;
+}*/
+
+std::vector<cluster> Split(std::vector<cluster> original_clu_vec)
+{
+  std::vector<cluster> clu_vec;
+  std::vector<dg_cell> all_cells;
+  int num_c=0;
+  for (auto const& clus : original_clu_vec) {
+    //infofile << "Cluster number: " << num_c << std::endl; 
+    int splitted = 0;
+    double tA = 0, tB = 0, tA2 = 0, tB2 = 0;
+    double EA, EB, EAtot = 0, EBtot = 0, EA2tot = 0, EB2tot = 0;
+    double tRMS_A, tRMS_B, dist;
+    all_cells = clus.cells;
+    for (int j = 0; j < all_cells.size(); j++) {
+      EA = all_cells.at(j).ps1.at(0).adc;
+      EB = all_cells.at(j).ps2.at(0).adc;
+      EAtot += EA;
+      EA2tot += EA * EA;
+      EBtot += EB;
+      EB2tot += EB * EB;
+      double d =
+          DfromTDC(all_cells[j].ps1.at(0).tdc, all_cells[j].ps2.at(0).tdc);
+      double d1, d2, d3;
+      d1 = 0.5 * all_cells[j].l + d;
+      d2 = 0.5 * all_cells[j].l - d;
+      double cell_E = sand_reco::ecal::reco::EfromADC(all_cells[j].ps1.at(0).adc,
+                                          all_cells[j].ps2.at(0).adc, d1, d2,
+                                          all_cells[j].lay);
+      tA += (all_cells.at(j).ps1.at(0).tdc -
+             sand_reco::ecal::scintillation::vlfb * d1 / sand_reco::conversion::m_to_mm) *
+            EA;
+      tA2 += std::pow(all_cells.at(j).ps1.at(0).tdc -
+                          sand_reco::ecal::scintillation::vlfb * d1 / sand_reco::conversion::m_to_mm,
+                      2) *
+             EA;
+      tB += (all_cells.at(j).ps2.at(0).tdc -
+             sand_reco::ecal::scintillation::vlfb * d2 / sand_reco::conversion::m_to_mm) *
+            EB;
+      tB2 += std::pow(all_cells.at(j).ps2.at(0).tdc -
+                          sand_reco::ecal::scintillation::vlfb * d2 / sand_reco::conversion::m_to_mm,
+                      2) *
+             EB;
+    }  
+
+    tA = tA / EAtot;
+    //infofile<< "tA: "<< tA << std::endl;
+    tA2 = tA2 / EAtot;
+    tB = tB / EBtot;
+    //infofile<< "tB: "<< tB << std::endl;
+    tB2 = tB2 / EBtot;
+    tRMS_A = sqrt( abs((tA2 - tA * tA) * (EA2tot - EAtot * EAtot) / EA2tot) );
+    //infofile<< "tRMS_A: "<< tRMS_A << std::endl;
+    tRMS_B = sqrt( abs((tB2 - tB * tB) * (EB2tot - EBtot * EBtot) / EB2tot));
+    //infofile<< "tRMS_B: "<< tRMS_B << std::endl;
+    dist = std::sqrt(tRMS_A * tRMS_A + tRMS_B * tRMS_B);
+    //infofile<< "dist: "<< dist << std::endl; 
+    if (dist > 5) {
+        //infofile << "dist > 5 so split"<< std::endl;
+        std::vector<dg_cell> q1_cells, q2_cells, q3_cells, q4_cells;
+        int n_cella=0;
+        for (auto const& a_cells : all_cells) {
+            //infofile << "cell number: " << n_cella <<std::endl; 
+            double d =
+            DfromTDC(a_cells.ps1.at(0).tdc, a_cells.ps2.at(0).tdc);
+            double d1, d2, d3;
+            d1 = 0.5 * a_cells.l + d;
+            d2 = 0.5 * a_cells.l - d;
+
+            double t_difA = a_cells.ps1.at(0).tdc - (sand_reco::ecal::scintillation::vlfb * d1 / sand_reco::conversion::m_to_mm) - tA;
+            double t_difB = a_cells.ps2.at(0).tdc - (sand_reco::ecal::scintillation::vlfb * d2 / sand_reco::conversion::m_to_mm) - tB;
+            
+            //infofile << "t_difA_new: " << t_difA << std::endl; 
+            //infofile << "t_difB_new: " << t_difB << std::endl; 
+
+            double t_difA_old = a_cells.ps1.at(0).tdc - tA;
+            double t_difB_old = a_cells.ps2.at(0).tdc - tB;
+            //infofile << "t_difA_old: " << t_difA_old << std::endl; 
+            //infofile << "t_difB_old: " << t_difB_old << std::endl; 
+            
+        if (t_difA > 0) {
+            if (t_difB > 0) {
+                q1_cells.push_back(a_cells);
+                //infofile << "tdiffA>0, tdiffB >0" <<std::endl; 
+            } else {
+                q2_cells.push_back(a_cells);\
+                //infofile << "tdiffA>0, tdiffB <0" <<std::endl; 
+            }
+        } else {
+            if (t_difB > 0) {
+                q3_cells.push_back(a_cells);
+                //infofile << "tdiffA<0, tdiffB >0" <<std::endl; 
+            } else {
+                //infofile << "tdiffA<0, tdiffB <0" <<std::endl; 
+                q4_cells.push_back(a_cells);
+            }
+        }
+        n_cella++;
+    }
+    std::vector<cluster> quadrant_cluster; //new DC 3 giugno   
+    if (q1_cells.size() != 0) {
+        cluster clus = Calc_variables(q1_cells);
+        quadrant_cluster.push_back(clus); // 3 giugno new DC
+        //clu_vec.push_back(clus);
+        splitted++;
+    }
+    if (q2_cells.size() != 0) {
+        cluster clus = Calc_variables(q2_cells);
+        quadrant_cluster.push_back(clus); // 3 giugno new DC
+        //clu_vec.push_back(clus);
+        splitted++;
+    }
+    if (q3_cells.size() != 0) {
+        cluster clus = Calc_variables(q3_cells);
+        quadrant_cluster.push_back(clus); // 3 giugno new DC
+        //clu_vec.push_back(clus);
+        splitted++;
+    }
+    if (q4_cells.size() != 0) {
+        cluster clus = Calc_variables(q4_cells);
+        quadrant_cluster.push_back(clus); // 3 giugno new DC
+        //clu_vec.push_back(clus);
+        splitted++;
+    }
+    q1_cells.clear();
+    q2_cells.clear();
+    q3_cells.clear();
+    q4_cells.clear();
+    auto new_vec_clu = Split(quadrant_cluster); // 3 giugno new DC
+    for(auto cl : new_vec_clu){ // 3 giugno new DC
+      clu_vec.push_back(cl); // 3 giugno new DC
+    }// 3 giugno new DC
+    quadrant_cluster.clear(); // 3 giugno new DC
+    new_vec_clu.clear(); // 3 giugno new DC
+} else {
+    clu_vec.push_back(clus);
+}
+all_cells.clear();
+num_c++;
+//infofile << std::endl; 
+}
+
+original_clu_vec.clear();
+return clu_vec;
 }
 
 std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
@@ -970,7 +1114,7 @@ std::tuple<double, double, double, double> fit_ls(int lay, double* X,double* Y, 
 
 //Calcolo variabili solo per il primo pulse 
 
-cluster Calc_variables(std::vector<dg_cell> cells)
+/*cluster Calc_variables(std::vector<dg_cell> cells)
 {
   ////infofile<<"Calc_variables" << std::endl;
   double x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0,
@@ -1050,6 +1194,95 @@ cluster Calc_variables(std::vector<dg_cell> cells)
   clust.vary = dy;
   clust.varz = dz;
   clust.cells = cells;
+  return clust;
+}*/
+cluster Calc_variables(std::vector<dg_cell> cells)
+{
+  ////infofile<<"Calc_variables" << std::endl;
+  double x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0,
+         x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, Etot = 0, E2tot,
+         EvEtot = 0, EA, EAtot = 0, EB, EBtot = 0, TA = 0, TB = 0;
+         
+  std::vector<double> cells_e; 
+
+  for (auto const& cell : cells) {
+    double d = DfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc); // distance module center - photosignal 
+    double d1, d2, d3;
+    d1 = 0.5 * cell.l + d; // distance pmt1 - module center -> middle of the layer + distance module center-hit 
+    d2 = 0.5 * cell.l - d;
+    double cell_E = sand_reco::ecal::reco::EfromADC(cell.ps1.at(0).adc, cell.ps2.at(0).adc,
+                                        d1, d2, cell.lay);
+    cells_e.push_back(cell_E);
+
+    double cell_T =
+        sand_reco::ecal::reco::TfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell.l); // time of the photosignal 
+        ////infofile<<"time of the photosignal: " << cell_T << "in the cell with id: " << cell.id << std::endl;
+    if (cell.mod > 25) { //endcap  
+      d3 = cell.y - d;
+      y_weighted = y_weighted + (d3 * cell_E);
+      y2_weighted = y2_weighted + (d3 * d3 * cell_E);
+      x_weighted = x_weighted + (cell.x * cell_E);
+      x2_weighted = x2_weighted + (cell.x * cell.x * cell_E);
+    } else { //barrel 
+      d3 = cell.x - d; //posizione ricostruita dell'hit lungo il modulo a partire dal centro, cell.x = module.x !  
+      x_weighted = x_weighted + (d3 * cell_E); 
+      x2_weighted = x2_weighted + (d3 * d3 * cell_E);
+      y_weighted = y_weighted + (cell.y * cell_E);
+      y2_weighted = y2_weighted + (cell.y * cell.y * cell_E);
+    }
+    t_weighted = t_weighted + cell_T * cell_E;
+    ////infofile<< "t_weighted: " << t_weighted << std::endl; 
+    z_weighted = z_weighted + (cell.z * cell_E);
+    z2_weighted = z2_weighted + (cell.z * cell.z * cell_E);
+    Etot = Etot + cell_E;
+    E2tot = E2tot + cell_E * cell_E;
+  }
+  x_weighted = x_weighted / Etot;
+  x2_weighted = x2_weighted / Etot;
+  y_weighted = y_weighted / Etot;
+  y2_weighted = y2_weighted / Etot;
+  z_weighted = z_weighted / Etot;
+  z2_weighted = z2_weighted / Etot;
+  t_weighted = t_weighted / Etot;
+  if (x_weighted > -0.000001 && x_weighted < 0.000001) x_weighted = 0;
+  if (y_weighted > -0.000001 && y_weighted < 0.000001) y_weighted = 0;
+  if (z_weighted > -0.000001 && z_weighted < 0.000001) z_weighted = 0;
+  double dx, dy, dz;
+  double neff = Etot * Etot / E2tot;
+  double dum = neff / (neff - 1);
+  if (cells.size() == 1) {
+    dx = 0;
+    dy = 0;
+    dz = 0;
+  } else {
+    if (x2_weighted - x_weighted * x_weighted < 0) {
+      dx = 0;
+    } else {
+      dx = sqrt(dum * (x2_weighted - x_weighted * x_weighted));
+    }
+    if (y2_weighted - y_weighted * y_weighted < 0) {
+      dy = 0;
+    } else {
+      dy = sqrt(dum * (y2_weighted - y_weighted * y_weighted));
+    }
+    if (z2_weighted - z_weighted * z_weighted < 0) {
+      dz = 0;
+    } else {
+      dz = sqrt(dum * (z2_weighted - z_weighted * z_weighted));
+    }
+  }
+  cluster clust;
+  clust.e = Etot;
+  clust.x = x_weighted;
+  clust.y = y_weighted;
+  clust.z = z_weighted;
+  clust.t = t_weighted;
+  clust.varx = dx;
+  clust.vary = dy;
+  clust.varz = dz;
+  clust.cells = cells;
+  clust.cells_e = cells_e;
+
   return clust;
 }
 

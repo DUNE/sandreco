@@ -77,6 +77,7 @@ struct cluster {
   double vary;
   double varz;
   std::vector<dg_cell> cells;
+  std::vector<double> cells_e;
 };
 
 struct track {
