@@ -795,7 +795,7 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
 {
   const double xl[5] = {4.44, 4.44, 4.44, 4.44, 5.24};
   for (int i = 0; i < clu_vec.size(); i++) {
-    double apx[3], eapx[3] = {0, 0, 0}, ctrk[3] = {0, 0, 0},
+    double apx[3]={0,0,0}, eapx[3] = {0, 0, 0}, ctrk[3] = {0, 0, 0},
                    ectrk[3] = {0, 0, 0};
     std::vector<dg_cell> cell_vec_0, cell_vec_1, cell_vec_2, cell_vec_3,
         cell_vec_4;
@@ -1075,9 +1075,9 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
     // DISCLAIMER: se vogliamo possiamo utilizzare l'apice del cluster, basta
     // scommentare 
     
-    clu_vec.at(i).x = apx[0]; 
-    clu_vec.at(i).y = apx[1];
-    clu_vec.at(i).z = apx[2];
+    clu_vec.at(i).ax = apx[0]; 
+    clu_vec.at(i).ay = apx[1];
+    clu_vec.at(i).az = apx[2];
 
     clu_vec.at(i).sx = ctrk[0];
     clu_vec.at(i).sy = ctrk[1];

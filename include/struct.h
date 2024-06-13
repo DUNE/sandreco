@@ -70,6 +70,9 @@ struct cluster {
   double z;
   double t;
   double e;
+  double ax;
+  double ay;
+  double az;
   double sx;
   double sy;
   double sz;
