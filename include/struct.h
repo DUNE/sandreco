@@ -45,6 +45,7 @@ struct dg_cell {
   int lay;
   int cel;
   int det;
+  double e;
   std::vector<dg_ps> ps1;
   std::vector<dg_ps> ps2;
 };
@@ -80,7 +81,6 @@ struct cluster {
   double vary;
   double varz;
   std::vector<dg_cell> cells;
-  std::vector<double> cells_e;
 };
 
 struct track {
