@@ -45,9 +45,20 @@ struct dg_cell {
   int lay;
   int cel;
   int det;
-  double e;
   std::vector<dg_ps> ps1;
   std::vector<dg_ps> ps2;
+};
+
+struct reco_cell {
+  int id;
+  double z;
+  double y;
+  double x;
+  double l;
+  int mod;
+  int lay;
+  double e;
+  double t; 
 };
 
 struct dg_tube {
@@ -81,6 +92,7 @@ struct cluster {
   double vary;
   double varz;
   std::vector<dg_cell> cells;
+  std::vector<reco_cell> reco_cells; 
 };
 
 struct track {

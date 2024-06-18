@@ -5,7 +5,7 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 {
   std::vector<dg_cell> complete_cells, broken_cells, multicomplete_cells;
   std::vector<cluster> vec_clust;
-  
+
   for (auto const& cell : *vec_cellraw) {
     if (cell.ps1.size() == 0 && cell.ps2.size() == 0) {
 
@@ -89,7 +89,6 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
           good_cell.mod = cell.mod;
           good_cell.lay = cell.lay;
           good_cell.cel = cell.cel;
-          good_cell.e = cell.e;
           good_cell.ps1.push_back(cell.ps1.at(i));
           good_cell.ps2.push_back(cell.ps2.at(j));
           complete_cells.push_back(good_cell);
@@ -109,7 +108,6 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
         ps1bad_cell.mod = cell.mod;
         ps1bad_cell.lay = cell.lay;
         ps1bad_cell.cel = cell.cel;
-        ps1bad_cell.e = cell.e;
         ps1bad_cell.ps1.push_back(cell.ps1.at(i));
         incomplete_cells.push_back(ps1bad_cell);
       }
@@ -133,7 +131,6 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
         ps2bad_cell.mod = cell.mod;
         ps2bad_cell.lay = cell.lay;
         ps2bad_cell.cel = cell.cel;
-        ps2bad_cell.e = cell.e;
         ps2bad_cell.ps2.push_back(cell.ps2.at(k));
         incomplete_cells.push_back(ps2bad_cell);
       }
@@ -146,7 +143,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
                                        std::vector<dg_cell> incomplete_cells)
 {
 
-    std::vector<double> tAvec;
+  std::vector<double> tAvec;
   std::vector<double> tBvec;
   for (auto cl : clus) {
     int splitted = 0;
@@ -851,8 +848,10 @@ cluster Calc_variables(std::vector<dg_cell> cells)
          EvEtot = 0, EA, EAtot = 0, EB, EBtot = 0, TA = 0, TB = 0;
 
   // std::vector<double> cells_e;
-
+  std::vector<reco_cell> reconstructed_cells;
+  
   for (auto& cell : cells) {
+    reco_cell rec_cell;
     double d = DfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
     double d1, d2, d3;
     d1 = 0.5 * cell.l + d;
@@ -861,19 +860,35 @@ cluster Calc_variables(std::vector<dg_cell> cells)
     double cell_E = sand_reco::ecal::reco::EfromADC(
         cell.ps1.at(0).adc, cell.ps2.at(0).adc, d1, d2, cell.lay);
     // cells_e.push_back(cell_E);
-    cell.e = cell_E;
+    // cell.e = cell_E;
 
     double cell_T = sand_reco::ecal::reco::TfromTDC(cell.ps1.at(0).tdc,
                                                     cell.ps2.at(0).tdc, cell.l);
 
+    rec_cell.id = cell.id;
+    rec_cell.l = cell.l;
+    rec_cell.mod = cell.mod;
+    rec_cell.lay = cell.lay;
+    rec_cell.e = cell_E;
+    rec_cell.t = cell_T;
+
     if (cell.mod > 25) {  // endcap
       d3 = cell.y - d;
+
+      rec_cell.y = d3;
+      rec_cell.x = cell.x;
+      rec_cell.z = cell.z;
+
       y_weighted = y_weighted + (d3 * cell_E);
       y2_weighted = y2_weighted + (d3 * d3 * cell_E);
       x_weighted = x_weighted + (cell.x * cell_E);
       x2_weighted = x2_weighted + (cell.x * cell.x * cell_E);
     } else {  // barrel
       d3 = cell.x - d;
+
+      rec_cell.x = d3;
+      rec_cell.y = cell.y;
+      rec_cell.z = cell.z;
 
       x_weighted = x_weighted + (d3 * cell_E);
       x2_weighted = x2_weighted + (d3 * d3 * cell_E);
@@ -886,6 +901,8 @@ cluster Calc_variables(std::vector<dg_cell> cells)
     z2_weighted = z2_weighted + (cell.z * cell.z * cell_E);
     Etot = Etot + cell_E;
     E2tot = E2tot + cell_E * cell_E;
+
+    reconstructed_cells.push_back(rec_cell);
   }
   x_weighted = x_weighted / Etot;
   x2_weighted = x2_weighted / Etot;
@@ -931,6 +948,7 @@ cluster Calc_variables(std::vector<dg_cell> cells)
   clust.vary = dy;
   clust.varz = dz;
   clust.cells = cells;
+  clust.reco_cells = reconstructed_cells;
 
   return clust;
 }
