@@ -75,6 +75,7 @@ TCanvas* cpr = 0;
 
 std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
 std::vector<dg_tube>* vec_tube = new std::vector<dg_tube>;
+std::vector<dg_wire>* vec_wire = new std::vector<dg_wire>;
 std::vector<track>* vec_tr = new std::vector<track>;
 std::vector<cluster>* vec_cl = new std::vector<cluster>;
 std::map<int, gcell> calocell;
@@ -143,6 +144,10 @@ void init(TFile* fmc, std::vector<TFile*> vf)
   }
 
   if (!tEdep) return;
+ 
+  geo = reinterpret_cast<TGeoManager*>(fmc->Get("EDepSimGeometry"));
+ 
+  if (!geo) return;
 
   if (tReco) tEdep->AddFriend(tReco);
   if (tDigit) tEdep->AddFriend(tDigit);
@@ -151,16 +156,18 @@ void init(TFile* fmc, std::vector<TFile*> vf)
 
   tEdep->SetBranchAddress("Event", &ev);
   if (tDigit) tDigit->SetBranchAddress("dg_cell", &vec_cell);
-  if (tDigit) tDigit->SetBranchAddress("dg_tube", &vec_tube);
+  if(geo->FindVolumeFast("STTtracker_PV")){
+    //stt based digitization
+    if (tDigit) tDigit->SetBranchAddress("dg_tube", &vec_tube);
+  }else{
+    if (tDigit) tDigit->SetBranchAddress("dg_wire", &vec_wire);
+    //drift based digitization
+  }
   if (tReco) tReco->SetBranchAddress("track", &vec_tr);
   if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);
   if (tEvent) tEvent->SetBranchAddress("event", &evt);
 
   t = tEdep;
-
-  geo = reinterpret_cast<TGeoManager*>(fmc->Get("EDepSimGeometry"));
-
-  if (!geo) return;
 
   double dummyLoc[3];
   double dummyMas[3];
@@ -615,7 +622,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   }
 
   if (showede) {
-    for (auto det : {"Straw", "EMCalSci", "LArHit"}) {
+    for (auto det : {"Straw", "EMCalSci", "LArHit","DriftVolume"}) {
       for (auto& h : ev->SegmentDetectors[det]) {
         TLine* lzx =
             new TLine(h.Start.Z(), h.Start.X(), h.Stop.Z(), h.Stop.X());
@@ -637,6 +644,18 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
         m->Draw();
       } else {
         TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).x, 6);
+        cev->cd(2);
+        m->Draw();
+      }
+    }
+
+    for (unsigned int i = 0; i < vec_wire->size(); i++) {
+      if (vec_wire->at(i).hor) {
+        TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).y, 6);
+        cev->cd(1);
+        m->Draw();
+      } else {
+        TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).x, 6);
         cev->cd(2);
         m->Draw();
       }

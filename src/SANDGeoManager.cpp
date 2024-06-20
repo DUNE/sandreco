@@ -343,7 +343,6 @@ void SANDGeoManager::set_ecal_info()
   // GetDx1() half length in x at -Dz
   // GetDx2() half length in x at +Dz
   // Dx1 < Dx2 => -Dz corresponds to minor width => internal side
-
   TGeoTrd2* mod =
       (TGeoTrd2*)geo_->FindVolumeFast(sand_geometry::ecal::barrel_module_name)
           ->GetShape();
@@ -496,6 +495,7 @@ bool SANDGeoManager::is_drift_plane(const TString& volume_name) const
 int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
 {
   auto plane_matches = stt_plane_regex_.MatchS(volume_path);
+  //std::cout<<"volume path "<<volume_path<<"\n";
   auto module_matches = stt_module_regex_.MatchS(volume_path);
 
   if (plane_matches->GetEntries() == 0) {
@@ -503,12 +503,15 @@ int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
     delete module_matches;
     return 0;
   }
-
+  for(auto i=0; i<module_matches->GetEntries();i++)
+  {
+    //std::cout<< "module_matches: " <<(reinterpret_cast<TObjString*>(module_matches->At(i)))->GetString().Data()<<std::endl;
+  }
   int module_id =
-      (reinterpret_cast<TObjString*>(plane_matches->At(1)))->GetString().Atoi();
+      (reinterpret_cast<TObjString*>(plane_matches->At(2)))->GetString().Atoi();
   int plane_replica_id =
-      (reinterpret_cast<TObjString*>(plane_matches->At(5)))->GetString().Atoi();
-  int plane_type = (reinterpret_cast<TObjString*>(plane_matches->At(4)))
+      (reinterpret_cast<TObjString*>(plane_matches->At(4)))->GetString().Atoi();
+  int plane_type = (reinterpret_cast<TObjString*>(plane_matches->At(3)))
                            ->GetString()
                            .EqualTo("XX")
                        ? 2
@@ -519,7 +522,7 @@ int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
 
   delete plane_matches;
   delete module_matches;
-
+  //std::cout<<"module_id: "<<module_id<<" module_replica_id: "<<module_replica_id<<" plane_replica_id: "<<plane_replica_id<<" plane_type: "<<plane_type<<"\n";
   return encode_stt_plane_id(module_id * 10 + module_replica_id,
                              2 * plane_replica_id + plane_type, plane_type);
 }
@@ -608,7 +611,8 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
   int stt_plane_local_id;
   decode_stt_plane_id(stt_plane_id, stt_module_id, stt_plane_local_id,
                       stt_plane_type);
-
+  std::cout <<"stt_plane_type: " << stt_plane_type << std::endl;
+  std::cout <<"stt_plane_id: " << stt_plane_id << std::endl;
   std::map<double, int> this_plane_stt_tube_tranverse_position_map;
 
   if (stt_plane_type != 1 && stt_plane_type != 2)
@@ -675,7 +679,7 @@ void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
   for (int i = 0; i < node->GetNdaughters(); i++) { // loop over wires
     auto wire_node = node->GetDaughter(i);
     if(isSwire(wire_node->GetName()))
-      {
+    {
       int wire_id = get_wire_id(wire_node->GetName());
       int wire_unique_id = drift_plane_unique_id + wire_id;
 
@@ -703,7 +707,7 @@ void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
                                  drift_plane_local_id == 2  ? SANDWireInfo::Orient::kVertical 
                                                             : SANDWireInfo::Orient::kHorizontal, 
                                  SANDWireInfo::ReadoutEnd::kPlus);// to be changed
-      }
+    }
   }
   wire_tranverse_position_map_[drift_plane_unique_id] = this_wire_tranverse_position_map;
 }
@@ -756,20 +760,23 @@ void SANDGeoManager::set_wire_info()
   if(geo_->FindVolumeFast("STTtracker_PV")){
     std::cout<<"using SAND tracker : STT\n";
     set_stt_info(matrix);
+    std::cout<<"writing sttmap_ info on separate file\n";
+    std::cout<<"sttmap_ size: "<<sttmap_.size()<<std::endl;
+    WriteMapOnFile("stt", sttmap_);
   }else
   {
     std::cout<<"using SAND tracker : DRIFT CHAMBER\n";
     set_wire_info(matrix);
+    std::cout<<"writing wiremap_ info on separate file\n";
+    std::cout<<"wiremap_ size: "<<wiremap_.size()<<std::endl;
+    WriteMapOnFile("wire", wiremap_);
   }
-  std::cout<<"writing wiremap_ info on separate file\n";
-  std::cout<<"wiremap_ size: "<<wiremap_.size()<<std::endl;
-  WriteMapOnFile(wiremap_);
 }
 
-void SANDGeoManager::WriteMapOnFile(const std::map<int,SANDWireInfo>& map)
+void SANDGeoManager::WriteMapOnFile(std::string fName, const std::map<int,SANDWireInfo>& map)
 {
   std::fstream file_wireinfo;
-  file_wireinfo.open("wireinfo.txt", std::ios::out); 
+  file_wireinfo.open(fName + "info.txt", std::ios::out); 
   file_wireinfo << "id,x,y,z,length,orientation\n";
   for(auto& wire: map)
   {
@@ -796,7 +803,6 @@ void SANDGeoManager::init(TGeoManager* const geo)
   sttmap_.clear();
   wiremap_.clear();
   stt_tube_tranverse_position_map_.clear();
-
   set_ecal_info();
   set_wire_info();
 }
@@ -890,8 +896,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
     std::cout<<"invalid current node (is not ecal active layer): "<<node->GetName()<<"\n";
     throw "";
   }
-  //std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  //std::cout<<"\n";
   if (check_and_process_ecal_path(volume_path) == false) return -999;
   //////
 
@@ -920,8 +924,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 
   int cell_unique_id =
       encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
-  //std::cout<<__FILE__<<" "<<__LINE__<<"\n";
-  //std::cout<<"\n";
   return cell_unique_id;
 }
 

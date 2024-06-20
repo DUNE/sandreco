@@ -98,6 +98,7 @@ private:
   TColor       *fColor;
 
   std::vector <dg_tube> *fTubeDigitVect;
+  std::vector <dg_wire> *fWireDigitVect;
   std::vector <dg_cell> *fCellDigitVect;
 
   TClonesArray *fTracksArrayZYTrue;
@@ -127,6 +128,8 @@ private:
   std::vector <EVHits_t>    fEventHitsZX;
   std::vector <EVHits_t>    fTubeDigitHitsZY;
   std::vector <EVHits_t>    fTubeDigitHitsZX;
+  std::vector <EVHits_t>    fWireDigitHitsZY;
+  std::vector <EVHits_t>    fWireDigitHitsZX;
   std::vector <EVHits_t>    fCellDigitHitsZY;
   std::vector <EVHits_t>    fCellDigitHitsZX;
 

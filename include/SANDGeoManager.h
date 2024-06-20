@@ -203,7 +203,7 @@ class SANDGeoManager : public TObject
   int get_wire_id(const TString& volume_path) const;
   bool is_drift_plane(const TString& volume_name) const;
   bool isSwire(const TString& volume_path) const;
-  void WriteMapOnFile(const std::map<int,SANDWireInfo>& map);
+  void WriteMapOnFile(std::string fName, const std::map<int,SANDWireInfo>& map);
 
  public:
   SANDGeoManager()

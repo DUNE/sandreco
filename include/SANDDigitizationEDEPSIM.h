@@ -73,10 +73,10 @@ double GetMinWireTime(TLorentzVector point, SANDWireInfo& arg_wire);
 
 void create_digits_from_wire_hits(const SANDGeoManager& geo,
                                   std::map<int, std::vector<hit> >& hits2wire,
-                                  std::vector<dg_tube>& digit_vec);
+                                  std::vector<dg_wire>& wire_digits);
 
 void digitize_wire(TG4Event* ev, const SANDGeoManager& geo,
-                  std::vector<dg_tube>& digit_vec);                                 
+                  std::vector<dg_wire>& wire_digits);                                 
 } // namespace chamber
 
 // digitize event
