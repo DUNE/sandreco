@@ -54,19 +54,16 @@ const double SAND_CENTER_Z = 23910.;
 // does not include frames
 const double SAND_TRACKER_X_LENGTH = 3220.0;
 
-// mm (approx), this includes 9 C3H6 mod + 1 C mod + clearances
-const double SAND_SUPEMOD_Z_THICK = 364.6;
+// distance in mm from SUPERMOD frames
+const double FIDUCIAL_CUT = 50.;
 
-const double SAND_TRACKER_Z_START = 22952.14;
-
-const std::vector<double> SUPERMOD_LENGTHS = {3129.97277395, // A1
-                                              3550.97659024, // B1
-                                              3755.16996258, // C1
-                                              3755.16996258, // C2
-                                              3550.97659024, // B2
-                                              3129.97277395, // A2
-                                              2466.05424949, // D
-                                              1262.30218417};// F
+// height in mm
+const double SUPERMOD_Y_HEIGHT[5] = {3755.16996258, // A1, A2
+                                     3550.97659024, // B1, B2
+                                     3129.97277395, // C1, C2
+                                     1262.30218417,  // X1    
+                                     2466.05424949 // X0   
+};
 
 const double MYLAR_2_MYLAR_DIST = 10.02; // mm
 
@@ -209,18 +206,76 @@ bool PassSelectionNofHits(const std::vector<dg_wire>& fired_wires){
 
 }
 
-bool IsInFiducialVolume(const TG4PrimaryVertex& vertex){
-    /*
-        select events in the sand fiducial volume at 10 cm far from the frames:
-        - 5 cm along x from the frame edge;
-    */
-    auto vertex_position = vertex.GetPosition();
-    bool pass_x = (fabs(vertex_position.X() - SAND_CENTER_X) <= SAND_TRACKER_X_LENGTH/2. - 50);
-    // get supermod number
-    int smod = (vertex_position.Z() - SAND_TRACKER_Z_START)/SAND_SUPEMOD_Z_THICK;
-    // event should be 5 cm far from supermod frame
-    bool pass_zy = (fabs(vertex_position.Y() - SAND_CENTER_Y) <= SUPERMOD_LENGTHS[smod]/2. - 50);
+// bool IsInFiducialVolume(const TG4PrimaryVertex& vertex){
+//     /*
+//         select events in the sand fiducial volume at 10 cm far from the frames:
+//         - 5 cm along x from the frame edge;
+//     */
+//     auto vertex_position = vertex.GetPosition();
+//     bool pass_x = (fabs(vertex_position.X() - SAND_CENTER_X) <= SAND_TRACKER_X_LENGTH/2. - 50);
+//     // get supermod number
+//     int smod = (vertex_position.Z() - SAND_TRACKER_Z_START)/SAND_SUPEMOD_Z_THICK;
+//     // event should be 5 cm far from supermod frame
+//     bool pass_zy = (fabs(vertex_position.Y() - SAND_CENTER_Y) <= SUPERMOD_LENGTHS[smod]/2. - 50);
+//     return pass_x * pass_zy;
+// }
+
+std::string GetVolumeFromCoordinates(std::string units, double x, double y, double z){
+    
+    if(!geo){
+        std::cout<<"GEO not initialized in "<<__FILE__<<" "<<__LINE__<<"\n";
+        throw "";
+    }
+    if(units == "cm"){ // convert to cm
+        x = x * 0.1;
+        y = y * 0.1;
+        z = z * 0.1;
+    }else if(units == "m"){ // convert to cm
+        x = x * 100.;
+        y = y * 100.;
+        z = z * 100.;
+    }
+
+    auto navigator = geo->GetCurrentNavigator();
+
+    if(!navigator) navigator = geo->AddNavigator();
+
+    // TGeoManager wants cm units
+    auto volume = navigator->FindNode(x, y, z)->GetVolume()->GetName();
+
+    return volume;
+}
+
+bool IsInSMODFiducialVol(int smod, double x, double y, double z){
+    // !!! ALL LENGTHS REQUIRED IN MM !!!
+    bool pass_x = (fabs(x - SAND_CENTER_X) <= SAND_TRACKER_X_LENGTH/2. - FIDUCIAL_CUT);
+    bool pass_zy = (fabs(y - SAND_CENTER_Y) <= SUPERMOD_Y_HEIGHT[smod]/2. - FIDUCIAL_CUT);
     return pass_x * pass_zy;
+}
+
+bool IsInFiducialVolume(std::string units, double x, double y, double z){
+    if(units == "m"){
+        x = x*1e3; y = y*1e3; z = z*1e3;
+    }else if(units == "cm"){
+        x = x*1e2; y = y*1e2; z = z*1e2;
+    }else{}
+    TString volName_ = GetVolumeFromCoordinates(units, x, y, z);
+    std::cout << "volName : "<< volName_ << "\n";
+    if(volName_.Contains("Frame")){
+        return false;
+    }else if(volName_.Contains("_A")){ // one of 2 supermod A
+        return IsInSMODFiducialVol(0, x, y, z);
+    }else if(volName_.Contains("_B")){ // one of 2 supermod B
+        return IsInSMODFiducialVol(1, x, y, z);
+    }else if(volName_.Contains("_C")){ // one of 2 supermod C
+        return IsInSMODFiducialVol(2, x, y, z);
+    }else if(volName_.Contains("_X0")){ // dwstream supermod X0
+        return IsInSMODFiducialVol(3, x, y, z);
+    }else if(volName_.Contains("_X1")){ // dwstream supermod X1
+        return IsInSMODFiducialVol(4, x, y, z);
+    }else{
+        return false;
+    }
 }
 
 // DIGITIZATION________________________________________________________________
@@ -1242,6 +1297,9 @@ int main(int argc, char* argv[]){
     
     TTree* tEdep = (TTree*)fEDep.Get("EDepSimEvents");
     
+    LOG("I","Open TGeoManager from edepsim file");
+    geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
+    
     // TTree* tDigit = (TTree*)fDigit.Get("tDigit");
     
     TTree tout("tReco", "tReco");
@@ -1261,8 +1319,8 @@ int main(int argc, char* argv[]){
     ReadWireInfos(fWireInfo, wire_infos);
 
     // for(auto i=935u; i < 936; i++)
-    for(auto i=9u; i < 10; i++)
-    // for(auto i=0u; i < tEdep->GetEntries(); i++)
+    // for(auto i=9u; i < 10; i++)
+    for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
         tEdep->GetEntry(i);
         
@@ -1282,7 +1340,10 @@ int main(int argc, char* argv[]){
         LOG("","\n");
         
         LOG("I","Check Event Vertex in Fiducial Volume (10 cm from frames)");
-        bool event_in_fiducial_volume = IsInFiducialVolume(vertex);
+        bool event_in_fiducial_volume = IsInFiducialVolume("mm", vertex.GetPosition().X(), 
+                                                                 vertex.GetPosition().Y(), 
+                                                                 vertex.GetPosition().Z()
+        );
         
         if(!event_in_fiducial_volume){
             LOG("W","skipping event, not in fiducial volume");
