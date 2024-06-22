@@ -78,6 +78,11 @@ struct dg_wire{
   bool hor;
   double wire_length;
   std::vector<int> hindex;
+  /*
+    list of edep track id that 
+    contributed to this fired wires
+  */
+  std::vector<int> edep_trj_contributors;
   /* 
     ADDENDUM
     tdc = drift_time + signal_time + t_hit

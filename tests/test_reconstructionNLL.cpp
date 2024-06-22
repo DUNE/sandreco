@@ -206,20 +206,6 @@ bool PassSelectionNofHits(const std::vector<dg_wire>& fired_wires){
 
 }
 
-// bool IsInFiducialVolume(const TG4PrimaryVertex& vertex){
-//     /*
-//         select events in the sand fiducial volume at 10 cm far from the frames:
-//         - 5 cm along x from the frame edge;
-//     */
-//     auto vertex_position = vertex.GetPosition();
-//     bool pass_x = (fabs(vertex_position.X() - SAND_CENTER_X) <= SAND_TRACKER_X_LENGTH/2. - 50);
-//     // get supermod number
-//     int smod = (vertex_position.Z() - SAND_TRACKER_Z_START)/SAND_SUPEMOD_Z_THICK;
-//     // event should be 5 cm far from supermod frame
-//     bool pass_zy = (fabs(vertex_position.Y() - SAND_CENTER_Y) <= SUPERMOD_LENGTHS[smod]/2. - 50);
-//     return pass_x * pass_zy;
-// }
-
 std::string GetVolumeFromCoordinates(std::string units, double x, double y, double z){
     
     if(!geo){
@@ -254,6 +240,7 @@ bool IsInSMODFiducialVol(int smod, double x, double y, double z){
 }
 
 bool IsInFiducialVolume(std::string units, double x, double y, double z){
+    std::cout << "x " << x << ", y " << y << ", z " << z << "\n";
     if(units == "m"){
         x = x*1e3; y = y*1e3; z = z*1e3;
     }else if(units == "cm"){
@@ -396,6 +383,7 @@ void SortWiresByTime(std::vector<dg_wire>& wires){
 }
 
 void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
+                          int PDG_hits_filter,
                           const std::vector<dg_wire>& wire_infos, 
                           std::vector<dg_wire>& fired_wires){
     /*
@@ -405,7 +393,7 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
     
     // filter only muon hit segments
     LOG("i", "Select muon hits from MC truth");
-    auto muon_hits = FilterHits(hits, 13);
+    auto muon_hits = FilterHits(hits, PDG_hits_filter);
 
     for(auto& hit : muon_hits){
         
@@ -1320,7 +1308,8 @@ int main(int argc, char* argv[]){
 
     // for(auto i=935u; i < 936; i++)
     // for(auto i=9u; i < 10; i++)
-    for(auto i=0u; i < tEdep->GetEntries(); i++)
+    for(auto i=15u; i < 20; i++)
+    // for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
         tEdep->GetEntry(i);
         
@@ -1328,7 +1317,7 @@ int main(int argc, char* argv[]){
         auto vertex = evEdep->Primaries[0];
         auto trj = evEdep->Trajectories;
 
-        if(muon_trj.GetPDGCode()!=13) continue;
+        if(abs(muon_trj.GetPDGCode())!=13) continue; // reconstruct mu- or mu+
 
         LOG("I","Test muon");
         std::cout << "event number : " << i 
@@ -1360,7 +1349,7 @@ int main(int argc, char* argv[]){
         }else{
             // create digits from edepsim selected hits
             LOG("I", "Digitization of edepsim TG4HitSegments");
-            CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], wire_infos, fired_wires);
+            CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], muon_trj.GetPDGCode(), wire_infos, fired_wires);
         }
 
         LOG("i", "Sort wires by true hit time");

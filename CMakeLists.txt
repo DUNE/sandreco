@@ -73,6 +73,9 @@ target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
 # Creates ReconstructNLLmethod executable.
 add_executable(test_reconstructNLL tests/test_reconstructionNLL.cpp)
 target_link_libraries(test_reconstructNLL Struct Utils SANDRecoUtils)
+
+add_executable(test_DigitizeDrift tests/test_DigitizeDrift.cpp)
+target_link_libraries(test_DigitizeDrift Struct Utils SANDRecoUtils)
 # ----
 
 # Creates Analyze executable.
