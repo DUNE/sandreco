@@ -138,7 +138,6 @@ void help_input(){
     std::cout << "--signal_propagation : include signal_propagation in digitization \n";
     std::cout << "--hit_time           : include hit time in digitization \n";
     std::cout << "--track_no_smear     : reconstruct non smeared track (NO E_LOSS NO MCS)\n";
-    std::cout << "--stt                : stt geometry flag\n";
     std::cout << "--debug              : use higher verbosity for TMinuit " << def << std::endl;
 }
 
@@ -1223,9 +1222,6 @@ int main(int argc, char* argv[]){
         }else if(opt.CompareTo("--debug")==0){
             _DEBUG_ = true;
         }
-        else if(opt.CompareTo("--stt")==0){
-            trackerType = "Straw";
-        }
         else{
             auto ui = argv[++index];
             std::cout<<"unknown input "<< ui << "\n";
@@ -1234,15 +1230,36 @@ int main(int argc, char* argv[]){
         index++;
     }
 
-    std::cout << "Signal propagation..." << (INCLUDE_SIGNAL_PROPAGATION ? "enabled" : "disabled") << std::endl;
-    std::cout << "Hit time............." << (INCLUDE_HIT_TIME ? "enabled" : "disabled") << std::endl;
-    std::cout << "Debug mode..........." << (_DEBUG_ ? "enabled" : "disabled") << std::endl;
-    std::cout << "Geometry............." << trackerType << std::endl;
-
     std::cout << "\n";
     
     TFile fEDep(fEDepInput, "READ");
     
+    // Checks for STT or DRIFT Chaber geometry
+    TGeoManager* geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
+
+    if (geo == nullptr) {
+        std::cout << "Error in retrieving geo objects from root file: "
+                << (geo == nullptr ? "EDepSimGeometry " : "") << '\n';
+        exit(-1);
+    }
+
+    if(geo->FindVolumeFast("STTtracker_PV")){
+        std::cout<<"\n--- STT based simulation ---\n";
+        trackerType="Straw";
+    }
+    else if (geo->FindVolumeFast("SANDtracker_PV")){
+        std::cout<<"\n--- Drift based simulation ---\n";
+        trackerType="DriftVolume";
+    }
+    else{
+        std::cout<<"Error in retriving volume information from Geo Manager, exiting...\n";
+        exit(-1);
+    }
+
+    std::cout << "Signal propagation..." << (INCLUDE_SIGNAL_PROPAGATION ? "enabled" : "disabled") << std::endl;
+    std::cout << "Hit time............." << (INCLUDE_HIT_TIME ? "enabled" : "disabled") << std::endl;
+    std::cout << "Debug mode..........." << (_DEBUG_ ? "enabled" : "disabled") << std::endl;
+    std::cout << "Geometry............." << trackerType << std::endl;
     // TFile fDigit(fDigitInput, "READ");
     
     TFile fout(fOutput, "RECREATE");
@@ -1259,9 +1276,8 @@ int main(int argc, char* argv[]){
     tEdep->SetBranchAddress("Event", &evEdep);
     
     tout.Branch("reco_object", "reco_object", &reco_object);
-    
-    std::vector<dg_wire> wire_infos;
-    
+
+    std::vector<dg_wire> wire_infos;    
     std::vector<dg_wire> fired_wires;
 
     LOG("I","Loading wires lookup table");
