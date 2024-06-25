@@ -712,12 +712,10 @@ struct RecoObject
     // edepsim info of the reconstructed track_____________________
     const char*                 edep_file_input;
     const char*                 digit_file_input;
-    int                         event_index;
-    int                         traj_edep_index;
+    int                         edepsim_event_index;
     std::vector<TLorentzVector> trj_points;
     
     // digitization info___________________________________________
-    bool                        use_track_no_smearing = false;
     /*
       fired_wires : 
         all the fired wires related to the reconstructed obj.

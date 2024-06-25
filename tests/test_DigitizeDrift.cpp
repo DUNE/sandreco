@@ -63,12 +63,6 @@ const double LIGHT_VELOCITY = 299.792458; // mm/ns
 
 std::vector<dg_wire>* RecoUtils::event_digits = nullptr;
 
-// pointer to vertical wires of event_digits
-std::vector<dg_wire*> vertical_fired_digits;
-
-// pointer to horizontal wires of event_digits
-std::vector<dg_wire*> horizontal_fired_digits;
-
 TGeoManager* geo = nullptr;
 
 TG4Event* evEdep = nullptr;
@@ -189,21 +183,6 @@ std::vector<TG4HitSegment> FilterHits(const std::vector<TG4HitSegment>& hits, co
     return filtered_hits;
 }
 
-void UpdateTrjContrib2FiredWire(dg_wire& wire, int trj_id){
- /*
-    Check if fired wire has already stored information
-    about which tracjectory fired it
- */
-  bool already_stored = false;
-  for(auto& contributor : wire.edep_trj_contributors){
-    if(contributor == trj_id){
-        already_stored = true;
-        break;
-    }
-  }
-  if(!already_stored) wire.edep_trj_contributors.push_back(trj_id);
-}
-
 void UpdateFiredWires(std::vector<dg_wire>& fired_wires, dg_wire new_fired){
     
     bool found = false;
@@ -239,11 +218,13 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
     */
     // fired_wires.clear();
 
-    for(auto& hit : hits){
+    // for(auto& hit : hits)
+    for(auto i = 0u; i < hits.size(); i++){
 
-        auto hit_middle = (hit.GetStart()+hit.GetStop())*0.5;
+        auto hit_middle = (hits[i].GetStop() + hits[i].GetStart())*0.5;
+        auto hit_delta =  (hits[i].GetStop() - hits[i].GetStart());
         
-        Line hit_line = Line(hit);
+        Line hit_line = Line(hits[i]);
         
         for(auto& wire : wire_infos){
 
@@ -273,12 +254,12 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
 
                     fired.signal_time = (w_point - wire_line.GetLineUpperLimit()).Mag() / sand_reco::stt::v_signal_inwire;
                     
-                    fired.t_hit = ((hit.GetStop() + hit.GetStart())*0.5 + (hit.GetStop() - hit.GetStart())*closest_2_wire).T();
+                    fired.t_hit = (hit_middle + hit_delta * closest_2_wire).T();
 
                     fired.tdc = fired.drift_time + fired.signal_time + fired.t_hit;
 
-                    UpdateTrjContrib2FiredWire(fired, hit.GetPrimaryId());
-                    
+                    fired.hindex.push_back(i);
+
                     UpdateFiredWires(fired_wires, fired);
                 }
             }
@@ -383,7 +364,7 @@ int main(int argc, char* argv[]){
     tEdep->SetBranchAddress("Event", &evEdep);
 
     // for(auto i=0u; i < tEdep->GetEntries(); i++)
-    for(auto i=9u; i < 10; i++)
+    for(auto i=0u; i < 10; i++)
     {
         LOG("ii", TString::Format("Processing Event %d", i).Data());
         tEdep->GetEntry(i);
@@ -397,20 +378,6 @@ int main(int argc, char* argv[]){
         
         tout.Fill();
 
-        // for (auto tj_i = 0u; tj_i < evEdep->Trajectories.size(); tj_i++)
-        // {
-        //     TG4Trajectory traj = evEdep->Trajectories[tj_i];
-            
-        //     LOG("iii", TString::Format("Digitizing Trajectory id: %d, pdg: %d, parent id: %d, momentum: (%f, %f, %f, %f)", 
-        //                               traj.GetTrackId(), 
-        //                               traj.GetPDGCode(), 
-        //                               traj.GetParentId(),
-        //                               traj.GetInitialMomentum().X(),
-        //                               traj.GetInitialMomentum().Y(),
-        //                               traj.GetInitialMomentum().Z(),
-        //                               traj.GetInitialMomentum().T()));
-
-        // }
     }
     fout.cd();
 

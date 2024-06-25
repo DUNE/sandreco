@@ -1445,8 +1445,7 @@ int main(int argc, char* argv[]){
         
         reco_object.edep_file_input = fEDepInput;
         reco_object.digit_file_input = fDigitInput;
-        reco_object.event_index = i;
-        if(USE_NON_SMEARED_TRACK) reco_object.use_track_no_smearing = true;
+        reco_object.edepsim_event_index = i;
 
         tout.Fill();
     }
