@@ -11,7 +11,7 @@ Three installation and development options are supported:
 ### Installation
 To install _sandreco_ using spack, download the installation [file](../../wiki/files/install-sand-with-spack.sh) and run it.
 
-```
+```console
 curl -O https://raw.githubusercontent.com/wiki/DUNE/sandreco/files/install-sand-with-spack.sh
 source install-sand-with-spack.sh <spack installation folder>
 ```
@@ -19,7 +19,7 @@ source install-sand-with-spack.sh <spack installation folder>
 ### Development
 To develop _sandreco_ first install it as described [above](#installation). Then setup the spack development environment using the following commands:
 
-```
+```console
 source <spack installation folder>/setup-env.sh
 SANDENV="${SPACK_ROOT}/var/spack/environments/sand"
 mkdir -p ${SANDENV}
@@ -34,15 +34,15 @@ spack install
 
 The commands above should be run just once. The next time just use the following commands:
 
-```
+```console
 source <spack installation folder>/setup-env.sh
 SANDENV="${SPACK_ROOT}/var/spack/environments/sand"
 spacktivate ${SANDENV}
 ```
 
-Then you can develop the code. Once done, use the following commands to build _sandreco_:
+Now you can develop the code. Once done, use the following commands to build _sandreco_:
 
-```
+```console
 # change the code in ${SANDENV}/sandreco
 spack install
 ```
@@ -50,9 +50,50 @@ spack install
 ## Using cmake
 [CMake](https://cmake.org/) is the de-facto standard for building C++ code. It’s a powerful, comprehensive solution for managing the software build process. Documentation can be found [here](https://cmake.org/documentation/)
 
-### Installation
+### Installation on FNAL machines
+Assuming you have installed _edepsim_ in `<edepsim installation folder>`
 
-### Development
+```console
+mkdir <installation path>
+cd <installation path>
+git clone https://github.com/DUNE/sandreco.git
+mkdir build & cd build
+spack load gcc@12.2.0
+spack load root@6.28.12
+cmake ../sandreco/ -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH=<edepsim installation folder>
+make -j8
+make install
+```
+
+#### Setup
+
+```console
+spack load gcc@12.2.0
+spack load root@6.28.12
+source <edepsim installation folder>/setup.sh
+source <installation path>/setup.sh
+```
+
+### Installation on CNAF machine
+
+```console
+mkdir <installation path>
+cd <installation path>
+git clone https://github.com/DUNE/sandreco.git
+sed -i "s:set(CMAKE_CXX_STANDARD 17):set(CMAKE_CXX_STANDARD 14):g" sandreco/CMakeLists.txt
+mkdir build & cd build
+source /opt/exp_software/neutrino/env.sh
+cmake ../sandreco/ -DCMAKE_INSTALL_PREFIX=..
+make -j8
+make install
+```
+
+#### Setup
+
+```console
+source /opt/exp_software/neutrino/env.sh
+source <installation path>/setup.sh
+```
 
 ## Installation with ups [DEPRECATED]
 
@@ -83,14 +124,6 @@ The `sandreco` project provides five executables:
 The executables exploit two libraries:
 - **libUtils.so** for utilities
 - **libStruct.so** for i/o
-
-### Setup
-
-```console
-$ source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh
-$ setup edepsim v3_2_0b -q "e20:prof"
-$ source setup.sh
-```
 
 # Run
 
