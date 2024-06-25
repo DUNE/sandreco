@@ -1,5 +1,16 @@
 # Installation
 
+Three installation options are supported:
+
+- with [spack](https://spack.readthedocs.io/en/latest/) (recommended on FNAL machines)
+- with [cmake](https://cmake.org/documentation/) (recommended on CNAF machine)
+
+## Installation with spack
+
+## Installation with cmake
+
+## Installation with ups [DEPRECATED]
+
 ```console
 $ VERSION="v01_00_00"
 $ QUAL="e20:prof"
@@ -15,15 +26,16 @@ $ mrb i
 
 for a specific tag or branch do `mrb g -t $TAG sandreco` or `mrb g -b $BRANCH sandreco`
 
+## sandreco
 
-In the `bin` folder, there will be five executables:
+The `sandreco` project provides five executables:
 - **Digitize** will perform digitization, 
 - **Reconstruct** will reconstruct tracks in STT and clusters in ECAL
 - **Analyze** will identify particles and assign them a momentum
 - **FastCheck** will produce a lot of plots to check everything is ok
 - **Display** displays events
 
-In the `lib` folder, there will be two libraries:
+The executables exploit two libraries:
 - **libUtils.so** for utilities
 - **libStruct.so** for i/o
 
