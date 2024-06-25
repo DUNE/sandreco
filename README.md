@@ -1,9 +1,9 @@
 # Installation
 
-Three installation and development options are supported:
+Currently, there are only two supported installation and development options:
 
-- using [spack](#using-spack) (recommended on FNAL machines)
-- using [cmake](#using-cmake) (recommended on CNAF machine)
+- using [spack](#using-spack) on FNAL machines
+- using [cmake](#using-cmake) on CNAF machine
 
 ## Using spack
 [Spack](https://spack.io/) is a package manager for supercomputers, Linux, and macOS. Documentation can be found [here](https://spack.readthedocs.io/en/latest/).
@@ -50,31 +50,7 @@ spack install
 ## Using cmake
 [CMake](https://cmake.org/) is the de-facto standard for building C++ code. It’s a powerful, comprehensive solution for managing the software build process. Documentation can be found [here](https://cmake.org/documentation/)
 
-### Installation on FNAL machines
-Assuming you have installed _edepsim_ in `<edepsim installation folder>`
-
-```console
-mkdir <installation path>
-cd <installation path>
-git clone https://github.com/DUNE/sandreco.git
-mkdir build & cd build
-spack load gcc@12.2.0
-spack load root@6.28.12
-cmake ../sandreco/ -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH=<edepsim installation folder>
-make -j8
-make install
-```
-
-#### Setup
-
-```console
-spack load gcc@12.2.0
-spack load root@6.28.12
-source <edepsim installation folder>/setup.sh
-source <installation path>/setup.sh
-```
-
-### Installation on CNAF machine
+### Installation
 
 ```console
 mkdir <installation path>
