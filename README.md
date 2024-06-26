@@ -1,74 +1,61 @@
 # Installation
 
-Currently, there are only two supported installation and development options:
+Currently, there are only two supported building and development environments:
 
-- using [spack](#using-spack) on FNAL machines
-- using [cmake](#using-cmake) on CNAF machine
+- [FNAL machines](#fnal-machines)
+- [CNAF machine](#cnaf-machine)
 
-## Using spack
-[Spack](https://spack.io/) is a package manager for supercomputers, Linux, and macOS. Documentation can be found [here](https://spack.readthedocs.io/en/latest/).
+## FNAL machines
+FNAL machines are Almalinux9 and the supported package manager is [Spack](https://spack.io/). Documentation can be found [here](https://spack.readthedocs.io/en/latest/).
 
 ### Installation
-To install _sandreco_ using spack, download the installation [file](../../wiki/files/install-sand-with-spack.sh) and run it.
+To build and install `sandreco` using spack, download the installation [file](../../wiki/files/install-sandreco-with-spack.sh) and run it.
 
 ```console
-curl -O https://raw.githubusercontent.com/wiki/DUNE/sandreco/files/install-sand-with-spack.sh
-source install-sand-with-spack.sh <spack installation folder>
+curl -O https://raw.githubusercontent.com/wiki/DUNE/sandreco/files/install-sandreco-with-spack.sh
+source install-sandreco-with-spack.sh <spack installation folder>
 ```
+
+When the script ends to run, you are ready to use `sandreco`. 
 
 ### Development
-To develop _sandreco_ first install it as described [above](#installation). Then setup the spack development environment using the following commands:
+To develop `sandreco`, first install `edepsim` downloading the installation [file](../../wiki/files/install-edepsim-with-spack.sh) and run it.
 
 ```console
-source <spack installation folder>/setup-env.sh
-SANDENV="${SPACK_ROOT}/var/spack/environments/sand"
-mkdir -p ${SANDENV}
-spack env create -d ${SANDENV}
-spacktivate ${SANDENV}
-spack add sandreco
-spack install
-spack develop sandreco@01_00_00
-spack concretize -f
-spack install
+curl -O https://raw.githubusercontent.com/wiki/DUNE/sandreco/files/install-edepsim-with-spack.sh
+source install-edepsim-with-spack.sh <spack installation folder>
 ```
 
-The commands above should be run just once. The next time just use the following commands:
+Then, build `sandreco` using the following commands:
 
 ```console
-source <spack installation folder>/setup-env.sh
-SANDENV="${SPACK_ROOT}/var/spack/environments/sand"
-spacktivate ${SANDENV}
+mkdir <installation path>
+cd <installation path>
+git clone https://github.com/DUNE/sandreco.git
+cd build & mkdir build
+spack load gcc@12.2.0
+spack load root@6.28.12
+spack load edepsim@3.2.0
+cmake ../sandreco/ -DCMAKE_INSTALL_PREFIX=.. \
+-DCMAKE_INSTALL_RPATH="$(spack find --paths edepsim@3.2.0 | grep "edepsim@3.2.0" | awk -F' ' '{print $2}')/lib:$(spack find --paths root@6.28.12 | grep "root@6.28.12" | awk -F' ' '{print $2}')/lib/root:${PWD}/../lib"
+make -j8
+make install
 ```
 
-Now you can develop the code. Once done, use the following commands to build _sandreco_:
-
-```console
-# change the code in ${SANDENV}/sandreco
-spack install
-```
-
-## Using cmake
-[CMake](https://cmake.org/) is the de-facto standard for building C++ code. It’s a powerful, comprehensive solution for managing the software build process. Documentation can be found [here](https://cmake.org/documentation/)
-
-### Installation
+## CNAF machine
+On the CNAF machine run, [CMake](https://cmake.org/) is used to build `sandreco` using the following commands:
 
 ```console
 mkdir <installation path>
 cd <installation path>
 git clone https://github.com/DUNE/sandreco.git
 sed -i "s:set(CMAKE_CXX_STANDARD 17):set(CMAKE_CXX_STANDARD 14):g" sandreco/CMakeLists.txt
-mkdir build & cd build
+cd build & mkdir build
 source /opt/exp_software/neutrino/env.sh
 cmake ../sandreco/ -DCMAKE_INSTALL_PREFIX=..
 make -j8
 make install
-```
-
-#### Setup
-
-```console
-source /opt/exp_software/neutrino/env.sh
-source <installation path>/setup.sh
+source ../setup.sh
 ```
 
 ## Installation with ups [DEPRECATED]
