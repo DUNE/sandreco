@@ -225,15 +225,15 @@ std::string GetVolumeFromCoordinates(std::string units, double x, double y, doub
         std::cout<<"GEO not initialized in "<<__FILE__<<" "<<__LINE__<<"\n";
         throw "";
     }
-    if(units == "mm"){ // convert to cm
-        x = x * 0.1;
-        y = y * 0.1;
-        z = z * 0.1;
-    }else if(units == "m"){ // convert to cm
-        x = x * 100.;
-        y = y * 100.;
-        z = z * 100.;
-    }
+    // if(units == "mm"){ // convert to cm
+    //     x = x * 0.1;
+    //     y = y * 0.1;
+    //     z = z * 0.1;
+    // }else if(units == "m"){ // convert to cm
+    //     x = x * 100.;
+    //     y = y * 100.;
+    //     z = z * 100.;
+    // }
 
     auto navigator = geo->GetCurrentNavigator();
 
@@ -253,14 +253,14 @@ bool IsInSMODFiducialVol(int smod, double x, double y, double z){
 }
 
 bool IsInFiducialVolume(std::string units, double x, double y, double z){
-    std::cout << "x " << x << ", y " << y << ", z " << z << "\n";
+    //std::cout << "x " << x << ", y " << y << ", z " << z << "\n";
     TString volName_ = GetVolumeFromCoordinates(units, x, y, z);
     if(units == "m"){ // convert to mm
         x = x*1e3; y = y*1e3; z = z*1e3;
     }else if(units == "cm"){ // convert to mm
         x = x*1e2; y = y*1e2; z = z*1e2;
     }else{}
-    std::cout << "volName : "<< volName_ << "\n";
+    //std::cout << "volName : "<< volName_ << "\n";
     if(volName_.Contains("Frame")){
         return false;
     }else if(volName_.Contains("_A")){ // one of 2 supermod A
@@ -1198,8 +1198,8 @@ int main(int argc, char* argv[]){
     LOG("I","Loading wires lookup table");
     ReadWireInfos(fWireInfo, wire_infos);
 
-    for(auto i=0u; i < 10; i++)
-    // for(auto i=0u; i < tEdep->GetEntries(); i++)
+    for(auto i=0u; i < tEdep->GetEntries(); i++)
+    //for(auto i=0u; i < 10; i++)
     {
         LOG("I", "NEW EVENT **********************************************************");
         RecoUtils::event_digits->clear();

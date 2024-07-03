@@ -380,8 +380,8 @@ int main(int argc, char* argv[]){
     LOG("I", "Reading branch Event from EDepFile");
     tEdep->SetBranchAddress("Event", &evEdep);
 
-    // for(auto i=0u; i < tEdep->GetEntries(); i++)
-    for(auto i=0u; i < 10; i++)
+    for(auto i=0u; i < tEdep->GetEntries(); i++)
+    //for(auto i=0u; i < 10; i++)
     {
         LOG("ii", TString::Format("Processing Event %d", i).Data());
         tEdep->GetEntry(i);
