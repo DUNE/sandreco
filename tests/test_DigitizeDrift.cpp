@@ -97,7 +97,7 @@ void LOG(TString i, const char* out){
 
 void help_input(){
     std::cout << "\n";
-    std::cout << red << "./buil/bin/test_DigitizeDrift"
+    std::cout << red << "./build/bin/test_DigitizeDrift"
               << "-edep <EDep file> "
               << "-wireinfo <WireInfo file> "
               << "-o <fOuptut.root> "
@@ -282,7 +282,9 @@ int main(int argc, char* argv[]){
     const char* fWireInfo;
 
     int index = 1;
-    
+
+    std::string trackerType = "DriftVolume";
+
     LOG("","\n");
     LOG("I", "Parsing inputs");
 
@@ -347,7 +349,22 @@ int main(int argc, char* argv[]){
     TTree tout("tDigit", "tDigit");
 
     TTree* tEdep = (TTree*)fEDep.Get("EDepSimEvents");
+
     geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
+
+    // Checks for STT or DRIFT Chaber geometry
+    if(geo->FindVolumeFast("STTtracker_PV")){
+        std::cout<<"\n--- STT based simulation ---\n";
+        trackerType="Straw";
+    }
+    else if (geo->FindVolumeFast("SANDtracker_PV")){
+        std::cout<<"\n--- Drift based simulation ---\n";
+        trackerType="DriftVolume";
+    }
+    else{
+        std::cout<<"Error in retriving volume information from Geo Manager, exiting...\n";
+        exit(-1);
+    }
 
     std::vector<dg_wire> wire_infos;
 
@@ -371,13 +388,12 @@ int main(int argc, char* argv[]){
 
         fired_wires.clear();
 
-        CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], wire_infos, fired_wires);
+        CreateDigitsFromEDep(evEdep->SegmentDetectors[trackerType], wire_infos, fired_wires);
         
         LOG("i", "Sort wires by true hit time");
         SortWiresByTime(fired_wires);
         
         tout.Fill();
-
     }
     fout.cd();
 

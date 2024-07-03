@@ -253,14 +253,14 @@ bool IsInSMODFiducialVol(int smod, double x, double y, double z){
 }
 
 bool IsInFiducialVolume(std::string units, double x, double y, double z){
-    // std::cout << "x " << x << ", y " << y << ", z " << z << "\n";
+    std::cout << "x " << x << ", y " << y << ", z " << z << "\n";
     TString volName_ = GetVolumeFromCoordinates(units, x, y, z);
     if(units == "m"){ // convert to mm
         x = x*1e3; y = y*1e3; z = z*1e3;
     }else if(units == "cm"){ // convert to mm
         x = x*1e2; y = y*1e2; z = z*1e2;
     }else{}
-    // std::cout << "volName : "<< volName_ << "\n";
+    std::cout << "volName : "<< volName_ << "\n";
     if(volName_.Contains("Frame")){
         return false;
     }else if(volName_.Contains("_A")){ // one of 2 supermod A
@@ -1083,7 +1083,9 @@ int main(int argc, char* argv[]){
     const char* fWireInfo;
 
     int index = 1;
-    
+
+    std::string trackerType = "DriftVolume";
+
     LOG("","\n");
     LOG("I","Reading inputs");
 
@@ -1157,9 +1159,24 @@ int main(int argc, char* argv[]){
     TTree* tEdep = (TTree*)fEDep.Get("EDepSimEvents");
     
     LOG("I","Open TGeoManager from edepsim file");
-    // geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
-    geo = TGeoManager::Import("/storage/gpfs_data/neutrino/users/gi/dunendggd/SAND_opt3_DRIFT1.root");
-    
+    geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
+    //geo = TGeoManager::Import("/storage/gpfs_data/neutrino/users/gi/dunendggd/SAND_opt3_DRIFT1.root");
+
+    // Checks for STT or DRIFT Chaber geometry
+    if(geo->FindVolumeFast("STTtracker_PV")){
+        std::cout<<"\n--- STT based simulation ---\n";
+        trackerType="Straw";
+    }
+    else if (geo->FindVolumeFast("SANDtracker_PV")){
+        std::cout<<"\n--- Drift based simulation ---\n";
+        trackerType="DriftVolume";
+    }
+    else{
+        std::cout<<"Error in retriving volume information from Geo Manager, exiting...\n";
+        exit(-1);
+    }
+    LOG("I", TString::Format("Geometry: %s", trackerType.c_str()));
+
     TTree* tDigit = (TTree*)fDigit.Get("tDigit");
     
     TTree tout("tReco", "tReco");
@@ -1198,7 +1215,7 @@ int main(int argc, char* argv[]){
             continue;
         }
 
-        event_drift_hits = evEdep->SegmentDetectors["DriftVolume"];
+        event_drift_hits = evEdep->SegmentDetectors[trackerType];
 
         if(abs(muon_trj.GetPDGCode())!=13) continue; // reconstruct mu- or mu+
 
