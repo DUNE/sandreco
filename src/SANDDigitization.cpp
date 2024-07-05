@@ -23,7 +23,7 @@ double photons_emission_time()
   do
   {
     // The exponential distribution as an envelope function: very efficient
-    t  = -1.0 * sand_reco::ecal::scintillation::decay_time * TMath::Exp(1.0 - rand.Uniform() );
+    t  = -1.0 * sand_reco::ecal::scintillation::decay_time * TMath::Log(1.0 - rand.Uniform() );
   }
   while (rand.Uniform()  > (1.0 - TMath::Exp(-t/sand_reco::ecal::scintillation::rise_time)));
 
