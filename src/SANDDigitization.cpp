@@ -13,6 +13,50 @@ TRandom3 rand(0);
 
 namespace ecal
 {
+
+// simulate time of emission of the scintillation photons
+double photons_emission_time()
+{
+  // https://github.com/Geant4/geant4/blob/e58e650b32b961c8093f3dd6a2c3bc917b2552be/source/processes/electromagnetic/xrays/src/G4Scintillation.cc#L638
+  double t;
+
+  do
+  {
+    // The exponential distribution as an envelope function: very efficient
+    t  = -1.0 * sand_reco::ecal::scintillation::decay_time * TMath::Exp(1.0 - rand.Uniform() );
+  }
+  while (rand.Uniform()  > (1.0 - TMath::Exp(-t/sand_reco::ecal::scintillation::rise_time)));
+
+  return t;
+}
+
+double photons_emission_time_as_kloe()
+{
+  
+  /*
+     - For each photoelectron: Time for TDC simulation obtained from
+
+C  PHOTOELECTRON TIME :  Particle TIME in the cell
+C                      + SCINTILLATION DECAY TIME +
+C                      + signal propagation to the cell
+C                      + 1ns  uncertainty
+
+               TPHE = Part_time+TSDEC+DPM1*VLFB+Gauss(1ns)
+
+      VLFB = 5.85 ns/m
+!!!! Input-TDC Scintillation time -
+               TSDEC = TSCIN*(1./RNDMPH(1)-1)**TSCEX  (ns)
+
+      TSCIN  3.08  ns
+      TSCEX  0.588
+  */
+
+  return sand_reco::ecal::scintillation::tscin *
+                TMath::Power(1. / rand.Uniform() - 1.,
+                             sand_reco::ecal::scintillation::tscex);
+}
+
+
 // simulate pe arrival time to pmt
 double photo_electron_time_to_pmt_arrival_time(double t0, double d)
 {
@@ -33,10 +77,8 @@ C                      + 1ns  uncertainty
       TSCIN  3.08  ns
       TSCEX  0.588
   */
-
-  double tdec = sand_reco::ecal::scintillation::tscin *
-                TMath::Power(1. / rand.Uniform() - 1.,
-                             sand_reco::ecal::scintillation::tscex);
+  
+  double tdec = photons_emission_time();
 
   double time = t0 + tdec +
                 sand_reco::ecal::scintillation::vlfb * d * conversion::mm_to_m +
