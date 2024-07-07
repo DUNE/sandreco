@@ -49,8 +49,10 @@ jobs:
       - run: ls -lrt spack
       - run: ls -lrt spack/share
       - run: ls -lrt spack/share/spack
-      - run: . spack/share/spack/setup-env.sh
+      - run: . spack/share/spack/setup-env.sh; which spack
+      - run: which spack
+      - run: . spack/share/spack/setup-env.sh; spack install geant4@11.2.1
 
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/index.html
       # - run: curl -O https://geant4-data.web.cern.ch/releases/lib4.11.2.p02/Linux-g++11.4.1-Alma9.tar.gz
-      - run: spack install geant4@11.2.1
+      # - run: spack install geant4@11.2.1
