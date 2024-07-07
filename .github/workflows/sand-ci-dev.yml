@@ -46,6 +46,9 @@ jobs:
       - run: yum install -y git
       - run: git clone --depth=100 --branch=releases/v0.22 https://github.com/spack/spack.git ~/spack
       - run: cd ~/spack
+      - run: ls -lrt 
+      - run: ls -lrt share
+      - run: ls -lrt share/spack
       - run: . share/spack/setup-env.sh
 
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/index.html
