@@ -88,16 +88,8 @@ jobs:
 
       #############################################################################################################################
 
-
-      # # Install git
-      # - run: yum install -y git
-
-      # # Install cmake
-      # - run: yum install -y cmake-3.26.5-2.el9.x86_64
-
-      # # Install Xerces-C++
-      # ## https://xerces.apache.org/xerces-c/download.cgi
-      # - run: yum install -y xerces-c-3.2.5-1.el9.x86_64 xerces-c-devel-3.2.5-1.el9.x86_64
+      # Install epel repo
+      - run: yum install -y epel-release
 
       # Install ROOT dependencies
       - run: |
@@ -119,7 +111,7 @@ jobs:
 
       # Install GEANT4 dependencies
       ## https://xerces.apache.org/xerces-c/download.cgi
-      - run: yum install -y xerces-c-3.2.5-1.el9.x86_64 xerces-c-devel-3.2.5-1.el9.x86_64
+      - run: yum install -y xerces-c xerces-c-devel
       
       # Install GEANT4
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/installguide.html
