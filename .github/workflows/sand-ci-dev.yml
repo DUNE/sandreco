@@ -39,17 +39,17 @@ jobs:
 
       # Install ROOT v6.32.02 with the package provider yum
       - run: yum install -y epel-release
-      - run: yum install -y root-6.32.02-1.el9.x86_64
+      # - run: yum install -y root-6.32.02-1.el9.x86_64
 
       # Install GEANT4 v4.11.2 with spack
       ## https://spack-tutorial.readthedocs.io/en/latest/tutorial_basics.html
       - run: yum install -y git
-      - run: git clone --depth=100 --branch=releases/v0.22 https://github.com/spack/spack.git ~/spack
-      - run: cd ~/spack
-      - run: ls -lrt 
-      - run: ls -lrt share
-      - run: ls -lrt share/spack
-      - run: . share/spack/setup-env.sh
+      - run: git clone --depth=100 --branch=releases/v0.22 https://github.com/spack/spack.git spack
+      # - run: cd ~/spack
+      - run: ls -lrt spack
+      - run: ls -lrt spack/share
+      - run: ls -lrt spack/share/spack
+      - run: . spack/share/spack/setup-env.sh
 
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/index.html
       # - run: curl -O https://geant4-data.web.cern.ch/releases/lib4.11.2.p02/Linux-g++11.4.1-Alma9.tar.gz
