@@ -39,9 +39,9 @@ jobs:
 
       # Install ROOT v6.32.02
       - run: yum install -y epel-release
-      - run: yum config-manager --set-enabled epel
-      - run: yum search root
       - run: yum repolist enabled
       - run: yum repolist disabled
+      - run: yum config-manager --set-enabled epel
+      - run: yum search root
       - run: yum --showduplicate list root
       - run: yum install -y root-6.32.02-1.el9.x86_64
