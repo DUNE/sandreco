@@ -53,13 +53,13 @@ jobs:
           root-minuit2-6.32.02-1.el9.x86_64 root-mlp-6.32.02-1.el9.x86_64 root-montecarlo-eg-6.32.02-1.el9.x86_64 root-montecarlo-pythia8-6.32.02-1.el9.x86_64 \
           root-net-auth-6.32.02-1.el9.x86_64 root-net-davix-6.32.02-1.el9.x86_64 root-net-http-6.32.02-1.el9.x86_64 root-net-httpsniff-6.32.02-1.el9.x86_64 \
           root-net-rpdutils-6.32.02-1.el9.x86_64 root-netx-6.32.02-1.el9.x86_64 root-proof-6.32.02-1.el9.x86_64 root-proof-bench-6.32.02-1.el9.x86_64 \
-          root-proof-player-6.32.02-1.el9.x86_64 root-proof-sessionviewer-6.32.02-1.el9.x86_64 root-quadp-6.32.02-1.el9.x86_64 root-r-6.32.02-1.el9.x86_64 \
-          root-r-tools-6.32.02-1.el9.x86_64 root-roofit-6.32.02-1.el9.x86_64 root-roofit-batchcompute-6.32.02-1.el9.x86_64 root-roofit-core-6.32.02-1.el9.x86_64 \
+          root-proof-player-6.32.02-1.el9.x86_64 root-proof-sessionviewer-6.32.02-1.el9.x86_64 root-quadp-6.32.02-1.el9.x86_64 \
+          root-roofit-6.32.02-1.el9.x86_64 root-roofit-batchcompute-6.32.02-1.el9.x86_64 root-roofit-core-6.32.02-1.el9.x86_64 \
           root-roofit-dataframe-helpers-6.32.02-1.el9.x86_64 root-roofit-hs3-6.32.02-1.el9.x86_64 root-roofit-jsoninterface-6.32.02-1.el9.x86_64 \
           root-roofit-more-6.32.02-1.el9.x86_64 root-roostats-6.32.02-1.el9.x86_64 root-smatrix-6.32.02-1.el9.x86_64 root-spectrum-6.32.02-1.el9.x86_64 \
           root-spectrum-painter-6.32.02-1.el9.x86_64 root-splot-6.32.02-1.el9.x86_64 root-sql-mysql-6.32.02-1.el9.x86_64 root-sql-odbc-6.32.02-1.el9.x86_64 \
           root-sql-pgsql-6.32.02-1.el9.x86_64 root-sql-sqlite-6.32.02-1.el9.x86_64 root-testsupport-6.32.02-1.el9.x86_64 root-tmva-6.32.02-1.el9.x86_64 \
-          root-tmva-gui-6.32.02-1.el9.x86_64 root-tmva-python-6.32.02-1.el9.x86_64 root-tmva-r-6.32.02-1.el9.x86_64 root-tmva-sofie-6.32.02-1.el9.x86_64 \
+          root-tmva-gui-6.32.02-1.el9.x86_64 root-tmva-python-6.32.02-1.el9.x86_64 root-tmva-sofie-6.32.02-1.el9.x86_64 \
           root-tmva-sofie-parser-6.32.02-1.el9.x86_64 root-tmva-utils-6.32.02-1.el9.x86_64 root-tpython-6.32.02-1.el9.x86_64 root-tree-ntuple-utils-6.32.02-1.el9.x86_64 \
           root-tree-viewer-6.32.02-1.el9.x86_64 root-tree-webviewer-6.32.02-1.el9.x86_64 root-unfold-6.32.02-1.el9.x86_64 root-unuran-6.32.02-1.el9.x86_64 \
           root-xroofit-6.32.02-1.el9.x86_64
