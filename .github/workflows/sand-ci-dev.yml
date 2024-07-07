@@ -67,6 +67,9 @@ jobs:
       - run: curl -O https://geant4-data.web.cern.ch/releases/lib4.11.2.p02/Linux-g++11.4.1-Alma9.tar.gz
       - run: tar xzf Linux-g++11.4.1-Alma9.tar.gz
 
+      # Install git
+      - run: yum install -y git
+
       # Imstall cmake
       - run: yum install -y cmake-3.26.5-2.el9.x86_64
 
