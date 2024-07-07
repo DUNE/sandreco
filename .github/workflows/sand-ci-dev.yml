@@ -43,15 +43,25 @@ jobs:
 
       # Install GEANT4 v4.11.2 with spack
       ## https://spack-tutorial.readthedocs.io/en/latest/tutorial_basics.html
-      - run: yum install -y git
-      - run: git clone --depth=100 --branch=releases/v0.22 https://github.com/spack/spack.git spack
+      # - run: yum install -y git
+      # - run: git clone --depth=100 --branch=releases/v0.22 https://github.com/spack/spack.git spack
       # - run: cd ~/spack
       # - run: ls -lrt spack
       # - run: ls -lrt spack/share
       # - run: ls -lrt spack/share/spack
       # - run: . spack/share/spack/setup-env.sh; which spack
       # - run: which spack
-      - run: . spack/share/spack/setup-env.sh; spack install geant4@11.2.1
+      # - run: . spack/share/spack/setup-env.sh; spack install geant4@11.2.1
+
+      ## https://github.com/spack/setup-spack
+      - name: Set up Spack
+        uses: spack/setup-spack@v2
+        with:
+          ref: develop      # Spack version (examples: develop, releases/v0.21)
+          buildcache: true  # Configure oci://ghcr.io/spack/github-actions-buildcache
+          color: true       # Force color output (SPACK_COLOR=always)
+          path: spack       # Where to clone Spack
+      - run: spack install geant4@11.2.1
 
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/index.html
       # - run: curl -O https://geant4-data.web.cern.ch/releases/lib4.11.2.p02/Linux-g++11.4.1-Alma9.tar.gz
