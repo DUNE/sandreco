@@ -64,8 +64,11 @@ jobs:
       # - run: spack install geant4@11.2.1
 
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/index.html
-      - run: curl -O https://geant4-data.web.cern.ch/releases/lib4.11.2.p02/Linux-g++11.4.1-Alma9.tar.gz
-      - run: tar xzf Linux-g++11.4.1-Alma9.tar.gz
+      - run: |
+          mkdir geant4
+          cd geant4
+          curl -O https://geant4-data.web.cern.ch/releases/lib4.11.2.p02/Linux-g++11.4.1-Alma9.tar.gz
+          tar xzf Linux-g++11.4.1-Alma9.tar.gz
 
       # Install git
       - run: yum install -y git
@@ -75,14 +78,19 @@ jobs:
 
       # Install edepsim
       ## https://github.com/ClarkMcGrew/edep-sim
-      - run: mkdir edep-sim && cd edep-sim
-      - run: git clone --depth 1 --branch 3.2.0 https://github.com/ClarkMcGrew/edep-sim.git source
-      - run: mkdir build && cd build
-      - run: ls -lrt .
-      - run: ls -lrt ..
-      - run: ls -lrt ../..
-      - run: cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_MODULE_PREFIX=../../Geant4-11.2.2-Linux/lib64/cmake/Geant4 ../source
-      - run: make -j64 install
+      - run: |
+          mkdir edep-sim
+          cd edep-sim
+          git clone --depth 1 --branch 3.2.0 https://github.com/ClarkMcGrew/edep-sim.git source
+      - run: |
+          mkdir edep-sim/build
+          cd edep-sim/build
+          ls -lrt .
+          ls -lrt ..
+          ls -lrt ../..
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_MODULE_PREFIX=../../geant4/Geant4-11.2.2-Linux/lib64/cmake/Geant4 ../source
+          make -j64 install
+
       
       
       
