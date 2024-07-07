@@ -43,6 +43,7 @@ jobs:
 
       # Install GEANT4 v4.11.2 with spack
       ## https://spack-tutorial.readthedocs.io/en/latest/tutorial_basics.html
+      - run: yum install -y git
       - run: git clone --depth=100 --branch=releases/v0.22 https://github.com/spack/spack.git ~/spack
       - run: cd ~/spack
       - run: . share/spack/setup-env.sh
