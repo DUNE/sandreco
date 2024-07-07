@@ -77,7 +77,10 @@ jobs:
       ## https://github.com/ClarkMcGrew/edep-sim
       - run: mkdir edep-sim && cd edep-sim
       - run: git clone --depth 1 --branch 3.2.0 https://github.com/ClarkMcGrew/edep-sim.git source
-      - run: mkdir build  && cd build
+      - run: mkdir build && cd build
+      - run: ls -lrt .
+      - run: ls -lrt ..
+      - run: ls -lrt ../..
       - run: cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_MODULE_PREFIX=../../Geant4-11.2.2-Linux/lib64/cmake/Geant4 ../source
       - run: make -j64 install
       
