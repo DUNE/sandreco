@@ -46,11 +46,11 @@ jobs:
       - run: yum install -y git
       - run: git clone --depth=100 --branch=releases/v0.22 https://github.com/spack/spack.git spack
       # - run: cd ~/spack
-      - run: ls -lrt spack
-      - run: ls -lrt spack/share
-      - run: ls -lrt spack/share/spack
-      - run: . spack/share/spack/setup-env.sh; which spack
-      - run: which spack
+      # - run: ls -lrt spack
+      # - run: ls -lrt spack/share
+      # - run: ls -lrt spack/share/spack
+      # - run: . spack/share/spack/setup-env.sh; which spack
+      # - run: which spack
       - run: . spack/share/spack/setup-env.sh; spack install geant4@11.2.1
 
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/index.html
