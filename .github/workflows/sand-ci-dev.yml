@@ -39,7 +39,7 @@ jobs:
 
       # Install ROOT v6.32.02 with the package provider yum
       - run: yum install -y epel-release
-      # - run: yum install -y root-6.32.02-1.el9.x86_64
+      - run: yum install -y root-6.32.02-1.el9.x86_64
 
       # Install GEANT4 v4.11.2 with spack
       ## https://spack-tutorial.readthedocs.io/en/latest/tutorial_basics.html
@@ -54,15 +54,29 @@ jobs:
       # - run: . spack/share/spack/setup-env.sh; spack install geant4@11.2.1
 
       ## https://github.com/spack/setup-spack
-      - name: Set up Spack
-        uses: spack/setup-spack@v2
-        with:
-          ref: develop      # Spack version (examples: develop, releases/v0.21)
-          buildcache: true  # Configure oci://ghcr.io/spack/github-actions-buildcache
-          color: true       # Force color output (SPACK_COLOR=always)
-          path: spack       # Where to clone Spack
-      - run: spack install geant4@11.2.1
+      # - name: Set up Spack
+      #   uses: spack/setup-spack@v2
+      #   with:
+      #     ref: develop      # Spack version (examples: develop, releases/v0.21)
+      #     buildcache: true  # Configure oci://ghcr.io/spack/github-actions-buildcache
+      #     color: true       # Force color output (SPACK_COLOR=always)
+      #     path: spack       # Where to clone Spack
+      # - run: spack install geant4@11.2.1
 
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/index.html
-      # - run: curl -O https://geant4-data.web.cern.ch/releases/lib4.11.2.p02/Linux-g++11.4.1-Alma9.tar.gz
-      # - run: spack install geant4@11.2.1
+      - run: curl -O https://geant4-data.web.cern.ch/releases/lib4.11.2.p02/Linux-g++11.4.1-Alma9.tar.gz
+      - run: tar xzf Linux-g++11.4.1-Alma9.tar.gz
+
+      # Imstall cmake
+      - run: yum install -y cmake-3.26.5-2.el9.x86_64
+
+      # Install edepsim
+      ## https://github.com/ClarkMcGrew/edep-sim
+      - run: mkdir edep-sim && cd edep-sim
+      - run: git clone --depth 1 --branch 3.2.0 https://github.com/ClarkMcGrew/edep-sim.git source
+      - run: mkdir build  && cd build
+      - run: cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_MODULE_PREFIX=../../Geant4-11.2.2-Linux/lib64/cmake/Geant4 ../source
+      - run: make -j64 install
+      
+      
+      
