@@ -39,7 +39,30 @@ jobs:
 
       # Install ROOT v6.32.02 with the package provider yum
       - run: yum install -y epel-release
-      - run: yum install -y root-6.32.02-1.el9.x86_64
+      - run: |
+          yum install -y root-6.32.02-1.el9.x86_64 root-fumili-6.32.02-1.el9.x86_64 root-gdml-6.32.02-1.el9.x86_64 root-genetic-6.32.02-1.el9.x86_64 \
+          root-genvector-6.32.02-1.el9.x86_64 root-geom-6.32.02-1.el9.x86_64 root-geom-builder-6.32.02-1.el9.x86_64 root-geom-painter-6.32.02-1.el9.x86_64 \
+          root-geom-webviewer-6.32.02-1.el9.x86_64 root-graf-fitsio-6.32.02-1.el9.x86_64 root-graf-gpadv7-6.32.02-1.el9.x86_64 root-graf-gviz-6.32.02-1.el9.x86_64 \
+          root-graf-primitives-6.32.02-1.el9.x86_64 root-graf3d-csg-6.32.02-1.el9.x86_64 root-graf3d-eve-6.32.02-1.el9.x86_64 root-graf3d-eve7-6.32.02-1.el9.x86_64 \
+          root-graf3d-gl-6.32.02-1.el9.x86_64 root-graf3d-gviz3d-6.32.02-1.el9.x86_64 root-graf3d-x3d-6.32.02-1.el9.x86_64 root-gui-browsable-6.32.02-1.el9.x86_64 \
+          root-gui-browserv7-6.32.02-1.el9.x86_64 root-gui-builder-6.32.02-1.el9.x86_64 root-gui-canvaspainter-6.32.02-1.el9.x86_64 root-gui-fitpanel-6.32.02-1.el9.x86_64 \
+          root-gui-fitpanelv7-6.32.02-1.el9.x86_64 root-gui-html-6.32.02-1.el9.x86_64 root-gui-qt5webdisplay-6.32.02-1.el9.x86_64 root-gui-qt6webdisplay-6.32.02-1.el9.x86_64 \
+          root-gui-recorder-6.32.02-1.el9.x86_64 root-gui-webdisplay-6.32.02-1.el9.x86_64 root-gui-webgui6-6.32.02-1.el9.x86_64 root-hbook-6.32.02-1.el9.x86_64 \
+          root-hist-draw-6.32.02-1.el9.x86_64 root-hist-factory-6.32.02-1.el9.x86_64 root-histv7-6.32.02-1.el9.x86_64 root-html-6.32.02-1.el9.x86_64 \
+          root-io-dcache-6.32.02-1.el9.x86_64 root-io-sql-6.32.02-1.el9.x86_64 root-io-xml-6.32.02-1.el9.x86_64 root-io-xmlparser-6.32.02-1.el9.x86_64 \
+          root-minuit2-6.32.02-1.el9.x86_64 root-mlp-6.32.02-1.el9.x86_64 root-montecarlo-eg-6.32.02-1.el9.x86_64 root-montecarlo-pythia8-6.32.02-1.el9.x86_64 \
+          root-net-auth-6.32.02-1.el9.x86_64 root-net-davix-6.32.02-1.el9.x86_64 root-net-http-6.32.02-1.el9.x86_64 root-net-httpsniff-6.32.02-1.el9.x86_64 \
+          root-net-rpdutils-6.32.02-1.el9.x86_64 root-netx-6.32.02-1.el9.x86_64 root-proof-6.32.02-1.el9.x86_64 root-proof-bench-6.32.02-1.el9.x86_64 \
+          root-proof-player-6.32.02-1.el9.x86_64 root-proof-sessionviewer-6.32.02-1.el9.x86_64 root-quadp-6.32.02-1.el9.x86_64 root-r-6.32.02-1.el9.x86_64 \
+          root-r-tools-6.32.02-1.el9.x86_64 root-roofit-6.32.02-1.el9.x86_64 root-roofit-batchcompute-6.32.02-1.el9.x86_64 root-roofit-core-6.32.02-1.el9.x86_64 \
+          root-roofit-dataframe-helpers-6.32.02-1.el9.x86_64 root-roofit-hs3-6.32.02-1.el9.x86_64 root-roofit-jsoninterface-6.32.02-1.el9.x86_64 \
+          root-roofit-more-6.32.02-1.el9.x86_64 root-roostats-6.32.02-1.el9.x86_64 root-smatrix-6.32.02-1.el9.x86_64 root-spectrum-6.32.02-1.el9.x86_64 \
+          root-spectrum-painter-6.32.02-1.el9.x86_64 root-splot-6.32.02-1.el9.x86_64 root-sql-mysql-6.32.02-1.el9.x86_64 root-sql-odbc-6.32.02-1.el9.x86_64 \
+          root-sql-pgsql-6.32.02-1.el9.x86_64 root-sql-sqlite-6.32.02-1.el9.x86_64 root-testsupport-6.32.02-1.el9.x86_64 root-tmva-6.32.02-1.el9.x86_64 \
+          root-tmva-gui-6.32.02-1.el9.x86_64 root-tmva-python-6.32.02-1.el9.x86_64 root-tmva-r-6.32.02-1.el9.x86_64 root-tmva-sofie-6.32.02-1.el9.x86_64 \
+          root-tmva-sofie-parser-6.32.02-1.el9.x86_64 root-tmva-utils-6.32.02-1.el9.x86_64 root-tpython-6.32.02-1.el9.x86_64 root-tree-ntuple-utils-6.32.02-1.el9.x86_64 \
+          root-tree-viewer-6.32.02-1.el9.x86_64 root-tree-webviewer-6.32.02-1.el9.x86_64 root-unfold-6.32.02-1.el9.x86_64 root-unuran-6.32.02-1.el9.x86_64 \
+          root-xroofit-6.32.02-1.el9.x86_64
 
       # Install GEANT4 v4.11.2 with spack
       ## https://spack-tutorial.readthedocs.io/en/latest/tutorial_basics.html
