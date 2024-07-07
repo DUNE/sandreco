@@ -38,31 +38,31 @@ jobs:
       # - run: yum -y install xrootd-client-devel xrootd-libs-devel gcc-gfortran pcre-devel mesa-libGL-devel mesa-libGLU-devel glew-devel ftgl-devel mysql-devel fftw-devel cfitsio-devel graphviz-devel libuuid-devel avahi-compat-libdns_sd-devel openldap-devel python-devel python3-numpy libxml2-devel gsl-devel readline-devel qt5-qtwebengine-devel R-devel R-Rcpp-devel R-RInside-devel
 
       # Install ROOT v6.32.02 with the package provider yum
-      - run: yum install -y epel-release
-      - run: |
-          yum install -y root-6.32.02-1.el9.x86_64 root-fumili-6.32.02-1.el9.x86_64 root-gdml-6.32.02-1.el9.x86_64 root-genetic-6.32.02-1.el9.x86_64 \
-          root-genvector-6.32.02-1.el9.x86_64 root-geom-6.32.02-1.el9.x86_64 root-geom-builder-6.32.02-1.el9.x86_64 root-geom-painter-6.32.02-1.el9.x86_64 \
-          root-geom-webviewer-6.32.02-1.el9.x86_64 root-graf-fitsio-6.32.02-1.el9.x86_64 root-graf-gpadv7-6.32.02-1.el9.x86_64 root-graf-gviz-6.32.02-1.el9.x86_64 \
-          root-graf-primitives-6.32.02-1.el9.x86_64 root-graf3d-csg-6.32.02-1.el9.x86_64 root-graf3d-eve-6.32.02-1.el9.x86_64 root-graf3d-eve7-6.32.02-1.el9.x86_64 \
-          root-graf3d-gl-6.32.02-1.el9.x86_64 root-graf3d-gviz3d-6.32.02-1.el9.x86_64 root-graf3d-x3d-6.32.02-1.el9.x86_64 root-gui-browsable-6.32.02-1.el9.x86_64 \
-          root-gui-browserv7-6.32.02-1.el9.x86_64 root-gui-builder-6.32.02-1.el9.x86_64 root-gui-canvaspainter-6.32.02-1.el9.x86_64 root-gui-fitpanel-6.32.02-1.el9.x86_64 \
-          root-gui-fitpanelv7-6.32.02-1.el9.x86_64 root-gui-html-6.32.02-1.el9.x86_64 root-gui-qt5webdisplay-6.32.02-1.el9.x86_64 root-gui-qt6webdisplay-6.32.02-1.el9.x86_64 \
-          root-gui-recorder-6.32.02-1.el9.x86_64 root-gui-webdisplay-6.32.02-1.el9.x86_64 root-gui-webgui6-6.32.02-1.el9.x86_64 root-hbook-6.32.02-1.el9.x86_64 \
-          root-hist-draw-6.32.02-1.el9.x86_64 root-hist-factory-6.32.02-1.el9.x86_64 root-histv7-6.32.02-1.el9.x86_64 root-html-6.32.02-1.el9.x86_64 \
-          root-io-dcache-6.32.02-1.el9.x86_64 root-io-sql-6.32.02-1.el9.x86_64 root-io-xml-6.32.02-1.el9.x86_64 root-io-xmlparser-6.32.02-1.el9.x86_64 \
-          root-minuit2-6.32.02-1.el9.x86_64 root-mlp-6.32.02-1.el9.x86_64 root-montecarlo-eg-6.32.02-1.el9.x86_64 root-montecarlo-pythia8-6.32.02-1.el9.x86_64 \
-          root-net-auth-6.32.02-1.el9.x86_64 root-net-davix-6.32.02-1.el9.x86_64 root-net-http-6.32.02-1.el9.x86_64 root-net-httpsniff-6.32.02-1.el9.x86_64 \
-          root-net-rpdutils-6.32.02-1.el9.x86_64 root-netx-6.32.02-1.el9.x86_64 root-proof-6.32.02-1.el9.x86_64 root-proof-bench-6.32.02-1.el9.x86_64 \
-          root-proof-player-6.32.02-1.el9.x86_64 root-proof-sessionviewer-6.32.02-1.el9.x86_64 root-quadp-6.32.02-1.el9.x86_64 python3-jupyroot-6.32.02-1.el9.noarch \
-          root-roofit-6.32.02-1.el9.x86_64 root-roofit-batchcompute-6.32.02-1.el9.x86_64 root-roofit-core-6.32.02-1.el9.x86_64 \
-          root-roofit-dataframe-helpers-6.32.02-1.el9.x86_64 root-roofit-hs3-6.32.02-1.el9.x86_64 root-roofit-jsoninterface-6.32.02-1.el9.x86_64 \
-          root-roofit-more-6.32.02-1.el9.x86_64 root-roostats-6.32.02-1.el9.x86_64 root-smatrix-6.32.02-1.el9.x86_64 root-spectrum-6.32.02-1.el9.x86_64 \
-          root-spectrum-painter-6.32.02-1.el9.x86_64 root-splot-6.32.02-1.el9.x86_64 root-sql-mysql-6.32.02-1.el9.x86_64 root-sql-odbc-6.32.02-1.el9.x86_64 \
-          root-sql-pgsql-6.32.02-1.el9.x86_64 root-sql-sqlite-6.32.02-1.el9.x86_64 root-testsupport-6.32.02-1.el9.x86_64 root-tmva-6.32.02-1.el9.x86_64 \
-          root-tmva-gui-6.32.02-1.el9.x86_64 root-tmva-python-6.32.02-1.el9.x86_64 root-tmva-sofie-6.32.02-1.el9.x86_64 root-fftw-6.32.02-1.el9.x86_64 \
-          root-tmva-sofie-parser-6.32.02-1.el9.x86_64 root-tmva-utils-6.32.02-1.el9.x86_64 root-tpython-6.32.02-1.el9.x86_64 root-tree-ntuple-utils-6.32.02-1.el9.x86_64 \
-          root-tree-viewer-6.32.02-1.el9.x86_64 root-tree-webviewer-6.32.02-1.el9.x86_64 root-unfold-6.32.02-1.el9.x86_64 root-unuran-6.32.02-1.el9.x86_64 \
-          root-xroofit-6.32.02-1.el9.x86_64
+      # - run: yum install -y epel-release
+      # - run: |
+      #     yum install -y root-6.32.02-1.el9.x86_64 root-fumili-6.32.02-1.el9.x86_64 root-gdml-6.32.02-1.el9.x86_64 root-genetic-6.32.02-1.el9.x86_64 \
+      #     root-genvector-6.32.02-1.el9.x86_64 root-geom-6.32.02-1.el9.x86_64 root-geom-builder-6.32.02-1.el9.x86_64 root-geom-painter-6.32.02-1.el9.x86_64 \
+      #     root-geom-webviewer-6.32.02-1.el9.x86_64 root-graf-fitsio-6.32.02-1.el9.x86_64 root-graf-gpadv7-6.32.02-1.el9.x86_64 root-graf-gviz-6.32.02-1.el9.x86_64 \
+      #     root-graf-primitives-6.32.02-1.el9.x86_64 root-graf3d-csg-6.32.02-1.el9.x86_64 root-graf3d-eve-6.32.02-1.el9.x86_64 root-graf3d-eve7-6.32.02-1.el9.x86_64 \
+      #     root-graf3d-gl-6.32.02-1.el9.x86_64 root-graf3d-gviz3d-6.32.02-1.el9.x86_64 root-graf3d-x3d-6.32.02-1.el9.x86_64 root-gui-browsable-6.32.02-1.el9.x86_64 \
+      #     root-gui-browserv7-6.32.02-1.el9.x86_64 root-gui-builder-6.32.02-1.el9.x86_64 root-gui-canvaspainter-6.32.02-1.el9.x86_64 root-gui-fitpanel-6.32.02-1.el9.x86_64 \
+      #     root-gui-fitpanelv7-6.32.02-1.el9.x86_64 root-gui-html-6.32.02-1.el9.x86_64 root-gui-qt5webdisplay-6.32.02-1.el9.x86_64 root-gui-qt6webdisplay-6.32.02-1.el9.x86_64 \
+      #     root-gui-recorder-6.32.02-1.el9.x86_64 root-gui-webdisplay-6.32.02-1.el9.x86_64 root-gui-webgui6-6.32.02-1.el9.x86_64 root-hbook-6.32.02-1.el9.x86_64 \
+      #     root-hist-draw-6.32.02-1.el9.x86_64 root-hist-factory-6.32.02-1.el9.x86_64 root-histv7-6.32.02-1.el9.x86_64 root-html-6.32.02-1.el9.x86_64 \
+      #     root-io-dcache-6.32.02-1.el9.x86_64 root-io-sql-6.32.02-1.el9.x86_64 root-io-xml-6.32.02-1.el9.x86_64 root-io-xmlparser-6.32.02-1.el9.x86_64 \
+      #     root-minuit2-6.32.02-1.el9.x86_64 root-mlp-6.32.02-1.el9.x86_64 root-montecarlo-eg-6.32.02-1.el9.x86_64 root-montecarlo-pythia8-6.32.02-1.el9.x86_64 \
+      #     root-net-auth-6.32.02-1.el9.x86_64 root-net-davix-6.32.02-1.el9.x86_64 root-net-http-6.32.02-1.el9.x86_64 root-net-httpsniff-6.32.02-1.el9.x86_64 \
+      #     root-net-rpdutils-6.32.02-1.el9.x86_64 root-netx-6.32.02-1.el9.x86_64 root-proof-6.32.02-1.el9.x86_64 root-proof-bench-6.32.02-1.el9.x86_64 \
+      #     root-proof-player-6.32.02-1.el9.x86_64 root-proof-sessionviewer-6.32.02-1.el9.x86_64 root-quadp-6.32.02-1.el9.x86_64 python3-jupyroot-6.32.02-1.el9.noarch \
+      #     root-roofit-6.32.02-1.el9.x86_64 root-roofit-batchcompute-6.32.02-1.el9.x86_64 root-roofit-core-6.32.02-1.el9.x86_64 \
+      #     root-roofit-dataframe-helpers-6.32.02-1.el9.x86_64 root-roofit-hs3-6.32.02-1.el9.x86_64 root-roofit-jsoninterface-6.32.02-1.el9.x86_64 \
+      #     root-roofit-more-6.32.02-1.el9.x86_64 root-roostats-6.32.02-1.el9.x86_64 root-smatrix-6.32.02-1.el9.x86_64 root-spectrum-6.32.02-1.el9.x86_64 \
+      #     root-spectrum-painter-6.32.02-1.el9.x86_64 root-splot-6.32.02-1.el9.x86_64 root-sql-mysql-6.32.02-1.el9.x86_64 root-sql-odbc-6.32.02-1.el9.x86_64 \
+      #     root-sql-pgsql-6.32.02-1.el9.x86_64 root-sql-sqlite-6.32.02-1.el9.x86_64 root-testsupport-6.32.02-1.el9.x86_64 root-tmva-6.32.02-1.el9.x86_64 \
+      #     root-tmva-gui-6.32.02-1.el9.x86_64 root-tmva-python-6.32.02-1.el9.x86_64 root-tmva-sofie-6.32.02-1.el9.x86_64 root-fftw-6.32.02-1.el9.x86_64 \
+      #     root-tmva-sofie-parser-6.32.02-1.el9.x86_64 root-tmva-utils-6.32.02-1.el9.x86_64 root-tpython-6.32.02-1.el9.x86_64 root-tree-ntuple-utils-6.32.02-1.el9.x86_64 \
+      #     root-tree-viewer-6.32.02-1.el9.x86_64 root-tree-webviewer-6.32.02-1.el9.x86_64 root-unfold-6.32.02-1.el9.x86_64 root-unuran-6.32.02-1.el9.x86_64 \
+      #     root-xroofit-6.32.02-1.el9.x86_64
 
       # Install GEANT4 v4.11.2 with spack
       ## https://spack-tutorial.readthedocs.io/en/latest/tutorial_basics.html
@@ -86,37 +86,66 @@ jobs:
       #     path: spack       # Where to clone Spack
       # - run: spack install geant4@11.2.1
 
-      ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/index.html
+      #############################################################################################################################
+
+
+      # # Install git
+      # - run: yum install -y git
+
+      # # Install cmake
+      # - run: yum install -y cmake-3.26.5-2.el9.x86_64
+
+      # # Install Xerces-C++
+      # ## https://xerces.apache.org/xerces-c/download.cgi
+      # - run: yum install -y xerces-c-3.2.5-1.el9.x86_64 xerces-c-devel-3.2.5-1.el9.x86_64
+
+      # Install ROOT dependencies
+      - run: |
+          yum install -y git make cmake gcc-c++ gcc binutils libX11-devel libXpm-devel libXft-devel libXext-devel python openssl-devel \
+          xrootd-client-devel xrootd-libs-devel gcc-gfortran pcre-devel mesa-libGL-devel mesa-libGLU-devel glew-devel ftgl-devel \
+          fftw-devel cfitsio-devel libuuid-devel openldap-devel python-devel python3-numpy libxml2-devel gsl-devel readline-devel \
+          qt5-qtwebengine-devel
+      
+      # Install ROOT v6.32.02
+      - run: |
+          mkdir root
+          cd root
+          git clone --depth 1 --branch v6-32-02 https://github.com/root-project/root.git source
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. ../source
+          make -j64 install
+          
+
+      # Install GEANT4 dependencies
+      ## https://xerces.apache.org/xerces-c/download.cgi
+      - run: yum install -y xerces-c-3.2.5-1.el9.x86_64 xerces-c-devel-3.2.5-1.el9.x86_64
+      
+      # Install GEANT4
+      ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/installguide.html
       - run: |
           mkdir geant4
           cd geant4
-          curl -O https://geant4-data.web.cern.ch/releases/lib4.11.2.p02/Linux-g++11.4.1-Alma9.tar.gz
-          tar xzf Linux-g++11.4.1-Alma9.tar.gz
-
-      # Install git
-      - run: yum install -y git
-
-      # Imstall cmake
-      - run: yum install -y cmake-3.26.5-2.el9.x86_64
+          git clone --depth 1 --branch v11.2.2 https://github.com/Geant4/geant4.git source
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DGEANT4_USE_GDML=ON ../source
+          
 
       # Install edepsim
       ## https://github.com/ClarkMcGrew/edep-sim
       - run: |
-          mkdir edep-sim
-          cd edep-sim
+          mkdir edepsim
+          cd edepsim
           git clone --depth 1 --branch 3.2.0 https://github.com/ClarkMcGrew/edep-sim.git source
-      - run: |
-          mkdir edep-sim/build
-          cd edep-sim/build
+          mkdir build
+          cd build
           ls -lrt .
           ls -lrt ..
           ls -lrt ../..
           ls -lrt ../../geant4
-          ls -lrt ../../geant4/Geant4-11.2.2-Linux
-          ls -lrt ../../geant4/Geant4-11.2.2-Linux/lib64
-          ls -lrt ../../geant4/Geant4-11.2.2-Linux/lib64/cmake
-          ls -lrt ../../geant4/Geant4-11.2.2-Linux/lib64/cmake/Geant4
-          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH=../../geant4/Geant4-11.2.2-Linux ../source
+          ls -lrt ../../root
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root" ../source
           make -j64 install
 
       
