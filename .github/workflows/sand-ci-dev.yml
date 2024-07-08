@@ -157,18 +157,18 @@ jobs:
           # An explicit key for restoring and saving the cache
           key: geant4-${{env.geant4-version}}
 
-      # #############################################################################################################################
-      # # Cache for EDEPSIM
-      # #############################################################################################################################      
-      # - name: EDEPSIM cache
-      #   id: cache-edepsim
-      #   uses: actions/cache@v4.0.2
-      #   with:
-      #     # A list of files, directories, and wildcard patterns to cache and restore
-      #     path: |
-      #       ~/edepsim
-      #     # An explicit key for restoring and saving the cache
-      #     key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}-edepsim-${{env.edepsim-version}}
+      #############################################################################################################################
+      # Cache for EDEPSIM
+      #############################################################################################################################      
+      - name: EDEPSIM cache
+        id: cache-edepsim
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/edepsim
+          # An explicit key for restoring and saving the cache
+          key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}-edepsim-${{env.edepsim-version}}
 
       #############################################################################################################################
       # Install CLHEP
@@ -213,25 +213,25 @@ jobs:
           cmake -DCMAKE_INSTALL_PREFIX=.. -DGEANT4_USE_GDML=ON ../source
           make -j8 install
           
-      # #############################################################################################################################
-      # # Install EDEPSIM
-      # #############################################################################################################################
-      # ## https://github.com/ClarkMcGrew/edep-sim
-      # - name: Install edepsim ${{env.edepsim-version}}
-      #   if: steps.cache-edepsim.outputs.cache-hit != 'true'
-      #   run: |
-      #     mkdir -p ~/edepsim
-      #     cd ~/edepsim
-      #     git clone --depth 1 --branch ${{env.edepsim-version}} https://github.com/ClarkMcGrew/edep-sim.git source
-      #     mkdir build
-      #     cd build
-      #     ls -lrt .
-      #     ls -lrt ..
-      #     ls -lrt ../..
-      #     ls -lrt ../../geant4
-      #     ls -lrt ../../root
-      #     cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root" ../source
-      #     make -j8 install
+      #############################################################################################################################
+      # Install EDEPSIM
+      #############################################################################################################################
+      ## https://github.com/ClarkMcGrew/edep-sim
+      - name: Install edepsim ${{env.edepsim-version}}
+        if: steps.cache-edepsim.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/edepsim
+          cd ~/edepsim
+          git clone --depth 1 --branch ${{env.edepsim-version}} https://github.com/ClarkMcGrew/edep-sim.git source
+          mkdir build
+          cd build
+          ls -lrt .
+          ls -lrt ..
+          ls -lrt ../..
+          ls -lrt ../../geant4
+          ls -lrt ../../root
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root" ../source
+          make -j8 install
 
       # #############################################################################################################################
       # # Get sandreco
