@@ -1,4 +1,4 @@
-name: SAND CI [dev]
+name: SAND CI
 run-name: SAND CI
 on: [push]
 
@@ -9,7 +9,7 @@ env:
   clhep-version: CLHEP_2_4_7_1
 
 jobs:
-  Explore-GitHub-Actions:
+  Build-sandreco:
     runs-on: ubuntu-latest
     container: almalinux/9-base
     steps:
