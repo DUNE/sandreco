@@ -250,5 +250,8 @@ jobs:
           cd sandreco
           mkdir build
           cd build
+          ls -lrt .
+          ls -lrt ..
+          ls -lrt ../..
           cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root;../../edepsim" ../source
           make -j8 install
