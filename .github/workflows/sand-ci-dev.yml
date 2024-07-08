@@ -1,6 +1,12 @@
 name: SAND CI [dev]
 run-name: SAND CI
 on: [push]
+
+env:
+  root-version: v6.32.02
+  geant4-version: v11.2.2
+  edepsim-version: 3.2.0
+
 jobs:
   Explore-GitHub-Actions:
     runs-on: ubuntu-latest
@@ -89,47 +95,79 @@ jobs:
       #############################################################################################################################
 
       # Install epel repo
-      - run: yum install -y epel-release
+      - name: Install epel repo
+        run: yum install -y epel-release
 
       # Install ROOT dependencies
-      - run: |
+      - name: Install ROOT dependencies
+        run: |
           yum install -y git make cmake gcc-c++ gcc binutils libX11-devel libXpm-devel libXft-devel libXext-devel python openssl-devel \
           xrootd-client-devel xrootd-libs-devel gcc-gfortran pcre-devel mesa-libGL-devel mesa-libGLU-devel glew-devel ftgl-devel \
           fftw-devel cfitsio-devel libuuid-devel openldap-devel python-devel python3-numpy libxml2-devel gsl-devel readline-devel \
           qt5-qtwebengine-devel
+          
+      # Install GEANT4 dependencies
+      ## https://xerces.apache.org/xerces-c/download.cgi
+      - name: Install GEANT4 dependencies
+        run: yum install -y xerces-c xerces-c-devel
+
+      - name: SAND dependencies cache
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/root
+            ~/geant4
+            ~/edepsim
+          # An explicit key for restoring and saving the cache
+          key: root-${{env.root-version}}-geant4-${{env.geant4-version}}-edepsim-${{env.edepsim-version}}
+          # # An ordered list of keys to use for restoring stale cache if no cache hit occurred for key. Note `cache-hit` returns false in this case.
+          # restore-keys: # optional
+          # # The chunk size used to split up large files during upload, in bytes
+          # upload-chunk-size: # optional
+          # # An optional boolean when enabled, allows windows runners to save or restore caches that can be restored or saved respectively on other platforms
+          # enableCrossOsArchive: # optional, default is false
+          # # Fail the workflow if cache entry is not found
+          # fail-on-cache-miss: # optional, default is false
+          # # Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache
+          # lookup-only: # optional, default is false
+          # # Run the post step to save the cache even if another step before fails
+          # save-always: # optional, default is false
+                
       
-      # Install ROOT v6.32.02
-      - run: |
-          mkdir root
-          cd root
-          git clone --depth 1 --branch v6-32-02 https://github.com/root-project/root.git source
+      # Install ROOT
+      - name: Install ROOT ${{env.root-version}}
+        timeout-minutes: 60
+        run: |
+          mkdir -p ~/root
+          cd ~/root
+          git clone --depth 1 --branch ${{env.root-version}} https://github.com/root-project/root.git source
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. ../source
           make -j64 install
-          
-
-      # Install GEANT4 dependencies
-      ## https://xerces.apache.org/xerces-c/download.cgi
-      - run: yum install -y xerces-c xerces-c-devel
       
       # Install GEANT4
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/installguide.html
-      - run: |
-          mkdir geant4
-          cd geant4
-          git clone --depth 1 --branch v11.2.2 https://github.com/Geant4/geant4.git source
+      - name: Install GEANT4 ${{env.geant4-version}}
+        timeout-minutes: 60
+        run: |
+          mkdir -p ~/geant4
+          cd ~/geant4
+          git clone --depth 1 --branch ${{env.geant4-version}} https://github.com/Geant4/geant4.git source
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. -DGEANT4_USE_GDML=ON ../source
+          make -j64 install
           
 
       # Install edepsim
       ## https://github.com/ClarkMcGrew/edep-sim
-      - run: |
-          mkdir edepsim
-          cd edepsim
-          git clone --depth 1 --branch 3.2.0 https://github.com/ClarkMcGrew/edep-sim.git source
+      - name: Install edepsim ${{env.edepsim-version}}
+        run: |
+          mkdir -p ~/edepsim
+          cd ~/edepsim
+          git clone --depth 1 --branch ${{env.edepsim-version}} https://github.com/ClarkMcGrew/edep-sim.git source
           mkdir build
           cd build
           ls -lrt .
