@@ -3,7 +3,7 @@ run-name: SAND CI
 on: [push]
 
 env:
-  root-version: v6.32.02
+  root-version: v6-32-02
   geant4-version: v11.2.2
   edepsim-version: 3.2.0
 
