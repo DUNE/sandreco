@@ -111,33 +111,39 @@ jobs:
       - name: Install GEANT4 dependencies
         run: yum install -y xerces-c xerces-c-devel
 
-      - name: SAND dependencies cache
+      - name: ROOT dependency cache
+        id: cache-root
         uses: actions/cache@v4.0.2
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
             ~/root
+          # An explicit key for restoring and saving the cache
+          key: root-${{env.root-version}}
+      
+      - name: GEANT4 dependency cache
+        id: cache-geant4
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
             ~/geant4
+          # An explicit key for restoring and saving the cache
+          key: geant4-${{env.geant4-version}}
+
+      - name: EDEPSIM dependency cache
+        id: cache-edepsim
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
             ~/edepsim
           # An explicit key for restoring and saving the cache
-          key: root-${{env.root-version}}-geant4-${{env.geant4-version}}-edepsim-${{env.edepsim-version}}
-          # # An ordered list of keys to use for restoring stale cache if no cache hit occurred for key. Note `cache-hit` returns false in this case.
-          # restore-keys: # optional
-          # # The chunk size used to split up large files during upload, in bytes
-          # upload-chunk-size: # optional
-          # # An optional boolean when enabled, allows windows runners to save or restore caches that can be restored or saved respectively on other platforms
-          # enableCrossOsArchive: # optional, default is false
-          # # Fail the workflow if cache entry is not found
-          # fail-on-cache-miss: # optional, default is false
-          # # Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache
-          # lookup-only: # optional, default is false
-          # # Run the post step to save the cache even if another step before fails
-          # save-always: # optional, default is false
-                
+          key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}-edepsim-${{env.edepsim-version}}
       
       # Install ROOT
       - name: Install ROOT ${{env.root-version}}
-        timeout-minutes: 60
+        if: steps.cache-root.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/root
           cd ~/root
@@ -145,12 +151,12 @@ jobs:
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. ../source
-          make -j16 install
+          make -j8 install
       
       # Install GEANT4
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/installguide.html
       - name: Install GEANT4 ${{env.geant4-version}}
-        timeout-minutes: 60
+        if: steps.cache-geant4.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/geant4
           cd ~/geant4
@@ -158,12 +164,13 @@ jobs:
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. -DGEANT4_USE_GDML=ON ../source
-          make -j16 install
+          make -j8 install
           
 
       # Install edepsim
       ## https://github.com/ClarkMcGrew/edep-sim
       - name: Install edepsim ${{env.edepsim-version}}
+        if: steps.cache-edepsim.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/edepsim
           cd ~/edepsim
@@ -176,8 +183,21 @@ jobs:
           ls -lrt ../../geant4
           ls -lrt ../../root
           cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root" ../source
-          make -j16 install
+          make -j8 install
 
       
-      
-      
+      # Get sandreco
+      - name: Checkout sandreco
+        uses: actions/checkout@v4.1.7
+        with:
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: ~/sandreco/source
+
+      # Install sandreco
+      - name: Install sandreco
+        run: |
+          cd ~/sandreco
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root;../../edepsim" ../source
+          make -j8 install
