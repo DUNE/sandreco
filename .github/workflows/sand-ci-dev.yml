@@ -145,7 +145,7 @@ jobs:
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. ../source
-          make -j64 install
+          make -j16 install
       
       # Install GEANT4
       ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/installguide.html
@@ -158,7 +158,7 @@ jobs:
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. -DGEANT4_USE_GDML=ON ../source
-          make -j64 install
+          make -j16 install
           
 
       # Install edepsim
@@ -176,7 +176,7 @@ jobs:
           ls -lrt ../../geant4
           ls -lrt ../../root
           cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root" ../source
-          make -j64 install
+          make -j16 install
 
       
       
