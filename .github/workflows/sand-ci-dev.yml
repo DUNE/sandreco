@@ -1,6 +1,9 @@
 name: SAND CI
 run-name: SAND CI
-on: [push]
+on:
+  push:
+    branches:
+      - develop
 
 env:
   root-version: v6-32-02
