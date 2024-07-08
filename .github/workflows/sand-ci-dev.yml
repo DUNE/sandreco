@@ -233,22 +233,22 @@ jobs:
           cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root" ../source
           make -j8 install
 
-      # #############################################################################################################################
-      # # Get sandreco
-      # #############################################################################################################################
-      # - name: Checkout sandreco
-      #   uses: actions/checkout@v4.1.7
-      #   with:
-      #     # Relative path under $GITHUB_WORKSPACE to place the repository
-      #     path: ~/sandreco/source
+      #############################################################################################################################
+      # Get sandreco
+      #############################################################################################################################
+      - name: Checkout sandreco
+        uses: actions/checkout@v4.1.7
+        with:
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: ~/sandreco/source
 
-      # #############################################################################################################################
-      # # Install sandreco
-      # #############################################################################################################################
-      # - name: Install sandreco
-      #   run: |
-      #     cd ~/sandreco
-      #     mkdir build
-      #     cd build
-      #     cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root;../../edepsim" ../source
-      #     make -j8 install
+      #############################################################################################################################
+      # Install sandreco
+      #############################################################################################################################
+      - name: Install sandreco
+        run: |
+          cd ~/sandreco
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root;../../edepsim" ../source
+          make -j8 install
