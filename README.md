@@ -140,3 +140,5 @@ The description of the data format can be found [here](../../wiki/Data-Model)
 # Support
 
 For any communication, please refer to [DUNE-ND-SAND-SOFTWARE@fnal.gov](mailto:DUNE-ND-SAND-SOFTWARE@fnal.gov)
+
+[![SAND CI](https://github.com/DUNE/sandreco/actions/workflows/sand-ci-dev.yml/badge.svg?branch=develop&event=push)](https://github.com/DUNE/sandreco/actions/workflows/sand-ci-dev.yml)
