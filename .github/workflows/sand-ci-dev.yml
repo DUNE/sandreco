@@ -6,6 +6,7 @@ env:
   root-version: v6-32-02
   geant4-version: v11.2.2
   edepsim-version: 3.2.0
+  clhep-version: CLHEP_2_4_7_1
 
 jobs:
   Explore-GitHub-Actions:
@@ -94,110 +95,160 @@ jobs:
 
       #############################################################################################################################
 
+      #############################################################################################################################
       # Install epel repo
+      #############################################################################################################################      
       - name: Install epel repo
         run: yum install -y epel-release
 
+      #############################################################################################################################
       # Install ROOT dependencies
+      #############################################################################################################################      
       - name: Install ROOT dependencies
         run: |
           yum install -y git make cmake gcc-c++ gcc binutils libX11-devel libXpm-devel libXft-devel libXext-devel python openssl-devel \
           xrootd-client-devel xrootd-libs-devel gcc-gfortran pcre-devel mesa-libGL-devel mesa-libGLU-devel glew-devel ftgl-devel \
           fftw-devel cfitsio-devel libuuid-devel openldap-devel python-devel python3-numpy libxml2-devel gsl-devel readline-devel \
           qt5-qtwebengine-devel
-          
+
+      #############################################################################################################################
       # Install GEANT4 dependencies
+      #############################################################################################################################      
       ## https://xerces.apache.org/xerces-c/download.cgi
       - name: Install GEANT4 dependencies
         run: yum install -y xerces-c xerces-c-devel
 
-      - name: ROOT dependency cache
-        id: cache-root
+      #############################################################################################################################
+      # Cache for CLHEP
+      #############################################################################################################################
+      - name: CLHEP cache
+        id: cache-clhep
         uses: actions/cache@v4.0.2
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
-            ~/root
+            ~/clhep
           # An explicit key for restoring and saving the cache
-          key: root-${{env.root-version}}
-      
-      - name: GEANT4 dependency cache
-        id: cache-geant4
-        uses: actions/cache@v4.0.2
-        with:
-          # A list of files, directories, and wildcard patterns to cache and restore
-          path: |
-            ~/geant4
-          # An explicit key for restoring and saving the cache
-          key: geant4-${{env.geant4-version}}
+          key: clhep-${{env.clhep-version}}
 
-      - name: EDEPSIM dependency cache
-        id: cache-edepsim
-        uses: actions/cache@v4.0.2
-        with:
-          # A list of files, directories, and wildcard patterns to cache and restore
-          path: |
-            ~/edepsim
-          # An explicit key for restoring and saving the cache
-          key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}-edepsim-${{env.edepsim-version}}
-      
-      # Install ROOT
-      - name: Install ROOT ${{env.root-version}}
-        if: steps.cache-root.outputs.cache-hit != 'true'
+      # #############################################################################################################################
+      # # Cache for ROOT
+      # #############################################################################################################################
+      # - name: ROOT cache
+      #   id: cache-root
+      #   uses: actions/cache@v4.0.2
+      #   with:
+      #     # A list of files, directories, and wildcard patterns to cache and restore
+      #     path: |
+      #       ~/root
+      #     # An explicit key for restoring and saving the cache
+      #     key: root-${{env.root-version}}
+
+      # #############################################################################################################################
+      # # Cache for GEANT4
+      # #############################################################################################################################      
+      # - name: GEANT4 cache
+      #   id: cache-geant4
+      #   uses: actions/cache@v4.0.2
+      #   with:
+      #     # A list of files, directories, and wildcard patterns to cache and restore
+      #     path: |
+      #       ~/geant4
+      #     # An explicit key for restoring and saving the cache
+      #     key: geant4-${{env.geant4-version}}
+
+      # #############################################################################################################################
+      # # Cache for EDEPSIM
+      # #############################################################################################################################      
+      # - name: EDEPSIM cache
+      #   id: cache-edepsim
+      #   uses: actions/cache@v4.0.2
+      #   with:
+      #     # A list of files, directories, and wildcard patterns to cache and restore
+      #     path: |
+      #       ~/edepsim
+      #     # An explicit key for restoring and saving the cache
+      #     key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}-edepsim-${{env.edepsim-version}}
+
+      #############################################################################################################################
+      # Install CLHEP
+      #############################################################################################################################
+      - name: Install CLHEP ${{env.clhep-version}}
+        if: steps.cache-clhep.outputs.cache-hit != 'true'
         run: |
-          mkdir -p ~/root
-          cd ~/root
-          git clone --depth 1 --branch ${{env.root-version}} https://github.com/root-project/root.git source
+          mkdir -p ~/clhep
+          cd ~/clhep
+          git clone --depth 1 --branch ${{env.clhep-version}} https://gitlab.cern.ch/CLHEP/CLHEP.git source
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. ../source
           make -j8 install
-      
-      # Install GEANT4
-      ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/installguide.html
-      - name: Install GEANT4 ${{env.geant4-version}}
-        if: steps.cache-geant4.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/geant4
-          cd ~/geant4
-          git clone --depth 1 --branch ${{env.geant4-version}} https://github.com/Geant4/geant4.git source
-          mkdir build
-          cd build
-          cmake -DCMAKE_INSTALL_PREFIX=.. -DGEANT4_USE_GDML=ON ../source
-          make -j8 install
+
+      # #############################################################################################################################
+      # # Install ROOT
+      # #############################################################################################################################
+      # - name: Install ROOT ${{env.root-version}}
+      #   if: steps.cache-root.outputs.cache-hit != 'true'
+      #   run: |
+      #     mkdir -p ~/root
+      #     cd ~/root
+      #     git clone --depth 1 --branch ${{env.root-version}} https://github.com/root-project/root.git source
+      #     mkdir build
+      #     cd build
+      #     cmake -DCMAKE_INSTALL_PREFIX=.. ../source
+      #     make -j8 install
+
+      # #############################################################################################################################
+      # # Install GEANT4
+      # #############################################################################################################################
+      # ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/installguide.html
+      # - name: Install GEANT4 ${{env.geant4-version}}
+      #   if: steps.cache-geant4.outputs.cache-hit != 'true'
+      #   run: |
+      #     mkdir -p ~/geant4
+      #     cd ~/geant4
+      #     git clone --depth 1 --branch ${{env.geant4-version}} https://github.com/Geant4/geant4.git source
+      #     mkdir build
+      #     cd build
+      #     cmake -DCMAKE_INSTALL_PREFIX=.. -DGEANT4_USE_GDML=ON ../source
+      #     make -j8 install
           
+      # #############################################################################################################################
+      # # Install EDEPSIM
+      # #############################################################################################################################
+      # ## https://github.com/ClarkMcGrew/edep-sim
+      # - name: Install edepsim ${{env.edepsim-version}}
+      #   if: steps.cache-edepsim.outputs.cache-hit != 'true'
+      #   run: |
+      #     mkdir -p ~/edepsim
+      #     cd ~/edepsim
+      #     git clone --depth 1 --branch ${{env.edepsim-version}} https://github.com/ClarkMcGrew/edep-sim.git source
+      #     mkdir build
+      #     cd build
+      #     ls -lrt .
+      #     ls -lrt ..
+      #     ls -lrt ../..
+      #     ls -lrt ../../geant4
+      #     ls -lrt ../../root
+      #     cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root" ../source
+      #     make -j8 install
 
-      # Install edepsim
-      ## https://github.com/ClarkMcGrew/edep-sim
-      - name: Install edepsim ${{env.edepsim-version}}
-        if: steps.cache-edepsim.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/edepsim
-          cd ~/edepsim
-          git clone --depth 1 --branch ${{env.edepsim-version}} https://github.com/ClarkMcGrew/edep-sim.git source
-          mkdir build
-          cd build
-          ls -lrt .
-          ls -lrt ..
-          ls -lrt ../..
-          ls -lrt ../../geant4
-          ls -lrt ../../root
-          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root" ../source
-          make -j8 install
+      # #############################################################################################################################
+      # # Get sandreco
+      # #############################################################################################################################
+      # - name: Checkout sandreco
+      #   uses: actions/checkout@v4.1.7
+      #   with:
+      #     # Relative path under $GITHUB_WORKSPACE to place the repository
+      #     path: ~/sandreco/source
 
-      
-      # Get sandreco
-      - name: Checkout sandreco
-        uses: actions/checkout@v4.1.7
-        with:
-          # Relative path under $GITHUB_WORKSPACE to place the repository
-          path: ~/sandreco/source
-
-      # Install sandreco
-      - name: Install sandreco
-        run: |
-          cd ~/sandreco
-          mkdir build
-          cd build
-          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root;../../edepsim" ../source
-          make -j8 install
+      # #############################################################################################################################
+      # # Install sandreco
+      # #############################################################################################################################
+      # - name: Install sandreco
+      #   run: |
+      #     cd ~/sandreco
+      #     mkdir build
+      #     cd build
+      #     cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="../../geant4;../../root;../../edepsim" ../source
+      #     make -j8 install
