@@ -116,7 +116,7 @@ jobs:
       #############################################################################################################################      
       ## https://xerces.apache.org/xerces-c/download.cgi
       - name: Install GEANT4 dependencies
-        run: yum install -y xerces-c xerces-c-devel
+        run: yum install -y xerces-c xerces-c-devel expat expat-devel zlib zlib-devel
 
       #############################################################################################################################
       # Cache for CLHEP
@@ -131,18 +131,18 @@ jobs:
           # An explicit key for restoring and saving the cache
           key: clhep-${{env.clhep-version}}
 
-      # #############################################################################################################################
-      # # Cache for ROOT
-      # #############################################################################################################################
-      # - name: ROOT cache
-      #   id: cache-root
-      #   uses: actions/cache@v4.0.2
-      #   with:
-      #     # A list of files, directories, and wildcard patterns to cache and restore
-      #     path: |
-      #       ~/root
-      #     # An explicit key for restoring and saving the cache
-      #     key: root-${{env.root-version}}
+      #############################################################################################################################
+      # Cache for ROOT
+      #############################################################################################################################
+      - name: ROOT cache
+        id: cache-root
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/root
+          # An explicit key for restoring and saving the cache
+          key: root-${{env.root-version}}
 
       # #############################################################################################################################
       # # Cache for GEANT4
@@ -184,19 +184,19 @@ jobs:
           cmake -DCMAKE_INSTALL_PREFIX=.. ../source
           make -j8 install
 
-      # #############################################################################################################################
-      # # Install ROOT
-      # #############################################################################################################################
-      # - name: Install ROOT ${{env.root-version}}
-      #   if: steps.cache-root.outputs.cache-hit != 'true'
-      #   run: |
-      #     mkdir -p ~/root
-      #     cd ~/root
-      #     git clone --depth 1 --branch ${{env.root-version}} https://github.com/root-project/root.git source
-      #     mkdir build
-      #     cd build
-      #     cmake -DCMAKE_INSTALL_PREFIX=.. ../source
-      #     make -j8 install
+      #############################################################################################################################
+      # Install ROOT
+      #############################################################################################################################
+      - name: Install ROOT ${{env.root-version}}
+        if: steps.cache-root.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/root
+          cd ~/root
+          git clone --depth 1 --branch ${{env.root-version}} https://github.com/root-project/root.git source
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. ../source
+          make -j8 install
 
       # #############################################################################################################################
       # # Install GEANT4
