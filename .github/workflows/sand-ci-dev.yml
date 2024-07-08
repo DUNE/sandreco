@@ -4,7 +4,7 @@ on: [push]
 
 env:
   root-version: v6-32-02
-  geant4-version: v11.2.2
+  geant4-version: v10.7.4
   edepsim-version: 3.2.0
   clhep-version: CLHEP_2_4_7_1
 
