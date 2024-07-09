@@ -89,7 +89,7 @@ jobs:
           path: |
             ~/edepsim
           # An explicit key for restoring and saving the cache
-          key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}-edepsim-${{env.edepsim-version}}
+          key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
 
       #############################################################################################################################
       # Install CLHEP
