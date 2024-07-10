@@ -43,3 +43,14 @@ jobs:
           git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
           cd source/
           python3 setup.py install
+          deactivate ~/gegede/ggdvenv
+  
+      #############################################################################################################################
+      # Install dunendggd
+      #############################################################################################################################      
+      - name: Install dunendggd
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          git clone --depth 1 https://github.com/DUNE/dunendggd.git
+          cd dunendggd/
+          pip install -e .
