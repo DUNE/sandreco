@@ -54,3 +54,12 @@ jobs:
           git clone --depth 1 https://github.com/DUNE/dunendggd.git
           cd dunendggd/
           pip install -e .
+  
+      #############################################################################################################################
+      # Build SAND geometry
+      #############################################################################################################################      
+      - name: Build SAND geometry
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          cd dunendggd
+          ./build_hall.sh sand_opt1_STT1
