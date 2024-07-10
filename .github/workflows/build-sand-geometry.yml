@@ -31,20 +31,14 @@ jobs:
           key: gegede-${{env.gegede-version}}
   
       #############################################################################################################################
-      # Create python3 venv
-      #############################################################################################################################      
-      - name: Create python3 venv
-        run: | 
-          python3 -m venv ~/gegede/ggdvenv
-          source ~/gegede/ggdvenv/bin/activate
-        
-      #############################################################################################################################
       # Install gegede
       #############################################################################################################################      
       - name: Install gegede ${{env.gegede-version}}
         if: steps.cache-gegede.outputs.cache-hit != 'true'
         run: | 
-          mkdir -p ~/gegede
+          python3 -m venv ~/gegede/ggdvenv
+          source ~/gegede/ggdvenv/bin/activate
+          python3 -m pip install setuptools
           cd ~/gegede
           git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
           cd source/
