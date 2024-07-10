@@ -1,0 +1,47 @@
+name: SAND GEOMETRY
+run-name: SAND GEOMETRY
+on:
+  push:
+    branches:
+      - develop
+
+env:
+  gegede-version: 0.8
+jobs:
+  Build-sand-geo:
+    runs-on: ubuntu-latest
+    container: almalinux/9-base
+    steps:
+    
+      #############################################################################################################################
+      # Cache for gegede
+      #############################################################################################################################
+      - name: gegede cache
+        id: cache-gegede
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/gegede
+          # An explicit key for restoring and saving the cache
+          key: gegede-${{env.gegede-version}}
+  
+      #############################################################################################################################
+      # Create python3 venv
+      #############################################################################################################################      
+      - name: Create python3 venv
+        run: | 
+          python3 -m venv ~/gegede/ggdvenv
+          source ~/gegede/ggdvenv/bin/activate
+        
+      #############################################################################################################################
+      # Install gegede
+      #############################################################################################################################      
+      - name: Install gegede ${{env.gegede-version}}
+        if: steps.cache-gegede.outputs.cache-hit != 'true'
+        run: | 
+          mkdir -p ~/gegede
+          cd ~/gegede
+          git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
+          cd source/
+          python3 setup.py install
