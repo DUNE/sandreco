@@ -17,9 +17,10 @@ int clustering(std::string const& input)
   t->SetBranchAddress("dg_cell", &cell);
 
   for (int i = 0; i < nEvents; i++) {
-
+      //std::cout <<"EVENT: " << i <<std::endl; 
     t->GetEntry(i);
     std::vector<cluster> clust = Clusterize(std::move(cell));
+
     double CluEn = 0;
 
     f_clust = clust;

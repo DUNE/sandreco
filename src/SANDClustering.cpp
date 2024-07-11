@@ -54,16 +54,16 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
   // SPLIT
 
   vec_clust = Split(vec_clust);
-
+  
   // MERGE
-  vec_clust = Merge(vec_clust);
 
+  vec_clust = Merge(vec_clust);
+  
   // Track Fit
   vec_clust = TrackFit(vec_clust);
-
+  
   // Recover Incomplete cells
   vec_clust = RecoverIncomplete(vec_clust, broken_cells);
-
   return vec_clust;
 }
 
@@ -145,7 +145,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
 
   std::vector<double> tAvec;
   std::vector<double> tBvec;
-  for (auto cl : clus) {
+  /*for (auto cl : clus) {
     int splitted = 0;
     double tA = 0, tB = 0, tA2 = 0, tB2 = 0;
     double EA, EB, EAtot = 0, EBtot = 0, EA2tot = 0, EB2tot = 0;
@@ -169,7 +169,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
     tB = tB / EBtot;
     tBvec.push_back(tB);
     tB2 = tB2 / EBtot;
-  }
+  }*/
 
   for (auto const& brok_cells : incomplete_cells) {
     int isbarrel = 0;
@@ -219,7 +219,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
         // std::endl;
         double minphi = 999, mintheta = 999;
         int isbarrelc = 0;
-        if (clus.at(j).cells[0].mod == 30) isbarrelc = 1;
+        if (clus.at(j).cells[0].mod == 30) isbarrelc = 1;  
         if (clus.at(j).cells[0].mod == 40) isbarrelc = 2;
         if (abs(cell_phi - clus_phi) < 3 && (isbarrelc == isbarrel) &&
             isbarrelc == 0) {
@@ -264,8 +264,8 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
     }
     if (found == 1 && isbarrel == 0) {
       double rec_en = 0;
-      double DpmA = clus.at(minentry).x / 10 + 215;
-      double DpmB = -clus.at(minentry).x / 10 + 215;
+      double DpmA = clus.at(minentry).x / 10 + 215; 
+      double DpmB = -clus.at(minentry).x / 10 + 215; 
       if (brok_cells.ps1.size() != 0 && brok_cells.ps2.size() != 0) {
         double Ea = brok_cells.ps1.at(0).adc;
         double Eb = brok_cells.ps2.at(0).adc;
@@ -273,12 +273,13 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
             sand_reco::ecal::reco::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
         clus.at(minentry).cells.push_back(brok_cells);
+        
       } else if (brok_cells.ps1.size() != 0) {
         int laycell = brok_cells.lay;
         double f =
             sand_reco::ecal::attenuation::AttenuationFactor(DpmA, laycell);
         rec_en = EfromADCsingle(brok_cells.ps1.at(0).adc, f);
-        clus.at(minentry).e = clus.at(minentry).e + rec_en;
+        clus.at(minentry).e = clus.at(minentry).e + rec_en; 
         clus.at(minentry).cells.push_back(brok_cells);
       } else if (brok_cells.ps2.size() != 0) {
         int laycell = brok_cells.lay;
@@ -470,8 +471,10 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec)
 
 std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
 {
+  
   std::vector<cluster> mgd_cluster;
   std::vector<int> checked;
+  
   for (int i = 0; i < Og_cluster.size(); i++) {
     double xi = Og_cluster.at(i).x;
     double yi = Og_cluster.at(i).y;
@@ -496,6 +499,8 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
     clust.vary = Og_cluster.at(i).vary;
     clust.varz = Og_cluster.at(i).varz;
     clust.cells = Og_cluster.at(i).cells;
+    clust.reco_cells = Og_cluster.at(i).reco_cells;
+
     for (int j = i; j < Og_cluster.size(); j++) {
       RepCheck = RepetitionCheck(checked, j);
       if (RepCheck == true) {
@@ -517,7 +522,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
       double dy = sqrt(std::pow(yi - yj, 2));
       double dz = sqrt(std::pow(zi - zj, 2));
 
-      if (D < 40 && DT < 2.5) {
+      if (D < 400 && DT < 2.5) {
 
         bool endcap = false;
         if (clust.cells[0].id > 25000) {
@@ -526,7 +531,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
         if (endcap == true) {
           double Dz_ec = abs(yi - yj);
           D = sqrt((xi - xj) * (xi - xj) + (zi - zj) * (zi - zj));
-          if (Dz_ec < 30 && D < 40) {
+          if (Dz_ec < 300 && D < 400) {
             std::vector<dg_cell> vec_cells_j = Og_cluster.at(j).cells;
             for (int k = 0; k < vec_cells_j.size(); k++) {
               clust.cells.push_back(vec_cells_j.at(k));
@@ -537,7 +542,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
         } else if (endcap == false) {
           double Dz_bar = abs(xi - xj);
           D = sqrt((zi - zj) * (zi - zj) + (yi - yj) * (yi - yj));
-          if (Dz_bar < 30 && D < 40) {
+          if (Dz_bar < 300 && D < 400) {
             std::vector<dg_cell> vec_cells_j = Og_cluster.at(j).cells;
             for (int k = 0; k < vec_cells_j.size(); k++) {
               clust.cells.push_back(vec_cells_j.at(k));
@@ -550,7 +555,10 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
     }
     mgd_cluster.push_back(clust);
   }
+  
+ 
   return mgd_cluster;
+
 }
 
 std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
@@ -851,6 +859,7 @@ cluster Calc_variables(std::vector<dg_cell> cells)
   std::vector<reco_cell> reconstructed_cells;
   
   for (auto& cell : cells) {
+    
     reco_cell rec_cell;
     double d = DfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
     double d1, d2, d3;
@@ -871,6 +880,7 @@ cluster Calc_variables(std::vector<dg_cell> cells)
     rec_cell.lay = cell.lay;
     rec_cell.e = cell_E;
     rec_cell.t = cell_T;
+    
 
     if (cell.mod > 25) {  // endcap
       d3 = cell.y - d;
@@ -903,7 +913,9 @@ cluster Calc_variables(std::vector<dg_cell> cells)
     E2tot = E2tot + cell_E * cell_E;
 
     reconstructed_cells.push_back(rec_cell);
+    
   }
+  
   x_weighted = x_weighted / Etot;
   x2_weighted = x2_weighted / Etot;
   y_weighted = y_weighted / Etot;
@@ -949,8 +961,9 @@ cluster Calc_variables(std::vector<dg_cell> cells)
   clust.varz = dz;
   clust.cells = cells;
   clust.reco_cells = reconstructed_cells;
-
+  
   return clust;
+  
 }
 
 bool RepetitionCheck(std::vector<int> v, int check)
