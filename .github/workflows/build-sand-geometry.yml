@@ -1,0 +1,95 @@
+name: SAND GEOMETRY
+run-name: SAND GEOMETRY
+on:
+  push:
+    branches:
+      - develop
+    
+
+env:
+  gegede-version: 0.8
+
+jobs:
+  Build-sand-geo:
+    runs-on: ubuntu-latest
+    container: almalinux/9-base
+    steps:
+    
+      #############################################################################################################################
+      # Install git
+      #############################################################################################################################
+      - name: Install git
+        run: yum install -y git
+
+      #############################################################################################################################
+      # Get SHA of HEAD develop 
+      #############################################################################################################################
+      - name: Get SHA of HEAD develop 
+        id: develop_sha
+        run: echo "sha=$(git ls-remote https://github.com/DUNE/sandreco --refs refs/heads/develop | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
+    
+      #############################################################################################################################
+      # Cache for gegede
+      #############################################################################################################################
+      - name: gegede cache
+        id: cache-gegede
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/gegede
+          # An explicit key for restoring and saving the cache
+          key: gegede-${{env.gegede-version}}
+      
+      #############################################################################################################################
+      # Cache for dunendggd
+      #############################################################################################################################
+      - name: dunendggd cache
+        id: cache-dunendggd
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/dunendggd
+          # An explicit key for restoring and saving the cache
+          key: dunendggd-${{steps.develop_sha.outputs.sha}}
+
+      #############################################################################################################################
+      # Install gegede
+      #############################################################################################################################      
+      - name: Install gegede ${{env.gegede-version}}
+        if: steps.cache-gegede.outputs.cache-hit != 'true'
+        run: | 
+          python3 -m venv ~/gegede/ggdvenv
+          source ~/gegede/ggdvenv/bin/activate
+          python3 -m pip install setuptools
+          cd ~/gegede
+          git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
+          cd source/
+          python3 setup.py install
+          deactivate ~/gegede/ggdvenv
+  
+      #############################################################################################################################
+      # Install dunendggd
+      #############################################################################################################################      
+      - name: Install dunendggd
+        if: steps.cache-dunendggd.outputs.cache-hit != 'true'
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          git clone --depth 1 https://github.com/DUNE/dunendggd.git ~/dunendggd
+          cd ~/dunendggd/
+          pip install -e .
+  
+      #############################################################################################################################
+      # Build SAND geometry
+      #############################################################################################################################      
+      - name: Build SAND geometry
+        if: steps.cache-dunendggd.outputs.cache-hit != 'true'
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          cd ~/dunendggd
+          ./build_hall.sh sand_opt1_STT1
+          ./build_hall.sh sand_opt2_STT1
+          ./build_hall.sh sand_opt3_STT1
+          ./build_hall.sh sand_opt2_STT3
+          ./build_hall.sh sand_opt3_DRIFT1

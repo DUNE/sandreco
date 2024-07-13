@@ -1,5 +1,5 @@
-name: SAND CI
-run-name: SAND CI
+name: SANDRECO CI
+run-name: SANDRECO CI
 on:
   push:
     branches:
