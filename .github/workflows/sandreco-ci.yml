@@ -1,9 +1,6 @@
 name: SANDRECO CI
 run-name: SANDRECO CI
-on:
-  push:
-    branches:
-      - develop
+on: [push]
 
 env:
   root-version: v6-32-02
@@ -38,6 +35,13 @@ jobs:
       ## https://xerces.apache.org/xerces-c/download.cgi
       - name: Install GEANT4 dependencies
         run: yum install -y xerces-c xerces-c-devel expat expat-devel zlib zlib-devel
+
+      #############################################################################################################################
+      # Get SHA of HEAD develop 
+      #############################################################################################################################
+      - name: Get SHA of HEAD develop 
+        id: develop_sha
+        run: echo "sha=$(git ls-remote https://github.com/DUNE/sandreco.git --refs refs/heads/develop | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
 
       #############################################################################################################################
       # Cache for CLHEP
@@ -90,6 +94,20 @@ jobs:
             ~/edepsim
           # An explicit key for restoring and saving the cache
           key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
+
+
+      #############################################################################################################################
+      # Cache for SANDRECO
+      #############################################################################################################################      
+      - name: SANDRECO cache
+        id: cache-sandreco
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            sandreco
+          # An explicit key for restoring and saving the cache
+          key: sandreco-${{steps.develop_sha.outputs.sha}}-edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
 
       #############################################################################################################################
       # Install CLHEP
@@ -153,6 +171,7 @@ jobs:
       # Get sandreco
       #############################################################################################################################
       - name: Checkout sandreco
+        if: steps.cache-sandreco.outputs.cache-hit != 'true'
         uses: actions/checkout@v4.1.7
         with:
           # Relative path under $GITHUB_WORKSPACE to place the repository
@@ -162,6 +181,7 @@ jobs:
       # Install sandreco
       #############################################################################################################################
       - name: Install sandreco
+        if: steps.cache-sandreco.outputs.cache-hit != 'true'
         run: |
           cd sandreco
           mkdir build

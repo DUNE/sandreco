@@ -1,9 +1,6 @@
 name: SAND GEOMETRY
 run-name: SAND GEOMETRY
-on:
-  push:
-    branches:
-      - develop
+on: [push]
     
 
 env:
@@ -25,9 +22,9 @@ jobs:
       # Get SHA of HEAD develop 
       #############################################################################################################################
       - name: Get SHA of HEAD develop 
-        id: develop_sha
-        run: echo "sha=$(git ls-remote https://github.com/DUNE/sandreco --refs refs/heads/develop | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
-    
+        id: dunendggd_sha
+        run: echo "sha=$(git ls-remote https://github.com/DUNE/dunendggd.git --refs refs/heads/develop | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
+
       #############################################################################################################################
       # Cache for gegede
       #############################################################################################################################
@@ -52,7 +49,7 @@ jobs:
           path: |
             ~/dunendggd
           # An explicit key for restoring and saving the cache
-          key: dunendggd-${{steps.develop_sha.outputs.sha}}
+          key: dunendggd-${{steps.dunendggd_sha.outputs.sha}}
 
       #############################################################################################################################
       # Install gegede
