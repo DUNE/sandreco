@@ -1,10 +1,14 @@
 name: SAND GEOMETRY
 run-name: SAND GEOMETRY
-on: [push]
+on:
+  push:
+    branches:
+      - develop
     
 
 env:
   gegede-version: 0.8
+
 jobs:
   Build-sand-geo:
     runs-on: ubuntu-latest
