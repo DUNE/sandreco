@@ -105,7 +105,7 @@ jobs:
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
-            ~/sandreco
+            sandreco
           # An explicit key for restoring and saving the cache
           key: sandreco-${{steps.develop_sha.outputs.sha}}-edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
 
@@ -175,7 +175,7 @@ jobs:
         uses: actions/checkout@v4.1.7
         with:
           # Relative path under $GITHUB_WORKSPACE to place the repository
-          path: ~/sandreco/source
+          path: sandreco/source
 
       #############################################################################################################################
       # Install sandreco
@@ -183,11 +183,7 @@ jobs:
       - name: Install sandreco
         if: steps.cache-sandreco.outputs.cache-hit != 'true'
         run: |
-          ls ~
-          ls ~/sandreco
-          ls ~/sandreco/source
-          mkdir -p ~/sandreco
-          cd ~/sandreco
+          cd sandreco
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim" ../source
