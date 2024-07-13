@@ -171,6 +171,7 @@ jobs:
       # Get sandreco
       #############################################################################################################################
       - name: Checkout sandreco
+        if: steps.cache-sandreco.outputs.cache-hit != 'true'
         uses: actions/checkout@v4.1.7
         with:
           # Relative path under $GITHUB_WORKSPACE to place the repository
@@ -182,6 +183,9 @@ jobs:
       - name: Install sandreco
         if: steps.cache-sandreco.outputs.cache-hit != 'true'
         run: |
+          ls ~
+          ls ~/sandreco
+          ls ~/sandreco/source
           mkdir -p ~/sandreco
           cd ~/sandreco
           mkdir build
