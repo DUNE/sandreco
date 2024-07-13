@@ -1,9 +1,6 @@
 name: SANDRECO CI
 run-name: SANDRECO CI
-on:
-  push:
-    branches:
-      - develop
+on: [push]
 
 env:
   root-version: v6-32-02

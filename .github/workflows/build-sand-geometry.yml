@@ -1,9 +1,6 @@
 name: SAND GEOMETRY
 run-name: SAND GEOMETRY
-on:
-  push:
-    branches:
-      - develop
+on: [push]
     
 
 env:
