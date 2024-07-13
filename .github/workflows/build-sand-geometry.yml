@@ -26,7 +26,7 @@ jobs:
       #############################################################################################################################
       - name: Get SHA of HEAD develop 
         id: develop_sha
-        run: echo "sha=$(git ls-remote https://github.com/DUNE/sandreco --refs refs/heads/develop | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
+        run: echo "sha=$(git ls-remote https://github.com/DUNE/dunendggd.git --refs refs/heads/develop | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
     
       #############################################################################################################################
       # Cache for gegede
