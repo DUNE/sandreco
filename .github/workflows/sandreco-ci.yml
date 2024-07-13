@@ -182,6 +182,7 @@ jobs:
       - name: Install sandreco
         if: steps.cache-sandreco.outputs.cache-hit != 'true'
         run: |
+          mkdir -p ~/sandreco
           cd ~/sandreco
           mkdir build
           cd build
