@@ -11,7 +11,7 @@ env:
   # sand-geometry: sand_opt3_STT1
 
 jobs:
-  Build-sandreco:
+  build-and-test-sandreco:
     strategy:
       matrix:
         sand-geometry: [sand_opt1_STT1, sand_opt2_STT1, sand_opt3_STT1, sand_opt2_STT3, sand_opt3_DRIFT1]
