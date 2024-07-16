@@ -199,4 +199,5 @@ jobs:
       - name: Run edepsim
         run: |
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
+          export PATH=${PATH}:~/edepsim/lib
           edep-sim -C -g ~/dunendggd/SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root macro.mac
