@@ -267,8 +267,6 @@ jobs:
           source ~/geant4/bin/geant4.sh
           mkdir ~/edepsim-events
           cd ~/edepsim-events
-          ls ~/
-          ls ~/dunendggd/
           cp ~/dunendggd/SAND_opt1_STT1.gdml .
           cp ~/dunendggd/SAND_opt2_STT1.gdml .
           cp ~/dunendggd/SAND_opt3_STT1.gdml .
@@ -282,12 +280,19 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
           source ~/sandreco/setup.sh
-          ls ~/
-          ls ~/sandreco
-          ls ~/sandreco/source
-          ls ~/sandreco/source/tests
           cd ~/sandreco/source/tests/
           mkdir ~/sandreco-reco
           cd ~/sandreco-reco
           Digitize ~/edepsim-events/SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root
           Reconstruct ~/edepsim-events/SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root SAND_opt3_STT1.reco.root
+
+      #############################################################################################################################
+      # Upload production for sandreco test as artifact
+      #############################################################################################################################
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: produced-files
+          path: |
+            ~/sandreco-reco
+            ~/edepsim-events
