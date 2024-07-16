@@ -112,6 +112,19 @@ jobs:
             sandreco
           # An explicit key for restoring and saving the cache
           key: sandreco-${{steps.develop_sha.outputs.sha}}-edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
+      
+      #############################################################################################################################
+      # Cache for dunendggd
+      #############################################################################################################################
+      - name: dunendggd cache
+        id: cache-dunendggd
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/dunendggd
+          # An explicit key for restoring and saving the cache
+          key: dunendggd-${{steps.dunendggd_sha.outputs.sha}}
 
       #############################################################################################################################
       # Install CLHEP
@@ -201,4 +214,5 @@ jobs:
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
           export PATH=${PATH}:~/edepsim/bin
           source ~/geant4/bin/geant4.sh
+          ls ~/dunendggd
           edep-sim -C -g ~/dunendggd/SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root macro.mac
