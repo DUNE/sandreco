@@ -8,7 +8,6 @@ env:
   edepsim-version: 3.2.0
   clhep-version: CLHEP_2_4_7_1
   gegede-version: 0.8
-  # sand-geometry: sand_opt3_STT1
 
 jobs:
   build-and-test-sandreco:
@@ -291,7 +290,7 @@ jobs:
       - name: Run sandreco
         run: |
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
-          source ~/sandreco/setup.sh/
+          source ~/sandreco/setup.sh
           mkdir ~/sandreco-reco
           cd ~/sandreco-reco
           GEO=$(echo ${{matrix.sand-geometry}} | sed "s:sand:SAND:g")
