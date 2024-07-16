@@ -124,6 +124,19 @@ jobs:
           key: dunendggd-${{steps.dunendggd_sha.outputs.sha}}
       
       #############################################################################################################################
+      # Cache for geometry
+      #############################################################################################################################
+      - name: geometry cache
+        id: cache-geometry
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/geo
+          # An explicit key for restoring and saving the cache
+          key: dunendggd-${{steps.dunendggd_sha.outputs.sha}}-geo-${{env.sand-geometry}}
+      
+      #############################################################################################################################
       # Cache for edepsim events with sand geo
       #############################################################################################################################
       - name: edepsim events cache with sand geo
@@ -134,7 +147,7 @@ jobs:
           path: |
             ~/edepsim-events
           # An explicit key for restoring and saving the cache
-          key: edepsim-event-with-dunendggd-${{steps.dunendggd_sha.outputs.sha}}
+          key: edepsim-event-with-dunendggd-${{steps.dunendggd_sha.outputs.sha}}-geo-${{env.sand-geometry}}
 
       #############################################################################################################################
       # Install CLHEP
@@ -198,7 +211,6 @@ jobs:
       # Get sandreco
       #############################################################################################################################
       - name: Checkout sandreco
-        # if: steps.cache-sandreco.outputs.cache-hit != 'true'
         uses: actions/checkout@v4.1.7
         with:
           # Relative path under $GITHUB_WORKSPACE to place the repository
@@ -247,16 +259,14 @@ jobs:
       # Build SAND geometry
       #############################################################################################################################      
       - name: Build SAND geometry
-        # if: steps.cache-dunendggd.outputs.cache-hit != 'true'
+        if: steps.cache-geometry.outputs.cache-hit != 'true'
         run: | 
           source ~/gegede/ggdvenv/bin/activate
           cd ~/dunendggd
           ./build_hall.sh ${{env.sand-geometry}}
-          # ./build_hall.sh sand_opt1_STT1
-          # ./build_hall.sh sand_opt2_STT1
-          # ./build_hall.sh sand_opt3_STT1
-          # ./build_hall.sh sand_opt2_STT3
-          # ./build_hall.sh sand_opt3_DRIFT1
+          GEO=$(echo ${{env.sand-geometry}} | sed "s:sand:SAND:g")
+          mkdir -p ~/geo 
+          mv ${GEO}.gdml ~/geo/.
 
       #############################################################################################################################
       # Run edepsim
@@ -270,12 +280,7 @@ jobs:
           mkdir ~/edepsim-events
           cd ~/edepsim-events
           GEO=$(echo ${{env.sand-geometry}} | sed "s:sand:SAND:g")
-          cp ~/dunendggd/${GEO}.gdml .
-          # cp ~/dunendggd/SAND_opt1_STT1.gdml .
-          # cp ~/dunendggd/SAND_opt2_STT1.gdml .
-          # cp ~/dunendggd/SAND_opt3_STT1.gdml .
-          # cp ~/dunendggd/SAND_opt3_DRIFT1.gdml .
-          edep-sim -C -g ${GEO}.gdml -o ${GEO}.edep.root ~/sandreco/source/tests/1000-mu-in-FV.mac
+          edep-sim -C -g ~/geo/${GEO}.gdml -o ${GEO}.edep.root ~/sandreco/source/tests/1000-mu-in-FV.mac
 
       #############################################################################################################################
       # Run sandreco
@@ -283,8 +288,7 @@ jobs:
       - name: Run sandreco
         run: |
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
-          source ~/sandreco/setup.sh
-          cd ~/sandreco/source/tests/
+          source ~/sandreco/setup.sh/
           mkdir ~/sandreco-reco
           cd ~/sandreco-reco
           GEO=$(echo ${{env.sand-geometry}} | sed "s:sand:SAND:g")
