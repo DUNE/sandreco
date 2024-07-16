@@ -1,6 +1,9 @@
-name: BUILD SANDRECO
-run-name: BUILD SANDRECO
-on: [push]
+name: BUILD AND TEST SANDRECO
+run-name: BUILD AND TEST SANDRECO
+on:
+  workflow_run:
+    workflows: [SAND GEOMETRY]
+    types: [completed]
 
 env:
   root-version: v6-32-02
@@ -10,6 +13,7 @@ env:
 
 jobs:
   Build-sandreco:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     container: almalinux/9-base
     steps:
@@ -188,3 +192,11 @@ jobs:
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim" ../source
           make -j8 install
+
+      #############################################################################################################################
+      # Run edepsim
+      #############################################################################################################################
+      - name: Run edepsim
+        run: |
+          export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64;~/root/lib;~/edepsim/lib
+          edep-sim -C -g ~/dunendggd/SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root macro.mac
