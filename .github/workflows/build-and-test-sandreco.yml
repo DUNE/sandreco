@@ -269,10 +269,10 @@ jobs:
           cd ~/edepsim-events
           ls ~/
           ls ~/dunendggd/
-          cp ~/dunendggd/sand_opt1_STT1.gdml .
-          cp ~/dunendggd/sand_opt2_STT1.gdml .
+          cp ~/dunendggd/SAND_opt1_STT1.gdml .
+          cp ~/dunendggd/SAND_opt2_STT1.gdml .
           cp ~/dunendggd/SAND_opt3_STT1.gdml .
-          cp ~/dunendggd/sand_opt3_DRIFT1.gdml .
+          cp ~/dunendggd/SAND_opt3_DRIFT1.gdml .
           edep-sim -C -g SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root ~/sandreco/source/tests/1000-mu-in-FV.mac
 
       #############################################################################################################################
