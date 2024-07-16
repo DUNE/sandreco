@@ -267,6 +267,8 @@ jobs:
           source ~/geant4/bin/geant4.sh
           mkdir ~/edepsim-events
           cd ~/edepsim-events
+          ls ~/
+          ls ~/dunendggd/
           cp ~/dunendggd/sand_opt1_STT1.gdml .
           cp ~/dunendggd/sand_opt2_STT1.gdml .
           cp ~/dunendggd/SAND_opt3_STT1.gdml .
