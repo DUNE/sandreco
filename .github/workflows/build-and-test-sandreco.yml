@@ -8,6 +8,7 @@ env:
   edepsim-version: 3.2.0
   clhep-version: CLHEP_2_4_7_1
   gegede-version: 0.8
+  sand_geometries: ("sand_opt1_STT1" "sand_opt2_STT1" "sand_opt3_STT1" "sand_opt2_STT3" "sand_opt3_DRIFT1")
 
 jobs:
   Build-sandreco:
@@ -246,15 +247,19 @@ jobs:
       # Build SAND geometry
       #############################################################################################################################      
       - name: Build SAND geometry
-        if: steps.cache-dunendggd.outputs.cache-hit != 'true'
+        # if: steps.cache-dunendggd.outputs.cache-hit != 'true'
         run: | 
           source ~/gegede/ggdvenv/bin/activate
           cd ~/dunendggd
-          ./build_hall.sh sand_opt1_STT1
-          ./build_hall.sh sand_opt2_STT1
-          ./build_hall.sh sand_opt3_STT1
-          ./build_hall.sh sand_opt2_STT3
-          ./build_hall.sh sand_opt3_DRIFT1
+          for geo in ${sand_geometries}
+          do
+            ./build_hall.sh ${geo}
+          done
+          # ./build_hall.sh sand_opt1_STT1
+          # ./build_hall.sh sand_opt2_STT1
+          # ./build_hall.sh sand_opt3_STT1
+          # ./build_hall.sh sand_opt2_STT3
+          # ./build_hall.sh sand_opt3_DRIFT1
 
       #############################################################################################################################
       # Run edepsim
