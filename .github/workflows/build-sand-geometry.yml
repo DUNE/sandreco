@@ -2,7 +2,7 @@ name: SAND GEOMETRY
 run-name: SAND GEOMETRY
 on:
   workflow_run:
-    workflows: [BUILD GEOMETRY]
+    workflows: [BUILD SANDRECO]
     types: [completed]
     
 
