@@ -268,12 +268,13 @@ jobs:
       # Run edepsim
       #############################################################################################################################
       - name: Run edepsim
-        if: steps.cache-dunendggd.outputs.cache-hit != 'true'
+        # if: steps.cache-dunendggd.outputs.cache-hit != 'true'
         run: |
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
           export PATH=${PATH}:~/edepsim/bin
           source ~/geant4/bin/geant4.sh
-          edep-sim -C -g ~/dunendggd/SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root sandreco/source/tests/1000-mu-in-FV.mac
+          cd sandreco/source/tests/
+          edep-sim -C -g ~/dunendggd/SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root 1000-mu-in-FV.mac
 
       #############################################################################################################################
       # Run sandreco
@@ -285,5 +286,6 @@ jobs:
           ls sandreco
           ls sandreco/source
           ls sandreco/source/tests
+          cd sandreco/source/tests/
           Digitize SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root
           Reconstruct SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root SAND_opt3_STT1.reco.root
