@@ -47,9 +47,9 @@ jobs:
       #############################################################################################################################
       # Get SHA of HEAD develop 
       #############################################################################################################################
-      - name: Get SHA of HEAD sandreco 
-        id: sandreco_sha
-        run: echo "sha=$(git ls-remote https://github.com/DUNE/sandreco.git --refs refs/heads/develop | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
+      # - name: Get SHA of HEAD sandreco 
+      #   id: sandreco_sha
+      #   run: echo "sha=$(git ls-remote https://github.com/DUNE/sandreco.git --refs refs/heads/develop | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
 
       #############################################################################################################################
       # Cache for CLHEP
@@ -107,15 +107,15 @@ jobs:
       #############################################################################################################################
       # Cache for SANDRECO
       #############################################################################################################################      
-      - name: SANDRECO cache
-        id: cache-sandreco
-        uses: actions/cache@v4.0.2
-        with:
-          # A list of files, directories, and wildcard patterns to cache and restore
-          path: |
-            sandreco
-          # An explicit key for restoring and saving the cache
-          key: sandreco-${{steps.sandreco_sha.outputs.sha}}-edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
+      # - name: SANDRECO cache
+      #   id: cache-sandreco
+      #   uses: actions/cache@v4.0.2
+      #   with:
+      #     # A list of files, directories, and wildcard patterns to cache and restore
+      #     path: |
+      #       sandreco
+      #     # An explicit key for restoring and saving the cache
+      #     key: sandreco-${{steps.sandreco_sha.outputs.sha}}-edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
 
       #############################################################################################################################
       # Cache for gegede
@@ -205,7 +205,7 @@ jobs:
       # Get sandreco
       #############################################################################################################################
       - name: Checkout sandreco
-        if: steps.cache-sandreco.outputs.cache-hit != 'true'
+        # if: steps.cache-sandreco.outputs.cache-hit != 'true'
         uses: actions/checkout@v4.1.7
         with:
           # Relative path under $GITHUB_WORKSPACE to place the repository
@@ -215,7 +215,7 @@ jobs:
       # Install sandreco
       #############################################################################################################################
       - name: Install sandreco
-        if: steps.cache-sandreco.outputs.cache-hit != 'true'
+        # if: steps.cache-sandreco.outputs.cache-hit != 'true'
         run: |
           cd sandreco
           pwd
@@ -272,7 +272,4 @@ jobs:
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
           export PATH=${PATH}:~/edepsim/bin
           source ~/geant4/bin/geant4.sh
-          ls sandreco
-          ls sandreco/sandreco
-          ls sandreco/sandreco/tests
-          edep-sim -C -g ~/dunendggd/SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root sandreco/sandreco/tests/macro.mac
+          edep-sim -C -g ~/dunendggd/SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root sandreco/tests/macro.mac
