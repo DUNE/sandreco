@@ -45,13 +45,6 @@ jobs:
         run: echo "sha=$(git ls-remote https://github.com/DUNE/dunendggd.git --refs refs/heads/master | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
 
       #############################################################################################################################
-      # Get SHA of HEAD develop 
-      #############################################################################################################################
-      # - name: Get SHA of HEAD sandreco 
-      #   id: sandreco_sha
-      #   run: echo "sha=$(git ls-remote https://github.com/DUNE/sandreco.git --refs refs/heads/develop | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
-
-      #############################################################################################################################
       # Cache for CLHEP
       #############################################################################################################################
       - name: CLHEP cache
@@ -103,20 +96,6 @@ jobs:
           # An explicit key for restoring and saving the cache
           key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
 
-
-      #############################################################################################################################
-      # Cache for SANDRECO
-      #############################################################################################################################      
-      # - name: SANDRECO cache
-      #   id: cache-sandreco
-      #   uses: actions/cache@v4.0.2
-      #   with:
-      #     # A list of files, directories, and wildcard patterns to cache and restore
-      #     path: |
-      #       sandreco
-      #     # An explicit key for restoring and saving the cache
-      #     key: sandreco-${{steps.sandreco_sha.outputs.sha}}-edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
-
       #############################################################################################################################
       # Cache for gegede
       #############################################################################################################################
@@ -142,6 +121,19 @@ jobs:
             ~/dunendggd
           # An explicit key for restoring and saving the cache
           key: dunendggd-${{steps.dunendggd_sha.outputs.sha}}
+      
+      #############################################################################################################################
+      # Cache for edepsim events with sand geo
+      #############################################################################################################################
+      - name: edepsim events cache with sand geo
+        id: cache-edepsim-events-sand-geo
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/edepsim-events
+          # An explicit key for restoring and saving the cache
+          key: edepsim-event-with-dunendggd-${{steps.dunendggd_sha.outputs.sha}}
 
       #############################################################################################################################
       # Install CLHEP
@@ -209,16 +201,14 @@ jobs:
         uses: actions/checkout@v4.1.7
         with:
           # Relative path under $GITHUB_WORKSPACE to place the repository
-          path: sandreco/source
+          path: ~/sandreco/source
 
       #############################################################################################################################
       # Install sandreco
       #############################################################################################################################
       - name: Install sandreco
-        # if: steps.cache-sandreco.outputs.cache-hit != 'true'
         run: |
-          cd sandreco
-          pwd
+          cd ~/sandreco
           mkdir build
           cd build
           cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim" ../source
@@ -268,13 +258,18 @@ jobs:
       # Run edepsim
       #############################################################################################################################
       - name: Run edepsim
-        # if: steps.cache-dunendggd.outputs.cache-hit != 'true'
+        if: steps.cache-edepsim-events-sand-geo.outputs.cache-hit != 'true'
         run: |
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
           export PATH=${PATH}:~/edepsim/bin
           source ~/geant4/bin/geant4.sh
-          cd sandreco/source/tests/
-          edep-sim -C -g ~/dunendggd/SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root 1000-mu-in-FV.mac
+          mkdir ~/edepsim-events
+          cd ~/edepsim-events
+          cp ~/dunendggd/sand_opt1_STT1.gdml .
+          cp ~/dunendggd/sand_opt2_STT1.gdml .
+          cp ~/dunendggd/SAND_opt3_STT1.gdml .
+          cp ~/dunendggd/sand_opt3_DRIFT1.gdml .
+          edep-sim -C -g SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root ~/sandreco/source/tests/1000-mu-in-FV.mac
 
       #############################################################################################################################
       # Run sandreco
@@ -282,10 +277,13 @@ jobs:
       - name: Run sandreco
         run: |
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
-          source sandreco/setup.sh
-          ls sandreco
-          ls sandreco/source
-          ls sandreco/source/tests
-          cd sandreco/source/tests/
-          Digitize SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root
-          Reconstruct SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root SAND_opt3_STT1.reco.root
+          source ~/sandreco/setup.sh
+          ls ~/
+          ls ~/sandreco
+          ls ~/sandreco/source
+          ls ~/sandreco/source/tests
+          cd ~/sandreco/source/tests/
+          mkdir ~/sandreco-reco
+          cd ~/sandreco-reco
+          Digitize ~/edepsim-events/SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root
+          Reconstruct ~/edepsim-events/SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root SAND_opt3_STT1.reco.root
