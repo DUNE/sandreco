@@ -8,7 +8,7 @@ env:
   edepsim-version: 3.2.0
   clhep-version: CLHEP_2_4_7_1
   gegede-version: 0.8
-  sand_geometries: ("sand_opt1_STT1" "sand_opt2_STT1" "sand_opt3_STT1" "sand_opt2_STT3" "sand_opt3_DRIFT1")
+  sand-geometry: sand_opt3_STT1
 
 jobs:
   Build-sandreco:
@@ -251,10 +251,7 @@ jobs:
         run: | 
           source ~/gegede/ggdvenv/bin/activate
           cd ~/dunendggd
-          for geo in ${sand_geometries}
-          do
-            ./build_hall.sh ${geo}
-          done
+          ./build_hall.sh ${{env.clhep-version}}
           # ./build_hall.sh sand_opt1_STT1
           # ./build_hall.sh sand_opt2_STT1
           # ./build_hall.sh sand_opt3_STT1
@@ -272,11 +269,13 @@ jobs:
           source ~/geant4/bin/geant4.sh
           mkdir ~/edepsim-events
           cd ~/edepsim-events
-          cp ~/dunendggd/SAND_opt1_STT1.gdml .
-          cp ~/dunendggd/SAND_opt2_STT1.gdml .
-          cp ~/dunendggd/SAND_opt3_STT1.gdml .
-          cp ~/dunendggd/SAND_opt3_DRIFT1.gdml .
-          edep-sim -C -g SAND_opt3_STT1.gdml -o SAND_opt3_STT1.edep.root ~/sandreco/source/tests/1000-mu-in-FV.mac
+          GEO=$(echo ${{env.clhep-version}} | sed "s:sand:SAND:g")
+          cp ~/dunendggd/${GEO}.gdml .
+          # cp ~/dunendggd/SAND_opt1_STT1.gdml .
+          # cp ~/dunendggd/SAND_opt2_STT1.gdml .
+          # cp ~/dunendggd/SAND_opt3_STT1.gdml .
+          # cp ~/dunendggd/SAND_opt3_DRIFT1.gdml .
+          edep-sim -C -g ${GEO}.gdml -o ${GEO}.edep.root ~/sandreco/source/tests/1000-mu-in-FV.mac
 
       #############################################################################################################################
       # Run sandreco
@@ -288,8 +287,9 @@ jobs:
           cd ~/sandreco/source/tests/
           mkdir ~/sandreco-reco
           cd ~/sandreco-reco
-          Digitize ~/edepsim-events/SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root
-          Reconstruct ~/edepsim-events/SAND_opt3_STT1.edep.root SAND_opt3_STT1.digit.root SAND_opt3_STT1.reco.root
+          GEO=$(echo ${{env.clhep-version}} | sed "s:sand:SAND:g")
+          Digitize ~/edepsim-events/${GEO}.edep.root ${GEO}.digit.root
+          Reconstruct ~/edepsim-events/${GEO}.edep.root ${GEO}.digit.root ${GEO}.reco.root
 
       #############################################################################################################################
       # Upload production for sandreco test as artifact
