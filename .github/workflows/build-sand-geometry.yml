@@ -1,6 +1,9 @@
 name: SAND GEOMETRY
 run-name: SAND GEOMETRY
-on: [push]
+on:
+  workflow_run:
+    workflows: [BUILD SANDRECO]
+    types: [completed]
     
 
 env:
@@ -9,6 +12,7 @@ env:
 jobs:
   Build-sand-geo:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     container: almalinux/9-base
     steps:
     
