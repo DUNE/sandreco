@@ -2,7 +2,7 @@ name: TEST SANDRECO
 run-name: TEST SANDRECO
 on:
   workflow_run:
-    workflows: ['BUILD SANDRECO', 'SAND GEOMETRY']
+    workflows: [SAND GEOMETRY]
     types: [completed]
 
 env:
@@ -14,6 +14,7 @@ env:
 jobs:
   Test-sand-geo:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     container: almalinux/9-base
     steps:
       #############################################################################################################################
