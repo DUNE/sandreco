@@ -251,7 +251,7 @@ jobs:
         run: | 
           source ~/gegede/ggdvenv/bin/activate
           cd ~/dunendggd
-          ./build_hall.sh ${{env.clhep-version}}
+          ./build_hall.sh ${{env.sand-geometry}}
           # ./build_hall.sh sand_opt1_STT1
           # ./build_hall.sh sand_opt2_STT1
           # ./build_hall.sh sand_opt3_STT1
@@ -269,7 +269,7 @@ jobs:
           source ~/geant4/bin/geant4.sh
           mkdir ~/edepsim-events
           cd ~/edepsim-events
-          GEO=$(echo ${{env.clhep-version}} | sed "s:sand:SAND:g")
+          GEO=$(echo ${{env.sand-geometry}} | sed "s:sand:SAND:g")
           cp ~/dunendggd/${GEO}.gdml .
           # cp ~/dunendggd/SAND_opt1_STT1.gdml .
           # cp ~/dunendggd/SAND_opt2_STT1.gdml .
@@ -287,7 +287,7 @@ jobs:
           cd ~/sandreco/source/tests/
           mkdir ~/sandreco-reco
           cd ~/sandreco-reco
-          GEO=$(echo ${{env.clhep-version}} | sed "s:sand:SAND:g")
+          GEO=$(echo ${{env.sand-geometry}} | sed "s:sand:SAND:g")
           Digitize ~/edepsim-events/${GEO}.edep.root ${GEO}.digit.root
           Reconstruct ~/edepsim-events/${GEO}.edep.root ${GEO}.digit.root ${GEO}.reco.root
 
