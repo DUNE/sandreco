@@ -1,5 +1,5 @@
-name: SANDRECO CI
-run-name: SANDRECO CI
+name: BUILD SANDRECO
+run-name: BUILD SANDRECO
 on: [push]
 
 env:

@@ -1,6 +1,9 @@
 name: TEST SANDRECO
 run-name: TEST SANDRECO
-on: [push]
+on:
+  workflow_run:
+    workflows: ['BUILD SANDRECO', 'SAND GEOMETRY']
+    types: [completed]
 
 env:
   root-version: v6-32-02
