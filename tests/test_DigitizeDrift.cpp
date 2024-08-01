@@ -286,7 +286,7 @@ int main(int argc, char* argv[]){
     LOG("","\n");
     LOG("I", "Parsing inputs");
 
-        while (index < argc)
+    while (index < argc)
     {
         TString opt = argv[index];
         if(opt.CompareTo("-edep")==0){
@@ -353,7 +353,14 @@ int main(int argc, char* argv[]){
 
     std::vector<dg_wire> fired_wires;
 
-    tout.Branch("edep_file", "edep_file", &fEDepInput);
+    unsigned int edep_event_index;
+
+    std::string fEDepInputStr = fEDepInput;
+
+    tout.Branch("edep_file", &fEDepInputStr);
+    
+    // tout.Branch("edep_event_index", "edep_event_index/i", &edep_event_index);
+    tout.Branch("edep_event_index", &edep_event_index, "edep_event_index/i");
     
     tout.Branch("fired_wires", "fired_wires", &fired_wires);
     
@@ -366,6 +373,8 @@ int main(int argc, char* argv[]){
     // for(auto i=0u; i < tEdep->GetEntries(); i++)
     for(auto i=0u; i < 10; i++)
     {
+        edep_event_index = i;
+
         LOG("ii", TString::Format("Processing Event %d", i).Data());
         tEdep->GetEntry(i);
 
