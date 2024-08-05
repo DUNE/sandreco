@@ -18,7 +18,7 @@ class Reader:
         self.tree_upr = self.file_upr[arg_tree_name]
         self.dataframe_helix = self.tree_upr.arrays([
                                 'edep_file_input',
-                                'event_index',
+                                'edep_event_index',
                                 'reco_object/pt_true',
                                 'reco_object/pt_reco',
                                 'reco_object/true_helix/true_helix.R_',
@@ -34,8 +34,6 @@ class Reader:
                                 'p_true',
                                 'p_reco',
                                 ], library='pd').rename(columns={
-                                'edep_file_input'                         : "edep_file",
-                                'event_index'                             : "event_index",
                                 'reco_object/true_helix/true_helix.R_'    : 'R_true',
                                 'reco_object/reco_helix/reco_helix.R_'    : 'R_reco',
                                 'reco_object/true_helix/true_helix.dip_'  : 'dip_true',
@@ -51,7 +49,7 @@ class Reader:
                                 })
         self.dataframe_wires = self.tree_upr.arrays([ 
                                 'edep_file_input',
-                                'event_index',
+                                'edep_event_index',
                                 'reco_object/fired_wires/fired_wires.did',
                                 'reco_object/fired_wires/fired_wires.x',
                                 'reco_object/fired_wires/fired_wires.y',
@@ -69,8 +67,6 @@ class Reader:
                                 'reco_object/fired_wires/fired_wires.drift_time_measured',
                                 'reco_object/fired_wires/fired_wires.missing_coordinate',
                                 ],library='pd').rename(columns={
-                                'edep_file_input'                                          : "edep_file",
-                                'event_index'                                              : "event_index",
                                 'reco_object/fired_wires/fired_wires.did'                  : "did",
                                 'reco_object/fired_wires/fired_wires.x'                    : "x",
                                 'reco_object/fired_wires/fired_wires.y'                    : "y",
@@ -90,7 +86,7 @@ class Reader:
                                 })
         self.dataframe_fitted_values_xz = self.tree_upr.arrays([
                                 'edep_file_input',
-                                'event_index',
+                                'edep_event_index',
                                 'reco_object/fit_infos_xz/fit_infos_xz.MinValue',
                                 'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.name',
                                 'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.id',
@@ -98,8 +94,6 @@ class Reader:
                                 'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.value',
                                 'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.error',
                                 ], library='pd').rename(columns={
-                                'edep_file_input'                                                                                      : "edep_file",
-                                'event_index'                                                                                          : "event_index",
                                 'reco_object/fit_infos_xz/fit_infos_xz.MinValue'                                                       : 'MinValue',
                                 'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.name'          : "name",
                                 'reco_object/fit_infos_xz/fit_infos_xz.fitted_parameters/fit_infos_xz.fitted_parameters.id'            : "id",
@@ -109,7 +103,7 @@ class Reader:
                                 })
         self.dataframe_fitted_values_zy = self.tree_upr.arrays([
                                 'edep_file_input',
-                                'event_index',
+                                'edep_event_index',
                                 'reco_object/fit_infos_zy/fit_infos_zy.MinValue',
                                 'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.name',
                                 'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.id',
@@ -117,8 +111,6 @@ class Reader:
                                 'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.value',
                                 'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.error',
                                 ], library='pd').rename(columns={
-                                'edep_file_input'                                                                                      : "edep_file",
-                                'event_index'                                                                                          : "event_index",
                                 'reco_object/fit_infos_zy/fit_infos_zy.MinValue'                                                       : "MinValue",
                                 'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.name'          : "name",
                                 'reco_object/fit_infos_zy/fit_infos_zy.fitted_parameters/fit_infos_zy.fitted_parameters.id'            : "id",

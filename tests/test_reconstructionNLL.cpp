@@ -1170,21 +1170,34 @@ int main(int argc, char* argv[]){
     std::vector<dg_wire> fired_wires;
     
     std::vector<dg_wire> wire_infos;
+
+    unsigned int edep_event_index;
+
+    std::string fEDepInputStr = fEDepInput;
+
+    std::string fDigitInputStr = fDigitInput;
     
     tEdep->SetBranchAddress("Event", &evEdep);
     tDigit->SetBranchAddress("Event", &evDigit);
     // tDigit->AddFriend(tEdep);
     tDigit->SetBranchAddress("fired_wires", &RecoUtils::event_digits);
     
+    tout.Branch("edep_file_input", &fEDepInputStr);
+    
+    tout.Branch("digit_file_input", &fDigitInputStr);
+    
+    tout.Branch("edep_event_index", &edep_event_index, "edep_event_index/i");
+    
     tout.Branch("reco_object", "reco_object", &reco_object);
     
     LOG("I","Loading wires lookup table");
     ReadWireInfos(fWireInfo, wire_infos);
 
-    for(auto i=0u; i < 10; i++)
-    // for(auto i=0u; i < tEdep->GetEntries(); i++)
+    // for(auto i=0u; i < 10; i++)
+    for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
         LOG("I", "NEW EVENT **********************************************************");
+        edep_event_index = i;
         RecoUtils::event_digits->clear();
         tEdep->GetEntry(i);
         tDigit->GetEntry(i);
@@ -1296,9 +1309,6 @@ int main(int argc, char* argv[]){
         reco_object.p_reco = {particle_momentum.X(), 
                               particle_momentum.Y(), 
                               particle_momentum.Z()};
-        reco_object.edep_file_input = fEDepInput;
-        reco_object.digit_file_input = fDigitInput;
-        reco_object.edepsim_event_index = i;
 
         tout.Fill();
 

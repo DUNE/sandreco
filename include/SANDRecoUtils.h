@@ -710,9 +710,6 @@ struct MinuitFitInfos
 struct RecoObject
 {
     // edepsim info of the reconstructed track_____________________
-    const char*                 edep_file_input;
-    const char*                 digit_file_input;
-    int                         edepsim_event_index;
     std::vector<TLorentzVector> trj_points;
     
     // digitization info___________________________________________

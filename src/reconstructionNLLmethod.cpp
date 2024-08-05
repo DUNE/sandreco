@@ -1443,9 +1443,9 @@ int main(int argc, char* argv[]){
         reco_object.p_true = {muon_trj.GetInitialMomentum().X(), muon_trj.GetInitialMomentum().Y(), muon_trj.GetInitialMomentum().Z()};
         reco_object.p_reco = {particle_momentum.X(), particle_momentum.Y(), particle_momentum.Z()};
         
-        reco_object.edep_file_input = fEDepInput;
-        reco_object.digit_file_input = fDigitInput;
-        reco_object.edepsim_event_index = i;
+        // reco_object.edep_file_input = fEDepInput;
+        // reco_object.digit_file_input = fDigitInput;
+        // reco_object.edep_event_index = i;
 
         tout.Fill();
     }

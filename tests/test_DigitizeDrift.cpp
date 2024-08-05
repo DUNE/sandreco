@@ -357,9 +357,8 @@ int main(int argc, char* argv[]){
 
     std::string fEDepInputStr = fEDepInput;
 
-    tout.Branch("edep_file", &fEDepInputStr);
+    tout.Branch("edep_file_input", &fEDepInputStr);
     
-    // tout.Branch("edep_event_index", "edep_event_index/i", &edep_event_index);
     tout.Branch("edep_event_index", &edep_event_index, "edep_event_index/i");
     
     tout.Branch("fired_wires", "fired_wires", &fired_wires);
@@ -370,8 +369,7 @@ int main(int argc, char* argv[]){
     LOG("I", "Reading branch Event from EDepFile");
     tEdep->SetBranchAddress("Event", &evEdep);
 
-    // for(auto i=0u; i < tEdep->GetEntries(); i++)
-    for(auto i=0u; i < 10; i++)
+    for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
         edep_event_index = i;
 
