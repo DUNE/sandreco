@@ -143,25 +143,6 @@ void ReadWireInfos(const std::string fInput, std::vector<dg_wire>& wire_infos){
     stream.close();
 }
 
-// std::map<int, std::vector<const TG4HitSegment*>> GroupHitsByTrajectory(const std::vector<TG4HitSegment>& hits)
-// {
-//     // Define a map to group pointers to hit segments by primary trajectory ID
-//     std::map<int, std::vector<const TG4HitSegment*>> grouped_hits;
-    
-//     // Iterate through each hit segment in the input vector
-//     for (const auto& hit : hits)
-//     {
-//         // Get the primary trajectory ID for the current segment
-//         int hit_trj_id = hit.GetPrimaryId();
-        
-//         // Add a pointer to the current segment to the vector associated with the primary trajectory ID in the map
-//         grouped_hits[hit_trj_id].push_back(&hit);
-//     }
-    
-//     // Return the map containing pointers to hit segments grouped by primary trajectory ID
-//     return grouped_hits;
-// }
-
 std::vector<TG4HitSegment> FilterHits(const std::vector<TG4HitSegment>& hits, const int PDG){
     /*
     filter hits whose PrimaryId is equal to PDG
@@ -216,14 +197,29 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
     /*
     Perform digitization of edepsim hits
     */
-    // fired_wires.clear();
-
-    // for(auto& hit : hits)
     for(auto i = 0u; i < hits.size(); i++){
+        // auto hit_primary_id = hits[i].GetPrimaryId();
+        
+        // bool muon_hit = true;
+        // for(const auto& contrib_id : hits[i].Contrib) {
+        //     if(evEdep->Trajectories[contrib_id].GetPDGCode() != 13 || 
+        //         evEdep->Trajectories[contrib_id].GetParentId()!=-1) {
+        //         muon_hit = false;
+        //         break;
+        //     }
+        // }
+        // if(!muon_hit) continue;
 
+        // std::cout 
+        //       << "hit number : " << i 
+        //       << ", hit_primary_id : " << hit_primary_id 
+        //       << ", evEdep->Trajectories[hit_primary_id].GetPDGCode() : " << evEdep->Trajectories[hit_primary_id].GetPDGCode()
+        //       << ", evEdep->Trajectories[hit_primary_id].GetParentId() : " << evEdep->Trajectories[hit_primary_id].GetParentId()
+        //       << ", hits[i].Contrib.size() : " << hits[i].Contrib.size()
+        //       << "\n";
         auto hit_middle = (hits[i].GetStop() + hits[i].GetStart())*0.5;
         auto hit_delta =  (hits[i].GetStop() - hits[i].GetStart());
-        
+    
         Line hit_line = Line(hits[i]);
         
         for(auto& wire : wire_infos){
@@ -237,14 +233,17 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
 
                 double closest_2_hit, closest_2_wire;
 
+                // given that wire and hit are 2 segments of a line, get segment 2 segment distance
                 double hit_2_wire_dist = RecoUtils::GetSegmentSegmentDistance(wire_line, hit_line, closest_2_hit, closest_2_wire);
 
+                // w_point is the 3D point on the wire's line closest to the hit's line
                 TVector3 w_point = wire_line.GetPointAt(closest_2_hit);
                 
+                // h_point is the 3D point on the line defined by the hit closest to the wire's line
                 TVector3 h_point = hit_line.GetPointAt(closest_2_wire);
 
                 bool is_hit_in_cell = (wire.hor == true) ? 
-                    fabs(w_point.Y() - h_point.Y()) < SENSE_2_SENSE_DIST * 0.5 : fabs(w_point.X() - h_point.X()) <= SENSE_2_SENSE_DIST * 0.5;
+                    fabs(w_point.Y() - h_point.Y()) <= SENSE_2_SENSE_DIST * 0.5 : fabs(w_point.X() - h_point.X()) <= SENSE_2_SENSE_DIST * 0.5;
 
                 if(is_hit_in_cell){ // pass if hit y (or x) coodinate is found in the hor (or vertical) wire cell
 
@@ -260,7 +259,9 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
 
                     fired.hindex.push_back(i);
 
+                    // if wire already fired check if the tdc saved is the smallest
                     UpdateFiredWires(fired_wires, fired);
+
                 }
             }
         }
@@ -371,6 +372,7 @@ int main(int argc, char* argv[]){
 
     for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
+        if(i != 33u && i != 111u && i != 127u && i != 166u) continue;
         edep_event_index = i;
 
         LOG("ii", TString::Format("Processing Event %d", i).Data());

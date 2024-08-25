@@ -207,7 +207,7 @@ double RecoUtils::GetMinImpactParameter(const Helix& helix, const Line& line, do
 }
 
 double RecoUtils::NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess, 
-                                  double tol, int max_iterations){
+                                  double tol, unsigned int max_iterations){
     /*
         given a function f and its derivative fprime
         find the point x_sol such that fprime(x_sol) 
@@ -217,7 +217,7 @@ double RecoUtils::NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess,
     */
     // std::cout << "x_guess " << x_guess << "f->Eval(x_guess) "<< f->Eval(x_guess) << "\n";
     double min_sofar = 1e6;
-    int iter = 0;
+    unsigned int iter = 0;
     for (auto i = 0u; i < max_iterations; i++)
     {
         double f_at_x = f->Eval(x_guess);
@@ -233,7 +233,7 @@ double RecoUtils::NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess,
         if (fabs(f_at_x) < tol) break;
         iter++;
     }
-    if(iter==max_iterations-1) return min_sofar;
+    if(iter==max_iterations - 1u) return min_sofar;
     return f->Eval(x_guess);
 }
 
@@ -554,6 +554,7 @@ double RecoUtils::FunctorNLL(const double* p)
 double RecoUtils::GetDipAngleFromCircleLine(const Circle& circle, 
                                             const Line2D& line, 
                                             double Phi0,
+                                            int helicity,
                                             TVector3& momentum){
     /*
         input:
@@ -564,18 +565,11 @@ double RecoUtils::GetDipAngleFromCircleLine(const Circle& circle,
                        total momentum
         NOTE: a guess for the initial vertex is needed because related to the dip angle
     */
-    TVector2 tangent_zy = circle.GetDerivativeAt(Phi0);
-    double angle_of_direction_zy = atan(tangent_zy.Y()/tangent_zy.X());
     double p_zy_module = circle.R() * 0.3 * 0.6;
-    double pz = p_zy_module * cos(angle_of_direction_zy);
-    double py = p_zy_module * sin(angle_of_direction_zy);
-    // direction_zy = tangent_zy.Unit();
-
-    // // p_yz momentum on the bending plane (transverse to magnetic fiels)
-    // double p_zy_module = circle.R() * 0.3 * 0.6;
-    // TVector2 p_zy = direction_zy * p_zy_module;
-    // double pz = -p_zy.X();
-    // double py = -p_zy.Y();
+    // define theta as the angle [0, 2 pi) between the momentum vector and z axis
+    double theta = Phi0 - helicity * TMath::Pi() / 2.;
+    double py = p_zy_module * sin(theta);
+    double pz = p_zy_module * cos(theta);
 
     // slope of the tangent in the zx plane
     double pz_over_px = line.m();
@@ -589,7 +583,7 @@ double RecoUtils::GetDipAngleFromCircleLine(const Circle& circle,
 
 Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle, 
                                         const Line2D& line, 
-                                        const TVector3 x0,
+                                        const Helix& true_helix,
                                         TVector3& momentum){
     /*
         input:
@@ -600,11 +594,15 @@ Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle,
         construct a helix from these inputs
         NOTE: a guess for the initial vertex is needed because related to the dip angle
     */
-    double Phi0 = circle.GetAngleFromPoint(x0.Z(),x0.Y());
-    
-    double dip_angle = RecoUtils::GetDipAngleFromCircleLine(circle, line, Phi0, momentum);
+    auto vertex = true_helix.x0();
 
-    return Helix(circle.R(), dip_angle, Phi0, 1, x0);
+    auto helicity = true_helix.h();
+
+    double Phi0 = circle.GetAngleFromPoint(vertex.Z() ,vertex.Y());
+    
+    double dip_angle = RecoUtils::GetDipAngleFromCircleLine(circle, line, Phi0, helicity, momentum);
+
+    return Helix(circle.R(), dip_angle, Phi0, helicity, vertex);
 }
 
 const double* RecoUtils::GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus)
