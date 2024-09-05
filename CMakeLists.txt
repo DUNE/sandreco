@@ -76,6 +76,9 @@ target_link_libraries(test_reconstructNLL Struct Utils SANDRecoUtils)
 
 add_executable(test_DigitizeDrift tests/test_DigitizeDrift.cpp)
 target_link_libraries(test_DigitizeDrift Struct Utils SANDRecoUtils)
+
+add_executable(test_DisplayReco tests/test_DisplayReco.cpp)
+target_link_libraries(test_DisplayReco Struct Utils)
 # ----
 
 # Creates Analyze executable.
