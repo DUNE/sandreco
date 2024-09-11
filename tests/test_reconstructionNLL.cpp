@@ -1204,10 +1204,10 @@ int main(int argc, char* argv[]){
     LOG("I","Loading wires lookup table");
     ReadWireInfos(fWireInfo, wire_infos);
 
-    int j = 0;
+    // int j = 0;
     for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
-        if(i != 33u && i != 111u && i != 127u && i != 166u) continue;
+        // if(i != 33u && i != 111u && i != 127u && i != 166u) continue;
         LOG("I", TString::Format("********************** PROCESSING EDEP EVENT %d **********************", i).Data());
         
         edep_event_index = i;
@@ -1215,9 +1215,10 @@ int main(int argc, char* argv[]){
         RecoUtils::event_digits->clear();
         
         tEdep->GetEntry(i);
-        
-        tDigit->GetEntry(j);
-        j++;
+        tDigit->GetEntry(i);
+
+        // tDigit->GetEntry(j);
+        // j++;
 
         auto muon_trj = evEdep->Trajectories[0];
 

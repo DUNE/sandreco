@@ -190,6 +190,17 @@ void SortWiresByTime(std::vector<dg_wire>& wires){
     });
 }
 
+void GetVolumeInfo(const char* path){
+    TString path_ts = path;
+    TObjArray* obja1 = path_ts.Tokenize("/");
+    auto supermod = ((TObjString*)obja1->At(7))->GetString();
+    auto mod = ((TObjString*)obja1->At(8))->GetString();
+    // auto plane = ((TObjString*)obja1->At(10))->GetString();
+    std::cout << "supermod " << supermod 
+            //   << ", mod " << mod
+            //   << ", plane " << plane 
+            << "\n";
+}
 
 void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
                           const std::vector<dg_wire>& wire_infos, 
@@ -198,28 +209,13 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
     Perform digitization of edepsim hits
     */
     for(auto i = 0u; i < hits.size(); i++){
-        // auto hit_primary_id = hits[i].GetPrimaryId();
         
-        // bool muon_hit = true;
-        // for(const auto& contrib_id : hits[i].Contrib) {
-        //     if(evEdep->Trajectories[contrib_id].GetPDGCode() != 13 || 
-        //         evEdep->Trajectories[contrib_id].GetParentId()!=-1) {
-        //         muon_hit = false;
-        //         break;
-        //     }
-        // }
-        // if(!muon_hit) continue;
-
-        // std::cout 
-        //       << "hit number : " << i 
-        //       << ", hit_primary_id : " << hit_primary_id 
-        //       << ", evEdep->Trajectories[hit_primary_id].GetPDGCode() : " << evEdep->Trajectories[hit_primary_id].GetPDGCode()
-        //       << ", evEdep->Trajectories[hit_primary_id].GetParentId() : " << evEdep->Trajectories[hit_primary_id].GetParentId()
-        //       << ", hits[i].Contrib.size() : " << hits[i].Contrib.size()
-        //       << "\n";
         auto hit_middle = (hits[i].GetStop() + hits[i].GetStart())*0.5;
         auto hit_delta =  (hits[i].GetStop() - hits[i].GetStart());
-    
+
+        auto node = geo->FindNode(hit_middle.X(), hit_middle.Y(),hit_middle.Z())->GetName();
+        auto path = geo->GetPath();
+        GetVolumeInfo(path);
         Line hit_line = Line(hits[i]);
         
         for(auto& wire : wire_infos){
@@ -372,7 +368,8 @@ int main(int argc, char* argv[]){
 
     for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
-        if(i != 33u && i != 111u && i != 127u && i != 166u) continue;
+        // if(i != 33u && i != 111u && i != 127u && i != 166u) continue;
+        if(i < 2) continue;
         edep_event_index = i;
 
         LOG("ii", TString::Format("Processing Event %d", i).Data());
@@ -381,13 +378,13 @@ int main(int argc, char* argv[]){
         fired_wires.clear();
 
         CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], wire_infos, fired_wires);
-        
         LOG("i", "Sort wires by true hit time");
         SortWiresByTime(fired_wires);
         
         tout.Fill();
 
     }
+    throw "";
     fout.cd();
 
     tout.Write();
