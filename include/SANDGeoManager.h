@@ -24,7 +24,7 @@ namespace chamber
 const char* const wire_regex_string =
    "(C|C3H6)DriftModule_([0-2]+)(_X0_|_X1_|_A_|_B_|_C_|_)(F|S)wire_PV_([0-9]+)(/|)";
 const char* const drift_plane_regex_string = 
-   "(C|C3H6)DriftModule_([0-2]+)(_X0_|_X1_|_A_|_B_|_C_|_)PV_0(/|)";
+   "(C|C3H6)DriftModule_([0-2]+)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-9])(/|)";
 const char* const drift_chamber_regex_string = 
    "(C|C3H6)DriftChamber(_X0_|_X1_|_A_|_B_|_C_|_)PV_0(/|)";
 const char* const module_regex_string =
@@ -47,6 +47,8 @@ const char* const stt_plane_regex_string =
 // "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
 const char* const stt_module_regex_string =
     "STT_([0-9]+)_(Trk|C3H6|C)Mod_PV_([0-9]+)(/|)";
+const char* const stt_supermodule_regex_string =
+   "(Trk|SuperMod)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-1]+)(/|)";
 }  // namespace stt
 
 namespace ecal
@@ -128,12 +130,16 @@ class SANDGeoManager : public TObject
                                                      // match relevant info
                                                      // about module from volume
                                                      // path
-  std::map<int, std::map<double, int> >
-      stt_tube_tranverse_position_map_;  // map (key: plane id, value: map (key:
-                                         // tube id, value: 2D position [i.e. x
-                                         // = z, y = transversal coord]))
+  mutable TPRegexp stt_supermodule_regex_{
+      sand_geometry::stt::stt_supermodule_regex_string};  // regular expression to
+                                                          // match relevant info
+                                                          // about supermodule from volume
+                                                          // path
   std::map<int, std::map<double, int> >
       wire_tranverse_position_map_;  // map (key: plane id, value: map (key:
+                                         // tube id, value: 2D position [i.e. x
+                                         // = z, y = transversal coord]))
+ // map (key: plane id, value: map (key:
                                          // wire id, value: 2D position [i.e. x
                                          // = z, y = transversal coord]))
 
@@ -196,8 +202,8 @@ class SANDGeoManager : public TObject
                             const TGeoHMatrix& matrix,
                             int drift_plane_unique_id);
   int get_drift_plane_id(const TString& volume_path, bool JustLocalId) const;
-  int get_supermodule_id(const TString& volume_path) const;
-  int get_module_id(const TString& volume_path) const;
+  int get_drift_supermodule_id(const TString& volume_path) const;
+  int get_drift_module_replica_id(const TString& volume_path) const;
   int get_wire_id(const TString& volume_path) const;
   bool is_drift_plane(const TString& volume_name) const;
   bool isSwire(const TString& volume_path) const;
@@ -212,7 +218,7 @@ class SANDGeoManager : public TObject
         stt_two_tubes_regex_(sand_geometry::stt::stt_two_tubes_regex_string),
         stt_plane_regex_(sand_geometry::stt::stt_plane_regex_string),
         stt_module_regex_(sand_geometry::stt::stt_module_regex_string),
-        stt_tube_tranverse_position_map_(),
+        stt_supermodule_regex_(sand_geometry::stt::stt_supermodule_regex_string),
         wire_tranverse_position_map_()
   {
   }
@@ -251,6 +257,10 @@ class SANDGeoManager : public TObject
   {
     return wiremap_;
   }
+  const std::map<int, std::map<double, int>>& get_wires_transverse_position_map() const
+  {
+    return wire_tranverse_position_map_; 
+  }
   int get_ecal_cell_id(double x, double y, double z) const;
   int get_stt_tube_id(double x, double y, double z) const;
   int get_wire_id(int drift_plane_id, double z, double transverse_coord) const;
@@ -272,11 +282,11 @@ class SANDGeoManager : public TObject
   static void decode_stt_tube_id(int stt_tube_global_id,
                                  int& stt_plane_global_id,
                                  int& stt_tube_local_id);
-  static int encode_stt_plane_id(int stt_module_id, int stt_plane_local_id,
-                                 int stt_plane_type);
-  static void decode_stt_plane_id(int stt_plane_global_id, int& stt_module_id,
-                                  int& stt_plane_local_id, int& stt_plane_type);
-
+  static int encode_plane_id(int supermodule_id,int module_id, 
+                                 int plane_local_id, int plane_type);
+  static void decode_plane_id(int plane_global_id, int& supermodule_id,
+                                  int& module_id, int& plane_local_id, 
+                                  int& plane_type);
     // DRIFT CHAMBER
   // static void decode_chamber_plane_id(int wire_global_id, 
   //                            int& drift_plane_global_id, 

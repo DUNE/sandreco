@@ -439,40 +439,36 @@ void SANDGeoManager::set_ecal_info()
 int SANDGeoManager::encode_stt_tube_id(int stt_plane_global_id,
                                        int stt_tube_local_id)
 {
-  return stt_tube_local_id * 100000 + stt_plane_global_id;
+  return stt_tube_local_id * 1000000 + stt_plane_global_id;
 }
 
 void SANDGeoManager::decode_stt_tube_id(int stt_tube_global_id,
                                         int& stt_plane_global_id,
                                         int& stt_tube_local_id)
 {
-  stt_tube_local_id = stt_tube_global_id / 100000;
-  stt_plane_global_id = stt_tube_global_id % 100000;  // global id
+  stt_plane_global_id = stt_tube_global_id % 1000000;  // global id
+  stt_tube_local_id = stt_tube_global_id / 1000000;
 }
 
-int SANDGeoManager::encode_stt_plane_id(int stt_module_id,
-                                        int stt_plane_local_id,
-                                        int stt_plane_type)
+int SANDGeoManager::encode_plane_id(int supermodule_id,
+                                        int module_id,
+                                        int plane_local_id,
+                                        int plane_type)
 {
-  return stt_module_id * 100 + stt_plane_local_id * 10 + stt_plane_type;
+  return supermodule_id * 1E5 + module_id * 100 + plane_local_id * 10 + plane_type;
 }
 
-
-void SANDGeoManager::decode_stt_plane_id(int stt_plane_global_id,
-                                         int& stt_module_id,
-                                         int& stt_plane_local_id,
-                                         int& stt_plane_type)
+void SANDGeoManager::decode_plane_id(int plane_global_id,
+                                         int& supermodule_id,
+                                         int& module_id,
+                                         int& plane_local_id,
+                                         int& plane_type)
 {
-  stt_module_id = stt_plane_global_id / 100;
-  stt_plane_local_id = (stt_plane_global_id - stt_module_id * 100) / 10;
-  stt_plane_type = stt_plane_global_id % 10;
+  supermodule_id = plane_global_id / 1E5;
+  module_id = (plane_global_id - supermodule_id * 1E5) / 100;
+  plane_local_id = (plane_global_id - supermodule_id * 1E5 - module_id * 100) / 10;
+  plane_type = plane_global_id % 10;
 }
-
-// void SANDGeoManager::decode_chamber_plane_id(int wire_global_id, 
-//                              int& drift_plane_global_id, 
-//                              int& wire_local_id)
-// {
-// }
 
 bool SANDGeoManager::is_stt_tube(const TString& volume_name) const
 {
@@ -490,13 +486,23 @@ bool SANDGeoManager::is_drift_plane(const TString& volume_name) const
 
 int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
 {
+  
   auto plane_matches = stt_plane_regex_.MatchS(volume_path);
   auto module_matches = stt_module_regex_.MatchS(volume_path);
+  auto supermodule_matches = stt_supermodule_regex_.MatchS(volume_path);
 
   if (plane_matches->GetEntries() == 0) {
     delete plane_matches;
     delete module_matches;
     return 0;
+  }
+
+  int supermodule_id;
+  if (supermodule_matches->GetEntries() == 0) {
+    supermodule_id = 0;
+  } else {
+    // To Do
+    // Currently there are no supermodules in the stt geometry
   }
 
   int module_id =
@@ -514,12 +520,12 @@ int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
 
   delete plane_matches;
   delete module_matches;
-
-  return encode_stt_plane_id(module_id * 10 + module_replica_id,
+ 
+  return encode_plane_id(supermodule_id, module_id * 10 + module_replica_id,
                              2 * plane_replica_id + plane_type, plane_type);
 }
 
-int SANDGeoManager::get_supermodule_id(const TString& volume_path) const
+int SANDGeoManager::get_drift_supermodule_id(const TString& volume_path) const
 {
   // upstram -> downstrea,
   // Trk, C1, B1, A1, A0, B0, C0, X0, X1
@@ -555,11 +561,16 @@ int SANDGeoManager::get_supermodule_id(const TString& volume_path) const
   return supermodule_id;
 }
 
-int SANDGeoManager::get_module_id(const TString& volume_path) const
+int SANDGeoManager::get_drift_module_replica_id(const TString& volume_path) const
 {
   auto matches = module_regex_.MatchS(volume_path);
+  auto type = (reinterpret_cast<TObjString*>(matches->At(1)))
+            ->GetString();
   int id = (reinterpret_cast<TObjString*>(matches->At(3)))
             ->GetString().Atoi();
+  if (type == "C") {
+    id = 9;
+  }
   return id;
 }
 
@@ -578,19 +589,30 @@ int SANDGeoManager::get_wire_id(const TString& volume_path) const
 
 int SANDGeoManager::get_drift_plane_id(const TString& volume_path, bool JustLocalId = false) const
 {
-  auto drift_plane_matches = drift_plane_regex_.MatchS(volume_path);
-  // std::cout<<"volume path "<<volume_path<<"\n";
-  int drift_plane_id = (reinterpret_cast<TObjString*>(drift_plane_matches->At(2)))
-                            ->GetString().Atoi();
-  // std::cout<<"drift_plane_id "<<drift_plane_id<<"\n";
+  auto plane_matches = drift_plane_regex_.MatchS(volume_path);
 
-  if(JustLocalId){
-    return drift_plane_id;
-  }else{
-    int supermodule_id = get_supermodule_id(volume_path);
+  if (plane_matches->GetEntries() == 0) {
+    delete plane_matches;
+    return 0;
+  }
+
+  int plane_type = (reinterpret_cast<TObjString*>(plane_matches->At(2)))
+                            ->GetString().Atoi();
+  int plane_replica_id = (reinterpret_cast<TObjString*>(plane_matches->At(4)))
+                            ->GetString().Atoi();
+
+  if (JustLocalId) {
+    return plane_type;
+  } else {
+    int supermodule_id = get_drift_supermodule_id(volume_path);
     int module_id = 0;
-    if(supermodule_id) module_id = get_module_id(volume_path);
-    return supermodule_id*100000 + module_id*10000 + drift_plane_id*1000;
+    int module_replica_id = 0;
+    if(supermodule_id) {
+      module_replica_id = get_drift_module_replica_id(volume_path);
+    }
+
+    return encode_plane_id(supermodule_id, module_id * 10 + module_replica_id,
+                               2 * plane_replica_id + plane_type, plane_type);
   }
 }
 
@@ -600,11 +622,12 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
 {
   int stt_plane_type;
   int stt_module_id;
+  int stt_supermodule_id;
   int stt_plane_local_id;
-  decode_stt_plane_id(stt_plane_id, stt_module_id, stt_plane_local_id,
+  decode_plane_id(stt_plane_id, stt_supermodule_id, stt_module_id, stt_plane_local_id,
                       stt_plane_type);
 
-  std::map<double, int> this_plane_stt_tube_tranverse_position_map;
+  std::map<double, int> this_plane_wire_tranverse_position_map;
 
   if (stt_plane_type != 1 && stt_plane_type != 2)
     std::cout << "Error: stt plane type expected 0 or 1 -> " << stt_plane_type
@@ -647,6 +670,8 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
       int tube_local_id = two_tubes_id * 2 + tube_id;
       int tube_unique_id = encode_stt_tube_id(stt_plane_id, tube_local_id);
 
+      std::cout << tube_local_id << " " << stt_plane_id << " " <<  tube_unique_id << std::endl;
+
       TVector3 tube_position;
       tube_position.SetX(tube_hmatrix.GetTranslation()[0]);
       tube_position.SetY(tube_hmatrix.GetTranslation()[1]);
@@ -655,39 +680,45 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
       double transverse_coord =
           stt_plane_type == 1 ? tube_position.Y() : tube_position.X();
 
-      this_plane_stt_tube_tranverse_position_map[transverse_coord] =
+      this_plane_wire_tranverse_position_map[transverse_coord] =
           tube_unique_id;
 
       // here we fill STT tube info
-      sttmap_[tube_unique_id] = SANDWireInfo(
-          tube_unique_id, tube_position.X(), tube_position.Y(),
-          tube_position.Z(), tube_length,
-          stt_plane_type == 1 ? SANDWireInfo::Orient::kVertical
-                              : SANDWireInfo::Orient::kHorizontal,
-          stt_plane_type == 1 ? SANDWireInfo::ReadoutEnd::kPlus
-                              : SANDWireInfo::ReadoutEnd::kPlus);
+      SANDWireInfo w;
+        w.x(tube_position.X()); w.y(tube_position.Y()); w.z(tube_position.Z());
+        w.length(tube_length);
+        w.readout_end(SANDWireInfo::ReadoutEnd::kPlus);
+      if (stt_plane_type == 1) {
+        w.orientation(SANDWireInfo::Orient::kVertical);
+        w.ax(0); w.ay(1); w.az(0);
+      } else {
+        w.orientation(SANDWireInfo::Orient::kHorizontal);
+        w.ax(1); w.ay(0); w.az(0);
+      }
+      wiremap_[tube_unique_id] = w;
     }
   }
 
-  stt_tube_tranverse_position_map_[stt_plane_id] =
-      this_plane_stt_tube_tranverse_position_map;
+  wire_tranverse_position_map_[stt_plane_id] =
+      this_plane_wire_tranverse_position_map;
 }
+
 void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
                                          const TGeoHMatrix& matrix,
                                          int drift_plane_unique_id)
 {
 
   int drift_plane_local_id = get_drift_plane_id(node->GetName(),true); // 0,1 or 2
-
-  std::map<double, int> this_wire_tranverse_position_map;
+  
+  std::map<double, int> this_plane_wire_tranverse_position_map;
 
   for (int i = 0; i < node->GetNdaughters(); i++) { // loop over wires
     auto wire_node = node->GetDaughter(i);
     if(isSwire(wire_node->GetName()))
       {
       int wire_id = get_wire_id(wire_node->GetName());
-      int wire_unique_id = drift_plane_unique_id + wire_id;
-
+      int wire_unique_id = encode_stt_tube_id(drift_plane_unique_id, wire_id);
+      
       TGeoMatrix*  wire_matrix = wire_node->GetMatrix();
       TGeoHMatrix wire_hmatrix = matrix * (*wire_matrix);
       TGeoTube*     wire_shape = (TGeoTube*)wire_node->GetVolume()->GetShape();
@@ -700,21 +731,25 @@ void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
 
       double transverse_coord = drift_plane_local_id == 2 ? wire_position.X() : wire_position.Y();
       
-      this_wire_tranverse_position_map[transverse_coord] = wire_unique_id;
-
+      this_plane_wire_tranverse_position_map[transverse_coord] = wire_unique_id;
+      
       // here we fill wire info
-      wiremap_[wire_unique_id] = SANDWireInfo(
-                                 wire_unique_id, 
-                                 wire_position.X(), 
-                                 wire_position.Y(),
-                                 wire_position.Z(), 
-                                 wire_length, 
-                                 drift_plane_local_id == 2  ? SANDWireInfo::Orient::kVertical 
-                                                            : SANDWireInfo::Orient::kHorizontal, 
-                                 SANDWireInfo::ReadoutEnd::kPlus);// to be changed
+      SANDWireInfo w;
+      w.x(wire_position.X()); w.y(wire_position.Y()); w.z(wire_position.Z());
+      w.length(wire_length);
+      w.readout_end(SANDWireInfo::ReadoutEnd::kPlus);
+      if (drift_plane_local_id == 2) {
+        w.orientation(SANDWireInfo::Orient::kVertical);
+        w.ax(0); w.ay(1); w.az(0);
+      } else {
+        w.orientation(SANDWireInfo::Orient::kHorizontal);
+        w.ax(1); w.ay(0); w.az(0);
       }
+      wiremap_[wire_unique_id] = w;
+    }
   }
-  wire_tranverse_position_map_[drift_plane_unique_id] = this_wire_tranverse_position_map;
+
+  wire_tranverse_position_map_[drift_plane_unique_id] = this_plane_wire_tranverse_position_map;
 }
 
 void SANDGeoManager::set_stt_info(const TGeoHMatrix& matrix)
@@ -744,11 +779,13 @@ void SANDGeoManager::set_wire_info(const TGeoHMatrix& matrix)
   TString         node_name = node->GetName();
   TGeoMatrix*   node_matrix = node->GetMatrix();
   TGeoHMatrix  node_hmatrix = matrix * (*node_matrix);
-  
   if(is_drift_plane(node_name)){
     int drift_plane_unique_id = get_drift_plane_id(node_path);
     set_drift_wire_info(node, node_hmatrix, drift_plane_unique_id);
-  }else{
+  } else if (is_stt_plane(node_name)) {
+    int stt_plane_unique_id = get_stt_plane_id(node_path);
+    set_stt_tube_info(node, node_hmatrix, stt_plane_unique_id);
+  } else {
     for (int i = 0; i < node->GetNdaughters(); i++) {
       gGeoManager->CdDown(i);
       set_wire_info(node_hmatrix);
@@ -764,12 +801,10 @@ void SANDGeoManager::set_wire_info()
   TGeoHMatrix matrix = *gGeoIdentity;
   if(geo_->FindVolumeFast("STTtracker_PV")){
     std::cout<<"using SAND tracker : STT\n";
-    set_stt_info(matrix);
-  }else
-  {
+  } else {
     std::cout<<"using SAND tracker : DRIFT CHAMBER\n";
-    set_wire_info(matrix);
   }
+  set_wire_info(matrix);
   std::cout<<"writing wiremap_ info on separate file\n";
   std::cout<<"wiremap_ size: "<<wiremap_.size()<<std::endl;
   WriteMapOnFile(wiremap_);
@@ -779,12 +814,12 @@ void SANDGeoManager::WriteMapOnFile(const std::map<int,SANDWireInfo>& map)
 {
   std::fstream file_wireinfo;
   file_wireinfo.open("wireinfo.txt", std::ios::out); 
-  file_wireinfo << "id,x,y,z,length,orientation\n";
+  file_wireinfo << "id,x,y,z,length,orientation,ax,ay,az\n";
   for(auto& wire: map)
   {
     SANDWireInfo w = wire.second;
     int orientation = (w.orientation()==SANDWireInfo::Orient::kVertical) ? 1 : 0;
-    file_wireinfo << std::setprecision(20) << wire.first <<","<<w.x()<<","<<w.y()<<","<<w.z()<<","<<w.length()<<","<<orientation<<"\n";
+    file_wireinfo << std::setprecision(20) << wire.first <<","<<w.x()<<","<<w.y()<<","<<w.z()<<","<<w.length()<<","<<orientation<<","<<w.ax()<<","<<w.ay()<<","<<w.az()<<"\n";
   }
   file_wireinfo.close();
 }
@@ -804,8 +839,8 @@ void SANDGeoManager::init(TGeoManager* const geo)
   cellmap_.clear();
   sttmap_.clear();
   wiremap_.clear();
-  stt_tube_tranverse_position_map_.clear();
-  set_ecal_info();
+  wire_tranverse_position_map_.clear();
+  // set_ecal_info();
   set_wire_info();
 }
 
@@ -943,10 +978,11 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
   if (plane_id == 0) return -999;
 
   int tube_id = -999;
+  int supermodule_id;
   int module_id;
   int plane_local_id;
   int plane_type;
-  decode_stt_plane_id(plane_id, module_id, plane_local_id, plane_type);
+  decode_plane_id(plane_id, supermodule_id, module_id, plane_local_id, plane_type);
 
   double transverse_coord = 0.;
 
@@ -956,13 +992,13 @@ int SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
     transverse_coord = y;
 
   std::map<double, int>::const_iterator it =
-      stt_tube_tranverse_position_map_.at(plane_id).lower_bound(
+      wire_tranverse_position_map_.at(plane_id).lower_bound(
           transverse_coord);
 
-  if (it == stt_tube_tranverse_position_map_.at(plane_id).begin()) {
-    tube_id = stt_tube_tranverse_position_map_.at(plane_id).begin()->second;
-  } else if (it == stt_tube_tranverse_position_map_.at(plane_id).end()) {
-    tube_id = stt_tube_tranverse_position_map_.at(plane_id).rbegin()->second;
+  if (it == wire_tranverse_position_map_.at(plane_id).begin()) {
+    tube_id = wire_tranverse_position_map_.at(plane_id).begin()->second;
+  } else if (it == wire_tranverse_position_map_.at(plane_id).end()) {
+    tube_id = wire_tranverse_position_map_.at(plane_id).rbegin()->second;
   } else {
     SANDWireInfo tube1 = sttmap_.at(it->second);
     SANDWireInfo tube2 = sttmap_.at(std::prev(it)->second);

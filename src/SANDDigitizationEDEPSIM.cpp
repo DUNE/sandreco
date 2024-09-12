@@ -329,10 +329,10 @@ void create_digits_from_hits(const SANDGeoManager& geo,
     double min_time_tub = 1E9;  // mm
     int did = it->first;
 
-    int mod, tub, type, pla, plloc;
+    int supmod, mod, tub, type, pla, plloc;
 
     SANDGeoManager::decode_stt_tube_id(did, pla, tub);
-    SANDGeoManager::decode_stt_plane_id(pla, mod, plloc, type);
+    SANDGeoManager::decode_plane_id(supmod, pla, mod, plloc, type);
 
     auto stt_info = geo.get_stt_tube_info(did);
 
