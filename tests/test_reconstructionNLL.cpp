@@ -178,23 +178,40 @@ void ReadWireInfos(const std::string fInput, std::vector<dg_wire>& wire_infos){
 
 // EVENT SELECTION_____________________________________________________________
 
-std::vector<dg_wire*> SelectWireFiredByTraj(int trj_index) {
+std::vector<dg_wire*> SelectWireFiredByTraj(int trj_index){
+
     std::vector<dg_wire*> selected_wires;
+
+    auto hits = evEdep->SegmentDetectors["DriftVolume"];
+
     if (!RecoUtils::event_digits) {
-        std::cerr << "Error: event_digits is null!" << std::endl;
+        // std::cerr << "Error: event_digits is null!" << std::endl;
+        std::cout << "Error: event_digits is null!" << std::endl;
         return selected_wires;
     }
-    for (auto& wire : *RecoUtils::event_digits) { // run over event fired wires
-        bool trj_contributed_to_this = false;
-        for(auto hit_index : wire.hindex){ // run over hits contribuiting to this wire
-            if(event_drift_hits[hit_index].GetPrimaryId() == trj_index){
-                // if there is at least 1 hit of the wire whose id is the one of
-                // the trj, than the trj contributed to this hit
-                trj_contributed_to_this = true;
-                break;
+
+    // run over event fired wires
+    for (auto& wire : *RecoUtils::event_digits) {
+
+        bool trj_contributed_to_this = true;
+
+        // run over hits contribuiting to this wire
+        for(auto hit_index : wire.hindex){
+        
+            // run over hits contributors
+            for(const auto& contrib_id : hits[hit_index].Contrib){
+
+                // pass only wire whose hits have contrubution
+                // from the trajectory with index traj index
+                if(evEdep->Trajectories[contrib_id].GetTrackId() != trj_index){
+
+                    trj_contributed_to_this = false;
+
+                    break;
+                }
             }
         }
-        if(trj_contributed_to_this) selected_wires.push_back(&wire);
+        if(trj_contributed_to_this) selected_wires.push_back(&wire);     
     }
     return selected_wires;
 }
@@ -487,10 +504,6 @@ void GetTrackFirstGuess(Circle& circle, Line2D& line){
     LOG("R", TString::Format("first guess : Center = (%f, %f), R =  %f", 
                             circle.center_x(), circle.center_y(), circle.R()).Data());
     
-    // LOG("R", TString::Format("track vertex (x, y, z) : (%f, %f, %f)", x0.X(), x0.Y(), x0.Z()).Data());
-    // LOG("R", TString::Format("Momentum (px, py, pz) : (%f, %f, %f)", momentum.X(), momentum.Y(), momentum.Z()).Data());
-    
-    // return RecoUtils::GetHelixFromCircleLine(circle, line, x0, momentum);
 }
 
 double WireZdistance(const dg_wire& wire1, const dg_wire& wire2) {
@@ -908,7 +921,6 @@ double NLL_Sin(TF1* TestSin, std::vector<dg_wire*>& wires){
         //                << ", r_estimated : " << r_estimated << "\n";
 
     }
-    // throw "";
     calls ++;
     return sqrt(nll)/wires.size();
 }
@@ -1164,45 +1176,66 @@ int main(int argc, char* argv[]){
     
     TTree tout("tReco", "tReco");
     
-    // EventReco event_reco;
     RecoObject reco_object;
     
     std::vector<dg_wire> fired_wires;
     
     std::vector<dg_wire> wire_infos;
+
+    unsigned int edep_event_index;
+
+    std::string fEDepInputStr = fEDepInput;
+
+    std::string fDigitInputStr = fDigitInput;
     
     tEdep->SetBranchAddress("Event", &evEdep);
     tDigit->SetBranchAddress("Event", &evDigit);
     // tDigit->AddFriend(tEdep);
     tDigit->SetBranchAddress("fired_wires", &RecoUtils::event_digits);
     
+    tout.Branch("edep_file_input", &fEDepInputStr);
+    
+    tout.Branch("digit_file_input", &fDigitInputStr);
+    
+    tout.Branch("edep_event_index", &edep_event_index, "edep_event_index/i");
+    
     tout.Branch("reco_object", "reco_object", &reco_object);
     
     LOG("I","Loading wires lookup table");
     ReadWireInfos(fWireInfo, wire_infos);
 
-    for(auto i=0u; i < 10; i++)
-    // for(auto i=0u; i < tEdep->GetEntries(); i++)
+    // int j = 0;
+    for(auto i=0u; i < tEdep->GetEntries(); i++)
     {
-        LOG("I", "NEW EVENT **********************************************************");
+        // if(i != 33u && i != 111u && i != 127u && i != 166u) continue;
+        LOG("I", TString::Format("********************** PROCESSING EDEP EVENT %d **********************", i).Data());
+        
+        edep_event_index = i;
+        
         RecoUtils::event_digits->clear();
+        
         tEdep->GetEntry(i);
         tDigit->GetEntry(i);
 
+        // tDigit->GetEntry(j);
+        // j++;
+
         auto muon_trj = evEdep->Trajectories[0];
+
+        if(abs(muon_trj.GetPDGCode())!=13) { // reconstruct mu- or mu+
+            LOG("W", TString::Format("Skipping Event %d, first trajectory is neither mu- nor mu+", i).Data());
+            continue;
+        }
+
         auto vertex = evEdep->Primaries[0];
-        auto trj = evEdep->Trajectories;
 
         if(!IsInFiducialVolume("mm", vertex.GetPosition().X(), vertex.GetPosition().Y(), vertex.GetPosition().Z())){
-            LOG("W", "Skipping Event not in fiducial volume");
+            LOG("W", TString::Format("Skipping Event %d not in fiducial volume", i).Data());
             continue;
         }
 
         event_drift_hits = evEdep->SegmentDetectors["DriftVolume"];
 
-        if(abs(muon_trj.GetPDGCode())!=13) continue; // reconstruct mu- or mu+
-
-        // LOG("I","Test muon");
         std::cout << "event number : " << i 
                   << ", muon_momentum : (" 
                   << muon_trj.GetInitialMomentum().X() << ", " 
@@ -1228,11 +1261,13 @@ int main(int argc, char* argv[]){
 
         LOG("ii", TString::Format("number of horizontal fired wires for trackid %d : %d", muon_trj.GetTrackId(), horizontal_fired_wires.size()).Data());
         LOG("ii", TString::Format("number of vertical fired wires for trackid %d : %d", muon_trj.GetTrackId(), vertical_fired_wires.size()).Data());
-
         LOG("I", "Check event with enough hits");
         bool enough_fired_wires = PassSelectionNofHits(horizontal_fired_wires.size(), vertical_fired_wires.size());
         
-        if(!enough_fired_wires) continue;
+        if(!enough_fired_wires){
+            LOG("W", TString::Format("Skipping Event %d not enough hits", i).Data());
+            continue;
+        };
 
         true_helix.PrintHelixPars();
 
@@ -1246,13 +1281,15 @@ int main(int argc, char* argv[]){
         LOG("I", "Track First Guess (seed): fitting wire coordinates");
         GetTrackFirstGuess(circle_ZY_plane, line_XZ_plane);
 
-        for (auto cycle = 0u; cycle < nof_cycles; i++)
+        for (auto cycle = 0u; cycle < nof_cycles; cycle++)
         {
             LOG("I", TString::Format("---------> Starting cycle number %d ", cycle).Data());
 
             LOG("I","Converting measured TDC into drift time ");
+            
             LOG("ii","Converting horizontal wires");
             TDC2DriftDistance<Line2D>(horizontal_fired_wires, line_XZ_plane);
+            
             LOG("ii","Converting vertical wires");
             TDC2DriftDistance<Circle>(vertical_fired_wires, circle_ZY_plane);
             
@@ -1266,17 +1303,20 @@ int main(int argc, char* argv[]){
 
             LOG("I", "Fitting drift circles with a NLL method");
             FitDriftCircles(circle_ZY_plane, line_XZ_plane, fit_ZY, fit_XZ);
-
-            cycle++;
         }
+
         LOG("I","Reconstructed Helix from Circle (ZY plane) and Line (XZ plane)");
-        reco_helix.Setx0(true_helix.x0());
-        reco_helix.Seth(true_helix.h());
-        reco_helix = RecoUtils::GetHelixFromCircleLine(circle_ZY_plane, line_XZ_plane, reco_helix.x0(), particle_momentum);
+        // reco_helix.Setx0(true_helix.x0());
+        // reco_helix.Seth(true_helix.h());
+        /*
+            To be modified in the future:
+                pass vertex and helicity of the true helix
+        */
+        reco_helix = RecoUtils::GetHelixFromCircleLine(circle_ZY_plane, line_XZ_plane, true_helix, particle_momentum);
         reco_helix.PrintHelixPars();                                     
         LOG("R", TString::Format("True momentum: (%f, %f, %f)",  muon_trj.GetInitialMomentum().X(),  muon_trj.GetInitialMomentum().Y(),  muon_trj.GetInitialMomentum().Z()));
         LOG("R", TString::Format("Reco momentum: (%f, %f, %f)", particle_momentum.X(), particle_momentum.Y(), particle_momentum.Z()));
-
+        // throw "";
         LOG("I", "Filling output tree");
         reco_object.fit_infos_xz = fit_XZ;
         reco_object.fit_infos_zy = fit_ZY;
@@ -1286,6 +1326,7 @@ int main(int argc, char* argv[]){
         for(dg_wire* wire : selected_wires){
             reco_object.fired_wires.push_back(*wire);
         }
+
         reco_object.true_helix = true_helix;
         reco_object.pt_true = true_helix.R()*0.3*0.6;
         reco_object.reco_helix = reco_helix;
@@ -1296,12 +1337,8 @@ int main(int argc, char* argv[]){
         reco_object.p_reco = {particle_momentum.X(), 
                               particle_momentum.Y(), 
                               particle_momentum.Z()};
-        reco_object.edep_file_input = fEDepInput;
-        reco_object.digit_file_input = fDigitInput;
-        reco_object.edepsim_event_index = i;
-
+        
         tout.Fill();
-
     }
     fout.cd();
 

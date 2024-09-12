@@ -49,14 +49,23 @@ class EventDisplay:
     
     def _handle_wires_input_(self, wires):
         if isinstance(wires, pd.DataFrame):
-            required_columns = ['edep_file', 'event_index', 'did', 'x', 'y', 'z', 'de', 'adc', 'tdc',
+            required_columns = ['edep_file_input', 'edep_event_index', 'did', 'x', 'y', 'z', 'de', 'adc', 'tdc',
                                 'hor', 'wire_length', 't_hit', 'drift_time', 'signal_time',
-                                't_hit_measured', 'signal_time_measured', 'drift_time_measured', 't_hit', 'drift_circle']
-            for column in wires.columns:
-                if column not in required_columns:
+                                't_hit_measured', 'signal_time_measured', 'drift_time_measured', 't_hit', 
+                                # 'drift_circle'
+                                ]
+
+            # wires_columns = [
+            #     (column.split('.')[-1] if '.' in column else column) 
+            #     for column in wires.columns
+            # ]
+
+
+            for column in required_columns:
+                if column not in wires.columns:
                     raise ValueError(f"wires dataframe has no a required column : {column}")
-            self.hor_fired_wires_info = wires[wires.hor == True]
-            self.ver_fired_wires_info = wires[wires.hor == False]
+            self.hor_fired_wires_info = wires[(wires.hor == True)&(wires.edep_event_index == self.event_idx)]
+            self.ver_fired_wires_info = wires[(wires.hor == False)&(wires.edep_event_index == self.event_idx)]
         else:
             raise ValueError("wires info are expected to be pandas dataframe")
 

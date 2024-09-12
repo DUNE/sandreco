@@ -643,7 +643,7 @@ double              GetMinImpactParameter(const Helix& helix, const Line& line);
 
 double              GetMinImpactParameter(const Helix& helix, const Line& line, double& s_min, double& t_min, bool& HasMinimized);
 
-double              NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess, double tol, int max_iterations);
+double              NewtonRaphson2D(TF1* f, TF1* fprime, double& x_guess, double tol, unsigned int max_iterations);
 
 Line                GetLineFromWire(const dg_wire& digit);
 
@@ -662,11 +662,12 @@ double              FunctorNLL(const double* p);
 double              GetDipAngleFromCircleLine(const Circle& circle, 
                                              const Line2D& line, 
                                              double Phi0,
+                                             int helicity,
                                              TVector3& Momentum);
 
 Helix               GetHelixFromCircleLine(const Circle& circle, 
                                            const Line2D& line, 
-                                           const TVector3 x0,
+                                           const Helix& true_helix,
                                            TVector3& momentum);
 
 const double*       GetHelixParameters(const Helix& helix_initial_guess, int& TMinuitStatus);
@@ -710,9 +711,6 @@ struct MinuitFitInfos
 struct RecoObject
 {
     // edepsim info of the reconstructed track_____________________
-    const char*                 edep_file_input;
-    const char*                 digit_file_input;
-    int                         edepsim_event_index;
     std::vector<TLorentzVector> trj_points;
     
     // digitization info___________________________________________
