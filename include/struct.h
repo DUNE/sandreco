@@ -62,7 +62,24 @@ struct dg_tube {
   double adc;
   double tdc; 
   bool hor;
+  double wire_length;
   std::vector<int> hindex;
+  /* 
+    ADDENDUM
+    tdc = drift_time + signal_time + t_hit
+    added to check validity of track fitting 
+    reconstruction method for drift chamber 
+  */
+  // true quantities
+  double t_hit = 1e9;
+  double signal_time = 1e9;
+  double drift_time = 1e9;
+  // measured quantities
+  double t_hit_measured = 1e9; // via global trigger
+  double signal_time_measured = 1e9; // exploit different wire orientation 
+  double drift_time_measured = 1e9; // tdc - signal_time_measured - t_hit_measured
+  
+  double missing_coordinate = 1e9;
 };
 
 struct dg_wire{

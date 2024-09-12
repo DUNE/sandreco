@@ -398,7 +398,7 @@ void SortWiresByTime(std::vector<dg_wire>& wires){
 void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
                           const std::vector<dg_wire>& wire_infos, 
                           std::vector<dg_wire>& fired_wires){
-    /*
+    /*,
     Perform digitization of edepsim hits
     */
     fired_wires.clear();
@@ -408,7 +408,6 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
     auto muon_hits = FilterHits(hits, 13);
 
     for(auto& hit : muon_hits){
-        
         for(auto& wire : wire_infos){
 
             auto hit_middle = (hit.GetStart()+hit.GetStop())*0.5;
@@ -1227,6 +1226,8 @@ int main(int argc, char* argv[]){
     const char* fWireInfo;
 
     int index = 1;
+
+    std::string trackerType = "DriftVolume";
     
     LOG("","\n");
     LOG("I","Reading inputs");
@@ -1284,13 +1285,36 @@ int main(int argc, char* argv[]){
         index++;
     }
 
-    std::cout << "Signal propagation..." << (INCLUDE_SIGNAL_PROPAGATION ? "enabled" : "disabled") << std::endl;
-    std::cout << "Hit time............." << (INCLUDE_HIT_TIME ? "enabled" : "disabled") << std::endl;
-    std::cout << "Debug mode..........." << (_DEBUG_ ? "enabled" : "disabled") << std::endl;
     std::cout << "\n";
     
     TFile fEDep(fEDepInput, "READ");
     
+    // Checks for STT or DRIFT Chaber geometry
+    TGeoManager* geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
+
+    if (geo == nullptr) {
+        std::cout << "Error in retrieving geo objects from root file: "
+                << (geo == nullptr ? "EDepSimGeometry " : "") << '\n';
+        exit(-1);
+    }
+
+    if(geo->FindVolumeFast("STTtracker_PV")){
+        std::cout<<"\n--- STT based simulation ---\n";
+        trackerType="Straw";
+    }
+    else if (geo->FindVolumeFast("SANDtracker_PV")){
+        std::cout<<"\n--- Drift based simulation ---\n";
+        trackerType="DriftVolume";
+    }
+    else{
+        std::cout<<"Error in retriving volume information from Geo Manager, exiting...\n";
+        exit(-1);
+    }
+
+    std::cout << "Signal propagation..." << (INCLUDE_SIGNAL_PROPAGATION ? "enabled" : "disabled") << std::endl;
+    std::cout << "Hit time............." << (INCLUDE_HIT_TIME ? "enabled" : "disabled") << std::endl;
+    std::cout << "Debug mode..........." << (_DEBUG_ ? "enabled" : "disabled") << std::endl;
+    std::cout << "Geometry............." << trackerType << std::endl;
     // TFile fDigit(fDigitInput, "READ");
     
     TFile fout(fOutput, "RECREATE");
@@ -1310,9 +1334,8 @@ int main(int argc, char* argv[]){
     tEdep->SetBranchAddress("Event", &evEdep);
     
     tout.Branch("reco_object", "reco_object", &reco_object);
-    
-    std::vector<dg_wire> wire_infos;
-    
+
+    std::vector<dg_wire> wire_infos;    
     std::vector<dg_wire> fired_wires;
 
     LOG("I","Loading wires lookup table");
@@ -1360,7 +1383,7 @@ int main(int argc, char* argv[]){
         }else{
             // create digits from edepsim selected hits
             LOG("I", "Digitization of edepsim TG4HitSegments");
-            CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], wire_infos, fired_wires);
+            CreateDigitsFromEDep(evEdep->SegmentDetectors[trackerType.c_str()], wire_infos, fired_wires);
         }
 
         LOG("i", "Sort wires by true hit time");
