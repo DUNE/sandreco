@@ -7,7 +7,7 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(SandReco LANGUAGES CXX VERSION 1.0.0)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
@@ -76,6 +76,9 @@ target_link_libraries(test_reconstructNLL Struct Utils SANDRecoUtils)
 
 add_executable(test_DigitizeDrift tests/test_DigitizeDrift.cpp)
 target_link_libraries(test_DigitizeDrift Struct Utils SANDRecoUtils)
+
+add_executable(test_DisplayReco tests/test_DisplayReco.cpp)
+target_link_libraries(test_DisplayReco Struct Utils)
 # ----
 
 # Creates Analyze executable.

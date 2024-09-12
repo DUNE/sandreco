@@ -7,16 +7,16 @@
 ### Get the code
 
 ```console
-$ git clone https://baltig.infn.it/dune/sand-reco.git
+$ git clone git@github.com:DUNE/sandreco.git
 ```
 
 ### Build the binaries
 
 ```console
-$ cd sand-reco
+$ cd sandreco
 $ mkdir build
 $ cd build
-$ cmake -DCMAKE_INSTALL_PREFIX=./.. ./..
+$ cmake -DCMAKE_INSTALL_PREFIX=./.. -DCMAKE_PREFIX_PATH=/path/to/edepsim/lib/cmake/EDepSim/ ./..
 $ make
 $ make install
 ```
