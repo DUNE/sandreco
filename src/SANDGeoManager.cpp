@@ -459,8 +459,6 @@ long SANDGeoManager::encode_plane_id(long supermodule_id,
                                         long plane_local_id,
                                         long plane_type)
 {
-  // std::cout << supermodule_id << " " << module_id << " " << plane_local_id << " " << plane_type << std::endl;
-  // std::cout << supermodule_id * 1E5 + module_id * 100 + plane_local_id * 10 + plane_type << std::endl;
   return supermodule_id * 1E5 + module_id * 100 + plane_local_id * 10 + plane_type;
 }
 
@@ -820,7 +818,7 @@ void SANDGeoManager::set_wire_info()
   WriteMapOnFile(geometry, wiremap_);
 }
 
-void SANDGeoManager::WriteMapOnFile(std::string fName, const std::map<int,SANDWireInfo>& map)
+void SANDGeoManager::WriteMapOnFile(std::string fName, const std::map<long,SANDWireInfo>& map)
 {
   std::fstream file_wireinfo;
   file_wireinfo.open(fName + "_info.txt", std::ios::out); 

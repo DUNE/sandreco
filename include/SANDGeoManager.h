@@ -107,7 +107,7 @@ class SANDGeoManager : public TObject
   std::map<int, SANDECALCellInfo> cellmap_;  // map of ecal cell (key: id,
                                              // value: info on cell)
 
-  std::map<int, SANDWireInfo> wiremap_; // map of wire (key : id, value:
+  std::map<long, SANDWireInfo> wiremap_; // map of wire (key : id, value:
                                             // info on wire)
   mutable TPRegexp stt_single_tube_regex_{
       sand_geometry::stt::stt_single_tube_regex_string};  // regular expression
@@ -205,7 +205,7 @@ class SANDGeoManager : public TObject
   int get_wire_id(const TString& volume_path) const;
   bool is_drift_plane(const TString& volume_name) const;
   bool isSwire(const TString& volume_path) const;
-  void WriteMapOnFile(std::string fName, const std::map<int,SANDWireInfo>& map);
+  void WriteMapOnFile(std::string fName, const std::map<long,SANDWireInfo>& map);
 
  public:
   SANDGeoManager()
@@ -234,7 +234,7 @@ class SANDGeoManager : public TObject
   {
     return cellmap_.at(ecal_cell_id);
   }
-  const SANDWireInfo& get_wire_info(int wire_id) const
+  const SANDWireInfo& get_wire_info(long wire_id) const
   {
     return wiremap_.at(wire_id);
   }
@@ -242,7 +242,7 @@ class SANDGeoManager : public TObject
   {
     return cellmap_;
   }
-  const std::map<int, SANDWireInfo>& get_wire_info() const
+  const std::map<long, SANDWireInfo>& get_wire_info() const
   {
     return wiremap_;
   }

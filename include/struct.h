@@ -84,7 +84,7 @@ struct dg_tube {
 
 struct dg_wire{
   std::string det;
-  int did;
+  long did; 
   double x;
   double y;
   double z;

@@ -277,7 +277,7 @@ namespace stt
 {
 // Group hits into tube
 void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
-                        std::map<int, std::vector<hit> >& hits2Tube)
+                        std::map<long, std::vector<hit> >& hits2Tube)
 {
   hits2Tube.clear();
 
@@ -291,7 +291,7 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
     double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
-    int stid = geo.get_stt_tube_id(x, y, z);
+    long stid = geo.get_stt_tube_id(x, y, z);
 
     if (stid == -999) {
       // std::cout << std::setprecision(12) << x << " " << y << " " << z <<
@@ -336,15 +336,15 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
 // tdc is the time of closest point to wire + drift time
 // adc is the sum of energy deposit within integration time window
 void create_digits_from_hits(const SANDGeoManager& geo,
-                             std::map<int, std::vector<hit> >& hits2Tube,
+                             std::map<long, std::vector<hit> >& hits2Tube,
                              std::vector<dg_wire>& wire_digits)
 {
   wire_digits.clear();
 
-  for (std::map<int, std::vector<hit> >::iterator it = hits2Tube.begin();
+  for (std::map<long, std::vector<hit> >::iterator it = hits2Tube.begin();
        it != hits2Tube.end(); ++it) {
     double min_time_tub = 1E9;  // mm
-    int did = it->first;
+    long did = it->first;
 
     long supmod, mod, tub, type, pla, plloc;
 
@@ -431,7 +431,7 @@ void create_digits_from_hits(const SANDGeoManager& geo,
 void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
                   std::vector<dg_wire>& wire_digits)
 {
-  std::map<int, std::vector<hit> > hits2Tube;
+  std::map<long, std::vector<hit> > hits2Tube;
   wire_digits.clear();
 
   group_hits_by_tube(ev, geo, hits2Tube);
@@ -469,10 +469,10 @@ TVector3 IntersectHitPlane(const TG4HitSegment& hseg,
   return crossing_point;
 }
 
-void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
-                        std::map<int, std::vector<hit> >& hits2wire)
+void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
+                        std::map<long, std::vector<hit> >& hits2cell)
 {
-  hits2wire.clear();
+  hits2cell.clear();
 
   for (unsigned int j = 0; j < ev->SegmentDetectors["DriftVolume"].size(); j++) 
   {
@@ -537,7 +537,7 @@ void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
       h.pid = hseg.PrimaryId;
       h.index = j;
 
-      hits2wire[id1].push_back(h);
+      hits2cell[id1].push_back(h);
       continue;
     }
 
@@ -576,7 +576,7 @@ void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
       start = stop;
       hseg_start_t += portion * hseg_dt;
 
-      hits2wire[i].push_back(h);
+      hits2cell[i].push_back(h);
     }
   }                        
 }
@@ -691,16 +691,16 @@ double GetMinWireTime(TLorentzVector point, SANDWireInfo& arg_wire)
   return point.T() + (point.Vect() - leftend).Mag()/sand_reco::stt::v_signal_inwire;
 }
 
-void create_digits_from_wire_hits(const SANDGeoManager& geo,
-                             std::map<int, std::vector<hit> >& hits2wire,
+void create_digits_from_hits(const SANDGeoManager& geo,
+                             std::map<long, std::vector<hit> >& hits2cell,
                              std::vector<dg_wire>& wire_digits)
 {
   wire_digits.clear();
 
-  for (std::map<int, std::vector<hit> >::iterator it = hits2wire.begin();
-       it != hits2wire.end(); ++it) // run over wires
+  for (std::map<long, std::vector<hit> >::iterator it = hits2cell.begin();
+       it != hits2cell.end(); ++it) // run over wires
   {
-    int did            = it->first; // wire unique id
+    long did            = it->first; // wire unique id
     auto wire_info     = geo.get_wire_info(did);
     double wire_time   = 999.;
     double drift_time  = 999.;
@@ -748,14 +748,14 @@ void create_digits_from_wire_hits(const SANDGeoManager& geo,
 }
 
 // simulate wire responce for whole event
-void digitize_wire(TG4Event* ev, const SANDGeoManager& geo,
+void digitize_drift(TG4Event* ev, const SANDGeoManager& geo,
                   std::vector<dg_wire>& wire_digits)
 {
-  std::map<int, std::vector<hit> > hits2wire;
+  std::map<long, std::vector<hit> > hits2cell;
   wire_digits.clear();
 
-  group_hits_by_wire(ev, geo, hits2wire);
-  digitization::edep_sim::chamber::create_digits_from_wire_hits(geo, hits2wire,
+  group_hits_by_cell(ev, geo, hits2cell);
+  digitization::edep_sim::chamber::create_digits_from_hits(geo, hits2cell,
                                                        wire_digits);
 }
 
@@ -858,7 +858,7 @@ void digitize(const char* finname, const char* foutname,
       digitization::edep_sim::stt::digitize_stt(ev, sand_geo, wire_digits);
     }else
     {
-      digitization::edep_sim::chamber::digitize_wire(ev, sand_geo, wire_digits);
+      digitization::edep_sim::chamber::digitize_drift(ev, sand_geo, wire_digits);
     }
 
     tout.Fill();
