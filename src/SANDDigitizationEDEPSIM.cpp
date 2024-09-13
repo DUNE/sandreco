@@ -337,23 +337,23 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
 // adc is the sum of energy deposit within integration time window
 void create_digits_from_hits(const SANDGeoManager& geo,
                              std::map<int, std::vector<hit> >& hits2Tube,
-                             std::vector<dg_tube>& digit_vec)
+                             std::vector<dg_wire>& wire_digits)
 {
-  digit_vec.clear();
+  wire_digits.clear();
 
   for (std::map<int, std::vector<hit> >::iterator it = hits2Tube.begin();
        it != hits2Tube.end(); ++it) {
     double min_time_tub = 1E9;  // mm
     int did = it->first;
 
-    int supmod, mod, tub, type, pla, plloc;
+    long supmod, mod, tub, type, pla, plloc;
 
-    SANDGeoManager::decode_stt_tube_id(did, pla, tub);
+    SANDGeoManager::decode_wire_id(did, pla, tub);
     SANDGeoManager::decode_plane_id(supmod, pla, mod, plloc, type);
 
-    auto stt_info = geo.get_stt_tube_info(did);
+    auto stt_info = geo.get_wire_info(did);
 
-    dg_tube d;
+    dg_wire d;
     d.det = it->second[0].det;
     d.did = did;
     d.de = 0;
@@ -423,20 +423,20 @@ void create_digits_from_hits(const SANDGeoManager& geo,
     d.tdc = min_time_tub + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
     d.adc = d.de;
 
-    digit_vec.push_back(d);
+    wire_digits.push_back(d);
   }
 }
 
 // simulate stt responce for whole event
 void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
-                  std::vector<dg_tube>& digit_vec)
+                  std::vector<dg_wire>& wire_digits)
 {
   std::map<int, std::vector<hit> > hits2Tube;
-  digit_vec.clear();
+  wire_digits.clear();
 
   group_hits_by_tube(ev, geo, hits2Tube);
   digitization::edep_sim::stt::create_digits_from_hits(geo, hits2Tube,
-                                                       digit_vec);
+                                                       wire_digits);
 }
 }  // namespace stt
 
@@ -484,21 +484,34 @@ void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
 
     // if(pdg!=13) continue; //->test digit only for muons
 
-    std::vector<int> ids = geo.get_segment_ids(hseg);
-    int id1=ids[0]; 
-    int id2=ids[1];
+    std::vector<long> ids = geo.get_segment_ids(hseg);
+    long id1=ids[0]; 
+    long id2=ids[1];
 
     if(id1==-999){
       // std::cout<<"skipping this hit\n";
       continue;}
 
-    if(abs(id1-id2)>1000){
+    
+    long plane_global_id1;
+    long plane_global_id2;
+    long wire_local_id1;
+    long wire_local_id2;
+    geo.decode_wire_id(id1, plane_global_id1, wire_local_id1);
+    geo.decode_wire_id(id2, plane_global_id2, wire_local_id2);
+
+    // std::cout << id1 << " "  << id2 << " " << std::endl;
+    // std::cout << plane_global_id1 << " " << plane_global_id2 << std::endl;
+    // std::cout << wire_local_id1 << " " << wire_local_id2 << std::endl;
+
+
+    if(plane_global_id1 != plane_global_id2){
       std::cout << "WIRE ID CORRESPONDING TO 2 DIFFERENT DIRFT PLANES" << std::endl;
       break;
     }
 
-    int start_id = 999; 
-    int stop_id  = 999;
+    long start_id = 999; 
+    long stop_id  = 999;
     if(id2>id1)
     {
       start_id = id1;
@@ -805,7 +818,6 @@ void digitize(const char* finname, const char* foutname,
 
   // vector of ECAL and STT digits
   std::vector<dg_cell> vec_cell;
-  std::vector<dg_tube> digit_vec;
   std::vector<dg_wire> wire_digits;
 
   // output
@@ -814,13 +826,12 @@ void digitize(const char* finname, const char* foutname,
   
   tout.Branch("dg_cell", "std::vector<dg_cell>", &vec_cell);
   
-  if(geo->FindVolumeFast("STTtracker_PV")){
+  if (geo->FindVolumeFast("STTtracker_PV")){
     std::cout<<"\n--- Digitize STT based simulation ---\n";
-    tout.Branch("dg_tube", "std::vector<dg_tube>", &digit_vec);
-  }else{
+  } else {
     std::cout<<"\n--- Digitize Drift based simulation ---\n"; 
-    tout.Branch("dg_wire", "std::vector<dg_wire>", &wire_digits);
   }
+  tout.Branch("dg_wire", "std::vector<dg_wire>", &wire_digits);
 
   // number of events
   const int nev = t->GetEntries();
@@ -838,20 +849,16 @@ void digitize(const char* finname, const char* foutname,
     // define the T0 for this event
     // for each straw tubs:
     // std::map<int, double> sand_reco::t0
+    sand_reco::stt::initT0(ev, sand_geo);
+    digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
+                                                ecal_digi_mode);
 
     if(geo->FindVolumeFast("STTtracker_PV"))
     {
-      sand_reco::stt::initT0(ev, sand_geo);
-      digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
-                                                  ecal_digi_mode);
-      digitization::edep_sim::stt::digitize_stt(ev, sand_geo, digit_vec);
+      digitization::edep_sim::stt::digitize_stt(ev, sand_geo, wire_digits);
     }else
     {
-      sand_reco::chamber::initT0(ev, sand_geo);
-      digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
-                                                  ecal_digi_mode);
       digitization::edep_sim::chamber::digitize_wire(ev, sand_geo, wire_digits);
-
     }
 
     tout.Fill();

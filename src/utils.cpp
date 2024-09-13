@@ -793,10 +793,10 @@ void sand_reco::stt::initT0(TG4Event* ev, SANDGeoManager& geo)
                    ev->Primaries[0].Position.Z() / sand_reco::constant::c +
                    r.Gaus(0, bucket_rms);
 
-  for (auto& tube : geo.get_stt_tube_info()) {
-    int plane_global_id;
-    int tube_local_id;
-    geo.decode_stt_tube_id(tube.first, plane_global_id, tube_local_id);
+  for (auto& tube : geo.get_wire_info()) {
+    long plane_global_id;
+    long tube_local_id;
+    geo.decode_wire_id(tube.first, plane_global_id, tube_local_id);
 
     if (t0.find(plane_global_id) == t0.end()) {
       auto tube_info = tube.second;

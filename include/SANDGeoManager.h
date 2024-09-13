@@ -35,16 +35,13 @@ const char* const supermodule_regex_string =
     
 namespace stt
 {
-const char* const path_internal_volume =
-    "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
-  "MagIntVol_volume_PV_0/sand_inner_volume_PV_0";
- const char* const name_internal_volume = "sand_inner_volume_PV";
-
 const char* const stt_single_tube_regex_string =
-  "(C|C3H6|Trk)Mod_([0-9]+)_plane(XX|YY)_straw_PV_([0-9]+)(/|)";
-//const char* const stt_two_tubes_regex_string =
-//  "(Trk|C3H6|C)Mod_([0-9]+)_plane(XX|YY)_2straw_stGas_(Xe|Ar)19_PV_([0-9]+)(/|)";
-
+    "(horizontalST_(Ar|Xe)|STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_vv_ST)_PV_([0-9]+"
+    ")(/|)";
+// "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
+// "0-9]+)";
+const char* const stt_two_tubes_regex_string =
+    "STT_([0-9]+)_(Trk|C3H6|C)Mod_(ST_|)(hh|vv)_2straw_PV_([0-9]+)(/|)";
 const char* const stt_plane_regex_string =
     "STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_(hh|vv)_PV_([0-9]+)(/|)";
 // "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
@@ -109,18 +106,16 @@ class SANDGeoManager : public TObject
   TGeoManager* geo_;  // TGeoManager pointer to ND site geometry
   std::map<int, SANDECALCellInfo> cellmap_;  // map of ecal cell (key: id,
                                              // value: info on cell)
-  std::map<int, SANDWireInfo> sttmap_;    // map of stt tube (key: id, value:
-                                             // info on tube)
 
   std::map<int, SANDWireInfo> wiremap_; // map of wire (key : id, value:
                                             // info on wire)
-  mutable TPRegexp stt_tube_regex_{
+  mutable TPRegexp stt_single_tube_regex_{
       sand_geometry::stt::stt_single_tube_regex_string};  // regular expression
                                                           // to match relevant
                                                           // info about tube
                                                           // from volume path
-//  mutable TPRegexp stt_two_tubes_regex_{
-//      sand_geometry::stt::stt_two_tubes_regex_string};  // regular expression to
+  mutable TPRegexp stt_two_tubes_regex_{
+      sand_geometry::stt::stt_two_tubes_regex_string};  // regular expression to
                                                         // match relevant info
                                                         // about tube couple
                                                         // from volume path
@@ -138,7 +133,7 @@ class SANDGeoManager : public TObject
                                                           // match relevant info
                                                           // about supermodule from volume
                                                           // path
-  std::map<int, std::map<double, int> >
+  std::map<long, std::map<double, long> >
       wire_tranverse_position_map_;  // map (key: plane id, value: map (key:
                                          // tube id, value: 2D position [i.e. x
                                          // = z, y = transversal coord]))
@@ -195,7 +190,7 @@ class SANDGeoManager : public TObject
   bool is_stt_plane(const TString& volume_name) const;
   int get_stt_plane_id(const TString& volume_path) const;
   void set_stt_tube_info(const TGeoNode* const node, const TGeoHMatrix& matrix,
-                         int stt_plane_id);
+                         long stt_plane_id);
   void set_stt_info(const TGeoHMatrix& matrix);
   // void set_stt_info();
 
@@ -203,7 +198,7 @@ class SANDGeoManager : public TObject
   void set_wire_info(const TGeoHMatrix& matrix);
   void set_drift_wire_info (const TGeoNode* const node,
                             const TGeoHMatrix& matrix,
-                            int drift_plane_unique_id);
+                            long drift_plane_unique_id);
   int get_drift_plane_id(const TString& volume_path, bool JustLocalId) const;
   int get_drift_supermodule_id(const TString& volume_path) const;
   int get_drift_module_replica_id(const TString& volume_path) const;
@@ -215,8 +210,8 @@ class SANDGeoManager : public TObject
  public:
   SANDGeoManager()
       : cellmap_(),
-        sttmap_(),
-         stt_tube_regex_(sand_geometry::stt::stt_single_tube_regex_string),
+        wiremap_(),
+         stt_single_tube_regex_(sand_geometry::stt::stt_single_tube_regex_string),
         //stt_two_tubes_regex_(sand_geometry::stt::stt_two_tubes_regex_string),
         stt_plane_regex_(sand_geometry::stt::stt_plane_regex_string),
         stt_module_regex_(sand_geometry::stt::stt_module_regex_string),
@@ -239,10 +234,6 @@ class SANDGeoManager : public TObject
   {
     return cellmap_.at(ecal_cell_id);
   }
-  const SANDWireInfo& get_stt_tube_info(int stt_tube_id) const
-  {
-    return sttmap_.at(stt_tube_id);
-  }
   const SANDWireInfo& get_wire_info(int wire_id) const
   {
     return wiremap_.at(wire_id);
@@ -251,24 +242,20 @@ class SANDGeoManager : public TObject
   {
     return cellmap_;
   }
-  const std::map<int, SANDWireInfo>& get_stt_tube_info() const
-  {
-    return sttmap_;
-  }
   const std::map<int, SANDWireInfo>& get_wire_info() const
   {
     return wiremap_;
   }
-  const std::map<int, std::map<double, int>>& get_wires_transverse_position_map() const
+  const std::map<long, std::map<double, long>>& get_wires_transverse_position_map() const
   {
     return wire_tranverse_position_map_; 
   }
   int get_ecal_cell_id(double x, double y, double z) const;
-  int get_stt_tube_id(double x, double y, double z) const;
-  int print_stt_tube_id(double x, double y, double z) const;
+  long get_stt_tube_id(double x, double y, double z) const;
+  long print_stt_tube_id(double x, double y, double z) const;
 
-  int get_wire_id(int drift_plane_id, double z, double transverse_coord) const;
-  std::vector<int> get_segment_ids(const TG4HitSegment& hseg) const;
+  long get_wire_id(long drift_plane_id, double z, double transverse_coord) const;
+  std::vector<long> get_segment_ids(const TG4HitSegment& hseg) const;
   TVector3 FindClosestDrift(TVector3 point, double epsilon) const;
   TVector3 SmearPoint(TVector3 point, double epsilon) const;
   bool IsOnEdge(TVector3 point) const;
@@ -282,15 +269,15 @@ class SANDGeoManager : public TObject
   TString FindNextActiveLayer(const double* starting_point, const double* direction) const;                                  
 
   // STT
-  static int encode_stt_tube_id(int stt_plane_global_id, int stt_tube_local_id);
-  static void decode_stt_tube_id(int stt_tube_global_id,
-                                 int& stt_plane_global_id,
-                                 int& stt_tube_local_id);
-  static int encode_plane_id(int supermodule_id,int module_id, 
-                                 int plane_local_id, int plane_type);
-  static void decode_plane_id(int plane_global_id, int& supermodule_id,
-                                  int& module_id, int& plane_local_id, 
-                                  int& plane_type);
+  static long encode_wire_id(long plane_global_id, long wire_local_id);
+  static void decode_wire_id(long wire_global_id,
+                                 long& plane_global_id,
+                                 long& wire_local_id);
+  static long encode_plane_id(long supermodule_id,long module_id, 
+                                 long plane_local_id, long plane_type);
+  static void decode_plane_id(long plane_global_id, long& supermodule_id,
+                                  long& module_id, long& plane_local_id, 
+                                  long& plane_type);
     // DRIFT CHAMBER
   // static void decode_chamber_plane_id(int wire_global_id, 
   //                            int& drift_plane_global_id, 
