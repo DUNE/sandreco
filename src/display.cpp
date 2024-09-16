@@ -108,18 +108,18 @@ const char* path_GRAIN =
 //     "GRAIN_gap_between_vessels_lv_PV_0/"
 //     "GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0";
 
-const char* path_GRIAN =
-    "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
-    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/"
-    "GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
-    "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/"
-    "GRAIN_gap_between_vessels_lv_PV_0/"
-    "GRAIN_inner_vessel_lv_PV_0/GRIAN_LAr_lv_PV_0";
+// const char* path_GRIAN =
+//     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+//     "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/"
+//     "GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
+//     "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/"
+//     "GRAIN_gap_between_vessels_lv_PV_0/"
+//     "GRAIN_inner_vessel_lv_PV_0/GRIAN_LAr_lv_PV_0";
 
 const char* barrel_mod_vol_name = "ECAL_lv_PV";
 const char* endcap_mod_vol_name = "ECAL_end_lv_PV";
 const char* GRAIN_vol_name = "GRAIN_LAr_lv_PV";
-const char* GRIAN_vol_name = "GRIAN_LAr_lv_PV";
+// const char* GRIAN_vol_name = "GRIAN_LAr_lv_PV";
 
 }  // namespace display
 
@@ -268,7 +268,8 @@ void init(TFile* fmc, std::vector<TFile*> vf)
       for (int k = 0; k < nCel; k++) {
 
         int index = i * (nLay * nCel) + j * (nCel) + k;
-        int id = k + 100 * j + 1000 * i;
+        // detID == 2 for barrel as in KLOE
+        int id = sand_reco::ecal::decoder::EncodeID(2, i, j, k);
 
         int local_index = j * nCel + k;
 
@@ -328,7 +329,9 @@ void init(TFile* fmc, std::vector<TFile*> vf)
 
   for (int j = 0; j < nLay_ec; j++) {
     for (int k = 0; k < nCel_ec; k++) {
-      int id = k + 100 * j + 1000 * 30;
+      // detID == 3 for right endcap as in KLOE
+      // modID == 30
+      int id = sand_reco::ecal::decoder::EncodeID(3, 30, j, k);
 
       calocell[id].id = id;
 
@@ -372,7 +375,9 @@ void init(TFile* fmc, std::vector<TFile*> vf)
 
   for (int j = 0; j < nLay_ec; j++) {
     for (int k = 0; k < nCel_ec; k++) {
-      int id = k + 100 * j + 1000 * 40;
+      // detID == 1 for left endcap as in KLOE
+      // modID == 40
+      int id = sand_reco::ecal::decoder::EncodeID(1, 40, j, k);
 
       calocell[id].id = id;
 
@@ -414,7 +419,7 @@ void init(TFile* fmc, std::vector<TFile*> vf)
   }
 
   TGeoVolume* GRAIN_vol = geo->FindVolumeFast(GRAIN_vol_name);
-  if(!GRAIN_vol) GRAIN_vol = geo->FindVolumeFast(GRIAN_vol_name);
+  // if(!GRAIN_vol) GRAIN_vol = geo->FindVolumeFast(GRIAN_vol_name);
 
   TGeoEltu* grain = (TGeoEltu*)GRAIN_vol->GetShape();
 
@@ -422,7 +427,8 @@ void init(TFile* fmc, std::vector<TFile*> vf)
   GRAIN_dy = grain->GetRmax();
   GRAIN_dx = grain->GetDz();
 
-  if(geo->cd(path_GRAIN) == kFALSE) geo->cd(path_GRIAN);
+  geo->cd(path_GRAIN);
+  // if(geo->cd(path_GRAIN) == kFALSE) geo->cd(path_GRIAN);
 
   dummyLoc[0] = 0.;
   dummyLoc[1] = 0.;
@@ -545,7 +551,8 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
     TGraph* gr = new TGraph(4, it->second.Z, it->second.Y);
 
     gr->SetFillColor(17);
-    if (it->first < 25000)
+    // barrel cell should be between 200000 and 300000
+    if (it->first >= 200000 && it->first < 300000)
       cev->cd(1);
     else
       cev->cd(2);
@@ -569,6 +576,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
         case 22:
           tr_zy->SetLineStyle(7);
           tr_zx->SetLineStyle(7);
+          [[fallthrough]];
         // e+/e-
         case 11:
         case -11:
@@ -672,7 +680,8 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
       TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);
 
       gr->SetFillColor(kBlack);
-      if (id < 25000)
+      // barrel cell should be between 200000 and 300000
+      if (id >= 200000 && id < 300000)
         cev->cd(1);
       else
         cev->cd(2);
@@ -809,7 +818,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
       else if (lw > 10.)
         lw = 10.;
 
-      if (isnan(vec_cl->at(i).sz)) {
+      if (std::isnan(vec_cl->at(i).sz)) {
         TMarker* m1 = new TMarker(vec_cl->at(i).z, vec_cl->at(i).y, 20);
         m1->SetMarkerColor(kBlue);
         m1->SetMarkerSize(lw);
@@ -948,6 +957,7 @@ void showPri(int index)
       // photons
       case 22:
         par->SetLineStyle(7);
+        [[fallthrough]];
       // e+/e-
       case 11:
       case -11:
@@ -1009,6 +1019,7 @@ void showPri(int index)
       // photons
       case 22:
         par->SetLineStyle(7);
+        [[fallthrough]];
       // e+/e-
       case 11:
       case -11:
@@ -1070,6 +1081,7 @@ void showPri(int index)
       // photons
       case 22:
         par->SetLineStyle(7);
+        [[fallthrough]];
       // e+/e-
       case 11:
       case -11:
@@ -1264,6 +1276,7 @@ void showPri(int index)
         // photons
         case 22:
           par->SetLineStyle(7);
+          [[fallthrough]];
         // e+/e-
         case 11:
         case -11:
@@ -1329,6 +1342,7 @@ void showPri(int index)
         // photons
         case 22:
           par->SetLineStyle(7);
+          [[fallthrough]];
         // e+/e-
         case 11:
         case -11:
@@ -1394,6 +1408,7 @@ void showPri(int index)
         // photons
         case 22:
           par->SetLineStyle(7);
+          [[fallthrough]];
         // e+/e-
         case 11:
         case -11:

@@ -1,0 +1,309 @@
+name: BUILD AND TEST SANDRECO
+run-name: BUILD AND TEST SANDRECO
+on: [push]
+
+env:
+  root-version: v6-32-02
+  geant4-version: v10.7.4
+  edepsim-version: 3.2.0
+  clhep-version: CLHEP_2_4_7_1
+  gegede-version: 0.8
+
+jobs:
+  build-and-test-sandreco:
+    strategy:
+      matrix:
+        sand-geometry: [sand_opt1_STT1, sand_opt2_STT1, sand_opt3_STT1, sand_opt2_STT3, sand_opt3_DRIFT1]
+    runs-on: ubuntu-latest
+    container: almalinux/9-base
+    steps:
+      #############################################################################################################################
+      # Install epel repo
+      #############################################################################################################################      
+      - name: Install epel repo
+        run: yum install -y epel-release
+
+      #############################################################################################################################
+      # Install ROOT dependencies
+      #############################################################################################################################      
+      - name: Install ROOT dependencies
+        run: |
+          yum install -y git make cmake gcc-c++ gcc binutils libX11-devel libXpm-devel libXft-devel libXext-devel python openssl-devel \
+          xrootd-client-devel xrootd-libs-devel gcc-gfortran pcre-devel mesa-libGL-devel mesa-libGLU-devel glew-devel ftgl-devel \
+          fftw-devel cfitsio-devel libuuid-devel openldap-devel python-devel python3-numpy libxml2-devel gsl-devel readline-devel \
+          qt5-qtwebengine-devel
+
+      #############################################################################################################################
+      # Install GEANT4 dependencies
+      #############################################################################################################################      
+      ## https://xerces.apache.org/xerces-c/download.cgi
+      - name: Install GEANT4 dependencies
+        run: yum install -y xerces-c xerces-c-devel expat expat-devel zlib zlib-devel
+
+      #############################################################################################################################
+      # Get SHA of HEAD develop 
+      #############################################################################################################################
+      - name: Get SHA of HEAD dunendggd 
+        id: dunendggd_sha
+        run: echo "sha=$(git ls-remote https://github.com/DUNE/dunendggd.git --refs refs/heads/master | awk -F' ' '{print $1}')" >> $GITHUB_OUTPUT
+
+      #############################################################################################################################
+      # Cache for CLHEP
+      #############################################################################################################################
+      - name: CLHEP cache
+        id: cache-clhep
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/clhep
+          # An explicit key for restoring and saving the cache
+          key: clhep-${{env.clhep-version}}
+
+      #############################################################################################################################
+      # Cache for ROOT
+      #############################################################################################################################
+      - name: ROOT cache
+        id: cache-root
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/root
+          # An explicit key for restoring and saving the cache
+          key: root-${{env.root-version}}
+
+      #############################################################################################################################
+      # Cache for GEANT4
+      #############################################################################################################################      
+      - name: GEANT4 cache
+        id: cache-geant4
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/geant4
+          # An explicit key for restoring and saving the cache
+          key: geant4-${{env.geant4-version}}
+
+      #############################################################################################################################
+      # Cache for EDEPSIM
+      #############################################################################################################################      
+      - name: EDEPSIM cache
+        id: cache-edepsim
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/edepsim
+          # An explicit key for restoring and saving the cache
+          key: edepsim-${{env.edepsim-version}}-root-${{env.root-version}}-geant4-${{env.geant4-version}}
+
+      #############################################################################################################################
+      # Cache for gegede
+      #############################################################################################################################
+      - name: gegede cache
+        id: cache-gegede
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/gegede
+          # An explicit key for restoring and saving the cache
+          key: gegede-${{env.gegede-version}}
+      
+      #############################################################################################################################
+      # Cache for dunendggd
+      #############################################################################################################################
+      - name: dunendggd cache
+        id: cache-dunendggd
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/dunendggd
+          # An explicit key for restoring and saving the cache
+          key: dunendggd-${{steps.dunendggd_sha.outputs.sha}}
+      
+      #############################################################################################################################
+      # Cache for geometry
+      #############################################################################################################################
+      - name: geometry cache
+        id: cache-geometry
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/geo
+          # An explicit key for restoring and saving the cache
+          key: dunendggd-${{steps.dunendggd_sha.outputs.sha}}-geo-${{matrix.sand-geometry}}
+      
+      #############################################################################################################################
+      # Cache for edepsim events with sand geo
+      #############################################################################################################################
+      - name: edepsim events cache with sand geo
+        id: cache-edepsim-events-sand-geo
+        uses: actions/cache@v4.0.2
+        with:
+          # A list of files, directories, and wildcard patterns to cache and restore
+          path: |
+            ~/edepsim-events
+          # An explicit key for restoring and saving the cache
+          key: edepsim-event-with-dunendggd-${{steps.dunendggd_sha.outputs.sha}}-geo-${{matrix.sand-geometry}}
+
+      #############################################################################################################################
+      # Install CLHEP
+      #############################################################################################################################
+      - name: Install CLHEP ${{env.clhep-version}}
+        if: steps.cache-clhep.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/clhep
+          cd ~/clhep
+          git clone --depth 1 --branch ${{env.clhep-version}} https://gitlab.cern.ch/CLHEP/CLHEP.git source
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. ../source
+          make -j8 install
+
+      #############################################################################################################################
+      # Install ROOT
+      #############################################################################################################################
+      - name: Install ROOT ${{env.root-version}}
+        if: steps.cache-root.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/root
+          cd ~/root
+          git clone --depth 1 --branch ${{env.root-version}} https://github.com/root-project/root.git source
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. ../source
+          make -j8 install
+
+      #############################################################################################################################
+      # Install GEANT4
+      #############################################################################################################################
+      ## https://geant4-userdoc.web.cern.ch/UsersGuides/InstallationGuide/html/installguide.html
+      - name: Install GEANT4 ${{env.geant4-version}}
+        if: steps.cache-geant4.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/geant4
+          cd ~/geant4
+          git clone --depth 1 --branch ${{env.geant4-version}} https://github.com/Geant4/geant4.git source
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DGEANT4_USE_GDML=ON -DGEANT4_INSTALL_DATA=ON ../source
+          make -j8 install
+          
+      #############################################################################################################################
+      # Install EDEPSIM
+      #############################################################################################################################
+      ## https://github.com/ClarkMcGrew/edep-sim
+      - name: Install edepsim ${{env.edepsim-version}}
+        if: steps.cache-edepsim.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/edepsim
+          cd ~/edepsim
+          git clone --depth 1 --branch ${{env.edepsim-version}} https://github.com/ClarkMcGrew/edep-sim.git source
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root" ../source
+          make -j8 install
+
+      #############################################################################################################################
+      # Get sandreco
+      #############################################################################################################################
+      - name: Checkout sandreco
+        uses: actions/checkout@v4.1.7
+        with:
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: sandreco
+
+      #############################################################################################################################
+      # Install sandreco
+      #############################################################################################################################
+      - name: Install sandreco
+        run: |
+          mkdir -p ~/sandreco
+          mv sandreco ~/sandreco/source
+          cd ~/sandreco
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim" ../source
+          make -j8 install
+  
+      #############################################################################################################################
+      # Install gegede
+      #############################################################################################################################      
+      - name: Install gegede ${{env.gegede-version}}
+        if: steps.cache-gegede.outputs.cache-hit != 'true'
+        run: | 
+          python3 -m venv ~/gegede/ggdvenv
+          source ~/gegede/ggdvenv/bin/activate
+          python3 -m pip install setuptools
+          cd ~/gegede
+          git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
+          cd source/
+          python3 setup.py install
+          deactivate ~/gegede/ggdvenv
+  
+      #############################################################################################################################
+      # Install dunendggd
+      #############################################################################################################################      
+      - name: Install dunendggd
+        if: steps.cache-dunendggd.outputs.cache-hit != 'true'
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          git clone --depth 1 https://github.com/DUNE/dunendggd.git ~/dunendggd
+          cd ~/dunendggd/
+          pip install -e .
+  
+      #############################################################################################################################
+      # Build SAND geometry
+      #############################################################################################################################      
+      - name: Build SAND geometry
+        if: steps.cache-geometry.outputs.cache-hit != 'true'
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          cd ~/dunendggd
+          ./build_hall.sh ${{matrix.sand-geometry}}
+          GEO=$(echo ${{matrix.sand-geometry}} | sed "s:sand:SAND:g")
+          mkdir -p ~/geo 
+          mv ${GEO}.gdml ~/geo/.
+
+      #############################################################################################################################
+      # Run edepsim
+      #############################################################################################################################
+      - name: Run edepsim
+        if: steps.cache-edepsim-events-sand-geo.outputs.cache-hit != 'true'
+        run: |
+          export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
+          export PATH=${PATH}:~/edepsim/bin
+          source ~/geant4/bin/geant4.sh
+          mkdir ~/edepsim-events
+          cd ~/edepsim-events
+          GEO=$(echo ${{matrix.sand-geometry}} | sed "s:sand:SAND:g")
+          edep-sim -C -g ~/geo/${GEO}.gdml -o ${GEO}.edep.root ~/sandreco/source/tests/1000-mu-in-FV.mac
+
+      #############################################################################################################################
+      # Run sandreco
+      #############################################################################################################################
+      - name: Run sandreco
+        run: |
+          export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
+          source ~/sandreco/setup.sh
+          mkdir ~/sandreco-reco
+          cd ~/sandreco-reco
+          GEO=$(echo ${{matrix.sand-geometry}} | sed "s:sand:SAND:g")
+          Digitize ~/edepsim-events/${GEO}.edep.root ${GEO}.digit.root
+          Reconstruct ~/edepsim-events/${GEO}.edep.root ${GEO}.digit.root ${GEO}.reco.root
+
+      #############################################################################################################################
+      # Upload production for sandreco test as artifact
+      #############################################################################################################################
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: produced-files-${{matrix.sand-geometry}}
+          path: |
+            ~/sandreco-reco
+            ~/edepsim-events

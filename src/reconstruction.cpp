@@ -188,7 +188,22 @@ void getVertCoord(const std::vector<double>& z_v, std::vector<double>& y_v,
   dy = TMath::Sqrt(dy_sq);
   y_v.push_back(tr.yc + sign * dy);
 
-  for (unsigned int i = 1; i < z_v.size(); i++) {
+
+    int i1=1;
+    if (forward == 0) {
+       i1 = 2;
+       if (z_v.size() >= 2) {
+	  forward = z_v[i1] - z_v[i1-1] > 0 ? 1 : -1;
+	  if (forward == 0) {
+	     i1 = 3;
+	     if (z_v.size() >= 3) {
+		forward = z_v[i1] - z_v[i1-1] > 0 ? 1 : -1;
+		}
+	     }
+	   }
+         }
+
+    for (unsigned int i = i1; i < z_v.size(); i++) {
     if ((z_v[i] - z_v[i - 1]) * forward >= 0.) {
       dy_sq = tr.r * tr.r - (z_v[i] - tr.zc) * (z_v[i] - tr.zc);
 
@@ -198,7 +213,7 @@ void getVertCoord(const std::vector<double>& z_v, std::vector<double>& y_v,
 
       y_v.push_back(tr.yc + sign * dy);
     } else {
-      break;
+      continue;
     }
   }
 }
@@ -500,7 +515,7 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
     for (const auto& p : time_ordered_XZdigit) tr.clX.push_back(p.second);
     for (const auto& p : time_ordered_YZdigit) tr.clY.push_back(p.second);
 
-    vec_tr.push_back(tr);
+    if (tr.clX.size() > 0 || tr.clY.size() > 0) vec_tr.push_back(tr);
   }
 }
 

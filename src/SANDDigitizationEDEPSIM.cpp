@@ -1,6 +1,7 @@
 #include "SANDDigitizationEDEPSIM.h"
 #include "SANDDigitization.h"
 
+#include <iomanip>
 #include <iostream>
 
 #include <iomanip>
@@ -75,6 +76,8 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   if(!running_volume.IsActive) return false;
 
   auto cell_global_id = g.get_ecal_cell_id(x, y, z);
+
+  if (cell_global_id == 999 || cell_global_id == -999) return false;
 
   g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
 
@@ -284,6 +287,9 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
   int skipped_hit = 0;
   int all_hit = ev->SegmentDetectors["Straw"].size();
 
+  int skipped_hit = 0;
+  int all_hit = ev->SegmentDetectors["Straw"].size();
+
   for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
     const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
 
@@ -325,6 +331,10 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
     h.index = j;
 
     hits2Tube[stid].push_back(h);
+  }
+  if (skipped_hit != 0) {
+    std::cout << "WARNING: " << skipped_hit << " out of " << all_hit
+              << " hits skipped due to unexpected volume path!!" << std::endl;
   }
   if (skipped_hit != 0) {
     std::cout << "WARNING: " << skipped_hit << " out of " << all_hit

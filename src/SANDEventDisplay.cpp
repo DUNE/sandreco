@@ -5,86 +5,82 @@
 #include "utils.h"
 #include <iostream>
 
-#include <TG4Event.h>
-#include <TROOT.h>
-#include <TFile.h>
-#include <TTree.h>
-#include <TEllipse.h>
 #include <TBox.h>
-#include <TPolyMarker.h>
 #include <TClonesArray.h>
-#include <TPolyLine.h>
-#include <TDatabasePDG.h>
-#include <TGButton.h>
-#include <TGComboBox.h>
-#include <TGToolBar.h>
-#include <TGMenu.h>
-#include <TGDockableFrame.h>
-#include <TGNumberEntry.h>
-#include <TGButtonGroup.h>
-#include <TGLabel.h>
 #include <TColor.h>
+#include <TDatabasePDG.h>
+#include <TEllipse.h>
+#include <TFile.h>
+#include <TG4Event.h>
+#include <TGButton.h>
+#include <TGButtonGroup.h>
+#include <TGComboBox.h>
+#include <TGDockableFrame.h>
+#include <TGLabel.h>
+#include <TGMenu.h>
+#include <TGNumberEntry.h>
+#include <TGToolBar.h>
 #include <TMath.h>
+#include <TPolyLine.h>
+#include <TPolyMarker.h>
+#include <TROOT.h>
+#include <TTree.h>
 
 using namespace std;
 
 ClassImp(SANDEventDisplay)
 
-enum ETestCommandIdentifiers {
-   M_FILE_OPEN,
-   M_SAVE_PICTURE,
-   M_SAVE_PICTURE_PNG,
-   M_SAVE_PICTURE_PDF,
-   M_PREVIOUS_EVENT,
-   M_EXECUTE_EVENT,
-   M_NEXT_EVENT,
-   M_ZOOM_IN,
-   M_ZOOM_OUT,
-   M_ZOOM_EVENT,
-   M_ZOOM_VERTEX,
-   M_ZOOM_DETECTOR,
-   M_FILE_EXIT
-};
+    enum ETestCommandIdentifiers {
+      M_FILE_OPEN,
+      M_SAVE_PICTURE,
+      M_SAVE_PICTURE_PNG,
+      M_SAVE_PICTURE_PDF,
+      M_PREVIOUS_EVENT,
+      M_EXECUTE_EVENT,
+      M_NEXT_EVENT,
+      M_ZOOM_IN,
+      M_ZOOM_OUT,
+      M_ZOOM_EVENT,
+      M_ZOOM_VERTEX,
+      M_ZOOM_DETECTOR,
+      M_FILE_EXIT
+    };
 
-const char *EVXpmNames[] = {
-  "open.xpm",
-  "save-picture.xpm",
-  "",
-  "previous.xpm",
-  "reload.xpm",
-  "next.xpm",
-  "",
-  "zoom-in.xpm",
-  "zoom-out.xpm",
-  "zoom-event.xpm",
-  "zoom-vertex.xpm",
-  "zoom-detector.xpm",
-  "",
-  "exit.xpm",
-  0
-};
+const char *EVXpmNames[] = {"open.xpm",
+                            "save-picture.xpm",
+                            "",
+                            "previous.xpm",
+                            "reload.xpm",
+                            "next.xpm",
+                            "",
+                            "zoom-in.xpm",
+                            "zoom-out.xpm",
+                            "zoom-event.xpm",
+                            "zoom-vertex.xpm",
+                            "zoom-detector.xpm",
+                            "",
+                            "exit.xpm",
+                            0};
 
 ToolBarData_t EVTbData[] = {
-  { "", "Open Root event file",     kFALSE, M_FILE_OPEN,         NULL },
-  { "", "Save picture",             kFALSE, M_SAVE_PICTURE,      NULL },
-  { "",              0,             0,      -1,                  NULL },
-  { "", "Previous event",           kFALSE, M_PREVIOUS_EVENT,    NULL },
-  { "", "Execute event",            kFALSE, M_EXECUTE_EVENT,     NULL },
-  { "", "Next event",               kFALSE, M_NEXT_EVENT,        NULL },
-  { "",              0,             0,      -1,                  NULL },
-  { "", "Zoom In",                  kFALSE, M_ZOOM_IN,           NULL },
-  { "", "Zoom Out",                 kFALSE, M_ZOOM_OUT,          NULL },
-  { "", "Zoom to event",            kFALSE, M_ZOOM_EVENT,        NULL },
-  { "", "Zoom to vertex",           kFALSE, M_ZOOM_VERTEX,       NULL },
-  { "", "Zoom to detector",         kFALSE, M_ZOOM_DETECTOR,     NULL },
-  { "",              0,             0,      -1,                  NULL },
-  { "", "Exit Application",         kFALSE, M_FILE_EXIT,         NULL },
-  { NULL,            NULL,          0,      0,                   NULL }
-};
+    {"", "Open Root event file", kFALSE, M_FILE_OPEN, NULL},
+    {"", "Save picture", kFALSE, M_SAVE_PICTURE, NULL},
+    {"", 0, 0, -1, NULL},
+    {"", "Previous event", kFALSE, M_PREVIOUS_EVENT, NULL},
+    {"", "Execute event", kFALSE, M_EXECUTE_EVENT, NULL},
+    {"", "Next event", kFALSE, M_NEXT_EVENT, NULL},
+    {"", 0, 0, -1, NULL},
+    {"", "Zoom In", kFALSE, M_ZOOM_IN, NULL},
+    {"", "Zoom Out", kFALSE, M_ZOOM_OUT, NULL},
+    {"", "Zoom to event", kFALSE, M_ZOOM_EVENT, NULL},
+    {"", "Zoom to vertex", kFALSE, M_ZOOM_VERTEX, NULL},
+    {"", "Zoom to detector", kFALSE, M_ZOOM_DETECTOR, NULL},
+    {"", 0, 0, -1, NULL},
+    {"", "Exit Application", kFALSE, M_FILE_EXIT, NULL},
+    {NULL, NULL, 0, 0, NULL}};
 
-
-
-SANDEventDisplay::SANDEventDisplay(const TGWindow *p, int w, int h) : TGMainFrame(p, w, h)
+SANDEventDisplay::SANDEventDisplay(const TGWindow *p, int w, int h)
+    : TGMainFrame(p, w, h)
 {
   // initialization
 
@@ -148,7 +144,6 @@ SANDEventDisplay::SANDEventDisplay(const TGWindow *p, int w, int h) : TGMainFram
   MapWindow();
 }
 
-
 SANDEventDisplay::~SANDEventDisplay()
 {
   SafeDelete(fTracksArrayZYTrue);
@@ -158,7 +153,6 @@ SANDEventDisplay::~SANDEventDisplay()
   SafeDelete(fFileSimData);
   SafeDelete(fFileDigitData);
 }
-
 
 //---------------------------------------------------------------------------
 void SANDEventDisplay::Run()
@@ -171,15 +165,15 @@ void SANDEventDisplay::Run()
 //----------------------------------------------------------------------------
 void SANDEventDisplay::DrawEvent()
 {
-  InitObjects(); // clear all drawing objects
+  InitObjects();  // clear all drawing objects
   DrawDetector();
   FillEventHits();
   FillDigitHits();
   DrawTracks();
   fEntryEventId->SetIntNumber(fEventNumber);
-  fDisplayCanvas->cd(); fDisplayCanvas->Update();
+  fDisplayCanvas->cd();
+  fDisplayCanvas->Update();
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::FillEventHits()
@@ -187,8 +181,10 @@ void SANDEventDisplay::FillEventHits()
   // event primary vertices
 
   for (auto &vtx : fEvent->Primaries) {
-    fVerticesZYTrue->SetNextPoint(vtx.GetPosition().Z()/10, vtx.GetPosition().Y()/10);
-    fVerticesZXTrue->SetNextPoint(vtx.GetPosition().Z()/10, vtx.GetPosition().X()/10);
+    fVerticesZYTrue->SetNextPoint(vtx.GetPosition().Z() / 10,
+                                  vtx.GetPosition().Y() / 10);
+    fVerticesZXTrue->SetNextPoint(vtx.GetPosition().Z() / 10,
+                                  vtx.GetPosition().X() / 10);
   }
 
   // event hits
@@ -205,17 +201,20 @@ void SANDEventDisplay::FillEventHits()
         int pdgCode = 0;
         for (auto &contrib : seg.Contrib) {
           for (auto &trj : fEvent->Trajectories) {
-            if (trj.GetTrackId() == contrib) {pdgCode = trj.GetPDGCode(); break;}
+            if (trj.GetTrackId() == contrib) {
+              pdgCode = trj.GetPDGCode();
+              break;
+            }
           }
           if (pdgCode) break;
         }
 
         hit.particle = pdgCode;
-        hit.z = seg.GetStart().Z()/10;
+        hit.z = seg.GetStart().Z() / 10;
         hit.e = seg.GetEnergyDeposit();
-        hit.x = seg.GetStart().Y()/10;
+        hit.x = seg.GetStart().Y() / 10;
         fEventHitsZY.push_back(hit);
-        hit.x = seg.GetStart().X()/10;
+        hit.x = seg.GetStart().X() / 10;
         fEventHitsZX.push_back(hit);
       }
     }
@@ -226,8 +225,8 @@ void SANDEventDisplay::FillEventHits()
   for (auto &trj : fEvent->Trajectories) {
     int itrack = fTracksArrayZYTrue->GetEntries();
 
-    TPolyLine *trackZY = (TPolyLine*)fTracksArrayZYTrue->ConstructedAt(itrack);
-    TPolyLine *trackZX = (TPolyLine*)fTracksArrayZXTrue->ConstructedAt(itrack);
+    TPolyLine *trackZY = (TPolyLine *)fTracksArrayZYTrue->ConstructedAt(itrack);
+    TPolyLine *trackZX = (TPolyLine *)fTracksArrayZXTrue->ConstructedAt(itrack);
 
     trackZY->SetPolyLine(0);
     trackZX->SetPolyLine(0);
@@ -238,28 +237,36 @@ void SANDEventDisplay::FillEventHits()
       double charge = fPDGcode->GetParticle(pdgCode)->Charge();
 
       if (abs(pdgCode) == 11) {
-        trackZY->SetLineColor(2); trackZX->SetLineColor(2);
-      }
-      else if (abs(pdgCode) == 13) {
-        trackZY->SetLineColor(4); trackZX->SetLineColor(4);
-      }
-      else {
-        trackZY->SetLineColor(3); trackZX->SetLineColor(3);
+        trackZY->SetLineColor(2);
+        trackZX->SetLineColor(2);
+      } else if (abs(pdgCode) == 13) {
+        trackZY->SetLineColor(4);
+        trackZX->SetLineColor(4);
+      } else {
+        trackZY->SetLineColor(3);
+        trackZX->SetLineColor(3);
       }
 
       if (!charge) {
-        trackZY->SetLineStyle(2); trackZX->SetLineStyle(2);
-        trackZY->SetLineColor(9); trackZX->SetLineColor(9);
+        trackZY->SetLineStyle(2);
+        trackZX->SetLineStyle(2);
+        trackZY->SetLineColor(9);
+        trackZX->SetLineColor(9);
         if (pdgCode == 2112) {
-          trackZY->SetLineColor(1); trackZX->SetLineColor(1);
+          trackZY->SetLineColor(1);
+          trackZX->SetLineColor(1);
         }
+      } else {
+        trackZY->SetLineStyle(1);
+        trackZX->SetLineStyle(1);
       }
-      else {trackZY->SetLineStyle(1); trackZX->SetLineStyle(1);}
 
       if (charge) {
         for (auto &trk : trj.Points) {
-          trackZY->SetNextPoint(trk.GetPosition().Z()/10, trk.GetPosition().Y()/10);
-          trackZX->SetNextPoint(trk.GetPosition().Z()/10, trk.GetPosition().X()/10);
+          trackZY->SetNextPoint(trk.GetPosition().Z() / 10,
+                                trk.GetPosition().Y() / 10);
+          trackZX->SetNextPoint(trk.GetPosition().Z() / 10,
+                                trk.GetPosition().X() / 10);
         }
       }
     }
@@ -268,7 +275,6 @@ void SANDEventDisplay::FillEventHits()
     if (!trackZX->Size()) fTracksArrayZXTrue->Remove(trackZX);
   }
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::FillDigitHits()
@@ -279,15 +285,30 @@ void SANDEventDisplay::FillDigitHits()
 
   for (auto &tube : *fTubeDigitVect) {
     hit.particle = 0;
-    hit.z = tube.z/10;
+    hit.z = tube.z / 10;
     hit.e = tube.de;
     if (tube.hor) {
-      hit.x = tube.y/10;
+      hit.x = tube.y / 10;
       fTubeDigitHitsZY.push_back(hit);
+    } else {
+      hit.x = tube.x / 10;
+      fTubeDigitHitsZX.push_back(hit);
+    }
+  }
+
+  // DRIFT wire hits
+
+  for (auto &wire : *fWireDigitVect) {
+    hit.particle = 0;
+    hit.z = wire.z/10;
+    hit.e = wire.de;
+    if (wire.hor) {
+      hit.x = wire.y/10;
+      fWireDigitHitsZY.push_back(hit);
     }
     else {
-      hit.x = tube.x/10;
-      fTubeDigitHitsZX.push_back(hit);
+      hit.x = wire.x/10;
+      fWireDigitHitsZX.push_back(hit);
     }
   }
 
@@ -311,7 +332,7 @@ void SANDEventDisplay::FillDigitHits()
 
   for (auto &cell : *fCellDigitVect) {
     hit.particle = 0;
-    hit.z = cell.z/10;
+    hit.z = cell.z / 10;
 
     int pe = 0;
 
@@ -326,17 +347,14 @@ void SANDEventDisplay::FillDigitHits()
     hit.e = pe;
 
     if (cell.det == 2) {
-      hit.x = cell.y/10;
+      hit.x = cell.y / 10;
       fCellDigitHitsZY.push_back(hit);
-    }
-    else if (cell.det == 1) {
-      hit.x = cell.x/10;
+    } else if (cell.det == 1) {
+      hit.x = cell.x / 10;
       fCellDigitHitsZX.push_back(hit);
     }
   }
-
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::DrawTracks()
@@ -348,14 +366,14 @@ void SANDEventDisplay::DrawTracks()
 
   // define track colors
 
-  double de = (0.01-0.000250)/20.;
+  double de = (0.01 - 0.000250) / 20.;
 
   fPadZY->cd();
 
   if (fDrawHits == kSimHits) {
     for (auto &hit : fEventHitsZY) {
-      int nc = int((hit.e-0.000250)/de);
-      hit.color = hit.e > 0.01 ? fPalette[fColNum-1] : fPalette[nc];
+      int nc = int((hit.e - 0.000250) / de);
+      hit.color = hit.e > 0.01 ? fPalette[fColNum - 1] : fPalette[nc];
       ellipse = new TEllipse(hit.z, hit.x, 1, 1, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, hit.color, 1001);
     }
@@ -366,7 +384,7 @@ void SANDEventDisplay::DrawTracks()
       ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
-    for (auto &hit : fCellDigitHitsZY){
+    for (auto &hit : fCellDigitHitsZY) {
       ellipse = new TEllipse(hit.z, hit.x, 2.5, 2.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
@@ -376,8 +394,8 @@ void SANDEventDisplay::DrawTracks()
 
   if (fDrawHits == kSimHits) {
     for (auto &hit : fEventHitsZX) {
-      int nc = int((hit.e-0.000250)/de);
-      hit.color = hit.e > 0.01 ? fPalette[fColNum-1] : fPalette[nc];
+      int nc = int((hit.e - 0.000250) / de);
+      hit.color = hit.e > 0.01 ? fPalette[fColNum - 1] : fPalette[nc];
       ellipse = new TEllipse(hit.z, hit.x, 1, 1, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, hit.color, 1001);
     }
@@ -388,7 +406,7 @@ void SANDEventDisplay::DrawTracks()
       ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
-    for (auto &hit : fCellDigitHitsZX){
+    for (auto &hit : fCellDigitHitsZX) {
       ellipse = new TEllipse(hit.z, hit.x, 2.5, 2.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
@@ -397,20 +415,20 @@ void SANDEventDisplay::DrawTracks()
   fPadZY->cd();
 
   for (int i = 0; i < fTracksArrayZYTrue->GetEntries(); ++i)
-  ((TPolyLine*)fTracksArrayZYTrue->At(i))->Draw();
+    ((TPolyLine *)fTracksArrayZYTrue->At(i))->Draw();
 
   fVerticesZYTrue->Draw();
 
   fPadZX->cd();
 
   for (int i = 0; i < fTracksArrayZXTrue->GetEntries(); ++i)
-  ((TPolyLine*)fTracksArrayZXTrue->At(i))->Draw();
+    ((TPolyLine *)fTracksArrayZXTrue->At(i))->Draw();
 
   fVerticesZXTrue->Draw();
 
-  //  canvas2->Print(Form("pictures/detector_view/detector_view_stt_%d.pdf", entry));
+  //  canvas2->Print(Form("pictures/detector_view/detector_view_stt_%d.pdf",
+  //  entry));
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::InitObjects()
@@ -429,17 +447,19 @@ void SANDEventDisplay::InitObjects()
   fCellDigitHitsZY.clear();
   fCellDigitHitsZX.clear();
 
-  SafeDelete(fPadZY); SafeDelete(fPadZX);
-  fDisplayCanvas->Clear(); fDisplayCanvas->cd();
+  SafeDelete(fPadZY);
+  SafeDelete(fPadZX);
+  fDisplayCanvas->Clear();
+  fDisplayCanvas->cd();
 
   // SafeDelete(fPadZY); SafeDelete(fPadZX);
 
   fPadZY = new TPad("ZY plane", "ZY plane", 0., 0, 0.5, 1);
   fPadZX = new TPad("ZX plane", "ZX plane", 0.5, 0, 1, 1);
 
-  fPadZY->Draw(); fPadZX->Draw();
+  fPadZY->Draw();
+  fPadZX->Draw();
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::DrawDetector()
@@ -450,23 +470,29 @@ void SANDEventDisplay::DrawDetector()
   // auto sandRadius = STTUtils::GetSANDInnerVolumeRadius()/10;
   // auto sandLenght = STTUtils::GetSANDInnerVolumeLength()/10;
 
-  double sandCenter[3] = {0, -2384.73/10, 23910/10};
+  double sandCenter[3] = {0, -2384.73 / 10, 23910 / 10};
   double sandRadius = 200;
   double sandLenght = 338;
 
   // for (int i = 0; i < 3; ++i) sandCenter[i] /= 10;
 
   fPadZY->cd();
-  fPadZY->DrawFrame(sandCenter[2] - 1.1 * sandRadius, sandCenter[1] - 1.1 * sandRadius, sandCenter[2] + 1.1 * sandRadius, sandCenter[1] + 1.1 * sandRadius);
+  fPadZY->DrawFrame(
+      sandCenter[2] - 1.1 * sandRadius, sandCenter[1] - 1.1 * sandRadius,
+      sandCenter[2] + 1.1 * sandRadius, sandCenter[1] + 1.1 * sandRadius);
 
   TEllipse *el1 = new TEllipse(sandCenter[2], sandCenter[1], sandRadius);
   el1->SetLineColor(2);
   el1->Draw();
 
   fPadZX->cd();
-  fPadZX->DrawFrame(sandCenter[2] - 1.1 * sandRadius, sandCenter[0] - 1.1 * 0.5 * sandLenght, sandCenter[2] + 1.1 * sandRadius, sandCenter[0] + 1.1 * 0.5 * sandLenght);
+  fPadZX->DrawFrame(
+      sandCenter[2] - 1.1 * sandRadius, sandCenter[0] - 1.1 * 0.5 * sandLenght,
+      sandCenter[2] + 1.1 * sandRadius, sandCenter[0] + 1.1 * 0.5 * sandLenght);
 
-  TBox *box1 = new TBox(sandCenter[2] - sandRadius, sandCenter[0] - 0.5*sandLenght, sandCenter[2] + sandRadius, sandCenter[0] + 0.5*sandLenght);
+  TBox *box1 =
+      new TBox(sandCenter[2] - sandRadius, sandCenter[0] - 0.5 * sandLenght,
+               sandCenter[2] + sandRadius, sandCenter[0] + 0.5 * sandLenght);
   box1->SetFillStyle(0);
   box1->SetLineColor(2);
   box1->Draw();
@@ -475,12 +501,13 @@ void SANDEventDisplay::DrawDetector()
   // TH2F *histo = (TH2F*)gROOT->FindObject(name);
   // SafeDelete(histo);
   //
-  // histo = new TH2F(name, "", 100, sandCenter[2] - 1.1*sandRadius, sandCenter[0] - 1.1*0.5*sandLenght,
-  // 100, sandCenter[2] + 1.1*sandRadius, sandCenter[0] + 1.1*0.5*sandLenght);
+  // histo = new TH2F(name, "", 100, sandCenter[2] - 1.1*sandRadius,
+  // sandCenter[0] - 1.1*0.5*sandLenght, 100, sandCenter[2] + 1.1*sandRadius,
+  // sandCenter[0] + 1.1*0.5*sandLenght);
 
-  // histo = new TH2F(name, "", 100, sandCenter[2] - 1.1*sandRadius, sandCenter[0] - 1.1*0.5*sandLenght,
-  // 100, sandCenter[2] + 1.1*sandRadius, sandCenter[0] + 1.1*0.5*sandLenght);
-  // histo->GetXaxis()->SetTitle("Z (cm)");
+  // histo = new TH2F(name, "", 100, sandCenter[2] - 1.1*sandRadius,
+  // sandCenter[0] - 1.1*0.5*sandLenght, 100, sandCenter[2] + 1.1*sandRadius,
+  // sandCenter[0] + 1.1*0.5*sandLenght); histo->GetXaxis()->SetTitle("Z (cm)");
   // histo->GetYaxis()->SetTitle("Y (cm)");
 
   // SetHistoStyle(histo);
@@ -493,36 +520,38 @@ void SANDEventDisplay::DrawDetector()
   // histo = (TH2F*)gROOT->FindObject(name);
   // SafeDelete(histo);
   //
-  // histo = new TH2F(name, "", 100, sandCenter[2] - 1.1*sandRadius, sandCenter[1] - 1.1*sandRadius,
-  // 100, sandCenter[2] + 1.1*sandRadius, sandCenter[1] + 1.1*sandRadius);
-  // histo->GetXaxis()->SetTitle("Z (cm)");
+  // histo = new TH2F(name, "", 100, sandCenter[2] - 1.1*sandRadius,
+  // sandCenter[1] - 1.1*sandRadius, 100, sandCenter[2] + 1.1*sandRadius,
+  // sandCenter[1] + 1.1*sandRadius); histo->GetXaxis()->SetTitle("Z (cm)");
   // histo->GetYaxis()->SetTitle("X (cm)");
   //
   // SetHistoStyle(histo);
   //
   // histo->Draw();
 
-
-
   // auto c = new TCanvas("myDisplay","", 2000, 1000);
   // c->Divide(2,1);
-  // c->cd(1)->DrawFrame(sandCenter[2]/10 - 1.1 * sandRadius, sandCenter[0]/10 - 1.1 * 0.5 * sandLenght, sandCenter[2]/10 + 1.1 * sandRadius, sandCenter[0]/10 + 1.1 * 0.5 * sandLenght);
+  // c->cd(1)->DrawFrame(sandCenter[2]/10 - 1.1 * sandRadius, sandCenter[0]/10
+  // - 1.1 * 0.5 * sandLenght, sandCenter[2]/10 + 1.1 * sandRadius,
+  // sandCenter[0]/10 + 1.1 * 0.5 * sandLenght);
   //
-  // TBox *box1 = new TBox(sandCenter[2]/10 - sandRadius, sandCenter[0]/10 - 0.5*sandLenght, sandCenter[2]/10 + sandRadius, sandCenter[0]/10 + 0.5*sandLenght);
-  // box1->SetFillStyle(0);
-  // box1->SetLineColor(2);
+  // TBox *box1 = new TBox(sandCenter[2]/10 - sandRadius, sandCenter[0]/10 -
+  // 0.5*sandLenght, sandCenter[2]/10 + sandRadius, sandCenter[0]/10 +
+  // 0.5*sandLenght); box1->SetFillStyle(0); box1->SetLineColor(2);
   // box1->Draw();
   //
-  // c->cd(2)->DrawFrame(sandCenter[2]/10 - 1.1 * sandRadius, sandCenter[1]/10 - 1.1 * sandRadius, sandCenter[2]/10 + 1.1 * sandRadius, sandCenter[1]/10 + 1.1 * sandRadius);
+  // c->cd(2)->DrawFrame(sandCenter[2]/10 - 1.1 * sandRadius, sandCenter[1]/10
+  // - 1.1 * sandRadius, sandCenter[2]/10 + 1.1 * sandRadius, sandCenter[1]/10
+  // + 1.1 * sandRadius);
   //
-  // TEllipse *el1 = new TEllipse(sandCenter[2]/10, sandCenter[1]/10, sandRadius);
-  // el1->SetLineColor(2);
-  // el1->Draw();
+  // TEllipse *el1 = new TEllipse(sandCenter[2]/10, sandCenter[1]/10,
+  // sandRadius); el1->SetLineColor(2); el1->Draw();
   //
   // return c;
 }
 
-// TMarker* SANDEventDisplay::GetMarkerFromCluster(const STTCluster& cluster, EColor color){
+// TMarker* SANDEventDisplay::GetMarkerFromCluster(const STTCluster& cluster,
+// EColor color){
 //
 //   auto trk = cluster.GetRecoParameters().front().trk;
 //   auto z = cluster.GetZ();
@@ -533,12 +562,15 @@ void SANDEventDisplay::DrawDetector()
 //   return m;
 // }
 //
-// TLine** SANDEventDisplay::GetFilterToPredictionLines(const STTKFTrack& tr, int stepIndex, EColor color)
+// TLine** SANDEventDisplay::GetFilterToPredictionLines(const STTKFTrack& tr,
+// int stepIndex, EColor color)
 // {
 //   auto step1 = tr.GetStep(stepIndex);
 //   auto step2 = tr.GetStep(stepIndex+1);
-//   auto state1 = step1.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering).GetStateVector();
-//   auto state2 = step2.GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction).GetStateVector();
+//   auto state1 =
+//   step1.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering).GetStateVector();
+//   auto state2 =
+//   step2.GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction).GetStateVector();
 //   auto x1 = state1.X();
 //   auto y1 = state1.Y();
 //   auto z1 = STTStrawTubeTracker::GetZPlane(step1.GetPlaneID());
@@ -556,19 +588,21 @@ void SANDEventDisplay::DrawDetector()
 //   return lines;
 // }
 
-
 //----------------------------------------------------------------------------
 void SANDEventDisplay::DrawButtons()
 {
   // layout hints
 
-  fLayoutExpX      = new TGLayoutHints(kLHintsExpandX, 2, 2, 2, 2);
-  fLayoutExpY      = new TGLayoutHints(kLHintsExpandY, 2, 2, 2, 2);
-  fLayoutLeftExpY  = new TGLayoutHints(kLHintsLeft|kLHintsExpandY, 2, 4, 0, 0);
-  fLayoutRightExpY = new TGLayoutHints(kLHintsRight|kLHintsExpandY,4, 2, 0, 0);
-  fLayoutLeftExpX  = new TGLayoutHints(kLHintsLeft|kLHintsExpandX, 2, 4, 0, 0);
-  fLayoutRightExpX = new TGLayoutHints(kLHintsRight|kLHintsExpandX,4, 2, 0, 0);
-  fLayoutExpXExpY  = new TGLayoutHints(kLHintsExpandX|kLHintsExpandY,2,2,2,2);
+  fLayoutExpX = new TGLayoutHints(kLHintsExpandX, 2, 2, 2, 2);
+  fLayoutExpY = new TGLayoutHints(kLHintsExpandY, 2, 2, 2, 2);
+  fLayoutLeftExpY = new TGLayoutHints(kLHintsLeft | kLHintsExpandY, 2, 4, 0, 0);
+  fLayoutRightExpY =
+      new TGLayoutHints(kLHintsRight | kLHintsExpandY, 4, 2, 0, 0);
+  fLayoutLeftExpX = new TGLayoutHints(kLHintsLeft | kLHintsExpandX, 2, 4, 0, 0);
+  fLayoutRightExpX =
+      new TGLayoutHints(kLHintsRight | kLHintsExpandX, 4, 2, 0, 0);
+  fLayoutExpXExpY =
+      new TGLayoutHints(kLHintsExpandX | kLHintsExpandY, 2, 2, 2, 2);
 
   SetCleanup(kDeepCleanup);
 
@@ -578,7 +612,8 @@ void SANDEventDisplay::DrawButtons()
 
   // Create main frame
 
-  // fMainFrame = new TGVerticalFrame(this, gClient->GetDisplayWidth(), gClient->GetDisplayHeight());
+  // fMainFrame = new TGVerticalFrame(this, gClient->GetDisplayWidth(),
+  // gClient->GetDisplayHeight());
   fMainFrame = new TGVerticalFrame(this, 1600, 800);
   fMainFrame->SetCleanup(kDeepCleanup);
 
@@ -601,7 +636,7 @@ void SANDEventDisplay::DrawButtons()
 
   // workframe->AddFrame(fTab, fLayoutExpY);
 
-  AddCanvasFrame(workframe);               // draw canvases
+  AddCanvasFrame(workframe);  // draw canvases
 
   // AddFrame(workframe, fLayoutLeftExpY);
 
@@ -613,20 +648,20 @@ void SANDEventDisplay::DrawButtons()
   // fStatusBar->Draw3DCorner(kFALSE);
   //
   fMainFrame->AddFrame(workframe, fLayoutExpXExpY);
-  // fMainFrame->AddFrame(fStatusBar, new TGLayoutHints(kLHintsExpandX,0,0,1,0));
+  // fMainFrame->AddFrame(fStatusBar, new
+  // TGLayoutHints(kLHintsExpandX,0,0,1,0));
 
   AddFrame(fMainFrame, fLayoutExpXExpY);
-
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::AddMenuBar(TGVerticalFrame *workframe)
 {
   // create menu bar
 
-  TGLayoutHints *LayoutMenuBar = new TGLayoutHints(kLHintsTop|kLHintsExpandX);
-  TGLayoutHints *LayoutMenuBarItem = new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0);
+  TGLayoutHints *LayoutMenuBar = new TGLayoutHints(kLHintsTop | kLHintsExpandX);
+  TGLayoutHints *LayoutMenuBarItem =
+      new TGLayoutHints(kLHintsTop | kLHintsLeft, 0, 4, 0, 0);
 
   // Section File
 
@@ -635,7 +670,7 @@ void SANDEventDisplay::AddMenuBar(TGVerticalFrame *workframe)
   MenuFile->AddEntry("Save picture .png", M_SAVE_PICTURE_PNG);
   MenuFile->AddEntry("Save picture .pdf", M_SAVE_PICTURE_PDF);
   MenuFile->AddSeparator();
-  MenuFile->AddEntry("Exit",              M_FILE_EXIT);
+  MenuFile->AddEntry("Exit", M_FILE_EXIT);
 
   MenuFile->DisableEntry(M_SAVE_PICTURE_PNG);
   MenuFile->DisableEntry(M_SAVE_PICTURE_PDF);
@@ -652,26 +687,30 @@ void SANDEventDisplay::AddMenuBar(TGVerticalFrame *workframe)
   MenuBar->AddPopup("&File", MenuFile, LayoutMenuBarItem);
 
   MenuDock->AddFrame(MenuBar, LayoutMenuBar);
-  workframe->AddFrame(MenuDock, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 0, 0, 1, 0));
+  workframe->AddFrame(
+      MenuDock, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 0, 0, 1, 0));
 
   // Toolbar
 
   Int_t spacing = 8;
-  TGToolBar *toolBar = new TGToolBar(workframe, 60, 20,
-				     kHorizontalFrame | kRaisedFrame);
+  TGToolBar *toolBar =
+      new TGToolBar(workframe, 60, 20, kHorizontalFrame | kRaisedFrame);
   for (Int_t i = 0; EVXpmNames[i]; i++) {
-    TString iconname = (TString)getenv("SandReco_DIR") +
-      "/icons/" + EVXpmNames[i];
+    TString iconname =
+        (TString)getenv("SandReco_DIR") + "/icons/" + EVXpmNames[i];
     // TString iconname = TString("icons/") + TString(EVXpmNames[i]);
     EVTbData[i].fPixmap = iconname.Data();
-    if (strlen(EVXpmNames[i]) == 0) {spacing = 8; continue;}
+    if (strlen(EVXpmNames[i]) == 0) {
+      spacing = 8;
+      continue;
+    }
     toolBar->AddButton(this, &EVTbData[i], spacing);
     spacing = 0;
   }
 
-  workframe->AddFrame(toolBar, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 0, 0, 0, 0));
+  workframe->AddFrame(
+      toolBar, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 0, 0, 0, 0));
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::AddRunEventFrame(TGHorizontalFrame *workframe)
@@ -692,7 +731,7 @@ void SANDEventDisplay::AddRunEventFrame(TGHorizontalFrame *workframe)
   // Tracks visualization
 
   // TGVButtonGroup *GroupTrkDir = new TGVButtonGroup(buttonframe,
-	// 					   "Draw directions of");
+  // 					   "Draw directions of");
   // fListTrkDir = new TGListBox(GroupTrkDir, 125);
   // fListTrkDir->SetMultipleSelections();
   // fListTrkDir->Resize(50, 70);
@@ -708,23 +747,34 @@ void SANDEventDisplay::AddRunEventFrame(TGHorizontalFrame *workframe)
 
   TGHorizontalFrame *FrameEventId = new TGHorizontalFrame(buttonframe);
   TGLabel *LblEventId = new TGLabel(FrameEventId, "Event Number");
-  fEntryEventId       = new TGNumberEntry(FrameEventId, fEventNumber, 7, -1, TGNumberFormat::kNESInteger, TGNumberFormat::kNEANonNegative, TGNumberFormat::kNELLimitMin, 0);
-  FrameEventId->AddFrame(LblEventId,    fLayoutLeftExpY);
+  fEntryEventId = new TGNumberEntry(
+      FrameEventId, fEventNumber, 7, -1, TGNumberFormat::kNESInteger,
+      TGNumberFormat::kNEANonNegative, TGNumberFormat::kNELLimitMin, 0);
+  FrameEventId->AddFrame(LblEventId, fLayoutLeftExpY);
   FrameEventId->AddFrame(fEntryEventId, fLayoutRightExpY);
   buttonframe->AddFrame(FrameEventId, fLayoutExpX);
-  fEntryEventId->GetNumberEntry()->Connect("TextChanged(char*)", "SANDEventDisplay", this, "SetEventId()");
+  fEntryEventId->GetNumberEntry()->Connect(
+      "TextChanged(char*)", "SANDEventDisplay", this, "SetEventId()");
 
   // Energy mode
 
-  // TGVButtonGroup *GroupEnergyMode = new TGVButtonGroup(buttonframe, "Hits drawing");
-  TGGroupFrame *GroupEnergyMode = new TGGroupFrame(buttonframe, "Hits drawing", kVerticalFrame|kRaisedFrame);
-  fRadioEnergyMode[0] = new TGRadioButton(GroupEnergyMode, new TGHotString("color energy mode"), 130);
-  fRadioEnergyMode[1] = new TGRadioButton(GroupEnergyMode, new TGHotString("bar energy mode"), 131);
-  fRadioEnergyMode[2] = new TGRadioButton(GroupEnergyMode, new TGHotString("particles mode (MC only)"), 132);
+  // TGVButtonGroup *GroupEnergyMode = new TGVButtonGroup(buttonframe, "Hits
+  // drawing");
+  TGGroupFrame *GroupEnergyMode = new TGGroupFrame(
+      buttonframe, "Hits drawing", kVerticalFrame | kRaisedFrame);
+  fRadioEnergyMode[0] = new TGRadioButton(
+      GroupEnergyMode, new TGHotString("color energy mode"), 130);
+  fRadioEnergyMode[1] = new TGRadioButton(
+      GroupEnergyMode, new TGHotString("bar energy mode"), 131);
+  fRadioEnergyMode[2] = new TGRadioButton(
+      GroupEnergyMode, new TGHotString("particles mode (MC only)"), 132);
 
   for (int i = 0; i < 3; ++i) {
-    GroupEnergyMode->AddFrame(fRadioEnergyMode[i], new TGLayoutHints(kLHintsTop | kLHintsLeft, 2, 2, 2, 2));
-    fRadioEnergyMode[i]->Connect("Clicked()", "SANDEventDisplay", this, "SetHitsMode()");
+    GroupEnergyMode->AddFrame(
+        fRadioEnergyMode[i],
+        new TGLayoutHints(kLHintsTop | kLHintsLeft, 2, 2, 2, 2));
+    fRadioEnergyMode[i]->Connect("Clicked()", "SANDEventDisplay", this,
+                                 "SetHitsMode()");
   }
 
   fRadioEnergyMode[fSetHitsMode]->SetState(kButtonDown);
@@ -734,28 +784,37 @@ void SANDEventDisplay::AddRunEventFrame(TGHorizontalFrame *workframe)
 
   // Hits type
 
-  // TGVButtonGroup *GroupHitsType = new TGVButtonGroup(buttonframe, "Hits type");
-  TGGroupFrame *GroupHitsType = new TGGroupFrame(buttonframe, new TGString("HitsType"), kVerticalFrame|kRaisedFrame);
-  fRadioHitsType[0] = new TGRadioButton(GroupHitsType, new TGHotString("simulated hits"), 140);
-  fRadioHitsType[1] = new TGRadioButton(GroupHitsType, new TGHotString("digitized hits"), 141);
-  fRadioHitsType[2] = new TGRadioButton(GroupHitsType, new TGHotString("reconstructed hits"), 142);
+  // TGVButtonGroup *GroupHitsType = new TGVButtonGroup(buttonframe, "Hits
+  // type");
+  TGGroupFrame *GroupHitsType = new TGGroupFrame(
+      buttonframe, new TGString("HitsType"), kVerticalFrame | kRaisedFrame);
+  fRadioHitsType[0] =
+      new TGRadioButton(GroupHitsType, new TGHotString("simulated hits"), 140);
+  fRadioHitsType[1] =
+      new TGRadioButton(GroupHitsType, new TGHotString("digitized hits"), 141);
+  fRadioHitsType[2] = new TGRadioButton(
+      GroupHitsType, new TGHotString("reconstructed hits"), 142);
 
   for (int i = 0; i < 3; ++i) {
-    GroupHitsType->AddFrame(fRadioHitsType[i], new TGLayoutHints(kLHintsTop | kLHintsLeft, 2, 2, 2, 2));
-    fRadioHitsType[i]->Connect("Clicked()", "SANDEventDisplay", this, "SetHitsType()");
+    GroupHitsType->AddFrame(
+        fRadioHitsType[i],
+        new TGLayoutHints(kLHintsTop | kLHintsLeft, 2, 2, 2, 2));
+    fRadioHitsType[i]->Connect("Clicked()", "SANDEventDisplay", this,
+                               "SetHitsType()");
   }
 
   for (int i = 0; i < 3; ++i) fRadioHitsType[i]->SetState(kButtonDisabled);
 
   buttonframe->AddFrame(GroupHitsType, fLayoutExpX);
 
-
-  // fEntryEventId->Connect("ValueSet(long)", "SANDEventDisplay", this, "SetEventId()");
+  // fEntryEventId->Connect("ValueSet(long)", "SANDEventDisplay", this,
+  // "SetEventId()");
 
   // TGHorizontalFrame *FrameEventNumber = new TGHorizontalFrame(buttonframe);
   // TGLabel *LblEventNumber = new TGLabel(FrameEventNumber, "Event number");
-  // fEntryEventNumber       = new TGTextEntry(FrameEventNumber, new TGTextBuffer(100));
-  // fEntryEventNumber->Resize(95, fEntryEventNumber->GetDefaultHeight());
+  // fEntryEventNumber       = new TGTextEntry(FrameEventNumber, new
+  // TGTextBuffer(100)); fEntryEventNumber->Resize(95,
+  // fEntryEventNumber->GetDefaultHeight());
   // fEntryEventNumber->SetAlignment(kTextRight);
   // fEntryEventNumber->Connect("ProcessedEvent(Event_t*)","EventViewer",this,"SelectText(Event_t*)");
   // fEntryEventNumber->Connect("ReturnPressed()","EventViewer",this,"SetEventNumber()");
@@ -767,28 +826,29 @@ void SANDEventDisplay::AddRunEventFrame(TGHorizontalFrame *workframe)
   // Using selected brick
 
   // fCheckSelectedBrickMode = new TGCheckButton(buttonframe,
-	// 				      "Zoom to selected brick", 104);
+  // 				      "Zoom to selected brick", 104);
   // fCheckSelectedBrickMode->Associate(this);
   // if (fSetZoomToSelectedBrick)
   //   fCheckSelectedBrickMode->SetState(kButtonDown, kTRUE);
   // buttonframe->AddFrame(fCheckSelectedBrickMode, fLayoutExpX);
   //
   // fCheckDrawVetoTracks = new TGCheckButton(buttonframe,
-	// 				   "Draw veto tracks", 174);
+  // 				   "Draw veto tracks", 174);
   // fCheckDrawVetoTracks->Associate(this);
   // fCheckDrawVetoTracks->SetState(kButtonDown, kTRUE);
   // buttonframe->AddFrame(fCheckDrawVetoTracks, fLayoutExpX);
   //
   // fCheckRemoveSelectedTracks = new TGCheckButton(buttonframe,
-	// 					 "Remove selected tracks",175);
+  // 					 "Remove selected tracks",175);
   // fCheckRemoveSelectedTracks->Associate(this);
   // fCheckRemoveSelectedTracks->SetState(kButtonUp, kTRUE);
   // buttonframe->AddFrame(fCheckRemoveSelectedTracks, fLayoutExpX);
 
- // Scanned tracks
+  // Scanned tracks
 
-  // TGVButtonGroup    *GroupScannedTrk = new TGVButtonGroup(buttonframe,"Scanned tracks");
-  // TGHorizontalFrame *FrameSelectTrk  = new TGHorizontalFrame(GroupScannedTrk);
+  // TGVButtonGroup    *GroupScannedTrk = new
+  // TGVButtonGroup(buttonframe,"Scanned tracks"); TGHorizontalFrame
+  // *FrameSelectTrk  = new TGHorizontalFrame(GroupScannedTrk);
   //
   // TGTextButton *selectbutton[3];
   // selectbutton[0] = new TGTextButton(FrameSelectTrk, " All ",      171);
@@ -815,7 +875,6 @@ void SANDEventDisplay::AddRunEventFrame(TGHorizontalFrame *workframe)
   // workframe->AddFrame(buttonframe, fLayoutExpX);
 }
 
-
 //----------------------------------------------------------------------------
 void SANDEventDisplay::AddNavigateButtons(TGVerticalFrame *workframe)
 {
@@ -826,10 +885,14 @@ void SANDEventDisplay::AddNavigateButtons(TGVerticalFrame *workframe)
   TGHorizontalFrame *viewNavigate2 = new TGHorizontalFrame(workframe);
   TString icpath = "icons/";
 
-  pictButton[0] = new TGPictureButton(viewNavigate1, gClient->GetPicture(icpath+"up.xpm"));
-  pictButton[1] = new TGPictureButton(viewNavigate2, gClient->GetPicture(icpath+"left.xpm"));
-  pictButton[2] = new TGPictureButton(viewNavigate2, gClient->GetPicture(icpath+"down.xpm"));
-  pictButton[3] = new TGPictureButton(viewNavigate2, gClient->GetPicture(icpath+"right.xpm"));
+  pictButton[0] = new TGPictureButton(viewNavigate1,
+                                      gClient->GetPicture(icpath + "up.xpm"));
+  pictButton[1] = new TGPictureButton(viewNavigate2,
+                                      gClient->GetPicture(icpath + "left.xpm"));
+  pictButton[2] = new TGPictureButton(viewNavigate2,
+                                      gClient->GetPicture(icpath + "down.xpm"));
+  pictButton[3] = new TGPictureButton(
+      viewNavigate2, gClient->GetPicture(icpath + "right.xpm"));
 
   // pictButton[0]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=2)");
   // pictButton[1]->Connect("Clicked()","SANDEventDisplay",this,"ShiftDetector(=-1)");
@@ -843,8 +906,8 @@ void SANDEventDisplay::AddNavigateButtons(TGVerticalFrame *workframe)
 
   // navigating axis
 
-//   TGVButtonGroup *GroupShiftAxis = new TGVButtonGroup(workframe,
-// 						      "Navigating axis");
+  //   TGVButtonGroup *GroupShiftAxis = new TGVButtonGroup(workframe,
+  // 						      "Navigating axis");
   // TGHorizontalFrame *FrameShiftAxis  = new TGHorizontalFrame(workframe);
   // TGLabel *LblShiftAxis = new TGLabel(FrameShiftAxis, "Axis:");
   // TGHButtonGroup *GroupShiftAxis = new TGHButtonGroup(FrameShiftAxis);
@@ -860,11 +923,14 @@ void SANDEventDisplay::AddNavigateButtons(TGVerticalFrame *workframe)
   // FrameShiftAxis->AddFrame(LblShiftAxis, fLayoutLeftExpY);
   // FrameShiftAxis->AddFrame(GroupShiftAxis, fLayoutExpX);
 
-  workframe->AddFrame(viewNavigate1, new TGLayoutHints(kLHintsCenterX | kLHintsExpandY, 2, 2, 2, 2));
-  workframe->AddFrame(viewNavigate2, new TGLayoutHints(kLHintsCenterX | kLHintsExpandY, 2, 2, 2, 2));
+  workframe->AddFrame(
+      viewNavigate1,
+      new TGLayoutHints(kLHintsCenterX | kLHintsExpandY, 2, 2, 2, 2));
+  workframe->AddFrame(
+      viewNavigate2,
+      new TGLayoutHints(kLHintsCenterX | kLHintsExpandY, 2, 2, 2, 2));
   // workframe->AddFrame(FrameShiftAxis, fLayoutExpX);
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::AddCanvasFrame(TGHorizontalFrame *workframe)
@@ -873,21 +939,24 @@ void SANDEventDisplay::AddCanvasFrame(TGHorizontalFrame *workframe)
 
   // Making optimal window size
 
-  int displayWidth = 1600; // gClient->GetDisplayWidth() - 251;
-  int displayHeight = 800; // gClient->GetDisplayHeight() - 205;
+  int displayWidth = 1600;  // gClient->GetDisplayWidth() - 251;
+  int displayHeight = 800;  // gClient->GetDisplayHeight() - 205;
 
   // Create frame and canvases for detector view and information
 
-  // TGVerticalFrame *CanvasFrame = new TGVerticalFrame(workframe, displayWidth, displayHeight);
+  // TGVerticalFrame *CanvasFrame = new TGVerticalFrame(workframe, displayWidth,
+  // displayHeight);
 
   // fTabCanvas = new TGTab(CanvasFrame);
 
   // Create a Tab with detector view
 
   // tf = fTabCanvas->AddTab("Detector");
-  TRootEmbeddedCanvas *DisplayDetector = new TRootEmbeddedCanvas("DisplayDetector", workframe, displayWidth, displayHeight);
+  TRootEmbeddedCanvas *DisplayDetector = new TRootEmbeddedCanvas(
+      "DisplayDetector", workframe, displayWidth, displayHeight);
 
-  // DisplayDetector->GetCanvas()->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)", "SANDEventDisplay", this, "CanvasInfo(Int_t, Int_t, Int_t, TObject*)");
+  // DisplayDetector->GetCanvas()->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)",
+  // "SANDEventDisplay", this, "CanvasInfo(Int_t, Int_t, Int_t, TObject*)");
   // tf->AddFrame(fDisplayDetector, fLayoutExpXExpY);
   // AddFrame(fDisplayDetector);
   // CanvasFrame->AddFrame(fDisplayDetector, fLayoutExpXExpY);
@@ -904,14 +973,14 @@ void SANDEventDisplay::AddCanvasFrame(TGHorizontalFrame *workframe)
 
   // tf = fTabCanvas->AddTab("Info");
   // fTextInfo = new TGTextView(tf, displayWidth, displayHeight);
-  // const TGFont *font = gClient->GetFont("-*-courier-bold-r-*-*-14-140-75-75-*-*-*-*");
+  // const TGFont *font =
+  // gClient->GetFont("-*-courier-bold-r-*-*-14-140-75-75-*-*-*-*");
   // fTextInfo->SetFont(font->GetFontStruct());
   // tf->AddFrame(fTextInfo, fLayoutExpXExpY);
 
   // CanvasFrame->AddFrame(fTabCanvas, fLayoutExpXExpY);
   workframe->AddFrame(DisplayDetector, fLayoutExpXExpY);
 }
-
 
 //----------------------------------------------------------------------------
 bool SANDEventDisplay::ProcessMessage(Long_t msg, Long_t param1, Long_t)
@@ -922,148 +991,146 @@ bool SANDEventDisplay::ProcessMessage(Long_t msg, Long_t param1, Long_t)
   TString picture_format;
   // const char *filetypes[] = {"ROOT files", "*.root", 0, 0};
 
-  // cout << param1 << " " << GET_MSG(msg) << " " << GET_SUBMSG(msg) << " " << kC_COMMAND << " " << kCM_RADIOBUTTON << endl;
-  // cout << M_PREVIOUS_EVENT << " " << kCM_MENU << endl;
-
+  // cout << param1 << " " << GET_MSG(msg) << " " << GET_SUBMSG(msg) << " " <<
+  // kC_COMMAND << " " << kCM_RADIOBUTTON << endl; cout << M_PREVIOUS_EVENT << "
+  // " << kCM_MENU << endl;
 
   switch (GET_MSG(msg)) {
     case kC_COMMAND:
-    switch (GET_SUBMSG(msg)) {
-      //   case kCM_COMBOBOX:
-      //   if (param1 == 100 && fSM) DrawDetector(kFALSE);
-      //   break;
-      //   case kCM_CHECKBUTTON:
-      //   if (param1 == 101) fSetNavigateMode=fCheckNavigateMode->IsDown();
-      //   else if (param1 == 103) {
-      //     fSetBrickFinderInfo = fCheckBrickFinderInfo->IsDown();
-      //     DrawDetector();
-      //   }
-      //   else if (param1 == 104) SetViewToBrick();
-      //   else if (param1 == 105) {
-      //     fSetPresentationMode = fCheckPresentationMode->IsDown();
-      //     DrawDetector(kFALSE);
-      //   }
-      //   else if (param1 >= 120 && param1 <= 123 && fSM) DrawDetector(kFALSE);
-      //   else if (param1 == 174) {
-      //     fTTCSConnection->SetDrawVetoTracks(fCheckDrawVetoTracks->IsDown());
-      //     DrawDetector(kFALSE);
-      //   }
-      //   else if (param1 == 175) {
-      //     fTTCSConnection->SetRemoveSelectedTracks(fCheckRemoveSelectedTracks->IsDown());
-      //     DrawDetector(kFALSE);
-      //   }
-      //   break;
-//      case kCM_RADIOBUTTON:
-      //   if (param1 == 100) fSetZoomTo = 0;
-      //   else if (param1 == 101) fSetZoomTo = 1;
-      //   else if (param1 == 102) fSetZoomTo = 2;
-      // if (param1 == 130) fSetHitsMode = 0;
-      // else if (param1 == 131) fSetHitsMode = 1;
-      // else if (param1 == 132) fSetHitsMode = 2;
-      // else if (param1 == 140) fDrawHits = kSimHits;
-      // else if (param1 == 141) fDrawHits = kDigitHits;
-      // else if (param1 == 142) fDrawHits = kRecHits;
-      //   else if (param1 == 140) fSetShiftAxis = 0;
-      //   else if (param1 == 141) fSetShiftAxis = 1;
-      //   else if (param1 == 142) fSetShiftAxis = 2;
-      // if (param1 >= 130 && param1 <= 142) Run();
-      // break;
-      //   case kCM_LISTBOX:
-      //   if (param1 == 125 && fSM) DrawDetector(kFALSE);
-      //   break;
-      //   case kCM_BUTTON:
-      //   if (param1 == 171) fTTCSConnection->SetStep(0);
-      //   else if (param1 == 172) fTTCSConnection->SetStep(-1);
-      //   else if (param1 == 173) fTTCSConnection->SetStep(1);
-      //   if (param1 >= 171 && param1 <= 173) DrawDetector(kFALSE);
-      // break; // We do not needed "break" in this case!
-      case kCM_BUTTON:
-      switch (param1) {
-        // case M_FILE_OPEN: {
-        //   static TString dir(fInputDataDirName);
-        //   TGFileInfo fi;
-        //   fi.fFileTypes = filetypes;
-        //   fi.fIniDir    = StrDup(dir.Data());
-        //
-        //   new TGFileDialog(gClient->GetRoot(), fMainFrame, kFDOpen, &fi);
-        //
-        //   dir = fi.fIniDir;
-        //
-        //   // open new file
-        //
-        //   if (fi.fFilename) {
-        //     fEventManager->ClearEventList();
-        //     if (fEventManager->InitTreeFile((TString)fi.fFilename)) {
-        //       NextEvent();
-        //       UpdateFileInfo();
-        //     }
-        //   }
-        // }
-        // break;
-        // case M_SAVE_PICTURE:
-        // SaveDisplayPicture(".");
-        // break;
-        // case M_SAVE_PICTURE_PNG:
-        // picture_format = fSetPictureFormat;
-        // fSetPictureFormat = "png";
-        // SaveDisplayPicture(".");
-        // fSetPictureFormat = picture_format;
-        // break;
-        // case M_SAVE_PICTURE_PDF:
-        // picture_format = fSetPictureFormat;
-        // fSetPictureFormat = "pdf";
-        // SaveDisplayPicture(".");
-        // fSetPictureFormat = picture_format;
-        // break;
-        case M_PREVIOUS_EVENT:
-        PreviousEvent();
-        break;
-        // case M_EXECUTE_EVENT:
-        // ProcessEvent();
-        // break;
-        case M_NEXT_EVENT:
-        NextEvent();
-        break;
-        // case M_ZOOM_IN:
-        // ZoomDetector(1.07);
-        // break;
-        // case M_ZOOM_OUT:
-        // ZoomDetector(0.93);
-        // break;
-        // case M_ZOOM_EVENT:
-        // FitZoomToEvent();
-        // break;
-        // case M_ZOOM_VERTEX:
-        // FitZoomToVertex();
-        // break;
-        // case M_ZOOM_DETECTOR:
-        // ZoomDetector();
-        // break;
-        case M_FILE_EXIT:
-        ExitApplication();
-        break;
+      switch (GET_SUBMSG(msg)) {
+          //   case kCM_COMBOBOX:
+          //   if (param1 == 100 && fSM) DrawDetector(kFALSE);
+          //   break;
+          //   case kCM_CHECKBUTTON:
+          //   if (param1 == 101) fSetNavigateMode=fCheckNavigateMode->IsDown();
+          //   else if (param1 == 103) {
+          //     fSetBrickFinderInfo = fCheckBrickFinderInfo->IsDown();
+          //     DrawDetector();
+          //   }
+          //   else if (param1 == 104) SetViewToBrick();
+          //   else if (param1 == 105) {
+          //     fSetPresentationMode = fCheckPresentationMode->IsDown();
+          //     DrawDetector(kFALSE);
+          //   }
+          //   else if (param1 >= 120 && param1 <= 123 && fSM)
+          //   DrawDetector(kFALSE); else if (param1 == 174) {
+          //     fTTCSConnection->SetDrawVetoTracks(fCheckDrawVetoTracks->IsDown());
+          //     DrawDetector(kFALSE);
+          //   }
+          //   else if (param1 == 175) {
+          //     fTTCSConnection->SetRemoveSelectedTracks(fCheckRemoveSelectedTracks->IsDown());
+          //     DrawDetector(kFALSE);
+          //   }
+          //   break;
+          //      case kCM_RADIOBUTTON:
+          //   if (param1 == 100) fSetZoomTo = 0;
+          //   else if (param1 == 101) fSetZoomTo = 1;
+          //   else if (param1 == 102) fSetZoomTo = 2;
+          // if (param1 == 130) fSetHitsMode = 0;
+          // else if (param1 == 131) fSetHitsMode = 1;
+          // else if (param1 == 132) fSetHitsMode = 2;
+          // else if (param1 == 140) fDrawHits = kSimHits;
+          // else if (param1 == 141) fDrawHits = kDigitHits;
+          // else if (param1 == 142) fDrawHits = kRecHits;
+          //   else if (param1 == 140) fSetShiftAxis = 0;
+          //   else if (param1 == 141) fSetShiftAxis = 1;
+          //   else if (param1 == 142) fSetShiftAxis = 2;
+          // if (param1 >= 130 && param1 <= 142) Run();
+          // break;
+          //   case kCM_LISTBOX:
+          //   if (param1 == 125 && fSM) DrawDetector(kFALSE);
+          //   break;
+          //   case kCM_BUTTON:
+          //   if (param1 == 171) fTTCSConnection->SetStep(0);
+          //   else if (param1 == 172) fTTCSConnection->SetStep(-1);
+          //   else if (param1 == 173) fTTCSConnection->SetStep(1);
+          //   if (param1 >= 171 && param1 <= 173) DrawDetector(kFALSE);
+          // break; // We do not needed "break" in this case!
+        case kCM_BUTTON:
+          switch (param1) {
+            // case M_FILE_OPEN: {
+            //   static TString dir(fInputDataDirName);
+            //   TGFileInfo fi;
+            //   fi.fFileTypes = filetypes;
+            //   fi.fIniDir    = StrDup(dir.Data());
+            //
+            //   new TGFileDialog(gClient->GetRoot(), fMainFrame, kFDOpen, &fi);
+            //
+            //   dir = fi.fIniDir;
+            //
+            //   // open new file
+            //
+            //   if (fi.fFilename) {
+            //     fEventManager->ClearEventList();
+            //     if (fEventManager->InitTreeFile((TString)fi.fFilename)) {
+            //       NextEvent();
+            //       UpdateFileInfo();
+            //     }
+            //   }
+            // }
+            // break;
+            // case M_SAVE_PICTURE:
+            // SaveDisplayPicture(".");
+            // break;
+            // case M_SAVE_PICTURE_PNG:
+            // picture_format = fSetPictureFormat;
+            // fSetPictureFormat = "png";
+            // SaveDisplayPicture(".");
+            // fSetPictureFormat = picture_format;
+            // break;
+            // case M_SAVE_PICTURE_PDF:
+            // picture_format = fSetPictureFormat;
+            // fSetPictureFormat = "pdf";
+            // SaveDisplayPicture(".");
+            // fSetPictureFormat = picture_format;
+            // break;
+            case M_PREVIOUS_EVENT:
+              PreviousEvent();
+              break;
+            // case M_EXECUTE_EVENT:
+            // ProcessEvent();
+            // break;
+            case M_NEXT_EVENT:
+              NextEvent();
+              break;
+            // case M_ZOOM_IN:
+            // ZoomDetector(1.07);
+            // break;
+            // case M_ZOOM_OUT:
+            // ZoomDetector(0.93);
+            // break;
+            // case M_ZOOM_EVENT:
+            // FitZoomToEvent();
+            // break;
+            // case M_ZOOM_VERTEX:
+            // FitZoomToVertex();
+            // break;
+            // case M_ZOOM_DETECTOR:
+            // ZoomDetector();
+            // break;
+            case M_FILE_EXIT:
+              ExitApplication();
+              break;
+            default:
+              break;
+          }
         default:
-        break;
+          break;
       }
-      default:
       break;
-    }
-    break;
     default:
-    break;
+      break;
   }
 
   return true;
 }
 
-
 //----------------------------------------------------------------------------
 void SANDEventDisplay::NextEvent()
 {
-  fEventNumber = TMath::Min(fEventNumber+1, fTreeSimData->GetEntries()-1);
+  fEventNumber = TMath::Min(fEventNumber + 1, fTreeSimData->GetEntries() - 1);
   Run();
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::PreviousEvent()
@@ -1072,84 +1139,92 @@ void SANDEventDisplay::PreviousEvent()
   Run();
 }
 
-
 //---------------------------------------------------------------------------
 void SANDEventDisplay::SetHitsMode()
 {
   // Handle radio buttons.
 
-  TGButton *btn = (TGButton *) gTQSender;
+  TGButton *btn = (TGButton *)gTQSender;
   int id = btn->WidgetId();
 
-  if (id == 130) fSetHitsMode = 0;
-  else if (id == 131) fSetHitsMode = 1;
-  else if (id == 132) fSetHitsMode = 2;
+  if (id == 130)
+    fSetHitsMode = 0;
+  else if (id == 131)
+    fSetHitsMode = 1;
+  else if (id == 132)
+    fSetHitsMode = 2;
 
   if (id >= 130 && id <= 132) {
     for (int i = 0; i < 3; i++)
-    if (fRadioEnergyMode[i]->WidgetId() != id && fRadioEnergyMode[i]->GetState() != kButtonDisabled) fRadioEnergyMode[i]->SetState(kButtonUp);
+      if (fRadioEnergyMode[i]->WidgetId() != id &&
+          fRadioEnergyMode[i]->GetState() != kButtonDisabled)
+        fRadioEnergyMode[i]->SetState(kButtonUp);
   }
 
   Run();
 }
-
 
 //---------------------------------------------------------------------------
 void SANDEventDisplay::SetHitsType()
 {
   // Handle radio buttons.
 
-  TGButton *btn = (TGButton *) gTQSender;
+  TGButton *btn = (TGButton *)gTQSender;
   int id = btn->WidgetId();
 
-  if (id == 140) fDrawHits = kSimHits;
-  else if (id == 141) fDrawHits = kDigitHits;
-  else if (id == 142) fDrawHits = kRecHits;
+  if (id == 140)
+    fDrawHits = kSimHits;
+  else if (id == 141)
+    fDrawHits = kDigitHits;
+  else if (id == 142)
+    fDrawHits = kRecHits;
 
   if (id >= 140 && id <= 142) {
     for (int i = 0; i < 3; i++)
-    if (fRadioHitsType[i]->WidgetId() != id && fRadioHitsType[i]->GetState() != kButtonDisabled) fRadioHitsType[i]->SetState(kButtonUp);
+      if (fRadioHitsType[i]->WidgetId() != id &&
+          fRadioHitsType[i]->GetState() != kButtonDisabled)
+        fRadioHitsType[i]->SetState(kButtonUp);
   }
 
   Run();
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::SetEventId()
 {
   long long eventId = atoi(fEntryEventId->GetNumberEntry()->GetText());
-  fEventNumber = TMath::Range(0, fTreeSimData->GetEntries()-1, eventId);
+  fEventNumber = TMath::Range(0, fTreeSimData->GetEntries() - 1, eventId);
   fEntryEventId->GetNumberEntry()->SetIntNumber(fEventNumber);
   Run();
 }
 
-
 //----------------------------------------------------------------------------
 void SANDEventDisplay::SetSimData(TString fileName)
 {
-  TGeoManager* geo = 0;
+  TGeoManager *geo = 0;
 
   try {
     fFileSimData = new TFile(fileName, "READ");
     try {
-      if (!fGeomInitialized) geo = static_cast<TGeoManager*>(fFileSimData->Get("EDepSimGeometry"));
-      fTreeSimData = static_cast<TTree*>(fFileSimData->Get("EDepSimEvents"));
-    }
-    catch(...)
-    {
-      cout << "<ERROR> MC info not found in " << fFileSimData->GetName() << endl;
+      if (!fGeomInitialized)
+        geo = static_cast<TGeoManager *>(fFileSimData->Get("EDepSimGeometry"));
+      fTreeSimData = static_cast<TTree *>(fFileSimData->Get("EDepSimEvents"));
+    } catch (...) {
+      cout << "<ERROR> MC info not found in " << fFileSimData->GetName()
+           << endl;
       return;
     }
-  }
-  catch(...)
-  {
+  } catch (...) {
     cout << "<ERROR> MC file can not be opened " << fileName << endl;
     return;
   }
 
+  if (!geo) {
+    cout << "<INFO> Geometry name: " << geo->GetName() << endl;
+  }
+
   if (!fGeomInitialized) {
-    //sand_reco::init(geo);
+    // sand_reco::init(geo);
     fGeomInitialized = true;
   }
 
@@ -1159,32 +1234,33 @@ void SANDEventDisplay::SetSimData(TString fileName)
   fTreeSimData->SetBranchAddress("Event", &fEvent);
 }
 
-
 //----------------------------------------------------------------------------
 void SANDEventDisplay::SetDigitData(TString fileName)
 {
-  TGeoManager* geo = 0;
+  TGeoManager *geo = 0;
 
   try {
     fFileDigitData = new TFile(fileName, "READ");
     try {
-      if (!fGeomInitialized) geo = static_cast<TGeoManager*>(fFileSimData->Get("EDepSimGeometry"));
-      fTreeDigitData = static_cast<TTree*>(fFileDigitData->Get("tDigit"));
-    }
-    catch(...)
-    {
-      cout << "<ERROR> Digit info not found in " << fFileDigitData->GetName() << endl;
+      if (!fGeomInitialized)
+        geo = static_cast<TGeoManager *>(fFileSimData->Get("EDepSimGeometry"));
+      fTreeDigitData = static_cast<TTree *>(fFileDigitData->Get("tDigit"));
+    } catch (...) {
+      cout << "<ERROR> Digit info not found in " << fFileDigitData->GetName()
+           << endl;
       return;
     }
-  }
-  catch(...)
-  {
+  } catch (...) {
     cout << "<ERROR> Digit file can not be opened " << fileName << endl;
     return;
   }
 
+  if (!geo) {
+    cout << "<INFO> Geometry name: " << geo->GetName() << endl;
+  }
+
   if (!fGeomInitialized) {
-    //sand_reco::init(geo);
+    // sand_reco::init(geo);
     fGeomInitialized = true;
   }
 
@@ -1205,32 +1281,38 @@ void SANDEventDisplay::SetDigitData(TString fileName)
   fTreeDigitData->SetBranchAddress("dg_cell", &fCellDigitVect);
 }
 
-
 //----------------------------------------------------------------------------
 void SANDEventDisplay::DefineColors()
 {
   for (int iColor = 0; iColor < fColNum; iColor++) {
 
-    float cl3   =  1 - 2.*iColor/fColNum;
-    float cl1   = -1 + 2.*iColor/fColNum;
-    float cl2_1 = 2.*(iColor-1)/fColNum;
-    float cl2_2 = 1 - 2.*(iColor-8)/fColNum;
-    float cl2   = cl2_1;
+    float cl3 = 1 - 2. * iColor / fColNum;
+    float cl1 = -1 + 2. * iColor / fColNum;
+    float cl2_1 = 2. * (iColor - 1) / fColNum;
+    float cl2_2 = 1 - 2. * (iColor - 8) / fColNum;
+    float cl2 = cl2_1;
 
-    if (cl3<0) {cl3 = 0; cl2 = cl2_2;}
-    if (cl1<0) {cl1 = 0; cl2 = cl2_1;}
-    if (cl2<0) {cl2 = 0;}
+    if (cl3 < 0) {
+      cl3 = 0;
+      cl2 = cl2_2;
+    }
+    if (cl1 < 0) {
+      cl1 = 0;
+      cl2 = cl2_1;
+    }
+    if (cl2 < 0) {
+      cl2 = 0;
+    }
 
-    if (!gROOT->GetColor(300+iColor))
-      fColor = new TColor(300+iColor, cl1, cl2, cl3, "");
+    if (!gROOT->GetColor(300 + iColor))
+      fColor = new TColor(300 + iColor, cl1, cl2, cl3, "");
     else {
-      fColor = gROOT->GetColor(300+iColor);
+      fColor = gROOT->GetColor(300 + iColor);
       fColor->SetRGB(cl1, cl2, cl3);
     }
     fPalette[iColor] = 300 + iColor;
   }
 }
-
 
 //----------------------------------------------------------------------------
 void SANDEventDisplay::SetHistoStyle(TH2F *histo)
@@ -1247,8 +1329,8 @@ void SANDEventDisplay::SetHistoStyle(TH2F *histo)
   histo->GetYaxis()->SetTitleFont(63);
   histo->GetYaxis()->SetTitleSize(27);
 
-  histo->SetTitleOffset(1.2,"X");
-  histo->SetTitleOffset(1.2,"Y");
+  histo->SetTitleOffset(1.2, "X");
+  histo->SetTitleOffset(1.2, "Y");
 
   histo->GetXaxis()->SetNdivisions(507, true);
   histo->GetYaxis()->SetNdivisions(505, true);
@@ -1256,9 +1338,5 @@ void SANDEventDisplay::SetHistoStyle(TH2F *histo)
   histo->SetStats(false);
 }
 
-
 //----------------------------------------------------------------------------
-void SANDEventDisplay::ExitApplication()
-{
-  gApplication->Terminate();
-}
+void SANDEventDisplay::ExitApplication() { gApplication->Terminate(); }
