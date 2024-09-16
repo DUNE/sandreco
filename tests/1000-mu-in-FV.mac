@@ -1,0 +1,30 @@
+################################
+# Add the GENIE events
+################################
+
+# source: muon
+/gps/particle mu-
+
+# position: in FV
+/gps/pos/type Volume
+/gps/pos/shape Cylinder
+/gps/pos/centre 0.0000000 -238.47300 2391.0000 cm
+/gps/pos/rot1 0 0 1
+/gps/pos/rot2 0 1 0
+/gps/pos/radius 180 cm
+/gps/pos/halfz 150 cm
+
+# direction along z with cos distribution
+/gps/ang/type cos
+/gps/ang/rot1 -1 0 0
+/gps/ang/rot2 0 1 0
+
+# energy spectra
+/gps/ene/type Gauss
+/gps/ene/mono 1.5 GeV
+/gps/ene/min 0.25 GeV
+/gps/ene/max 5.5 GeV
+/gps/ene/sigma 0.5 GeV
+
+/run/initialize
+/run/beamOn 1000
