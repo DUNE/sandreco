@@ -89,8 +89,9 @@ class SANDEventDisplay : public TGMainFrame
   TTree *fTreeDigitData;
   TColor *fColor;
 
-  std::vector<dg_tube> *fTubeDigitVect;
-  std::vector<dg_cell> *fCellDigitVect;
+  std::vector <dg_tube> *fTubeDigitVect;
+  std::vector <dg_wire> *fWireDigitVect;
+  std::vector <dg_cell> *fCellDigitVect;
 
   TClonesArray *fTracksArrayZYTrue;
   TClonesArray *fTracksArrayZXTrue;
@@ -115,26 +116,28 @@ class SANDEventDisplay : public TGMainFrame
 
   // TRootEmbeddedCanvas *fDisplayDetector;
 
-  std::vector<EVHits_t> fEventHitsZY;
-  std::vector<EVHits_t> fEventHitsZX;
-  std::vector<EVHits_t> fTubeDigitHitsZY;
-  std::vector<EVHits_t> fTubeDigitHitsZX;
-  std::vector<EVHits_t> fCellDigitHitsZY;
-  std::vector<EVHits_t> fCellDigitHitsZX;
+  std::vector <EVHits_t>    fEventHitsZY;
+  std::vector <EVHits_t>    fEventHitsZX;
+  std::vector <EVHits_t>    fTubeDigitHitsZY;
+  std::vector <EVHits_t>    fTubeDigitHitsZX;
+  std::vector <EVHits_t>    fWireDigitHitsZY;
+  std::vector <EVHits_t>    fWireDigitHitsZX;
+  std::vector <EVHits_t>    fCellDigitHitsZY;
+  std::vector <EVHits_t>    fCellDigitHitsZX;
 
-  void InitObjects();  // init drawing objects
-  void FillEventHits();
-  void FillDigitHits();
-  void DrawEvent();
-  void DrawDetector();
-  void DrawTracks();
-  void SetHistoStyle(TH2F *histo);
-  void DrawButtons();
-  void DefineColors();
-  void AddMenuBar(TGVerticalFrame *workframe);
-  void AddRunEventFrame(TGHorizontalFrame *workframe);
-  void AddCanvasFrame(TGHorizontalFrame *workframe);
-  void AddNavigateButtons(TGVerticalFrame *workframe);
+  void   InitObjects(); // init drawing objects
+  void   FillEventHits();
+  void   FillDigitHits();
+  void   DrawEvent();
+  void   DrawDetector();
+  void   DrawTracks();
+  void   SetHistoStyle(TH2F *histo);
+  void   DrawButtons();
+  void   DefineColors();
+  void   AddMenuBar(TGVerticalFrame *workframe);
+  void   AddRunEventFrame(TGHorizontalFrame *workframe);
+  void   AddCanvasFrame(TGHorizontalFrame *workframe);
+  void   AddNavigateButtons(TGVerticalFrame *workframe);
   // void   DrawEllipse(TEllipse *ellipse, Color_t color, Style_t style);
   // void   DrawBox(TBox *box, Color_t color, Style_t style);
 

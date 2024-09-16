@@ -105,6 +105,16 @@ $ Digitize <MC file> <digit file>
 $ Reconstruct <MC file> <digiti file> <reco file>
 ```
 
+### Reconstruct using Drift Circles method
+- reconstruct muon track fitting drift circles
+- digitization included in the exhecutable
+- reconstruct only muons in the fiducial volume
+- reconstruct only tracks with at least 5+5 fired wires
+
+```console
+$ ./build/bin/ReconstructNLLmethod -edep <EDEP file> -wireinfo tests/wireinfo.txt -o <reco file> --hit_time --signal_propagation
+```
+
 ### Analyze
 - Evaluate parameters of particles
 - Evaluate neutrino energy
