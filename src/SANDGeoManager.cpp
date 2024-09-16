@@ -476,7 +476,7 @@ void SANDGeoManager::decode_plane_id(long plane_global_id,
 
 bool SANDGeoManager::is_stt_tube(const TString& volume_name) const
 {
-  return volume_name.Contains(stt_single_tube_regex_);
+  return volume_name.Contains(stt_tube_regex_);
 }
 
 bool SANDGeoManager::is_stt_plane(const TString& volume_name) const
@@ -492,7 +492,6 @@ int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
 {
   
   auto plane_matches = stt_plane_regex_.MatchS(volume_path);
-  //std::cout<<"volume path "<<volume_path<<"\n";
   auto module_matches = stt_module_regex_.MatchS(volume_path);
   auto supermodule_matches = stt_supermodule_regex_.MatchS(volume_path);
 
@@ -522,13 +521,16 @@ int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
 
   int module_id =
       (reinterpret_cast<TObjString*>(plane_matches->At(2)))->GetString().Atoi();
+
   int plane_replica_id =
       (reinterpret_cast<TObjString*>(plane_matches->At(4)))->GetString().Atoi();
+
   int plane_type = (reinterpret_cast<TObjString*>(plane_matches->At(3)))
                            ->GetString()
                            .EqualTo("XX")
                        ? 2
                        : 1;
+
   int module_replica_id = (reinterpret_cast<TObjString*>(module_matches->At(3)))
                               ->GetString()
                               .Atoi();
@@ -649,69 +651,52 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
               << std::endl;
 
   for (int i = 0; i < node->GetNdaughters(); i++) {
-    auto two_tubes_node = node->GetDaughter(i);
-    auto two_tubes_matches =
-        stt_two_tubes_regex_.MatchS(two_tubes_node->GetName());
+    auto tube_node = node->GetDaughter(i);
+    auto tube_matches = stt_tube_regex_.MatchS(tube_node->GetName());
 
-    long two_tubes_id = (reinterpret_cast<TObjString*>(two_tubes_matches->At(5)))
-                           ->GetString()
-                           .Atoi();
-    delete two_tubes_matches;
+//      std::cout<<tube_node->GetName()<<" -- "<<tube<a_matches->GetEntries()<< " --  "<<reinterpret_cast<TObjString*>(tube_matches->At(4))->GetString()<<"\n";
+    int tube_id = (reinterpret_cast<TObjString*>(tube_matches->At(4)))
+                      ->GetString()
+                      .Atoi();
+    delete tube_matches;
 
-    TGeoMatrix* two_tubes_matrix = two_tubes_node->GetMatrix();
-    TGeoHMatrix two_tubes_hmatrix = matrix * (*two_tubes_matrix);
+    int tube_unique_id = encode_wire_id(stt_plane_id, tube_id);
 
-    for (int j = 0; j < two_tubes_node->GetNdaughters(); j++) {
-      TGeoNode* tube_node = two_tubes_node->GetDaughter(j);
-      TGeoTube* tube_shape = (TGeoTube*)tube_node->GetVolume()->GetShape();
-      double tube_length = 2 * tube_shape->GetDz();
-      TString tube_volume_name = tube_node->GetName();
+    TGeoMatrix* tube_matrix = tube_node->GetMatrix();
+    TGeoHMatrix tube_hmatrix = matrix * (*tube_matrix);
 
-      if (!is_stt_tube(tube_volume_name))
-        std::cout << "Error: expected ST but not -> " << tube_volume_name.Data()
-                  << std::endl;
+    TGeoTube* tube_shape = (TGeoTube*)tube_node->GetVolume()->GetShape();
+    double tube_length = 2 * tube_shape->GetDz();
+    TString tube_volume_name = tube_node->GetName();
 
-      TGeoMatrix* tube_matrix = two_tubes_node->GetDaughter(j)->GetMatrix();
-      TGeoHMatrix tube_hmatrix = two_tubes_hmatrix * (*tube_matrix);
+    if (!is_stt_tube(tube_volume_name))
+      std::cout << "Error: expected ST but not -> " << tube_volume_name.Data()
+                << std::endl;
 
-      auto tube_matches = stt_single_tube_regex_.MatchS(tube_volume_name);
-
-      long tube_id = (reinterpret_cast<TObjString*>(
-                         tube_matches->At(tube_matches->GetEntries() - 2)))
-                        ->GetString()
-                        .Atoi();
-      delete tube_matches;
-
-      long tube_local_id = two_tubes_id * 2 + tube_id;
-      long tube_unique_id = encode_wire_id(stt_plane_id, tube_local_id);
-
-      // std::cout << tube_local_id << " " << stt_plane_id << " " <<  tube_unique_id << std::endl;
-
-      TVector3 tube_position;
-      tube_position.SetX(tube_hmatrix.GetTranslation()[0]);
-      tube_position.SetY(tube_hmatrix.GetTranslation()[1]);
-      tube_position.SetZ(tube_hmatrix.GetTranslation()[2]);
+    TVector3 tube_position;
+    tube_position.SetX(tube_hmatrix.GetTranslation()[0]);
+    tube_position.SetY(tube_hmatrix.GetTranslation()[1]);
+    tube_position.SetZ(tube_hmatrix.GetTranslation()[2]);
 
     double transverse_coord =
         stt_plane_type == 1 ? tube_position.X() : tube_position.Y();
 
-      this_plane_wire_tranverse_position_map[transverse_coord] =
-          tube_unique_id;
+    this_plane_wire_tranverse_position_map[transverse_coord] =
+        tube_unique_id;
 
-      // here we fill STT tube info
-      SANDWireInfo w;
-        w.x(tube_position.X()); w.y(tube_position.Y()); w.z(tube_position.Z());
-        w.length(tube_length);
-        w.readout_end(SANDWireInfo::ReadoutEnd::kPlus);
-      if (stt_plane_type == 1) {
-        w.orientation(SANDWireInfo::Orient::kVertical);
-        w.ax(0); w.ay(1); w.az(0);
-      } else {
-        w.orientation(SANDWireInfo::Orient::kHorizontal);
-        w.ax(1); w.ay(0); w.az(0);
-      }
-      wiremap_[tube_unique_id] = w;
+    // here we fill STT tube info
+    SANDWireInfo w;
+      w.x(tube_position.X()); w.y(tube_position.Y()); w.z(tube_position.Z());
+      w.length(tube_length);
+      w.readout_end(SANDWireInfo::ReadoutEnd::kPlus);
+    if (stt_plane_type == 1) {
+      w.orientation(SANDWireInfo::Orient::kVertical);
+      w.ax(0); w.ay(1); w.az(0);
+    } else {
+      w.orientation(SANDWireInfo::Orient::kHorizontal);
+      w.ax(1); w.ay(0); w.az(0);
     }
+    wiremap_[tube_unique_id] = w;
   }
 
   wire_tranverse_position_map_[stt_plane_id] =
