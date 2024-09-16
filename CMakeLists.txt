@@ -7,7 +7,7 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(SandReco LANGUAGES CXX VERSION 01.00.00)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14ù)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
@@ -68,18 +68,6 @@ target_link_libraries(Reconstruct Struct Utils SANDGeoManager)
 # Creates ReconstructNLLmethod executable.
 # add_executable(ReconstructNLLmethod src/reconstructionNLLmethod.cpp)
 # target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
-
-# ADDED TEMPORARY FOR TESTING OF THE METHOD ----
-# Creates ReconstructNLLmethod executable.
-add_executable(test_reconstructNLL tests/test_reconstructionNLL.cpp)
-target_link_libraries(test_reconstructNLL Struct Utils SANDRecoUtils)
-
-add_executable(test_DigitizeDrift tests/test_DigitizeDrift.cpp)
-target_link_libraries(test_DigitizeDrift Struct Utils SANDRecoUtils)
-
-add_executable(test_DisplayReco tests/test_DisplayReco.cpp)
-target_link_libraries(test_DisplayReco Struct Utils)
-# ----
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)

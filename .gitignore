@@ -21,4 +21,4 @@ build/*
 *.sh
 *.png
 *.gdml
-#tests/*
+tests/*
