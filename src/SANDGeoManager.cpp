@@ -476,7 +476,7 @@ void SANDGeoManager::decode_plane_id(long plane_global_id,
 
 bool SANDGeoManager::is_stt_tube(const TString& volume_name) const
 {
-  return volume_name.Contains(stt_tube_regex_);
+  return volume_name.Contains(stt_single_tube_regex_);
 }
 
 bool SANDGeoManager::is_stt_plane(const TString& volume_name) const
@@ -649,24 +649,27 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
               << std::endl;
 
   for (int i = 0; i < node->GetNdaughters(); i++) {
-    auto tube_node = node->GetDaughter(i);
-    auto tube_matches = stt_tube_regex_.MatchS(tube_node->GetName());
+    auto two_tubes_node = node->GetDaughter(i);
+    auto two_tubes_matches =
+        stt_two_tubes_regex_.MatchS(two_tubes_node->GetName());
 
     long two_tubes_id = (reinterpret_cast<TObjString*>(two_tubes_matches->At(5)))
                            ->GetString()
                            .Atoi();
     delete two_tubes_matches;
 
-    TGeoMatrix* tube_matrix = tube_node->GetMatrix();
-    TGeoHMatrix tube_hmatrix = matrix * (*tube_matrix);
+    TGeoMatrix* two_tubes_matrix = two_tubes_node->GetMatrix();
+    TGeoHMatrix two_tubes_hmatrix = matrix * (*two_tubes_matrix);
 
-    TGeoTube* tube_shape = (TGeoTube*)tube_node->GetVolume()->GetShape();
-    double tube_length = 2 * tube_shape->GetDz();
-    TString tube_volume_name = tube_node->GetName();
+    for (int j = 0; j < two_tubes_node->GetNdaughters(); j++) {
+      TGeoNode* tube_node = two_tubes_node->GetDaughter(j);
+      TGeoTube* tube_shape = (TGeoTube*)tube_node->GetVolume()->GetShape();
+      double tube_length = 2 * tube_shape->GetDz();
+      TString tube_volume_name = tube_node->GetName();
 
-    if (!is_stt_tube(tube_volume_name))
-      std::cout << "Error: expected ST but not -> " << tube_volume_name.Data()
-                << std::endl;
+      if (!is_stt_tube(tube_volume_name))
+        std::cout << "Error: expected ST but not -> " << tube_volume_name.Data()
+                  << std::endl;
 
       TGeoMatrix* tube_matrix = two_tubes_node->GetDaughter(j)->GetMatrix();
       TGeoHMatrix tube_hmatrix = two_tubes_hmatrix * (*tube_matrix);

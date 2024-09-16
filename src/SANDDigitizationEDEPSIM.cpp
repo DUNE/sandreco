@@ -287,9 +287,6 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
   int skipped_hit = 0;
   int all_hit = ev->SegmentDetectors["Straw"].size();
 
-  int skipped_hit = 0;
-  int all_hit = ev->SegmentDetectors["Straw"].size();
-
   for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
     const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
 
