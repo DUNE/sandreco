@@ -2,6 +2,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <TString.h>
+#include <TGeoManager.h>
 
 #ifndef STRUCT_H
 #define STRUCT_H
@@ -58,9 +60,57 @@ struct dg_tube {
   double t0;
   double de;
   double adc;
-  double tdc;
+  double tdc; 
   bool hor;
+  double wire_length;
   std::vector<int> hindex;
+  /* 
+    ADDENDUM
+    tdc = drift_time + signal_time + t_hit
+    added to check validity of track fitting 
+    reconstruction method for drift chamber 
+  */
+  // true quantities
+  double t_hit = 1e9;
+  double signal_time = 1e9;
+  double drift_time = 1e9;
+  // measured quantities
+  double t_hit_measured = 1e9; // via global trigger
+  double signal_time_measured = 1e9; // exploit different wire orientation 
+  double drift_time_measured = 1e9; // tdc - signal_time_measured - t_hit_measured
+  
+  double missing_coordinate = 1e9;
+};
+
+struct dg_wire{
+  std::string det;
+  long did; 
+  double x;
+  double y;
+  double z;
+  double t0;
+  double de;
+  double adc;
+  double tdc = 1e9;
+  bool hor;
+  double wire_length;
+  std::vector<int> hindex;
+  /* 
+    ADDENDUM
+    tdc = drift_time + signal_time + t_hit
+    added to check validity of track fitting 
+    reconstruction method for drift chamber 
+  */
+  // true quantities
+  double t_hit = 1e9;
+  double signal_time = 1e9;
+  double drift_time = 1e9;
+  // measured quantities
+  double t_hit_measured = 1e9; // via global trigger
+  double signal_time_measured = 1e9; // exploit different wire orientation 
+  double drift_time_measured = 1e9; // tdc - signal_time_measured - t_hit_measured
+  
+  double missing_coordinate = 1e9;
 };
 
 struct cluster {
@@ -158,6 +208,12 @@ struct gcell {
   double Y[4];
   double adc;
   double tdc;
+};
+
+struct volume {
+  TGeoVolume* geo_volume;
+  TString     volume_path;
+  bool        IsActive;
 };
 
 #endif
