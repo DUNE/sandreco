@@ -565,11 +565,11 @@ double RecoUtils::GetDipAngleFromCircleLine(const Circle& circle,
                        total momentum
         NOTE: a guess for the initial vertex is needed because related to the dip angle
     */
-    double p_zy_module = circle.R() * 0.3 * 0.6;
+    double pt = circle.R() * 0.3 * 0.6;
     // define theta as the angle [0, 2 pi) between the momentum vector and z axis
     double theta = Phi0 - helicity * TMath::Pi() / 2.;
-    double py = p_zy_module * sin(theta);
-    double pz = p_zy_module * cos(theta);
+    double py = pt * sin(theta);
+    double pz = pt * cos(theta);
 
     // slope of the tangent in the zx plane
     double pz_over_px = line.m();
@@ -578,7 +578,7 @@ double RecoUtils::GetDipAngleFromCircleLine(const Circle& circle,
     // fill momentum
     momentum = {px, py, pz};
 
-    return atan2(px, p_zy_module);
+    return atan2(px, pt);
 }
 
 Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle, 
