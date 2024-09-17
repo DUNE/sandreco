@@ -16,22 +16,19 @@ SANDTrackerPlane &SANDTrackerModule::getPlane(long index)
           // "handling of that";
 }
 
-void SANDTrackerModule::addPlane(const SANDTrackerPlane plane)
+bool SANDTrackerModule::addPlane(const SANDTrackerPlane plane)
 {
   long i = plane.id();
   auto it = _vPlanes_map.insert({i, plane});
-  // if (!(it.second)) {
-    // throw "plane already in the list...i should impelent a class for "
-            // "exception and handling of that";
-  // }
+  return it.second;
 
-  for (SANDTrackerPlane &p : _vPlanes) {
-    if (i == p.id()) {
-      throw "plane already in the list...i should impelent a class for "
-            "exception and handling of that";
-    }
-  }
-  _vPlanes.push_back(plane);
+  // for (SANDTrackerPlane &p : _vPlanes) {
+  //   if (i == p.id()) {
+  //     throw "plane already in the list...i should impelent a class for "
+  //           "exception and handling of that";
+  //   }
+  // }
+  // _vPlanes.push_back(plane);
 }
 
 void SANDTrackerModule::clear()

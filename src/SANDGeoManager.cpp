@@ -724,8 +724,15 @@ void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
   // std::cout << drift_module_unique_id << " " << drift_plane_unique_id << " " << 
   //              drift_plane_local_id << std::endl;
   
-  _tracker_modules_map.insert({drift_module_unique_id, SANDTrackerModule(drift_module_unique_id)});
-  _tracker_modules_map[drift_module_unique_id].addPlane(SANDTrackerPlane(drift_plane_unique_id));
+  auto insert_result = _tracker_modules_map.insert({drift_module_unique_id, SANDTrackerModule(drift_module_unique_id)});
+  bool added = _tracker_modules_map[drift_module_unique_id].addPlane(SANDTrackerPlane(drift_plane_unique_id));
+
+  if (added) {
+    // To Do
+    // Add new plane info: angle, position, others?
+  }
+
+
   
   std::map<double, long> this_plane_wire_tranverse_position_map;
 

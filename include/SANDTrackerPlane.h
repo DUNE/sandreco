@@ -7,7 +7,7 @@ class SANDTrackerPlane
 {
  private:
   long _id;
-  double _rotation;
+  double _rotation; //rad, mano destra su z
   TVector3 _center_position;
   TVector3 _dimensions;
   std::map<double, long> _coord_to_id_map;
