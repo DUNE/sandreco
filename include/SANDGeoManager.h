@@ -1,5 +1,5 @@
 #include "SANDECALCellInfo.h"
-#include "SANDSTTTubeInfo.h"
+#include "SANDWireInfo.h"
 #include "struct.h"
 
 #include <TGeoManager.h>

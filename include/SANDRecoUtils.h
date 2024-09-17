@@ -10,7 +10,7 @@
 // #include "utils.h"
 #include "struct.h"
 #include "utils.h"
-#include "SANDSTTTubeInfo.h"
+#include "SANDWireInfo.h"
 #include "SANDGeoManager.h"
 
 #include "TVector3.h"
