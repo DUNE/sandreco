@@ -89,7 +89,6 @@ class SANDEventDisplay : public TGMainFrame
   TTree *fTreeDigitData;
   TColor *fColor;
 
-  std::vector <dg_tube> *fTubeDigitVect;
   std::vector <dg_wire> *fWireDigitVect;
   std::vector <dg_cell> *fCellDigitVect;
 

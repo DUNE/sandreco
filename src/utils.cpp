@@ -361,20 +361,20 @@ double sand_reco::stt::getT(double y1, double y2, double y, double z1,
 //   return encodeSTID(pid, sid);
 // }
 
-bool sand_reco::ecal::isCluBigger(const std::vector<dg_tube>& v1,
-                                  const std::vector<dg_tube>& v2)
+bool sand_reco::ecal::isCluBigger(const std::vector<dg_wire>& v1,
+                                  const std::vector<dg_wire>& v2)
 {
   return v1.size() > v2.size();
 }
 
-bool sand_reco::stt::isDigUpstream(const dg_tube& d1, const dg_tube& d2)
+bool sand_reco::stt::isDigUpstream(const dg_wire& d1, const dg_wire& d2)
 {
   return d1.z < d2.z;
 }
 
 bool sand_reco::ecal::isHitBefore(hit h1, hit h2) { return h1.t1 < h2.t1; }
 
-bool sand_reco::stt::isDigBefore(dg_tube d1, dg_tube d2)
+bool sand_reco::stt::isDigBefore(dg_wire d1, dg_wire d2)
 {
   return d1.tdc < d2.tdc;
 }

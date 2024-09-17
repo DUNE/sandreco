@@ -74,7 +74,6 @@ TCanvas* cev = 0;
 TCanvas* cpr = 0;
 
 std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
-std::vector<dg_tube>* vec_tube = new std::vector<dg_tube>;
 std::vector<dg_wire>* vec_wire = new std::vector<dg_wire>;
 std::vector<track>* vec_tr = new std::vector<track>;
 std::vector<cluster>* vec_cl = new std::vector<cluster>;
@@ -160,13 +159,7 @@ void init(TFile* fmc, std::vector<TFile*> vf)
 
   tEdep->SetBranchAddress("Event", &ev);
   if (tDigit) tDigit->SetBranchAddress("dg_cell", &vec_cell);
-  if(geo->FindVolumeFast("STTtracker_PV")){
-    //stt based digitization
-    if (tDigit) tDigit->SetBranchAddress("dg_tube", &vec_tube);
-  }else{
-    if (tDigit) tDigit->SetBranchAddress("dg_wire", &vec_wire);
-    //drift based digitization
-  }
+  if (tDigit) tDigit->SetBranchAddress("dg_wire", &vec_wire);
   if (tReco) tReco->SetBranchAddress("track", &vec_tr);
   if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);
   if (tEvent) tEvent->SetBranchAddress("event", &evt);
@@ -649,13 +642,13 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   }
 
   if (showdig) {
-    for (unsigned int i = 0; i < vec_tube->size(); i++) {
-      if (vec_tube->at(i).hor) {
-        TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).y, 6);
+    for (unsigned int i = 0; i < vec_wire->size(); i++) {
+      if (vec_wire->at(i).hor) {
+        TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).y, 6);
         cev->cd(1);
         m->Draw();
       } else {
-        TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).x, 6);
+        TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).x, 6);
         cev->cd(2);
         m->Draw();
       }
@@ -712,13 +705,13 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   // }
 
   // if (showdig) {
-  //   for (unsigned int i = 0; i < vec_tube->size(); i++) {
-  //     if (vec_tube->at(i).hor) {
-  //       TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).y, 6);
+  //   for (unsigned int i = 0; i < vec_wire->size(); i++) {
+  //     if (vec_wire->at(i).hor) {
+  //       TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).y, 6);
   //       cev->cd(1);
   //       m->Draw();
   //     } else {
-  //       TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).x, 6);
+  //       TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).x, 6);
   //       cev->cd(2);
   //       m->Draw();
   //     }

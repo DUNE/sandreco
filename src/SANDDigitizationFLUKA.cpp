@@ -416,7 +416,7 @@ void group_hits_by_tube(TG4Event* ev, TGeoManager* geo, int NHits,
 // tdc is the time of closest point to wire + drift time
 // adc is the sum of energy deposit within integration time window
 void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
-                             std::vector<dg_tube>& digit_vec)
+                             std::vector<dg_wire>& digit_vec)
 {
   digit_vec.clear();
 
@@ -433,7 +433,7 @@ void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
 
     TVector2 wire = sand_reco::fluka::stt::tubePos[did];
 
-    dg_tube d;
+    dg_wire d;
     d.det = it->second[0].det;
     d.did = did;
     d.de = 0;
@@ -498,7 +498,7 @@ void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
 void digitize_stt(TG4Event* ev, TGeoManager* geo, int NHits,
                   Int_t DetType[10000], Float_t xPos[10000],
                   Float_t yPos[10000], Float_t zPos[10000],
-                  std::vector<dg_tube>& digit_vec)
+                  std::vector<dg_wire>& digit_vec)
 {
   std::map<int, std::vector<hit> > hits2Tube;
   digit_vec.clear();
@@ -584,14 +584,14 @@ void digitize(const char* finname, const char* foutname,
   sand_reco::fluka::init(geo);
 
   // vector of ECAL and STT digits
-  std::vector<dg_tube> digit_vec;
+  std::vector<dg_wire> digit_vec;
   std::vector<dg_cell> vec_cell;
 
   // output
   TFile fout(foutname, "RECREATE");
   TTree tout("tDigit", "Digitization");
   tout.Branch("dg_cell", "std::vector<dg_cell>", &vec_cell);
-  tout.Branch("dg_tube", "std::vector<dg_tube>", &digit_vec);
+  tout.Branch("dg_wire", "std::vector<dg_wire>", &digit_vec);
 
   // number of events
   const int nev = t->GetEntries();
