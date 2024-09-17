@@ -1184,6 +1184,8 @@ int main(int argc, char* argv[]){
 
     unsigned int edep_event_index;
 
+    bool KeepThisEvent = false;
+
     std::string fEDepInputStr = fEDepInput;
 
     std::string fDigitInputStr = fDigitInput;
@@ -1198,6 +1200,8 @@ int main(int argc, char* argv[]){
     tout.Branch("digit_file_input", &fDigitInputStr);
     
     tout.Branch("edep_event_index", &edep_event_index, "edep_event_index/i");
+    
+    tout.Branch("KeepThisEvent", &KeepThisEvent, "KeepThisEvent/O");
     
     tout.Branch("reco_object", "reco_object", &reco_object);
     
@@ -1222,15 +1226,19 @@ int main(int argc, char* argv[]){
 
         auto muon_trj = evEdep->Trajectories[0];
 
-        if(abs(muon_trj.GetPDGCode())!=13) { // reconstruct mu- or mu+
-            LOG("W", TString::Format("Skipping Event %d, first trajectory is neither mu- nor mu+", i).Data());
-            continue;
+        // Discard event if no muon(antimuon) is found
+        KeepThisEvent = (abs(muon_trj.GetPDGCode()) != 13);
+
+        if (!KeepThisEvent) {
+            // Discard event if vertex not in fiducial volume
+            auto vertex = evEdep->Primaries[0];
+            KeepThisEvent = IsInFiducialVolume("mm", vertex.GetPosition().X(), vertex.GetPosition().Y(), vertex.GetPosition().Z());
         }
 
-        auto vertex = evEdep->Primaries[0];
-
-        if(!IsInFiducialVolume("mm", vertex.GetPosition().X(), vertex.GetPosition().Y(), vertex.GetPosition().Z())){
-            LOG("W", TString::Format("Skipping Event %d not in fiducial volume", i).Data());
+        if (!KeepThisEvent) {
+            LOG("W", TString::Format("Skipping Event %d, reason: %s", i,
+                (abs(muon_trj.GetPDGCode()) != 13) ? "first trajectory is neither mu- nor mu+" : "not in fiducial volume").Data());
+            tout.Fill();  // Fill empty event to keep 1-1 correspondence with input file
             continue;
         }
 
@@ -1262,10 +1270,12 @@ int main(int argc, char* argv[]){
         LOG("ii", TString::Format("number of horizontal fired wires for trackid %d : %d", muon_trj.GetTrackId(), horizontal_fired_wires.size()).Data());
         LOG("ii", TString::Format("number of vertical fired wires for trackid %d : %d", muon_trj.GetTrackId(), vertical_fired_wires.size()).Data());
         LOG("I", "Check event with enough hits");
-        bool enough_fired_wires = PassSelectionNofHits(horizontal_fired_wires.size(), vertical_fired_wires.size());
         
-        if(!enough_fired_wires){
+        KeepThisEvent = PassSelectionNofHits(horizontal_fired_wires.size(), vertical_fired_wires.size());
+        
+        if(!KeepThisEvent){
             LOG("W", TString::Format("Skipping Event %d not enough hits", i).Data());
+            tout.Fill();
             continue;
         };
 
