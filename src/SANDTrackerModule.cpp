@@ -1,7 +1,8 @@
 #include "SANDTrackerModule.h"
 #include <iostream>
 
-SANDTrackerPlane &SANDTrackerModule::getPlane(int index) {
+SANDTrackerPlane &SANDTrackerModule::getPlane(int index)
+{
   if (index < (int)_vPlanes.size())
     return _vPlanes[index];
   else
@@ -9,7 +10,8 @@ SANDTrackerPlane &SANDTrackerModule::getPlane(int index) {
           "handling of that";
 }
 
-void SANDTrackerModule::addPlane(const SANDTrackerPlane plane) {
+void SANDTrackerModule::addPlane(const SANDTrackerPlane plane)
+{
   long i = plane.id();
   for (SANDTrackerPlane &p : _vPlanes) {
     if (i == p.id()) {
@@ -20,7 +22,8 @@ void SANDTrackerModule::addPlane(const SANDTrackerPlane plane) {
   _vPlanes.push_back(plane);
 }
 
-void SANDTrackerModule::propagateTrack(const CLine3D track) {
+void SANDTrackerModule::propagateTrack(const CLine3D track)
+{
 
   for (std::vector<SANDTrackerPlane>::iterator pit = _vPlanes.begin();
        pit != _vPlanes.end(); pit++) {
@@ -28,7 +31,8 @@ void SANDTrackerModule::propagateTrack(const CLine3D track) {
   }
 }
 
-void SANDTrackerModule::clear() {
+void SANDTrackerModule::clear()
+{
   for (std::vector<SANDTrackerPlane>::iterator pit = _vPlanes.begin();
        pit != _vPlanes.end(); pit++)
     pit->clear();

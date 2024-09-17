@@ -65,7 +65,10 @@ std::map<int, double> stL;
 std::map<int, std::map<int, TVector2> > stPos;
 std::map<int, TVector2> tubePos;
 
-int encodeSTID(int planeid, int tubeid) { return tubeid * 100000 + planeid; }
+int encodeSTID(int planeid, int tubeid)
+{
+  return tubeid * 100000 + planeid;
+}
 
 int encodePlaneID(int moduleid, int planelocid, int type)
 {
@@ -372,7 +375,10 @@ bool sand_reco::stt::isDigUpstream(const dg_wire& d1, const dg_wire& d2)
   return d1.z < d2.z;
 }
 
-bool sand_reco::ecal::isHitBefore(hit h1, hit h2) { return h1.t1 < h2.t1; }
+bool sand_reco::ecal::isHitBefore(hit h1, hit h2)
+{
+  return h1.t1 < h2.t1;
+}
 
 bool sand_reco::stt::isDigBefore(dg_wire d1, dg_wire d2)
 {
@@ -390,7 +396,10 @@ bool sand_reco::ecal::isCellBefore(dg_cell c1, dg_cell c2)
             (c2.ps1.at(0).tdc + c2.ps2.at(0).tdc));
 }
 
-bool sand_reco::isAfter(particle p1, particle p2) { return p1.tid > p2.tid; }
+bool sand_reco::isAfter(particle p1, particle p2)
+{
+  return p1.tid > p2.tid;
+}
 
 // bool sand_reco::ecal::geometry::isBarrel(TString& str)
 // {
@@ -635,8 +644,8 @@ void sand_reco::fluka::ecal::CellPosition(TGeoManager* geo, int det, int mod,
     dummyMas[2] = LocalToGlobalCoordinates(dummyLoc).Z();
 
   } else if (mod == 30 || mod == 40)
-  // right x > 0 : c->mod = 30
-  // left  x < 0 : c->mod = 40
+      // right x > 0 : c->mod = 30
+      // left  x < 0 : c->mod = 40
   {
 
     double dummyLoc[3];
@@ -814,11 +823,11 @@ void sand_reco::chamber::initT0(TG4Event* ev, SANDGeoManager& geo)
                    r.Gaus(0, sand_reco::stt::bucket_rms);
   // wiremap_ is ordered, and wires id of 2 following planes differ
   // by at least 1000 - nof wires of previous plane (about 300, to be safe 500)
-  int previous_id = geo.get_wire_info().begin()->first;             
-  for (auto& wire : geo.get_wire_info()){
+  int previous_id = geo.get_wire_info().begin()->first;
+  for (auto& wire : geo.get_wire_info()) {
     auto wire_info = wire.second;
     auto new_id = wire_info.id();
-    if(abs(new_id-previous_id)>500)// plane has changed
+    if (abs(new_id - previous_id) > 500)  // plane has changed
     {
       t0[new_id] = t0_beam + wire_info.z() / sand_reco::constant::c;
       previous_id = new_id;
@@ -922,7 +931,7 @@ double sand_reco::ecal::attenuation::AttenuationFactor(double d, int planeID)
     std::cout << "\talt1 = " << atl1 << std::endl;
     std::cout << "\talt2 = " << atl2 << std::endl;
     std::cout << "\tatt  = "
-              << p1 * TMath::Exp(-d / atl1) + (1. - p1) * TMath::Exp(-d / atl2)
+              << p1* TMath::Exp(-d / atl1) + (1. - p1) * TMath::Exp(-d / atl2)
               << std::endl;
   }
 

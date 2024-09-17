@@ -30,11 +30,20 @@ class TTree;
 class TColor;
 class TG4Event;
 
-enum DetectorType_t { kECAL, kGRAIN, kSTT };
+enum DetectorType_t {
+  kECAL,
+  kGRAIN,
+  kSTT
+};
 
-enum HitsType_t { kSimHits, kDigitHits, kRecHits };
+enum HitsType_t {
+  kSimHits,
+  kDigitHits,
+  kRecHits
+};
 
-typedef struct {
+typedef struct
+{
   DetectorType_t detector;  // detector type
   int particle;             // particle code
   double x;                 // X or Y coordinates of the digits
@@ -60,7 +69,10 @@ class SANDEventDisplay : public TGMainFrame
   // stepIndex, EColor color);
 
   void SetEventId();
-  void SetEventNumber(long long eventNumber) { fEventNumber = eventNumber; }
+  void SetEventNumber(long long eventNumber)
+  {
+    fEventNumber = eventNumber;
+  }
   void SetSimData(TString fileName);
   void SetDigitData(TString fileName);
   void Run();
@@ -89,8 +101,8 @@ class SANDEventDisplay : public TGMainFrame
   TTree *fTreeDigitData;
   TColor *fColor;
 
-  std::vector <dg_wire> *fWireDigitVect;
-  std::vector <dg_cell> *fCellDigitVect;
+  std::vector<dg_wire> *fWireDigitVect;
+  std::vector<dg_cell> *fCellDigitVect;
 
   TClonesArray *fTracksArrayZYTrue;
   TClonesArray *fTracksArrayZXTrue;
@@ -115,28 +127,28 @@ class SANDEventDisplay : public TGMainFrame
 
   // TRootEmbeddedCanvas *fDisplayDetector;
 
-  std::vector <EVHits_t>    fEventHitsZY;
-  std::vector <EVHits_t>    fEventHitsZX;
-  std::vector <EVHits_t>    fTubeDigitHitsZY;
-  std::vector <EVHits_t>    fTubeDigitHitsZX;
-  std::vector <EVHits_t>    fWireDigitHitsZY;
-  std::vector <EVHits_t>    fWireDigitHitsZX;
-  std::vector <EVHits_t>    fCellDigitHitsZY;
-  std::vector <EVHits_t>    fCellDigitHitsZX;
+  std::vector<EVHits_t> fEventHitsZY;
+  std::vector<EVHits_t> fEventHitsZX;
+  std::vector<EVHits_t> fTubeDigitHitsZY;
+  std::vector<EVHits_t> fTubeDigitHitsZX;
+  std::vector<EVHits_t> fWireDigitHitsZY;
+  std::vector<EVHits_t> fWireDigitHitsZX;
+  std::vector<EVHits_t> fCellDigitHitsZY;
+  std::vector<EVHits_t> fCellDigitHitsZX;
 
-  void   InitObjects(); // init drawing objects
-  void   FillEventHits();
-  void   FillDigitHits();
-  void   DrawEvent();
-  void   DrawDetector();
-  void   DrawTracks();
-  void   SetHistoStyle(TH2F *histo);
-  void   DrawButtons();
-  void   DefineColors();
-  void   AddMenuBar(TGVerticalFrame *workframe);
-  void   AddRunEventFrame(TGHorizontalFrame *workframe);
-  void   AddCanvasFrame(TGHorizontalFrame *workframe);
-  void   AddNavigateButtons(TGVerticalFrame *workframe);
+  void InitObjects();  // init drawing objects
+  void FillEventHits();
+  void FillDigitHits();
+  void DrawEvent();
+  void DrawDetector();
+  void DrawTracks();
+  void SetHistoStyle(TH2F *histo);
+  void DrawButtons();
+  void DefineColors();
+  void AddMenuBar(TGVerticalFrame *workframe);
+  void AddRunEventFrame(TGHorizontalFrame *workframe);
+  void AddCanvasFrame(TGHorizontalFrame *workframe);
+  void AddNavigateButtons(TGVerticalFrame *workframe);
   // void   DrawEllipse(TEllipse *ellipse, Color_t color, Style_t style);
   // void   DrawBox(TBox *box, Color_t color, Style_t style);
 

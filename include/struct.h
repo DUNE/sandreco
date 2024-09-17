@@ -8,12 +8,14 @@
 #ifndef STRUCT_H
 #define STRUCT_H
 
-struct pe {
+struct pe
+{
   double time;
   int h_index;
 };
 
-struct hit {
+struct hit
+{
   std::string det;
   int did;
   double x1;
@@ -30,14 +32,16 @@ struct hit {
 };
 
 // photo-signal
-struct dg_ps {
+struct dg_ps
+{
   int side;
   double adc;
   double tdc;
   std::vector<pe> photo_el;
 };
 
-struct dg_cell {
+struct dg_cell
+{
   int id;
   double z;
   double y;
@@ -51,9 +55,10 @@ struct dg_cell {
   std::vector<dg_ps> ps2;
 };
 
-struct dg_wire{
+struct dg_wire
+{
   std::string det;
-  long did; 
+  long did;
   double x;
   double y;
   double z;
@@ -64,25 +69,27 @@ struct dg_wire{
   bool hor;
   double wire_length;
   std::vector<int> hindex;
-  /* 
+  /*
     ADDENDUM
     tdc = drift_time + signal_time + t_hit
-    added to check validity of track fitting 
-    reconstruction method for drift chamber 
+    added to check validity of track fitting
+    reconstruction method for drift chamber
   */
   // true quantities
   double t_hit = 1e9;
   double signal_time = 1e9;
   double drift_time = 1e9;
   // measured quantities
-  double t_hit_measured = 1e9; // via global trigger
-  double signal_time_measured = 1e9; // exploit different wire orientation 
-  double drift_time_measured = 1e9; // tdc - signal_time_measured - t_hit_measured
-  
+  double t_hit_measured = 1e9;        // via global trigger
+  double signal_time_measured = 1e9;  // exploit different wire orientation
+  double drift_time_measured =
+      1e9;  // tdc - signal_time_measured - t_hit_measured
+
   double missing_coordinate = 1e9;
 };
 
-struct cluster {
+struct cluster
+{
   int tid;
   double x;
   double y;
@@ -98,7 +105,8 @@ struct cluster {
   std::vector<dg_cell> cells;
 };
 
-struct track {
+struct track
+{
   int tid;
   double yc;
   double zc;
@@ -119,7 +127,8 @@ struct track {
   std::vector<dg_wire> clY;
 };
 
-struct particle {
+struct particle
+{
   int primary;
   int pdg;
   int tid;
@@ -155,7 +164,8 @@ struct particle {
   std::vector<particle> daughters;
 };
 
-struct event {
+struct event
+{
   double x;
   double y;
   double z;
@@ -171,7 +181,8 @@ struct event {
   std::vector<particle> particles;
 };
 
-struct gcell {
+struct gcell
+{
   int id;
   double Z[4];
   double Y[4];
@@ -179,10 +190,11 @@ struct gcell {
   double tdc;
 };
 
-struct volume {
+struct volume
+{
   TGeoVolume* geo_volume;
-  TString     volume_path;
-  bool        IsActive;
+  TString volume_path;
+  bool IsActive;
 };
 
 #endif

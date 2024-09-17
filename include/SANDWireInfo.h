@@ -7,8 +7,14 @@
 class SANDWireInfo : public TObject
 {
  public:
-  enum class Orient { kHorizontal, kVertical };
-  enum class ReadoutEnd { kPlus, kMinus };
+  enum class Orient {
+    kHorizontal,
+    kVertical
+  };
+  enum class ReadoutEnd {
+    kPlus,
+    kMinus
+  };
 
  private:
   int id_;                  // id of tube
@@ -25,10 +31,11 @@ class SANDWireInfo : public TObject
  public:
   SANDWireInfo();  // Default constructor
   SANDWireInfo(int id, double x, double y, double z, double length,
-                  Orient orientation, ReadoutEnd readout_end);  // parametric constructor
+               Orient orientation,
+               ReadoutEnd readout_end);  // parametric constructor
   SANDWireInfo(int id, double x, double y, double z, double length,
-                  Orient orientation, ReadoutEnd readout_end,
-                  double arg_ax, double arg_ay, double arg_az);  // parametric constructor
+               Orient orientation, ReadoutEnd readout_end, double arg_ax,
+               double arg_ay, double arg_az);  // parametric constructor
 
   // Setter methods for the attributes
   void id(int arg_id);

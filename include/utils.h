@@ -87,7 +87,7 @@ void initT0(TG4Event* ev, SANDGeoManager& geo);
 namespace chamber
 {
 void initT0(TG4Event* ev, SANDGeoManager& geo);
-}// namespace chamber
+}  // namespace chamber
 
 namespace ecal
 {

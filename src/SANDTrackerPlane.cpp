@@ -1,7 +1,8 @@
 #include "SANDTrackerPlane.h"
 #include <iostream>
 
-SANDTrackerCell &SANDTrackerPlane::getCell(int index) {
+SANDTrackerCell &SANDTrackerPlane::getCell(int index)
+{
   if (index < (int)_vCells.size())
     return _vCells[index];
   else
@@ -9,7 +10,8 @@ SANDTrackerCell &SANDTrackerPlane::getCell(int index) {
           "handling of that";
 }
 
-void SANDTrackerPlane::propagateTrack(const CLine3D track) {
+void SANDTrackerPlane::propagateTrack(const CLine3D track)
+{
   int nc = _vCells.size();
   for (int iCell = 0; iCell < nc; iCell++) {
     SANDTrackerCell &c = _vCells[iCell];
@@ -26,7 +28,8 @@ void SANDTrackerPlane::propagateTrack(const CLine3D track) {
   }
 }
 
-void SANDTrackerPlane::clear() {
+void SANDTrackerPlane::clear()
+{
   for (std::vector<long>::iterator cit = _vFiredCellsIndex.begin();
        cit != _vFiredCellsIndex.end(); cit++) {
     _vCells.at(*cit).isFired(false);

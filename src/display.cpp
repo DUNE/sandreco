@@ -147,9 +147,9 @@ void init(TFile* fmc, std::vector<TFile*> vf)
   }
 
   if (!tEdep) return;
- 
+
   geo = reinterpret_cast<TGeoManager*>(fmc->Get("EDepSimGeometry"));
- 
+
   if (!geo) return;
 
   if (tReco) tEdep->AddFriend(tReco);
@@ -608,7 +608,8 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
 
         // pion+/pion-
         case 211:
-        case -211:;
+        case -211:
+          ;
           tr_zy->SetLineColor(kCyan);
           tr_zx->SetLineColor(kCyan);
           break;
@@ -627,7 +628,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   }
 
   if (showede) {
-    for (auto det : {"Straw", "EMCalSci", "LArHit","DriftVolume"}) {
+    for (auto det : {"Straw", "EMCalSci", "LArHit", "DriftVolume"}) {
       for (auto& h : ev->SegmentDetectors[det]) {
         TLine* lzx =
             new TLine(h.Start.Z(), h.Start.X(), h.Stop.Z(), h.Stop.X());
@@ -667,7 +668,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
     }
 
     for (unsigned int j = 0; j < vec_cell->size(); j++) {
-      
+
       int id = vec_cell->at(j).id;
 
       TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);
@@ -873,9 +874,9 @@ void showPri(int index)
 
   TLorentzVector vpos = ev->Primaries.at(0).GetPosition();
 
-  cpr->cd(1)->DrawFrame(
-      -1 + vpos.X(), -1 + vpos.Y(), 1 + vpos.X(), 1 + vpos.Y(),
-      TString::Format("XY (front) [Event: %d]", index).Data());
+  cpr->cd(1)
+      ->DrawFrame(-1 + vpos.X(), -1 + vpos.Y(), 1 + vpos.X(), 1 + vpos.Y(),
+                  TString::Format("XY (front) [Event: %d]", index).Data());
   cpr->cd(2)->DrawFrame(-1 + vpos.Z(), -1 + vpos.Y(), 1 + vpos.Z(),
                         1 + vpos.Y(),
                         TString::Format("ZY (side) [Event: %d]", index).Data());
@@ -891,8 +892,7 @@ void showPri(int index)
 
   std::cout << "TRUE "
                "==============================================================="
-               "===="
-            << std::endl;
+               "====" << std::endl;
 
   std::cout << std::setw(10) << "PDG"
             << " |" << std::setw(10) << "ID"
@@ -903,8 +903,7 @@ void showPri(int index)
             << " |" << std::endl;
 
   std::cout << "==============================================================="
-               "========="
-            << std::endl;
+               "=========" << std::endl;
 
   for (unsigned int i = 0; i < ev->Primaries.at(0).Particles.size(); i++) {
     TVector3 mom;
@@ -937,8 +936,7 @@ void showPri(int index)
               << std::endl;
   }
   std::cout << "==============================================================="
-               "========="
-            << std::endl;
+               "=========" << std::endl;
 
   cpr->cd(1);
   for (unsigned int i = 0; i < pmom.size(); i++) {
@@ -987,7 +985,8 @@ void showPri(int index)
 
       // pion+/pion-
       case 211:
-      case -211:;
+      case -211:
+        ;
         par->SetLineColor(kCyan);
         par->SetFillColor(kCyan);
         break;
@@ -1049,7 +1048,8 @@ void showPri(int index)
 
       // pion+/pion-
       case 211:
-      case -211:;
+      case -211:
+        ;
         par->SetLineColor(kCyan);
         par->SetFillColor(kCyan);
         break;
@@ -1111,7 +1111,8 @@ void showPri(int index)
 
       // pion+/pion-
       case 211:
-      case -211:;
+      case -211:
+        ;
         par->SetLineColor(kCyan);
         par->SetFillColor(kCyan);
         break;
@@ -1157,8 +1158,7 @@ void showPri(int index)
 
     std::cout << "RECO "
                  "============================================================="
-                 "======"
-              << std::endl;
+                 "======" << std::endl;
 
     std::cout << std::setw(10) << "PDG"
               << " |" << std::setw(10) << "ID"
@@ -1169,8 +1169,7 @@ void showPri(int index)
               << " |" << std::endl;
 
     std::cout << "============================================================="
-                 "==========="
-              << std::endl;
+                 "===========" << std::endl;
 
     for (unsigned int i = 0; i < evt->particles.size(); i++) {
       if (evt->particles.at(i).primary == 1 &&
@@ -1224,8 +1223,7 @@ void showPri(int index)
       }
     }
     std::cout << "============================================================="
-                 "==========="
-              << std::endl;
+                 "===========" << std::endl;
 
     double frac = 0.5;
     double dx = std::max<double>(10., xmax - xmin);
@@ -1240,20 +1238,20 @@ void showPri(int index)
     double yc = 0.5 * (ymax + ymin);
     double zc = 0.5 * (zmax + zmin);
 
-    cpr->cd(4)->DrawFrame(
-        xc - (1. + frac) * dXYmax, yc - (1. + frac) * dXYmax,
-        xc + (1. + frac) * dXYmax, yc + (1. + frac) * dXYmax,
-        TString::Format("XY (front) [Event: %d]", index).Data());
+    cpr->cd(4)
+        ->DrawFrame(xc - (1. + frac) * dXYmax, yc - (1. + frac) * dXYmax,
+                    xc + (1. + frac) * dXYmax, yc + (1. + frac) * dXYmax,
+                    TString::Format("XY (front) [Event: %d]", index).Data());
 
-    cpr->cd(5)->DrawFrame(
-        zc - (1. + frac) * dYZmax, yc - (1. + frac) * dYZmax,
-        zc + (1. + frac) * dYZmax, yc + (1. + frac) * dYZmax,
-        TString::Format("ZY (side) [Event: %d]", index).Data());
+    cpr->cd(5)
+        ->DrawFrame(zc - (1. + frac) * dYZmax, yc - (1. + frac) * dYZmax,
+                    zc + (1. + frac) * dYZmax, yc + (1. + frac) * dYZmax,
+                    TString::Format("ZY (side) [Event: %d]", index).Data());
 
-    cpr->cd(6)->DrawFrame(
-        zc - (1. + frac) * dXZmax, xc - (1. + frac) * dXZmax,
-        zc + (1. + frac) * dXZmax, xc + (1. + frac) * dXZmax,
-        TString::Format("ZX (top) [Event: %d]", index).Data());
+    cpr->cd(6)
+        ->DrawFrame(zc - (1. + frac) * dXZmax, xc - (1. + frac) * dXZmax,
+                    zc + (1. + frac) * dXZmax, xc + (1. + frac) * dXZmax,
+                    TString::Format("ZX (top) [Event: %d]", index).Data());
 
     cpr->cd(4);
     for (unsigned int i = 0; i < pmom_reco.size(); i++) {
@@ -1306,7 +1304,8 @@ void showPri(int index)
 
         // pion+/pion-
         case 211:
-        case -211:;
+        case -211:
+          ;
           par->SetLineColor(kCyan);
           par->SetFillColor(kCyan);
           break;
@@ -1372,7 +1371,8 @@ void showPri(int index)
 
         // pion+/pion-
         case 211:
-        case -211:;
+        case -211:
+          ;
           par->SetLineColor(kCyan);
           par->SetFillColor(kCyan);
           break;
@@ -1438,7 +1438,8 @@ void showPri(int index)
 
         // pion+/pion-
         case 211:
-        case -211:;
+        case -211:
+          ;
           par->SetLineColor(kCyan);
           par->SetFillColor(kCyan);
           break;
@@ -1487,8 +1488,7 @@ void help()
                "--trj          -- to show trajectories\n"
                "--ede          -- to show energy deposits\n"
                "--dgt          -- to show digits\n"
-               "--rec          -- to show reco objects\n"
-            << std::endl;
+               "--rec          -- to show reco objects\n" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -1516,40 +1516,55 @@ int main(int argc, char* argv[])
   while (index < argc) {
     TString opt = argv[index];
     if (opt.CompareTo("-e") == 0) {
-      try {
+      try
+      {
         evid = atoi(argv[++index]);
         is_ev_number_set = true;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }
     } else if (opt.CompareTo("-mc") == 0) {
-      try {
+      try
+      {
         fmc = new TFile(argv[++index]);
         is_mc_file_set = true;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }
     } else if (opt.CompareTo("-f") == 0) {
-      try {
+      try
+      {
         vf.push_back(new TFile(argv[++index]));
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }
     } else if (opt.CompareTo("-o") == 0) {
-      try {
+      try
+      {
         fout = argv[++index];
         is_out_file_set = true;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }
     } else if (opt.CompareTo("--batch") == 0) {
-      try {
+      try
+      {
         is_batch_mode_set = true;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }
