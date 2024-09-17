@@ -1,4 +1,5 @@
 #include <TObject.h>
+#include "TVector3.h"
 
 #ifndef SANDWireInfo_H
 #define SANDWireInfo_H

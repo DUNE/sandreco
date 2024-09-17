@@ -127,6 +127,16 @@ class SANDGeoManager : public TObject
 
   std::map<long, SANDWireInfo> wiremap_;  // map of wire (key : id, value:
                                           // info on wire)
+
+  std::map<long, std::map<double, long>>
+      wire_tranverse_position_map_;  // map (key: plane id, value: map (key:
+                                     // tube id, value: 2D position [i.e. x
+                                     // = z, y = transversal coord]))
+                                     // map (key: plane id, value: map (key:
+                                     // wire id, value: 2D position [i.e. x
+                                     // = z, y = transversal coord]))
+  std::map<long, SANDTrackerModule> _tracker_modules_map;
+
   mutable TPRegexp stt_tube_regex_{
       sand_geometry::stt::stt_single_tube_regex_string};  // regular expression
                                                           // to match relevant
@@ -150,15 +160,8 @@ class SANDGeoManager : public TObject
       sand_geometry::stt::stt_supermodule_regex_string};  // regular expression
                                                           // to
                                                           // match relevant info
-  // about supermodule from volume
-  // path
-  std::map<long, std::map<double, long>>
-      wire_tranverse_position_map_;  // map (key: plane id, value: map (key:
-                                     // tube id, value: 2D position [i.e. x
-                                     // = z, y = transversal coord]))
-                                     // map (key: plane id, value: map (key:
-                                     // wire id, value: 2D position [i.e. x
-                                     // = z, y = transversal coord]))
+                                                          // about supermodule from volume
+                                                          // path
 
   // DRIFT CHAMBER
   mutable TPRegexp wire_regex_{sand_geometry::chamber::wire_regex_string};
@@ -200,6 +203,7 @@ class SANDGeoManager : public TObject
   void set_ecal_info();
 
   void set_wire_info();
+
   // STT
   bool is_stt_tube(const TString& volume_name) const;
   bool is_stt_plane(const TString& volume_name) const;
@@ -212,12 +216,12 @@ class SANDGeoManager : public TObject
   // DRIFT CHAMEBER
   void set_wire_info(const TGeoHMatrix& matrix);
   void set_drift_wire_info(const TGeoNode* const node,
-                           const TGeoHMatrix& matrix,
-                           long drift_plane_unique_id);
-  int get_drift_plane_id(const TString& volume_path, bool JustLocalId) const;
+                           const TGeoHMatrix& matrix);
+  long get_drift_plane_id(const TString& volume_path, bool JustLocalId) const;
+  long get_drift_module_id(const TString& volume_path) const;
   int get_drift_supermodule_id(const TString& volume_path) const;
-  int get_drift_module_replica_id(const TString& volume_path) const;
-  int get_wire_id(const TString& volume_path) const;
+  long get_drift_module_replica_id(const TString& volume_path) const;
+  long get_wire_id(const TString& volume_path) const;
   bool is_drift_plane(const TString& volume_name) const;
   bool isSwire(const TString& volume_path) const;
   void WriteMapOnFile(std::string fName,
@@ -292,11 +296,13 @@ class SANDGeoManager : public TObject
   static long encode_wire_id(long plane_global_id, long wire_local_id);
   static void decode_wire_id(long wire_global_id, long& plane_global_id,
                              long& wire_local_id);
-  static long encode_plane_id(long supermodule_id, long module_id,
+  static long encode_plane_id(long unique_module_id,
                               long plane_local_id, long plane_type);
   static void decode_plane_id(long plane_global_id, long& supermodule_id,
                               long& module_id, long& plane_local_id,
                               long& plane_type);
+  static long encode_module_id(long supermodule_id, 
+                               long module_id, long module_replica_id);
   // DRIFT CHAMBER
   // static void decode_chamber_plane_id(int wire_global_id,
   //                            int& drift_plane_global_id,

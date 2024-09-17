@@ -17,6 +17,7 @@ class SANDTrackerPlane
   std::vector<long> _vFiredCellsIndex;
 
  public:
+  SANDTrackerPlane() {};
   SANDTrackerPlane(long idPlane)
   {
     _id = idPlane;
@@ -31,13 +32,23 @@ class SANDTrackerPlane
   {
     return _id;
   }
+  void addCell(const double transverse_coordinate,
+               const long id,
+               const SANDWireInfo w)
+  {
+    if(_coord_to_id_map.find(transverse_coordinate) == _coord_to_id_map.end()) {
+      _coord_to_id_map.insert({transverse_coordinate, id});
+      _id_to_wire_map.insert({id, SANDTrackerCell(w, id)});
+    }
+  }
   void addCell(const SANDTrackerCell cell)
   {
     _vCells.push_back(cell);
   }
   int nCells() const
   {
-    return _vCells.size();
+    return _coord_to_id_map.size();
+    // return _vCells.size();
   }
   SANDTrackerCell &getCell(int);
 
@@ -45,6 +56,5 @@ class SANDTrackerPlane
   {
     return _vFiredCellsIndex;
   }
-  void propagateTrack(const CLine3D track);
   void clear();
 };

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "CLine3D.h"
+#include "SANDWireInfo.h"
 
 class SANDTrackerCell
 {
-  CLine3D _wire;
+  SANDWireInfo _wire;
   double _timeResponse;   // time response in nanoseconds
   double _driftVelocity;  // drift velocity in um/ns
   bool _isFired;
@@ -13,7 +13,7 @@ class SANDTrackerCell
   double _height;
 
  public:
-  SANDTrackerCell(const CLine3D &l, const double time, const double vd,
+  SANDTrackerCell(const SANDWireInfo &l, const double time, const double vd,
                   const bool fired, const long wID, const double w,
                   const double h)
       : _wire(l),
@@ -24,6 +24,11 @@ class SANDTrackerCell
         _width(w),
         _height(h)
 
+  {
+  }
+
+  SANDTrackerCell(const SANDWireInfo &l, const long wID): _wire(l),
+        _wireID(wID)
   {
   }
 
@@ -59,7 +64,7 @@ class SANDTrackerCell
     h = _height;
     w = _width;
   }
-  CLine3D wire() const
+  SANDWireInfo wire() const
   {
     return _wire;
   }

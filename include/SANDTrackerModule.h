@@ -50,17 +50,17 @@ class SANDTrackerModule
   }
 
   void addPlane(const SANDTrackerPlane plane);
-  SANDTrackerPlane& getPlane(int index);
+  SANDTrackerPlane& getPlane(long index);
 
   int nPlanes() const
   {
-    return _vPlanes.size();
+    return _vPlanes_map.size();
+    // return _vPlanes.size();
   }
   std::vector<SANDTrackerPlane>& planes()
   {
     return _vPlanes;
   };
 
-  void propagateTrack(const CLine3D track);
   void clear();
 };

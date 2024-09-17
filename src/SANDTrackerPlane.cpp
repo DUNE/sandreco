@@ -10,24 +10,6 @@ SANDTrackerCell &SANDTrackerPlane::getCell(int index)
           "handling of that";
 }
 
-void SANDTrackerPlane::propagateTrack(const CLine3D track)
-{
-  int nc = _vCells.size();
-  for (int iCell = 0; iCell < nc; iCell++) {
-    SANDTrackerCell &c = _vCells[iCell];
-
-    double h, w;
-    c.size(h, w);
-    double maxDist = 0.5 * sqrt(h * h + w * w);
-    double dist = CLine3D::distance(c.wire(), track);
-    if (dist < maxDist) {
-      c.isFired(true);
-      c.timeResponse(dist / c.driftVelocity());
-      _vFiredCellsIndex.push_back(iCell);
-    }
-  }
-}
-
 void SANDTrackerPlane::clear()
 {
   for (std::vector<long>::iterator cit = _vFiredCellsIndex.begin();
