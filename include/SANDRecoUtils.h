@@ -692,10 +692,11 @@ struct Parameter
     double initial_guess;
     double value;
     double error;
-    // Parameter() 
-    //     : name(""), fixed_in_fit(false), initial_guess(0.0), value(0.0), error(0.0) {}
-    // Parameter(std::string n, int i, bool f, double ig, double v, double e) 
-    //     : name(n), id(i), fixed_in_fit(f), initial_guess(ig), value(v), error(e) {}
+    // default constuctor
+    Parameter() 
+        : name(""), fixed_in_fit(false), initial_guess(-999.), value(-999.), error(-999.) {}
+    Parameter(std::string n, int i, bool f, double ig, double v, double e) 
+        : name(n), id(i), fixed_in_fit(f), initial_guess(ig), value(v), error(e) {}
 };
 
 struct MinuitFitInfos
@@ -706,6 +707,10 @@ struct MinuitFitInfos
     int                         NIterations; // number of iterations to reach the minimum
     double                      MinValue; // value of the func to minimize at its minimum
     std::vector<Parameter>      fitted_parameters;
+
+    // default constructor
+    MinuitFitInfos() 
+        : Auxiliary_name("Dummy"), TMinuitFinalStatus(-999), NIterations(-999), MinValue(-999.), fitted_parameters() {}
 };
 
 struct RecoObject
@@ -746,6 +751,13 @@ struct RecoObject
     // fitting info TMinuit _______________________________________
     MinuitFitInfos              fit_infos_xz;
     MinuitFitInfos              fit_infos_zy;
+
+    // defaul constructor
+    RecoObject() 
+        : trj_points(), fired_wires(), impact_par_estimated(),
+          pt_true(-999.), pt_reco(-999.), 
+          p_true(TVector3(-999.,-999.,-999.)), p_reco(TVector3(-999.,-999.,-999.)), 
+          fit_infos_xz(), fit_infos_zy() {}
 };
 
 namespace Color {

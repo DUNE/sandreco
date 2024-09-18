@@ -145,7 +145,7 @@ void init(TFile* fmc, std::vector<TFile*> vf)
     tt = reinterpret_cast<TTree*>(f->Get("tDigit"));
     if (tt) tDigit = tt;
   }
-
+  
   if (!tEdep) return;
  
   geo = reinterpret_cast<TGeoManager*>(fmc->Get("EDepSimGeometry"));
