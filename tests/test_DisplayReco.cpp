@@ -31,8 +31,6 @@
 
 namespace display
 {
-const bool debug = false;
-
 static const int nMod = 24;
 static const int nLay = 5;
 static const int nCel = 12;
@@ -44,14 +42,29 @@ static const int nCellModule = nLay * nCel;
 
 static const double dt = 500;
 
+const bool debug = false;
+
+bool initialized = false;
+
+bool showtrj      = false;
+bool showtrj2reco = false;
+bool showede      = false;
+bool showede2reco = false;
+bool showdig      = false;
+bool showrec      = false;
+bool compare      = false;
+
+bool is_ev_number_set = false;
+bool is_mc_file_set = false;
+bool is_out_file_set = false;
+bool is_batch_mode_set = false;
+
+int palette = 87;
+
 double centerKLOE[3];
 double CellLocalX[nCellModule][4];
 double CellLocalZ[nCellModule][4];
 double centerGRAIN[3];
-
-int palette = 87;
-
-bool initialized = false;
 
 double GRAIN_dx;
 double GRAIN_dy;
@@ -64,9 +77,17 @@ double dwz = 2500.;
 double kloe_int_R = 2000.;
 double kloe_int_dx = 1690.;
 
+//files
 TFile* f = 0;
 TFile* fmc = 0;
+std::vector<TFile*> vf;
+TString fout;
+
 TTree* t = 0;
+TTree* tEvent = 0;
+TTree* tReco = 0;
+TTree* tDigit = 0;
+
 TG4Event* ev = new TG4Event;
 event* evt = new event;
 TGeoManager* geo = 0;
@@ -121,17 +142,20 @@ const char* GRIAN_vol_name = "GRIAN_LAr_lv_PV";
 
 using namespace display;
 
-void init(TFile* fmc, std::vector<TFile*> vf)
+void init()
 {
   gStyle->SetPalette(palette);
 
-  TTree* tEvent = nullptr;
-  TTree* tReco = nullptr;
-  TTree* tDigit = nullptr;
-
   TTree* tEdep = reinterpret_cast<TTree*>(fmc->Get("EDepSimEvents"));
+  if (!tEdep) return;
+  tEdep->SetBranchAddress("Event", &ev);
+
   TTree* tGenie =
       reinterpret_cast<TTree*>(fmc->Get("DetSimPassThru/gRooTracker"));
+  if (tGenie) tEdep->AddFriend(tGenie);
+
+  geo = reinterpret_cast<TGeoManager*>(fmc->Get("EDepSimGeometry"));
+  if (!geo) return;
 
   for (auto f : vf) {
     TTree* tt = nullptr;
@@ -143,29 +167,22 @@ void init(TFile* fmc, std::vector<TFile*> vf)
     if (tt) tDigit = tt;
   }
 
-  if (!tEdep) return;
- 
-  geo = reinterpret_cast<TGeoManager*>(fmc->Get("EDepSimGeometry"));
- 
-  if (!geo) return;
-
-  if (tReco) tEdep->AddFriend(tReco);
-  if (tDigit) tEdep->AddFriend(tDigit);
   if (tEvent) tEdep->AddFriend(tEvent);
-  if (tGenie) tEdep->AddFriend(tGenie);
+  if (tEvent) tEvent->SetBranchAddress("event", &evt);
 
-  tEdep->SetBranchAddress("Event", &ev);
-  if (tDigit) tDigit->SetBranchAddress("dg_cell", &vec_cell);
+  if (tDigit) tEdep->AddFriend(tDigit);
+  //if (tDigit) tDigit->SetBranchAddress("dg_cell", &vec_cell);
   if(geo->FindVolumeFast("STTtracker_PV")){
     //stt based digitization
     if (tDigit) tDigit->SetBranchAddress("dg_tube", &vec_tube);
   }else{
-    if (tDigit) tDigit->SetBranchAddress("dg_wire", &vec_wire);
     //drift based digitization
+    if (tDigit) tDigit->SetBranchAddress("dg_wire", &vec_wire);
   }
+
+  if (tReco) tEdep->AddFriend(tReco);
   if (tReco) tReco->SetBranchAddress("track", &vec_tr);
   if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);
-  if (tEvent) tEvent->SetBranchAddress("event", &evt);
 
   t = tEdep;
 
@@ -429,7 +446,110 @@ void init(TFile* fmc, std::vector<TFile*> vf)
   initialized = true;
 }
 
-void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
+//Add trajectories to a graph
+void showTrj(int index, int frame1, int frame2, bool over)
+{
+  std::string same = "l";
+  if (over)
+    same = "same l";
+  t->GetEntry(index);
+
+  for (unsigned int i = 0; i < ev->Trajectories.size(); i++) {
+    TGraph* tr_zy = new TGraph(ev->Trajectories[i].Points.size());
+    TGraph* tr_zx = new TGraph(ev->Trajectories[i].Points.size());
+
+    for (unsigned int j = 0; j < ev->Trajectories[i].Points.size(); j++) {
+      tr_zy->SetPoint(j, ev->Trajectories[i].Points[j].GetPosition().Z(),
+                      ev->Trajectories[i].Points[j].GetPosition().Y());
+      tr_zx->SetPoint(j, ev->Trajectories[i].Points[j].GetPosition().Z(),
+                      ev->Trajectories[i].Points[j].GetPosition().X());
+    }
+
+    switch (ev->Trajectories[i].GetPDGCode()) {
+      // photons
+      case 22:
+        tr_zy->SetLineStyle(7);
+        tr_zx->SetLineStyle(7);
+      // e+/e-
+      case 11:
+      case -11:
+        tr_zy->SetLineColor(kRed);
+        tr_zx->SetLineColor(kRed);
+        break;
+
+      // mu+/mu-
+      case 13:
+      case -13:
+        tr_zy->SetLineColor(kBlue);
+        tr_zx->SetLineColor(kBlue);
+        break;
+
+      // proton
+      case 2212:
+        tr_zy->SetLineColor(kBlack);
+        tr_zx->SetLineColor(kBlack);
+        break;
+
+      // neutron
+      case 2112:
+        tr_zy->SetLineStyle(7);
+        tr_zx->SetLineStyle(7);
+        tr_zy->SetLineColor(kGray);
+        tr_zx->SetLineColor(kGray);
+        break;
+
+      // pion0
+      case 111:
+        tr_zy->SetLineStyle(7);
+        tr_zx->SetLineStyle(7);
+        tr_zy->SetLineColor(kMagenta);
+        tr_zx->SetLineColor(kMagenta);
+        break;
+
+      // pion+/pion-
+      case 211:
+      case -211:;
+        tr_zy->SetLineColor(kCyan);
+        tr_zx->SetLineColor(kCyan);
+        break;
+
+      default:
+        tr_zy->SetLineColor(8);
+        tr_zx->SetLineColor(8);
+        break;
+    }
+
+    cev->cd(frame1);
+    tr_zy->Draw(same.c_str());
+    cev->cd(frame2);
+    tr_zx->Draw(same.c_str());
+  }
+}
+
+//Add ede to a graph
+void showEde(int index, int frame1, int frame2, bool over)
+{
+  std::string same = "";
+  if (over)
+    same = "same";
+  t->GetEntry(index);
+
+  //for (auto det : {"Straw", "EMCalSci", "LArHit","DriftVolume"}) {
+  for (auto det : {"EMCalSci", "LArHit","DriftVolume"}) {
+    for (auto& h : ev->SegmentDetectors[det]) {
+      TLine* lzx =
+          new TLine(h.Start.Z(), h.Start.X(), h.Stop.Z(), h.Stop.X());
+      TLine* lzy =
+          new TLine(h.Start.Z(), h.Start.Y(), h.Stop.Z(), h.Stop.Y());
+      cev->cd(frame1);
+      lzy->Draw(same.c_str());
+      cev->cd(frame2);
+      lzx->Draw(same.c_str());
+    }
+  }
+}
+
+void show(int index)
 {
   if (!initialized) {
     std::cout << "not initialized" << std::endl;
@@ -480,59 +600,6 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
     it->second.adc = 0.;
     it->second.tdc = 0.;
   }
-  /*
-  double max = 0.0;
-
-  for(unsigned int i = 0; i < vec_cell->size(); i++)
-  {
-    calocell[vec_cell->at(i).id].adc = vec_cell->at(i).adc1;
-    calocell[vec_cell->at(i).id].tdc = vec_cell->at(i).tdc1;
-    calocell[-1*vec_cell->at(i).id].adc = vec_cell->at(i).adc2;
-    calocell[-1*vec_cell->at(i).id].tdc = vec_cell->at(i).tdc2;
-
-    if((vec_cell->at(i).adc1 + vec_cell->at(i).adc2) > max)
-      max = (vec_cell->at(i).adc1 + vec_cell->at(i).adc2);
-  }
-
-  for(std::map<int, gcell>::iterator it=calocell.begin(); it != calocell.end();
-  ++it)
-  {
-    if(it->first < 0)
-      continue;
-
-    TGraph* gr = new TGraph(4, it->second.Z, it->second.Y);
-
-    int ndiv = max > 255 ? 255 : max;
-    double scale = ndiv / max;
-    int color = 0.01 + (it->second.adc + calocell[-1*it->first].adc) * scale;
-    int ncolors = gStyle->GetNumberOfColors();
-    int theColor = (color + 0.99) * double(ncolors) / double(ndiv);
-    int thiscolor = gStyle->GetColorPalette(theColor);
-
-    gr->SetFillColor(thiscolor);
-
-    cev->cd(1);
-
-    if((it->second.adc + calocell[-1*it->first].adc) == 0.)
-    {
-      gr->SetFillColor(19);
-    }
-    else
-    {
-
-      //std::cout << "ID: " << it->first  << "\tADC1: " << setw(3) <<
-  it->second.adc
-      //                                  << "\tTDC1: " << setw(3) <<
-  calocell[it->first].tdc
-      //                                  << "\tADC2: " << setw(3) <<
-  calocell[-1*it->first].adc
-      //                                  << "\tTDC2: " << setw(3) <<
-  calocell[-1*it->first].tdc << std::endl;
-    }
-
-    gr->Draw("f");
-  }
-  */
 
   for (std::map<int, gcell>::iterator it = calocell.begin();
        it != calocell.end(); ++it) {
@@ -549,92 +616,11 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   }
 
   if (showtrj) {
-    for (unsigned int i = 0; i < ev->Trajectories.size(); i++) {
-      TGraph* tr_zy = new TGraph(ev->Trajectories[i].Points.size());
-      TGraph* tr_zx = new TGraph(ev->Trajectories[i].Points.size());
-
-      for (unsigned int j = 0; j < ev->Trajectories[i].Points.size(); j++) {
-        tr_zy->SetPoint(j, ev->Trajectories[i].Points[j].GetPosition().Z(),
-                        ev->Trajectories[i].Points[j].GetPosition().Y());
-        tr_zx->SetPoint(j, ev->Trajectories[i].Points[j].GetPosition().Z(),
-                        ev->Trajectories[i].Points[j].GetPosition().X());
-      }
-
-      switch (ev->Trajectories[i].GetPDGCode()) {
-        // photons
-        case 22:
-          tr_zy->SetLineStyle(7);
-          tr_zx->SetLineStyle(7);
-        // e+/e-
-        case 11:
-        case -11:
-          tr_zy->SetLineColor(kRed);
-          tr_zx->SetLineColor(kRed);
-          break;
-
-        // mu+/mu-
-        case 13:
-        case -13:
-          tr_zy->SetLineColor(kBlue);
-          tr_zx->SetLineColor(kBlue);
-          break;
-
-        // proton
-        case 2212:
-          tr_zy->SetLineColor(kBlack);
-          tr_zx->SetLineColor(kBlack);
-          break;
-
-        // neutron
-        case 2112:
-          tr_zy->SetLineStyle(7);
-          tr_zx->SetLineStyle(7);
-          tr_zy->SetLineColor(kGray);
-          tr_zx->SetLineColor(kGray);
-          break;
-
-        // pion0
-        case 111:
-          tr_zy->SetLineStyle(7);
-          tr_zx->SetLineStyle(7);
-          tr_zy->SetLineColor(kMagenta);
-          tr_zx->SetLineColor(kMagenta);
-          break;
-
-        // pion+/pion-
-        case 211:
-        case -211:;
-          tr_zy->SetLineColor(kCyan);
-          tr_zx->SetLineColor(kCyan);
-          break;
-
-        default:
-          tr_zy->SetLineColor(8);
-          tr_zx->SetLineColor(8);
-          break;
-      }
-
-      cev->cd(1);
-      tr_zy->Draw("l");
-      cev->cd(2);
-      tr_zx->Draw("l");
-    }
+    showTrj(index, 1, 2, false);
   }
 
   if (showede) {
-    //for (auto det : {"Straw", "EMCalSci", "LArHit","DriftVolume"}) {
-    for (auto det : {"EMCalSci", "LArHit","DriftVolume"}) {
-      for (auto& h : ev->SegmentDetectors[det]) {
-        TLine* lzx =
-            new TLine(h.Start.Z(), h.Start.X(), h.Stop.Z(), h.Stop.X());
-        TLine* lzy =
-            new TLine(h.Start.Z(), h.Start.Y(), h.Stop.Z(), h.Stop.Y());
-        cev->cd(1);
-        lzy->Draw();
-        cev->cd(2);
-        lzx->Draw();
-      }
-    }
+    showEde(index, 1, 2, false);
   }
 
   if (showdig) {
@@ -675,55 +661,6 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
       gr->Draw("f");
     }
   }
-
-  // for (unsigned int j = 0; j < vec_cl->size(); j++) {
-  //   for (unsigned int i = 0; i < vec_cl->at(j).cells.size(); i++) {
-  //     int id = vec_cl->at(j).cells.at(i).id;
-
-  //     calocell[id].adc = vec_cl->at(j).cells.at(i).ps1.at(0).adc;
-  //     calocell[id].tdc = vec_cl->at(j).cells.at(i).ps1.at(0).tdc;
-  //     calocell[-id].adc = vec_cl->at(j).cells.at(i).ps2.at(0).adc;
-  //     calocell[-id].tdc = vec_cl->at(j).cells.at(i).ps2.at(0).tdc;
-
-  //     if (showdig) {
-  //       TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);
-  //       int color = (vec_cl->at(j).tid == 0) ? 632 : vec_cl->at(j).tid;
-  //       gr->SetFillColor(color);
-  //       if (id < 25000)
-  //         cev->cd(1);
-  //       else
-  //         cev->cd(2);
-  //       gr->Draw("f");
-  //     }
-  //   }
-  // }
-
-  // if (showdig) {
-  //   for (unsigned int i = 0; i < vec_tube->size(); i++) {
-  //     if (vec_tube->at(i).hor) {
-  //       TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).y, 6);
-  //       cev->cd(1);
-  //       m->Draw();
-  //     } else {
-  //       TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).x, 6);
-  //       cev->cd(2);
-  //       m->Draw();
-  //     }
-  //   }
-
-  //   for (const auto& tr : *vec_tr) {
-  //     for (const auto& d : tr.clX) {
-  //       TMarker* m = new TMarker(d.z, d.x, 6);
-  //       cev->cd(2);
-  //       m->Draw();
-  //     }
-  //     for (const auto& d : tr.clY) {
-  //       TMarker* m = new TMarker(d.z, d.y, 6);
-  //       cev->cd(1);
-  //       m->Draw();
-  //     }
-  //   }
-  // }
 
   if (showrec) {
     for (unsigned int i = 0; i < vec_tr->size(); i++) {
@@ -1467,79 +1404,66 @@ void DumpPri(int nev = 100, int istart = 0)
   DumpPri(nev, ids);
 }
 
-void addTrj2Reco(int index)
+//To compare edepsim to reco
+void comparison()
 {
-  t->GetEntry(index);
+  if (!tDigit || !tReco) {
+    std::cerr << "tDigit or tReco TTree non found" << std::endl;
+    for (auto f : vf)
+      f->Close();
+    return;
+  }
 
-  for (unsigned int i = 0; i < ev->Trajectories.size(); i++) {
-    TGraph* tr_zy = new TGraph(ev->Trajectories[i].Points.size());
-    TGraph* tr_zx = new TGraph(ev->Trajectories[i].Points.size());
+  //Loop on tDigit entries
+  Long64_t nEntries = tDigit->GetEntries();
 
-    for (unsigned int j = 0; j < ev->Trajectories[i].Points.size(); j++) {
-      tr_zy->SetPoint(j, ev->Trajectories[i].Points[j].GetPosition().Z(),
-                      ev->Trajectories[i].Points[j].GetPosition().Y());
-      tr_zx->SetPoint(j, ev->Trajectories[i].Points[j].GetPosition().Z(),
-                      ev->Trajectories[i].Points[j].GetPosition().X());
-    }
+  TH1* hist1;
+  TH1* hist2;
 
-    switch (ev->Trajectories[i].GetPDGCode()) {
-      // photons
-      case 22:
-        tr_zy->SetLineStyle(7);
-        tr_zx->SetLineStyle(7);
-      // e+/e-
-      case 11:
-      case -11:
-        tr_zy->SetLineColor(kRed);
-        tr_zx->SetLineColor(kRed);
-        break;
+  for (Long64_t i=0; i<nEntries; i++)
+  {
+    show(i);
 
-      // mu+/mu-
-      case 13:
-      case -13:
-        tr_zy->SetLineColor(kBlue);
-        tr_zx->SetLineColor(kBlue);
-        break;
-
-      // proton
-      case 2212:
-        tr_zy->SetLineColor(kBlack);
-        tr_zx->SetLineColor(kBlack);
-        break;
-
-      // neutron
-      case 2112:
-        tr_zy->SetLineStyle(7);
-        tr_zx->SetLineStyle(7);
-        tr_zy->SetLineColor(kGray);
-        tr_zx->SetLineColor(kGray);
-        break;
-
-      // pion0
-      case 111:
-        tr_zy->SetLineStyle(7);
-        tr_zx->SetLineStyle(7);
-        tr_zy->SetLineColor(kMagenta);
-        tr_zx->SetLineColor(kMagenta);
-        break;
-
-      // pion+/pion-
-      case 211:
-      case -211:;
-        tr_zy->SetLineColor(kCyan);
-        tr_zx->SetLineColor(kCyan);
-        break;
-
-      default:
-        tr_zy->SetLineColor(8);
-        tr_zx->SetLineColor(8);
-        break;
-    }
-
+    //3rd plot
     cev->cd(3);
-    tr_zy->Draw("same l");
+    tDigit->Draw(Form("fired_wires.y:fired_wires.z >> htemp%lld", i), Form("Entry$ == %lld && fired_wires.hor==1", i), "P");
+    hist1 = gDirectory->Get<TH1>(Form("htemp%lld", i));
+    hist1->SetStats(kFALSE);
+    hist1->SetMarkerStyle(20);
+    hist1->SetMarkerSize(0.5);
+    hist1->Draw();
+
+    //4th plot
     cev->cd(4);
-    tr_zx->Draw("same l");
+    tDigit->Draw(Form("fired_wires.x:fired_wires.z >> htemp%lld_a", i),Form("Entry$ == %lld && fired_wires.hor==0", i), "P");
+    hist2 = gDirectory->Get<TH1>(Form("htemp%lld_a", i));
+    hist2->SetStats(kFALSE);
+    hist2->SetMarkerStyle(20);
+    hist2->SetMarkerSize(0.5);
+    hist2->Draw();
+
+    if (showtrj2reco)
+      showTrj(i, 3, 4, true);
+    if (showede2reco)
+      showEde(i, 3, 4, true);
+
+    if (is_out_file_set == true) {
+      if (i == 0)
+          cev->Print(fout + "(",Form("Title: Event N: %lld", i));
+      else if (i == nEntries-1)
+          cev->Print(fout + ")",Form("Title: Event N: %lld", i));
+      else
+      {
+          cev->Print(fout,Form("Title: Event N: %lld", i));
+      }
+
+      std::cout << " writing entry N: "<< i << std::endl;
+    }
+
+    delete hist1;
+    delete hist2;
+    delete gDirectory->Get<TH1>(Form("htemp%lld", i));
+    delete gDirectory->Get<TH1>(Form("htemp%lld_a", i));
   }
 }
 
@@ -1548,6 +1472,7 @@ void help()
   std::cout << "Display -e <event number> -mc <MC file>"
                "[-f <input file1> -f <input file2> ... ] [-o <output file>] "
                "[--batch] [options]\n\n"
+               "--compare      -- to wirte a file over all events\n"
                "--trj          -- to show trajectories\n"
                "--ede          -- to show energy deposits\n"
                "--dgt          -- to show digits\n"
@@ -1559,23 +1484,7 @@ int main(int argc, char* argv[])
 {
   TApplication* myapp = new TApplication("myapp", 0, 0);
 
-  bool showtrj = false;
-  bool showede = false;
-  bool showdig = false;
-  bool showrec = false;
-  bool compare = false;
-
   int evid = 0;
-
-  bool is_ev_number_set = false;
-  bool is_mc_file_set = false;
-  bool is_out_file_set = false;
-  bool is_batch_mode_set = false;
-
-  TFile* fmc = nullptr;
-  std::vector<TFile*> vf;
-  TString fout;
-
   int index = 1;
 
   while (index < argc) {
@@ -1618,10 +1527,15 @@ int main(int argc, char* argv[])
         std::cerr << e.what() << '\n';
         return 1;
       }
-    } else if (opt.CompareTo("--trj") == 0)
+    }
+    else if (opt.CompareTo("--trj") == 0)
       showtrj = true;
+    else if (opt.CompareTo("--trj2reco") == 0)
+      showtrj2reco = true;
     else if (opt.CompareTo("--ede") == 0)
       showede = true;
+    else if (opt.CompareTo("--ede2reco") == 0)
+      showede2reco = true;
     else if (opt.CompareTo("--dgt") == 0)
       showdig = true;
     else if (opt.CompareTo("--rec") == 0)
@@ -1640,89 +1554,14 @@ int main(int argc, char* argv[])
     gROOT->SetBatch();
   }
 
-  init(fmc, vf);
+  init();
 
   if (compare == true) {
-    auto fDigit    = TFile::Open("/exp/dune/app/users/agioiosa/sandreco_data/digi-events-in-SANDtracker.0.edep-sim.root");
-    if (!fDigit || fDigit->IsZombie()) {
-        std::cerr << "Error opening Digit file" << std::endl;
-        return -1;
-    }
-
-    auto fReco     = TFile::Open("/exp/dune/app/users/agioiosa/sandreco_data/reco-events-in-SANDtracker.0.edep-sim.root");
-    if (!fReco || fReco->IsZombie()) {
-        std::cerr << "Error opening Reco file" << std::endl;
-        return -1;
-    }
-
-    // read Digit Event TTree
-    TTree *tDigit = (TTree*)fDigit->Get("tDigit");
-    if (!tDigit) {
-        std::cerr << "tDigit TTree non found" << std::endl;
-        fDigit->Close();
-        return -1;
-    }
-
-    // read Reco Event TTree
-    TTree *tReco = (TTree*)fReco->Get("tReco");
-    if (!tReco) {
-        std::cerr << "tReco TTree non found" << std::endl;
-        fReco->Close();
-        return -1;
-    }
-
-    //Loop on tDigit entries
-    Long64_t nEntries = tDigit->GetEntries();
-
-    TH1* hist1;
-    TH1* hist2;
-
-    for (Long64_t i=0; i<nEntries; i++)
-    {
-      show(i, showtrj, showede, showdig, showrec);
-
-      //3rd plot
-      cev->cd(3);
-      tDigit->Draw(Form("fired_wires.y:fired_wires.z >> htemp%lld", i), Form("Entry$ == %lld && fired_wires.hor==1", i), "P");
-      hist1 = gDirectory->Get<TH1>(Form("htemp%lld", i));
-      hist1->SetStats(kFALSE);
-      hist1->SetMarkerStyle(20);
-      hist1->SetMarkerSize(0.5);
-      hist1->Draw();
-
-      //4th plot
-      cev->cd(4);
-      tDigit->Draw(Form("fired_wires.x:fired_wires.z >> htemp%lld_a", i),Form("Entry$ == %lld && fired_wires.hor==0", i), "P");
-      hist2 = gDirectory->Get<TH1>(Form("htemp%lld_a", i));
-      hist2->SetStats(kFALSE);
-      hist2->SetMarkerStyle(20);
-      hist2->SetMarkerSize(0.5);
-      hist2->Draw();
-
-      addTrj2Reco(i);
-
-      if (is_out_file_set == true) {
-        if (i == 0)
-            cev->Print(fout + "(",Form("Title: Event N: %lld", i));
-        else if (i == nEntries-1)
-            cev->Print(fout + ")",Form("Title: Event N: %lld", i));
-        else
-        {
-            cev->Print(fout,Form("Title: Event N: %lld", i));
-        }
-
-        std::cout << " writing entry N: "<< i << std::endl;
-      }
-
-      delete hist1;
-      delete hist2;
-      delete gDirectory->Get<TH1>(Form("htemp%lld", i));
-      delete gDirectory->Get<TH1>(Form("htemp%lld_a", i));
-    }
+    comparison();
   }
   else
   {
-    show(evid, showtrj, showede, showdig, showrec);
+    show(evid);
 
     if (is_out_file_set == true) {
       cev->SaveAs(fout.Data());
@@ -1732,5 +1571,6 @@ int main(int argc, char* argv[])
       myapp->Run();
     }
   }
+
   return 0;
 }
