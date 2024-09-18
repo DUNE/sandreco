@@ -2,59 +2,58 @@
 #include "SANDTrackerCell.h"
 #include <vector>
 #include <map>
-
 class SANDTrackerPlane
 {
  private:
-  long _id;
+  long _unique_id;
+  long _local_id;
   double _rotation; //rad, mano destra su z
-  TVector3 _center_position;
-  TVector3 _dimensions;
+  TVector3 _position;
+  TVector3 _dimension;
   std::map<double, long> _coord_to_id_map;
-  std::map<long, SANDTrackerCell> _id_to_wire_map;
+  std::map<long, SANDTrackerCell> _id_to_cell_map;
 
-  std::vector<SANDTrackerCell> _vCells;
-  std::vector<long> _vFiredCellsIndex;
+  std::vector<TVector2> _vertices;
+
+  double _max_transverse_position = 0;
 
  public:
   SANDTrackerPlane() {};
-  SANDTrackerPlane(long idPlane)
+  SANDTrackerPlane(long uid, long lid)
   {
-    _id = idPlane;
+    _unique_id = uid;
+    _local_id  = lid;
   }
-  SANDTrackerPlane(long idPlane, std::vector<SANDTrackerCell> cells)
+  long uid() const
   {
-    _id = idPlane;
-    _vCells = cells;
+    return _unique_id;
   }
-
-  long id() const
+  long lid() const
   {
-    return _id;
+    return _local_id;
   }
   void addCell(const double transverse_coordinate,
-               const long id,
                const SANDWireInfo w)
   {
     if(_coord_to_id_map.find(transverse_coordinate) == _coord_to_id_map.end()) {
-      _coord_to_id_map.insert({transverse_coordinate, id});
-      _id_to_wire_map.insert({id, SANDTrackerCell(w, id)});
+      _coord_to_id_map.insert({transverse_coordinate, w.id()});
+      _id_to_cell_map.insert({w.id(), SANDTrackerCell(w)});
     }
-  }
-  void addCell(const SANDTrackerCell cell)
-  {
-    _vCells.push_back(cell);
   }
   int nCells() const
   {
     return _coord_to_id_map.size();
-    // return _vCells.size();
   }
-  SANDTrackerCell &getCell(int);
-
-  std::vector<long> firedCellsIndex() const
-  {
-    return _vFiredCellsIndex;
-  }
-  void clear();
+  void computePlaneVertices();
+  void computeMaxTransversePosition();
+  SANDTrackerCell &getCell(long);
+  SANDTrackerCell &getCell(double);
+  TVector3 getPosition()  const {return _position;} ;
+  TVector3 getDimension() const {return _dimension;} ;
+  double getRotation() const {return _rotation;} ;
+  double getMaxTransverseCoord() const {return _max_transverse_position;} ;
+  std::vector<TVector2> getPlaneVertices() const {return _vertices;} ;
+  void setPosition(TVector3 p)  { _position  = p;};
+  void setDimension(TVector3 d) { _dimension = d;};
+  void setRotation(double r) {_rotation = r;};
 };

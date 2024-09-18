@@ -6,8 +6,7 @@ class SANDTrackerModule
  private:
   std::string _target;
   long _id;
-  std::vector<SANDTrackerPlane> _vPlanes;
-  std::map<long, SANDTrackerPlane> _vPlanes_map;
+  std::map<long, SANDTrackerPlane> _vPlanes;
 
  public:
   SANDTrackerModule()
@@ -22,15 +21,7 @@ class SANDTrackerModule
     _id = i;
     _target = trg;
   }
-  // maybe not needed
-  SANDTrackerModule(long i, std::string trg,
-                    std::vector<SANDTrackerPlane> vPlanes)
-  {
-    _id = i;
-    _target = trg;
-    _vPlanes = vPlanes;
-  }
-
+  
   void id(const long idModule)
   {
     _id = idModule;
@@ -54,13 +45,10 @@ class SANDTrackerModule
 
   int nPlanes() const
   {
-    return _vPlanes_map.size();
-    // return _vPlanes.size();
+    return _vPlanes.size();
   }
-  std::vector<SANDTrackerPlane>& planes()
+  std::map<long, SANDTrackerPlane>& planes()
   {
     return _vPlanes;
   };
-
-  void clear();
 };

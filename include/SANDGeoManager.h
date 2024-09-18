@@ -163,6 +163,12 @@ class SANDGeoManager : public TObject
                                                           // about supermodule from volume
                                                           // path
 
+
+  TVector2 pointInRotatedSystem(TVector2 v, double angle);
+  bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector3& intersection);
+  void set_drift_plane_info(SANDTrackerPlane& plane, double angle);
+  void printGeometryInfo();
+
   // DRIFT CHAMBER
   mutable TPRegexp wire_regex_{sand_geometry::chamber::wire_regex_string};
   mutable TPRegexp drift_plane_regex_{
@@ -215,8 +221,8 @@ class SANDGeoManager : public TObject
 
   // DRIFT CHAMEBER
   void set_wire_info(const TGeoHMatrix& matrix);
-  void set_drift_wire_info(const TGeoNode* const node,
-                           const TGeoHMatrix& matrix);
+  void set_drift_plane_info(const TGeoNode* const node, const TGeoHMatrix& matrix);
+  void set_drift_wire_info(SANDTrackerPlane& plane);
   long get_drift_plane_id(const TString& volume_path, bool JustLocalId) const;
   long get_drift_module_id(const TString& volume_path) const;
   int get_drift_supermodule_id(const TString& volume_path) const;

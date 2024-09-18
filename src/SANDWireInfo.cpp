@@ -9,7 +9,7 @@ SANDWireInfo::SANDWireInfo()
 }
 
 // Parametric constructor
-SANDWireInfo::SANDWireInfo(int arg_id, double arg_x, double arg_y, double arg_z,
+SANDWireInfo::SANDWireInfo(long arg_id, double arg_x, double arg_y, double arg_z,
                            double arg_length, Orient arg_orientation,
                            ReadoutEnd arg_readout_end)
     : id_(arg_id),
@@ -23,7 +23,7 @@ SANDWireInfo::SANDWireInfo(int arg_id, double arg_x, double arg_y, double arg_z,
 }
 
 // Parametric constructor
-SANDWireInfo::SANDWireInfo(int arg_id, double arg_x, double arg_y, double arg_z,
+SANDWireInfo::SANDWireInfo(long arg_id, double arg_x, double arg_y, double arg_z,
                            double arg_length, Orient arg_orientation,
                            ReadoutEnd arg_readout_end, double arg_ax,
                            double arg_ay, double arg_az)
@@ -41,7 +41,7 @@ SANDWireInfo::SANDWireInfo(int arg_id, double arg_x, double arg_y, double arg_z,
 }
 
 // Setter methods for the attributes
-void SANDWireInfo::id(int arg_id)
+void SANDWireInfo::id(long arg_id)
 {
   id_ = arg_id;
 }
@@ -83,43 +83,43 @@ void SANDWireInfo::readout_end(ReadoutEnd arg_readout_end)
 }
 
 // Getter methods for the attributes
-int SANDWireInfo::id()
+long SANDWireInfo::id() const
 {
   return id_;
 }
-double SANDWireInfo::x()
+double SANDWireInfo::x() const
 {
   return x_;
 }
-double SANDWireInfo::y()
+double SANDWireInfo::y() const
 {
   return y_;
 }
-double SANDWireInfo::z()
+double SANDWireInfo::z() const
 {
   return z_;
 }
-double SANDWireInfo::length()
+double SANDWireInfo::length() const
 {
   return length_;
 }
-SANDWireInfo::Orient SANDWireInfo::orientation()
+SANDWireInfo::Orient SANDWireInfo::orientation() const
 {
   return orientation_;
 }
-double SANDWireInfo::ax()
+double SANDWireInfo::ax() const
 {
   return ax_;
 }
-double SANDWireInfo::ay()
+double SANDWireInfo::ay() const
 {
   return ay_;
 }
-double SANDWireInfo::az()
+double SANDWireInfo::az() const
 {
   return az_;
 }
-SANDWireInfo::ReadoutEnd SANDWireInfo::readout_end()
+SANDWireInfo::ReadoutEnd SANDWireInfo::readout_end() const
 {
   return readout_end_;
 }

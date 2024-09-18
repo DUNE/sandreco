@@ -1,12 +1,15 @@
 #include "SANDGeoManager.h"
+#include "SANDTrackerModuleConfig.h"
 
 #include <iostream>
 #include <fstream>
 
 #include <iomanip>
 
+
 #include <TGeoTrd2.h>
 #include <TGeoTube.h>
+#include <TGeoBBox.h>
 #include <TObjString.h>
 #include <TRandom3.h>
 
@@ -711,84 +714,125 @@ void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
       this_plane_wire_tranverse_position_map;
 }
 
-void SANDGeoManager::set_drift_wire_info(const TGeoNode* const node,
-                                         const TGeoHMatrix& matrix)
+TVector2 SANDGeoManager::pointInRotatedSystem(TVector2 v, double angle)
 {
+  TVector2 rotated_v;
+  rotated_v.SetX( v.X() * cos(angle) + v.Y() * sin(angle));
+  rotated_v.SetY(-v.X() * sin(angle) + v.Y() * cos(angle));
 
+  return rotated_v;
+}
+
+bool SANDGeoManager::getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector3& intersection)
+{
+  double delta_x = A.X() - B.X();
+  double delta_y = A.Y() - B.Y();
+  double det = dir.X() * delta_y  - dir.Y() * delta_x;
+
+  if (fabs(det) < 1E-9) {
+    // std::cout << "Line and segment are parallel." << std::endl;
+    return false;
+  } else {
+    
+    double t = ((A.X() - p.X()) * delta_y - (A.Y() - p.Y()) * delta_x) / det;
+    double s = ((p.X() - A.X()) * dir.Y() - (p.Y() - A.Y()) * dir.X()) / det;
+
+    if (s >= 0 && s <= 1) {
+      intersection.SetX(p.X() + t * dir.X());
+      intersection.SetY(p.Y() + t * dir.Y());
+      return true;
+    }
+
+    return false;
+  }
+}
+
+void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
+                                          const TGeoHMatrix& matrix)
+{
+  // To Do
+  // Check rotation of modules in the drift geometry.
+  // Currently the rotation of the wire is obtained by rotating 
+  // the whole plane. This results is the x-y dimensions being swapped
   TString node_path = gGeoManager->GetPath();
 
   long drift_module_unique_id = get_drift_module_id(node_path);
   long drift_plane_unique_id = get_drift_plane_id(node_path);
   long drift_plane_local_id  = get_drift_plane_id(node_path, true);  // 0,1 or 2
 
-  // std::cout << drift_module_unique_id << " " << drift_plane_unique_id << " " << 
-  //              drift_plane_local_id << std::endl;
-  
   auto insert_result = _tracker_modules_map.insert({drift_module_unique_id, SANDTrackerModule(drift_module_unique_id)});
-  bool added = _tracker_modules_map[drift_module_unique_id].addPlane(SANDTrackerPlane(drift_plane_unique_id));
+  bool added = _tracker_modules_map[drift_module_unique_id].addPlane(SANDTrackerPlane(drift_plane_unique_id, drift_plane_local_id));
+  auto& plane = _tracker_modules_map[drift_module_unique_id].getPlane(drift_plane_unique_id);
 
-  if (added) {
-    // To Do
-    // Add new plane info: angle, position, others?
-  }
+  double angle = TrackerModuleConfiguration::_id_to_angle[std::to_string(drift_plane_local_id)];
 
+  plane.setRotation(angle);
 
+  TGeoMatrix* plane_matrix = node->GetMatrix();
+  TGeoHMatrix plane_hmatrix = matrix * (*plane_matrix);
+  TGeoBBox* plane_shape = (TGeoBBox*)node->GetVolume()->GetShape();
+  TVector3 plane_dimension;
+  plane_dimension.SetX(2 * plane_shape->GetDZ());
+  plane_dimension.SetY(2 * plane_shape->GetDY());
+  plane_dimension.SetZ(2 * plane_shape->GetDX());
+
+  TVector3 plane_position;
+  plane_position.SetX(plane_hmatrix.GetTranslation()[0]);
+  plane_position.SetY(plane_hmatrix.GetTranslation()[1]);
+  plane_position.SetZ(plane_hmatrix.GetTranslation()[2]);
+
+  plane.setPosition(plane_position);
+  plane.setDimension(plane_dimension);
   
-  std::map<double, long> this_plane_wire_tranverse_position_map;
+  plane.computePlaneVertices();
+  plane.computeMaxTransversePosition();
 
-  for (int i = 0; i < node->GetNdaughters(); i++) {  // loop over wires
-    auto wire_node = node->GetDaughter(i);
-    if (isSwire(wire_node->GetName())) {
-      long wire_id = get_wire_id(wire_node->GetName());
-      long wire_unique_id = encode_wire_id(drift_plane_unique_id, wire_id);
+  set_drift_wire_info(plane);
+}
 
-      TGeoMatrix* wire_matrix = wire_node->GetMatrix();
-      TGeoHMatrix wire_hmatrix = matrix * (*wire_matrix);
-      TGeoTube* wire_shape = (TGeoTube*)wire_node->GetVolume()->GetShape();
-      double wire_length = 2 * wire_shape->GetDz();
+void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
+{
 
-      TVector3 wire_position;
-      wire_position.SetX(wire_hmatrix.GetTranslation()[0]);
-      wire_position.SetY(wire_hmatrix.GetTranslation()[1]);
-      wire_position.SetZ(wire_hmatrix.GetTranslation()[2]);
+  TVector2 local_plane_x_axis = pointInRotatedSystem(TVector2(1, 0), -plane.getRotation());
+  // local_plane_x_axis.Print();
+  
+  std::vector<TVector2> vertices = plane.getPlaneVertices();
 
-      double transverse_coord =
-          drift_plane_local_id == 2 ? wire_position.X() : wire_position.Y();
+  double transverse_position = -plane.getMaxTransverseCoord() + TrackerModuleConfiguration::_id_to_offset[std::to_string(plane.lid())];
+  long wire_id = 0;
+  while (transverse_position < plane.getMaxTransverseCoord()) {
+    SANDWireInfo w;
 
-      this_plane_wire_tranverse_position_map[transverse_coord] = wire_unique_id;
+    long wire_unique_id = encode_wire_id(plane.lid(), wire_id);
+    TVector2 _rotated_transverse_position = pointInRotatedSystem(TVector2(0, transverse_position), -plane.getRotation());
+    TVector3 intersection(0, 0, 0);
+    if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
+                               vertices[0], vertices[1], intersection)) {
+      w.setPoint(intersection + plane.getPosition());
+    };
+    if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
+                               vertices[1], vertices[2], intersection)) {
+      w.setPoint(intersection + plane.getPosition());
+    };
+    if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
+                               vertices[2], vertices[3], intersection)) {
+      w.setPoint(intersection + plane.getPosition());
+    };
+    if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
+                               vertices[3], vertices[0], intersection)) {
+      w.setPoint(intersection + plane.getPosition());
+    };
 
-      // here we fill wire info
-      SANDWireInfo w;
-      w.x(wire_position.X());
-      w.y(wire_position.Y());
-      w.z(wire_position.Z());
-      w.length(wire_length);
-      w.readout_end(SANDWireInfo::ReadoutEnd::kPlus);
-      if (drift_plane_local_id == 2) {
-        w.orientation(SANDWireInfo::Orient::kVertical);
-        w.ax(0);
-        w.ay(1);
-        w.az(0);
-      } else {
-        w.orientation(SANDWireInfo::Orient::kHorizontal);
-        w.ax(1);
-        w.ay(0);
-        w.az(0);
-      }
-
-      _tracker_modules_map[drift_module_unique_id].getPlane(drift_plane_unique_id)
-                                                  .addCell(transverse_coord, wire_unique_id, w);
+    if (w.getPoints().size() == 2) {
+      w.center((w.getPoints()[0] + w.getPoints()[1]) * 0.5);
+      w.length((w.getPoints()[1] - w.getPoints()[0]).Mag());
       
-      // std::cout << _tracker_modules_map.size() << " " 
-      //       << _tracker_modules_map[drift_module_unique_id].nPlanes() << " " 
-      //       << _tracker_modules_map[drift_module_unique_id].getPlane(drift_plane_unique_id).nCells() << std::endl;
-      
-      wiremap_[wire_unique_id] = w;
     }
-  }
+    plane.addCell(transverse_position, w);
 
-  wire_tranverse_position_map_[drift_plane_unique_id] =
-      this_plane_wire_tranverse_position_map;
+    wire_id++;
+    transverse_position += TrackerModuleConfiguration::_id_to_spacing[std::to_string(plane.lid())];
+  }
 }
 
 void SANDGeoManager::set_stt_info(const TGeoHMatrix& matrix)
@@ -820,7 +864,7 @@ void SANDGeoManager::set_wire_info(const TGeoHMatrix& matrix)
   TGeoHMatrix node_hmatrix = matrix * (*node_matrix);
   if (is_drift_plane(node_name)) {
     // long drift_plane_unique_id = get_drift_plane_id(node_path);
-    set_drift_wire_info(node, node_hmatrix);
+    set_drift_plane_info(node, node_hmatrix);
   } else if (is_stt_plane(node_name)) {
     long stt_plane_unique_id = get_stt_plane_id(node_path);
     set_stt_tube_info(node, node_hmatrix, stt_plane_unique_id);

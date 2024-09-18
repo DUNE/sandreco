@@ -14,6 +14,7 @@ class SANDTrackerCell
   bool _isFired;
 
  public:
+  SANDTrackerCell() {};
   SANDTrackerCell(const SANDWireInfo &l, const double time, const double vd,
                   const bool fired, const long wID, const double w,
                   const double h)
@@ -21,15 +22,15 @@ class SANDTrackerCell
         _timeResponse(time),
         _driftVelocity(vd),
         _isFired(fired),
-        _wireID(wID),
+        _wireID(l.id()),
         _width(w),
         _height(h)
 
   {
   }
 
-  SANDTrackerCell(const SANDWireInfo &l, const long wID): _wire(l),
-        _wireID(wID)
+  SANDTrackerCell(const SANDWireInfo &l): _wire(l),
+        _wireID(l.id())
   {
   }
 
