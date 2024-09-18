@@ -1214,6 +1214,8 @@ int main(int argc, char* argv[]){
         // if(i != 33u && i != 111u && i != 127u && i != 166u) continue;
         LOG("I", TString::Format("********************** PROCESSING EDEP EVENT %d **********************", i).Data());
         
+        KeepThisEvent = false;
+        
         edep_event_index = i;
         
         RecoUtils::event_digits->clear();
