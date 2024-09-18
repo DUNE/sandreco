@@ -95,7 +95,6 @@ SANDEventDisplay::SANDEventDisplay(const TGWindow *p, int w, int h)
   fFileDigitData = NULL;
   fTreeSimData = NULL;
   fTreeDigitData = NULL;
-  fTubeDigitVect = NULL;
   fWireDigitVect = NULL;
   fCellDigitVect = NULL;
   fPDGcode = TDatabasePDG::Instance();
@@ -283,7 +282,7 @@ void SANDEventDisplay::FillDigitHits()
 
   // STT hits
 
-  for (auto &tube : *fTubeDigitVect) {
+  for (auto &tube : *fWireDigitVect) {
     hit.particle = 0;
     hit.z = tube.z / 10;
     hit.e = tube.de;
@@ -1267,17 +1266,10 @@ void SANDEventDisplay::SetDigitData(TString fileName)
   fRadioHitsType[kDigitHits]->SetState(kButtonEngaged);
   fRadioHitsType[fDrawHits]->SetState(kButtonDown);
 
-  fTubeDigitVect = new std::vector<dg_tube>;
   fWireDigitVect = new std::vector<dg_wire>;
   fCellDigitVect = new std::vector<dg_cell>;
   
-  if(geo->FindVolumeFast("STTtracker_PV")){
-    //stt based digitization
-    fTreeDigitData ->SetBranchAddress("dg_tube", &fTubeDigitVect);
-  }else{
-    //drift based digitization
-    fTreeDigitData ->SetBranchAddress("dg_wire", &fWireDigitVect);
-  }
+  fTreeDigitData ->SetBranchAddress("dg_wire", &fWireDigitVect);
   fTreeDigitData->SetBranchAddress("dg_cell", &fCellDigitVect);
 }
 

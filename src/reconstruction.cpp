@@ -52,7 +52,7 @@ void evalUV(double& u, double& v, double zv, double yv, double z, double y)
 
 void evalPhi(double& phi, double u, double v) { phi = TMath::ATan2(v, u); }
 
-void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_tube>& vd,
+void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_wire>& vd,
                     double zv, double yv)
 {
   double dphi = 1E3;
@@ -69,7 +69,7 @@ void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_tube>& vd,
   }
 }
 
-bool findNearDigX(int& idx, double exp_x, std::vector<dg_tube>& vd, double xvtx)
+bool findNearDigX(int& idx, double exp_x, std::vector<dg_wire>& vd, double xvtx)
 {
   double dx = 10000.;
 
@@ -235,7 +235,7 @@ void GetRho(const std::vector<double>& z_v, const std::vector<double>& y_v,
 
 void FillPositionInfo(track& tr, int signy, double cos, double sin)
 {
-  dg_tube d = (sand_reco::stt::isDigBefore(tr.clX.front(), tr.clY.front())
+  dg_wire d = (sand_reco::stt::isDigBefore(tr.clX.front(), tr.clY.front())
                    ? tr.clX.front()
                    : tr.clY.front());
   tr.z0 = d.z;
@@ -448,7 +448,7 @@ void fillInfoCircFit(int n, const std::vector<double>& z,
 
 enum class TrackFilter { all_tracks, only_primaries };
 
-void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
+void TrackFind(TG4Event* ev, std::vector<dg_wire>* vec_digi,
                std::vector<track>& vec_tr,
                std::string const trackerType = "Straw",
                TrackFilter const track_filter = TrackFilter::all_tracks)
@@ -471,8 +471,8 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
 
     TRandom3 rand(0);
 
-    std::map<double, dg_tube> time_ordered_XZdigit;
-    std::map<double, dg_tube> time_ordered_YZdigit;
+    std::map<double, dg_wire> time_ordered_XZdigit;
+    std::map<double, dg_wire> time_ordered_YZdigit;
 
     for (unsigned int k = 0; k < vec_digi->size(); k++) {
 
@@ -519,8 +519,8 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
   }
 }
 
-void fillLayers(std::map<int, std::vector<dg_tube> >& m,
-                std::vector<dg_tube>& d, TH1D& hdummy, int hor)
+void fillLayers(std::map<int, std::vector<dg_wire> >& m,
+                std::vector<dg_wire>& d, TH1D& hdummy, int hor)
 {
   for (unsigned int k = 0; k < d.size(); k++) {
     if (d.at(k).hor == hor)
@@ -528,8 +528,8 @@ void fillLayers(std::map<int, std::vector<dg_tube> >& m,
   }
 }
 
-void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
-                 std::vector<std::vector<dg_tube> >& clustersY, TH1D& hdummy,
+void findTracksY(std::map<int, std::vector<dg_wire> >& mdY,
+                 std::vector<std::vector<dg_wire> >& clustersY, TH1D& hdummy,
                  double xvtx_reco, double yvtx_reco, double zvtx_reco,
                  double phi_tol = 0.1, double dlay_tol = 5)
 {
@@ -540,13 +540,13 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
 
   double u, v, phi, dphi;
 
-  dg_tube current_digit;
+  dg_wire current_digit;
 
   // loop on modules
   while (mdY.size() != 0) {
     // get most downstream module
-    std::map<int, std::vector<dg_tube> >::iterator ite = mdY.begin();
-    std::vector<dg_tube>* layer = &(ite->second);
+    std::map<int, std::vector<dg_wire> >::iterator ite = mdY.begin();
+    std::vector<dg_wire>* layer = &(ite->second);
 
     // loop on digits in the module
     while (layer->size() != 0) {
@@ -554,7 +554,7 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
       current_digit = layer->front();
 
       // create cluster and insert first digit
-      std::vector<dg_tube> clY;
+      std::vector<dg_wire> clY;
       clY.push_back(std::move(current_digit));
 
       // remove the current digit from the module
@@ -564,7 +564,7 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
       prev_mod = ite->first;
 
       // get iterator to the next module
-      std::map<int, std::vector<dg_tube> >::iterator nite = std::next(ite);
+      std::map<int, std::vector<dg_wire> >::iterator nite = std::next(ite);
 
       // reset parameters
       evalUV(u, v, zvtx_reco, yvtx_reco, current_digit.z, current_digit.y);
@@ -579,7 +579,7 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
         // check if module are downstream the reco vtx
         if (hdummy.GetXaxis()->GetBinUpEdge(-1 * nite->first) > zvtx_reco) {
           // get next layer
-          std::vector<dg_tube>* nlayer = &(nite->second);
+          std::vector<dg_wire>* nlayer = &(nite->second);
 
           // evaluate the distance (in number of modules) between this module
           // and the previous one
@@ -622,7 +622,7 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
 
               // remove module if it is empty
               if (nlayer->size() == 0) {
-                std::map<int, std::vector<dg_tube> >::iterator dummy =
+                std::map<int, std::vector<dg_wire> >::iterator dummy =
                     std::next(nite);
                 mdY.erase(nite);
                 nite = dummy;
@@ -642,8 +642,8 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
   }
 }
 
-void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
-                 std::vector<std::vector<dg_tube> >& clustersX, TH1D& hdummy,
+void findTracksX(std::map<int, std::vector<dg_wire> >& mdX,
+                 std::vector<std::vector<dg_wire> >& clustersX, TH1D& hdummy,
                  double xvtx_reco, double yvtx_reco, double zvtx_reco,
                  double x_tol = 100, double dlay_tol = 5)
 {
@@ -652,13 +652,13 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
 
   double prev_x, dx;
 
-  dg_tube current_digit;
+  dg_wire current_digit;
 
   // loop on modules from downstream to upstream
   while (mdX.size() != 0) {
     // get most downstream module
-    std::map<int, std::vector<dg_tube> >::iterator ite = mdX.begin();
-    std::vector<dg_tube>* layer = &(ite->second);
+    std::map<int, std::vector<dg_wire> >::iterator ite = mdX.begin();
+    std::vector<dg_wire>* layer = &(ite->second);
 
     // loop on digits in the module
     while (layer->size() != 0) {
@@ -666,7 +666,7 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
       current_digit = layer->front();
 
       // create cluster and insert first digit
-      std::vector<dg_tube> clX;
+      std::vector<dg_wire> clX;
       clX.push_back(std::move(current_digit));
 
       // remove the current digit from the module
@@ -676,7 +676,7 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
       prev_mod = ite->first;
 
       // get iterator to the next module
-      std::map<int, std::vector<dg_tube> >::iterator nite = std::next(ite);
+      std::map<int, std::vector<dg_wire> >::iterator nite = std::next(ite);
 
       // reset parameters
       prev_x = current_digit.x;
@@ -687,7 +687,7 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
         // check if module are downstream the reco vtx
         if (hdummy.GetXaxis()->GetBinUpEdge(-1 * nite->first) > zvtx_reco) {
           // get next layer
-          std::vector<dg_tube>* nlayer = &(nite->second);
+          std::vector<dg_wire>* nlayer = &(nite->second);
 
           // evaluate the distance (in number of modules) between this module
           // and the previous one
@@ -717,7 +717,7 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
 
                 // remove module if it is empty
                 if (nlayer->size() == 0) {
-                  std::map<int, std::vector<dg_tube> >::iterator dummy =
+                  std::map<int, std::vector<dg_wire> >::iterator dummy =
                       std::next(nite);
                   mdX.erase(nite);
                   nite = dummy;
@@ -738,8 +738,8 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
   }
 }
 
-void mergeXYTracks(std::vector<std::vector<dg_tube> >& clustersX,
-                   std::vector<std::vector<dg_tube> >& clustersY,
+void mergeXYTracks(std::vector<std::vector<dg_wire> >& clustersX,
+                   std::vector<std::vector<dg_wire> >& clustersY,
                    std::vector<track>& tr3D, double dn_tol, double dz_tol)
 {
   double dzend;
@@ -787,23 +787,23 @@ void mergeXYTracks(std::vector<std::vector<dg_tube> >& clustersX,
   }
 }
 
-void TrackFind(std::vector<track>& tracks, std::vector<dg_tube> digits,
+void TrackFind(std::vector<track>& tracks, std::vector<dg_wire> digits,
                std::vector<double>& binning, double xvtx_reco, double yvtx_reco,
                double zvtx_reco, double tol_phi, double tol_x, int tol_mod,
                unsigned int mindigtr, const double dn_tol, const double dz_tol)
 {
   TH1D hdummy("hdummy", "hdummy;Z (mm); multipliciy", binning.size() - 1,
               binning.data());
-  std::vector<std::vector<dg_tube> > clustersY;
-  std::vector<std::vector<dg_tube> > clustersX;
+  std::vector<std::vector<dg_wire> > clustersY;
+  std::vector<std::vector<dg_wire> > clustersX;
 
   // track finding with clustering in arctg(v/u) VS z
-  std::map<int, std::vector<dg_tube> > mdY;
+  std::map<int, std::vector<dg_wire> > mdY;
   fillLayers(mdY, digits, hdummy, 1);
   clustersY.clear();
 
   // find track on XZ view
-  std::map<int, std::vector<dg_tube> > mdX;
+  std::map<int, std::vector<dg_wire> > mdX;
   fillLayers(mdX, digits, hdummy, 0);
   clustersX.clear();
 
@@ -1372,7 +1372,7 @@ void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
   }
 }
 
-void MeanAndRMS(std::vector<dg_tube>& digits, TH1D& hmeanX, TH1D& hrmsX,
+void MeanAndRMS(std::vector<dg_wire>& digits, TH1D& hmeanX, TH1D& hrmsX,
                 TH1I& hnX, TH1D& hmeanY, TH1D& hrmsY, TH1I& hnY)
 {
 
@@ -1458,7 +1458,7 @@ void filterDigitsModule(std::map<int, double>& yd, std::vector<int>& toremove,
   }
 }
 
-void filterDigits(std::vector<dg_tube>& digits, TH1D& hdummy,
+void filterDigits(std::vector<dg_wire>& digits, TH1D& hdummy,
                   const double epsilon)
 {
   std::map<int, std::map<int, double> > dy;
@@ -1533,7 +1533,7 @@ void vtxfinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
 }
 
 void VertexFind(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
-                int& VtxType, std::vector<dg_tube> digits,
+                int& VtxType, std::vector<dg_wire> digits,
                 std::vector<double>& binning, double epsilon)
 {
   TH1D hrmsX("hrmsX", "rmsX;Z (mm); rmsX (mm)", binning.size() - 1,
@@ -1666,10 +1666,10 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event", &ev);
 
-  std::vector<dg_tube>* vec_digi = new std::vector<dg_tube>;
+  std::vector<dg_wire>* vec_digi = new std::vector<dg_wire>;
   std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
 
-  t->SetBranchAddress("dg_tube", &vec_digi);
+  t->SetBranchAddress("dg_wire", &vec_digi);
   t->SetBranchAddress("dg_cell", &vec_cell);
 
   std::vector<track> vec_tr;
@@ -1703,8 +1703,8 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
     double xvtx_reco, yvtx_reco, zvtx_reco;
     int VtxType;
 
-    std::vector<dg_tube> clustersY;
-    std::vector<dg_tube> clustersX;
+    std::vector<dg_wire> clustersY;
+    std::vector<dg_wire> clustersX;
 
     switch (stt_mode) {
       case STT_Mode::fast_only_primaries:

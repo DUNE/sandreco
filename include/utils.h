@@ -79,8 +79,8 @@ const double tm_stt_smearing = 3.5;   // ns
 // int encodePlaneID(int moduleid, int planelocid, int type);
 // void decodePlaneID(int id, int& moduleid, int& planelocid, int& type);
 double getT(double y1, double y2, double y, double z1, double z2, double z);
-bool isDigBefore(dg_tube d1, dg_tube d2);
-bool isDigUpstream(const dg_tube& d1, const dg_tube& d2);
+bool isDigBefore(dg_wire d1, dg_wire d2);
+bool isDigUpstream(const dg_wire& d1, const dg_wire& d2);
 void initT0(TG4Event* ev, SANDGeoManager& geo);
 }  // namespace stt
 
@@ -228,8 +228,8 @@ const double B = 0.6;
 }
 
 bool isPeBefore(const pe& p1, const pe& p2);
-bool isCluBigger(const std::vector<dg_tube>& v1,
-                 const std::vector<dg_tube>& v2);
+bool isCluBigger(const std::vector<dg_wire>& v1,
+                 const std::vector<dg_wire>& v2);
 bool isHitBefore(hit h1, hit h2);
 bool isCellBefore(dg_cell c1, dg_cell c2);
 }  // namespace ecal

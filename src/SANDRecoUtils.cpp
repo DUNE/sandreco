@@ -1,4 +1,5 @@
 #include "SANDRecoUtils.h"
+#include <numeric>
 
 SANDGeoManager geo_manager;
 
@@ -323,7 +324,7 @@ TF1* RecoUtils::WiresSinFit(const std::vector<dg_wire>& wires){
     }
     std::cout << "number of zy hits: " << z.size() << "\n";
 
-    // Create a TGraph object and fill it with the data
+    // Create a TGraph object and fill it with the data 
     TGraph *graph = new TGraph(z.size(), &x[0], &z[0]);
 
     double x_min = *std::min_element(x.begin(), x.end());

@@ -1,5 +1,5 @@
 #include "SANDECALCellInfo.h"
-#include "SANDSTTTubeInfo.h"
+#include "SANDWireInfo.h"
 #include "struct.h"
 
 #include <TGeoManager.h>
@@ -35,19 +35,34 @@ const char* const supermodule_regex_string =
     
 namespace stt
 {
-const char* const stt_single_tube_regex_string =
-    "(horizontalST_(Ar|Xe)|STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_vv_ST)_PV_([0-9]+"
-    ")(/|)";
-// "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
-// "0-9]+)";
-const char* const stt_two_tubes_regex_string =
-    "STT_([0-9]+)_(Trk|C3H6|C)Mod_(ST_|)(hh|vv)_2straw_PV_([0-9]+)<(/|)>";
-const char* const stt_plane_regex_string =
-    // "STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_(hh|vv)_PV_([0-9]+)(/|)";
-    // "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
-    "(C|C3H6|Trk)Mod_([0-9]+)_plane(XX|YY)_PV_([0-9]+)(/|)";
-const char* const stt_module_regex_string =
-    "STT_([0-9]+)_(Trk|C3H6|C)Mod_PV_([0-9]+)(/|)";
+   const char* const path_internal_volume =
+    "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0";
+  const char* const name_internal_volume = "sand_inner_volume_PV";
+
+  const char* const stt_single_tube_regex_string =
+  "(C|C3H6|Trk)Mod_([0-9]+)_plane(XX|YY)_straw_PV_([0-9]+)(/|)";
+  //const char* const stt_two_tubes_regex_string =
+  //  "(Trk|C3H6|C)Mod_([0-9]+)_plane(XX|YY)_2straw_stGas_(Xe|Ar)19_PV_([0-9]+)(/|)";
+
+  const char* const stt_plane_regex_string =
+  "(C|C3H6|Trk)Mod_([0-9]+)_plane(XX|YY)_PV_([0-9]+)(/|)";
+  const char* const stt_module_regex_string =
+    "(C|C3H6|Trk)Mod_([0-9]+)_PV_([0-9]+)(/|)";
+
+// const char* const stt_single_tube_regex_string =
+//     "(horizontalST_(Ar|Xe)|STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_vv_ST)_PV_([0-9]+"
+//     ")(/|)";
+// // "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
+// // "0-9]+)";
+// const char* const stt_two_tubes_regex_string =
+//     "STT_([0-9]+)_(Trk|C3H6|C)Mod_(ST_|)(hh|vv)_2straw_PV_([0-9]+)<(/|)>";
+// const char* const stt_plane_regex_string =
+//     // "STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_(hh|vv)_PV_([0-9]+)(/|)";
+//     // "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
+//     "(C|C3H6|Trk)Mod_([0-9]+)_plane(XX|YY)_PV_([0-9]+)(/|)";
+// const char* const stt_module_regex_string =
+//     "STT_([0-9]+)_(Trk|C3H6|C)Mod_PV_([0-9]+)(/|)";
 const char* const stt_supermodule_regex_string =
    "(Trk|SuperMod)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-1]+)(/|)";
 }  // namespace stt
@@ -110,13 +125,13 @@ class SANDGeoManager : public TObject
 
   std::map<long, SANDWireInfo> wiremap_; // map of wire (key : id, value:
                                             // info on wire)
-  mutable TPRegexp stt_single_tube_regex_{
+  mutable TPRegexp stt_tube_regex_{
       sand_geometry::stt::stt_single_tube_regex_string};  // regular expression
                                                           // to match relevant
                                                           // info about tube
                                                           // from volume path
-  mutable TPRegexp stt_two_tubes_regex_{
-      sand_geometry::stt::stt_two_tubes_regex_string};  // regular expression to
+  // mutable TPRegexp stt_two_tubes_regex_{
+      // sand_geometry::stt::stt_two_tubes_regex_string};  // regular expression to
                                                         // match relevant info
                                                         // about tube couple
                                                         // from volume path
@@ -212,7 +227,7 @@ class SANDGeoManager : public TObject
   SANDGeoManager()
       : cellmap_(),
         wiremap_(),
-         stt_single_tube_regex_(sand_geometry::stt::stt_single_tube_regex_string),
+         stt_tube_regex_(sand_geometry::stt::stt_single_tube_regex_string),
         //stt_two_tubes_regex_(sand_geometry::stt::stt_two_tubes_regex_string),
         stt_plane_regex_(sand_geometry::stt::stt_plane_regex_string),
         stt_module_regex_(sand_geometry::stt::stt_module_regex_string),

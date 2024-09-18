@@ -1,7 +1,7 @@
 /*Implementation of the SANDWireInfo class,
-for storing geometric info of the SAND STTs*/
+for storing geometric info of the SAND Tracker*/
 
-#include "SANDSTTTubeInfo.h"
+#include "SANDWireInfo.h"
 
 // Default constructor
 SANDWireInfo::SANDWireInfo() {}

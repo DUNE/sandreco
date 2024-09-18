@@ -15,7 +15,6 @@
 //#pragma link C++ class std::vector < particle> + ;
 #pragma link C++ class pe + ;
 #pragma link C++ class dg_ps + ;
-#pragma link C++ class dg_tube + ;
 #pragma link C++ class dg_wire + ;
 #pragma link C++ class dg_cell + ;
 #pragma link C++ class cluster + ;
