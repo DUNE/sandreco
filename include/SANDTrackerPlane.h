@@ -32,14 +32,14 @@ class SANDTrackerPlane
   {
     return _local_id;
   }
-  void addCell(const double transverse_coordinate,
-               const SANDWireInfo w)
+  void addCell(const double transverse_coordinate, SANDWireInfo w)
   {
     if(_coord_to_id_map.find(transverse_coordinate) == _coord_to_id_map.end()) {
       _coord_to_id_map.insert({transverse_coordinate, w.id()});
       _id_to_cell_map.insert({w.id(), SANDTrackerCell(w)});
     }
   }
+  const std::map<long, SANDTrackerCell>& getIdToCellMap() {return _id_to_cell_map;};
   int nCells() const
   {
     return _coord_to_id_map.size();

@@ -803,7 +803,8 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
   while (transverse_position < plane.getMaxTransverseCoord()) {
     SANDWireInfo w;
 
-    long wire_unique_id = encode_wire_id(plane.lid(), wire_id);
+    long wire_unique_id = encode_wire_id(plane.uid(), wire_id);
+    w.id(wire_unique_id);
     TVector2 _rotated_transverse_position = pointInRotatedSystem(TVector2(0, transverse_position), -plane.getRotation());
     TVector3 intersection(0, 0, 0);
     if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
@@ -893,6 +894,41 @@ void SANDGeoManager::set_wire_info()
   std::cout << "writing wiremap_ info on separate file\n";
   std::cout << "wiremap_ size: " << wiremap_.size() << std::endl;
   WriteMapOnFile(geometry, wiremap_);
+  PrintModulesInfo();
+}
+
+void SANDGeoManager::PrintModulesInfo(int verbose)
+{
+  std::cout << "There are " << _tracker_modules_map.size() << " modules in the geometry:" << std::endl;
+  for (auto m:_tracker_modules_map) {
+    std::cout << "  - Module " << m.first << " has " << m.second.nPlanes() << " planes:" << std::endl;
+    for (auto p:m.second.planes()) {
+      std::cout << "    - Plane " << p.first << std::endl;
+      std::cout << "      Wire rotation: " << p.second.getRotation() << std::endl;
+      std::cout << "      Center position: " << p.second.getPosition().X() << " " 
+                                           << p.second.getPosition().Y() << " " 
+                                           << p.second.getPosition().Z() << std::endl;
+      std::cout << "      Dimensions: "    << p.second.getDimension().X() << " " 
+                                           << p.second.getDimension().Y() << " " 
+                                           << p.second.getDimension().Z() << std::endl;
+      std::cout << "      List of cells (" << p.second.nCells() << "):"  << std::endl;
+      if (verbose >= 1) {
+        for(auto c:p.second.getIdToCellMap()) {
+          std::cout << "        " << c.first << std::endl;
+          std::cout << "          Center: " << c.second.wire().center().X() << " "
+                                          << c.second.wire().center().Y() << " "
+                                          << c.second.wire().center().Z() << std::endl;
+          std::cout << "          Length: " << c.second.wire().length()     << std::endl;
+          std::cout << "          Point1: " << c.second.wire().getPoints()[0].X() << " "
+                                          << c.second.wire().getPoints()[0].Y() << " "
+                                          << c.second.wire().getPoints()[0].Z() << std::endl;
+          std::cout << "          Point2: " << c.second.wire().getPoints()[1].X() << " "
+                                          << c.second.wire().getPoints()[1].Y() << " "
+                                          << c.second.wire().getPoints()[1].Z() << std::endl;
+        }
+      }
+    }
+  }
 }
 
 void SANDGeoManager::WriteMapOnFile(std::string fName,
