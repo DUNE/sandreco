@@ -12,6 +12,9 @@
 #include <TGeoBBox.h>
 #include <TObjString.h>
 #include <TRandom3.h>
+#include <TH2D.h>
+#include <TLine.h>
+#include <TCanvas.h>
 
 Counter counter_;
 
@@ -638,14 +641,14 @@ long SANDGeoManager::get_drift_plane_id(const TString& volume_path,
 }
 
 void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
-                                       const TGeoHMatrix& matrix,
-                                       long stt_plane_id)
+                                       const TGeoHMatrix& matrix)
 {
+  long stt_plane_unique_id = get_stt_plane_id(node_path);
   long stt_plane_type;
   long stt_module_id;
   long stt_supermodule_id;
   long stt_plane_local_id;
-  decode_plane_id(stt_plane_id, stt_supermodule_id, stt_module_id,
+  decode_plane_id(stt_plane_unique_id, stt_supermodule_id, stt_module_id,
                   stt_plane_local_id, stt_plane_type);
 
   std::map<double, long> this_plane_wire_tranverse_position_map;
@@ -827,7 +830,7 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
     if (w.getPoints().size() == 2) {
       w.center((w.getPoints()[0] + w.getPoints()[1]) * 0.5);
       w.length((w.getPoints()[1] - w.getPoints()[0]).Mag());
-      
+
     }
     plane.addCell(transverse_position, w);
 
@@ -864,11 +867,9 @@ void SANDGeoManager::set_wire_info(const TGeoHMatrix& matrix)
   TGeoMatrix* node_matrix = node->GetMatrix();
   TGeoHMatrix node_hmatrix = matrix * (*node_matrix);
   if (is_drift_plane(node_name)) {
-    // long drift_plane_unique_id = get_drift_plane_id(node_path);
     set_drift_plane_info(node, node_hmatrix);
   } else if (is_stt_plane(node_name)) {
-    long stt_plane_unique_id = get_stt_plane_id(node_path);
-    set_stt_tube_info(node, node_hmatrix, stt_plane_unique_id);
+    set_stt_tube_info(node, node_hmatrix);
   } else {
     for (int i = 0; i < node->GetNdaughters(); i++) {
       gGeoManager->CdDown(i);
@@ -894,7 +895,8 @@ void SANDGeoManager::set_wire_info()
   std::cout << "writing wiremap_ info on separate file\n";
   std::cout << "wiremap_ size: " << wiremap_.size() << std::endl;
   WriteMapOnFile(geometry, wiremap_);
-  PrintModulesInfo();
+  PrintModulesInfo(0);
+  DrawModulesInfo();
 }
 
 void SANDGeoManager::PrintModulesInfo(int verbose)
@@ -929,6 +931,32 @@ void SANDGeoManager::PrintModulesInfo(int verbose)
       }
     }
   }
+}
+
+void SANDGeoManager::DrawModulesInfo()
+{
+  TCanvas cc("", "", 1000, 1000);
+  cc.cd();
+
+  auto mod_it = _tracker_modules_map.begin();
+  mod_it++;
+  auto plane_it = mod_it->second.planes().begin();
+  plane_it++;
+  plane_it++;
+  auto plane = plane_it->second;
+  
+  TH2D h("","", 10, plane.getPosition().X() - plane.getDimension().X() / 2, plane.getPosition().X() + plane.getDimension().X() / 2, 
+                10, plane.getPosition().Y() - plane.getDimension().Y() / 2, plane.getPosition().Y() + plane.getDimension().Y() / 2);
+
+  h.Draw();
+
+  for (auto c:plane.getIdToCellMap()) {
+    TLine* l = new TLine(c.second.wire().getPoints()[0].X(), c.second.wire().getPoints()[0].Y(),
+                         c.second.wire().getPoints()[1].X(), c.second.wire().getPoints()[1].Y());
+    l->Draw("same");
+  }
+  
+  cc.SaveAs("plane.png");
 }
 
 void SANDGeoManager::WriteMapOnFile(std::string fName,

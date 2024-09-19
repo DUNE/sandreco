@@ -168,6 +168,7 @@ class SANDGeoManager : public TObject
   bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector3& intersection);
   void set_drift_plane_info(SANDTrackerPlane& plane, double angle);
   void PrintModulesInfo(int verbose = 1);
+  void DrawModulesInfo();
 
   // DRIFT CHAMBER
   mutable TPRegexp wire_regex_{sand_geometry::chamber::wire_regex_string};
