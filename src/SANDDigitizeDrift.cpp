@@ -97,7 +97,7 @@ void LOG(TString i, const char* out){
 
 void help_input(){
     std::cout << "\n";
-    std::cout << red << "./build/bin/test_DigitizeDrift"
+    std::cout << red << "./buil/bin/test_DigitizeDrift"
               << "-edep <EDep file> "
               << "-wireinfo <WireInfo file> "
               << "-o <fOuptut.root> "
@@ -142,25 +142,6 @@ void ReadWireInfos(const std::string fInput, std::vector<dg_wire>& wire_infos){
     }
     stream.close();
 }
-
-// std::map<int, std::vector<const TG4HitSegment*>> GroupHitsByTrajectory(const std::vector<TG4HitSegment>& hits)
-// {
-//     // Define a map to group pointers to hit segments by primary trajectory ID
-//     std::map<int, std::vector<const TG4HitSegment*>> grouped_hits;
-    
-//     // Iterate through each hit segment in the input vector
-//     for (const auto& hit : hits)
-//     {
-//         // Get the primary trajectory ID for the current segment
-//         int hit_trj_id = hit.GetPrimaryId();
-        
-//         // Add a pointer to the current segment to the vector associated with the primary trajectory ID in the map
-//         grouped_hits[hit_trj_id].push_back(&hit);
-//     }
-    
-//     // Return the map containing pointers to hit segments grouped by primary trajectory ID
-//     return grouped_hits;
-// }
 
 std::vector<TG4HitSegment> FilterHits(const std::vector<TG4HitSegment>& hits, const int PDG){
     /*
@@ -209,21 +190,18 @@ void SortWiresByTime(std::vector<dg_wire>& wires){
     });
 }
 
-
 void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
                           const std::vector<dg_wire>& wire_infos, 
-                          std::vector<dg_wire>& fired_wires){
+                          std::vector<dg_wire>& fired_wires
+                          ){
     /*
     Perform digitization of edepsim hits
     */
-    // fired_wires.clear();
-
-    // for(auto& hit : hits)
     for(auto i = 0u; i < hits.size(); i++){
-
+        
         auto hit_middle = (hits[i].GetStop() + hits[i].GetStart())*0.5;
         auto hit_delta =  (hits[i].GetStop() - hits[i].GetStart());
-        
+
         Line hit_line = Line(hits[i]);
         
         for(auto& wire : wire_infos){
@@ -237,14 +215,17 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
 
                 double closest_2_hit, closest_2_wire;
 
+                // given that wire and hit are 2 segments of a line, get segment 2 segment distance
                 double hit_2_wire_dist = RecoUtils::GetSegmentSegmentDistance(wire_line, hit_line, closest_2_hit, closest_2_wire);
 
+                // w_point is the 3D point on the wire's line closest to the hit's line
                 TVector3 w_point = wire_line.GetPointAt(closest_2_hit);
                 
+                // h_point is the 3D point on the line defined by the hit closest to the wire's line
                 TVector3 h_point = hit_line.GetPointAt(closest_2_wire);
 
                 bool is_hit_in_cell = (wire.hor == true) ? 
-                    fabs(w_point.Y() - h_point.Y()) < SENSE_2_SENSE_DIST * 0.5 : fabs(w_point.X() - h_point.X()) <= SENSE_2_SENSE_DIST * 0.5;
+                    fabs(w_point.Y() - h_point.Y()) <= SENSE_2_SENSE_DIST * 0.5 : fabs(w_point.X() - h_point.X()) <= SENSE_2_SENSE_DIST * 0.5;
 
                 if(is_hit_in_cell){ // pass if hit y (or x) coodinate is found in the hor (or vertical) wire cell
 
@@ -260,7 +241,9 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
 
                     fired.hindex.push_back(i);
 
+                    // if wire already fired check if the tdc saved is the smallest
                     UpdateFiredWires(fired_wires, fired);
+
                 }
             }
         }
@@ -282,13 +265,11 @@ int main(int argc, char* argv[]){
     const char* fWireInfo;
 
     int index = 1;
-
-    std::string trackerType = "DriftVolume";
-
+    
     LOG("","\n");
     LOG("I", "Parsing inputs");
 
-        while (index < argc)
+    while (index < argc)
     {
         TString opt = argv[index];
         if(opt.CompareTo("-edep")==0){
@@ -349,28 +330,19 @@ int main(int argc, char* argv[]){
     TTree tout("tDigit", "tDigit");
 
     TTree* tEdep = (TTree*)fEDep.Get("EDepSimEvents");
-
     geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
-
-    // Checks for STT or DRIFT Chaber geometry
-    if(geo->FindVolumeFast("STTtracker_PV")){
-        std::cout<<"\n--- STT based simulation ---\n";
-        trackerType="Straw";
-    }
-    else if (geo->FindVolumeFast("SANDtracker_PV")){
-        std::cout<<"\n--- Drift based simulation ---\n";
-        trackerType="DriftVolume";
-    }
-    else{
-        std::cout<<"Error in retriving volume information from Geo Manager, exiting...\n";
-        exit(-1);
-    }
 
     std::vector<dg_wire> wire_infos;
 
     std::vector<dg_wire> fired_wires;
 
-    tout.Branch("edep_file", "edep_file", &fEDepInput);
+    unsigned int edep_event_index;
+
+    std::string fEDepInputStr = fEDepInput;
+
+    tout.Branch("edep_file_input", &fEDepInputStr);
+    
+    tout.Branch("edep_event_index", &edep_event_index, "edep_event_index/i");
     
     tout.Branch("fired_wires", "fired_wires", &fired_wires);
     
@@ -381,20 +353,21 @@ int main(int argc, char* argv[]){
     tEdep->SetBranchAddress("Event", &evEdep);
 
     for(auto i=0u; i < tEdep->GetEntries(); i++)
-    //for(auto i=0u; i < 10; i++)
     {
+        edep_event_index = i;
+
         LOG("ii", TString::Format("Processing Event %d", i).Data());
         tEdep->GetEntry(i);
 
         fired_wires.clear();
 
-        CreateDigitsFromEDep(evEdep->SegmentDetectors[trackerType], wire_infos, fired_wires);
-        
+        CreateDigitsFromEDep(evEdep->SegmentDetectors["DriftVolume"], wire_infos, fired_wires);
         LOG("i", "Sort wires by true hit time");
         SortWiresByTime(fired_wires);
         
         tout.Fill();
     }
+
     fout.cd();
 
     tout.Write();

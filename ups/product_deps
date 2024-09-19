@@ -1,0 +1,48 @@
+# The parent line must be the first non-comment line in the file
+# This line defines the product name and version 
+parent  sandreco
+defaultqual	e20
+
+# These optional lines define the installed directories where
+# headers, libraries, and executables will be found
+# Use them only if your product does not conform to the defaults
+# Format: directory_type directory_path directory_name
+# The only recognized values of the first field are fcldir, incdir, libdir, and bindir
+# The only recognized values of the second field are product_dir, fq_dir, and -
+# The third field is not constrained.
+# Defaults:
+# incdir  product_dir  include
+# fcldir  product_dir  fcl
+# libdir  fq_dir       lib
+# bindir  fq_dir       bin
+# gdmldir product_dir
+# fwdir   product_dir  fw
+
+product         version
+edepsim         v3_2_0b
+end_product_list
+
+# define allowed qualifiers and the corresponding qualifiers for the depdencies.
+# e15  - with gcc 6.4.0 and -std=c++14
+
+qualifier   edepsim
+e20:prof    e20:prof
+end_qualifier_list
+
+# table fragment to set FW_SEARCH_PATH needed
+# to find gdml files:
+table_fragment_begin
+
+#pathPrepend(FW_SEARCH_PATH, ${UPS_PROD_DIR}/gdml)
+#pathPrepend(FW_SEARCH_PATH, ${UPS_PROD_DIR}/xml)
+#pathPrepend(FW_SEARCH_PATH, ${UPS_PROD_DIR}/txt)
+#pathPrepend(GXMLPATH, ${UPS_PROD_DIR}/xml)
+#pathPrepend(FHICL_FILE_PATH, .:./job)
+
+table_fragment_end
+
+# Preserve tabs and formatting in emacs and vi / vim:
+
+### Local Variables:
+### tab-width: 8
+### End:

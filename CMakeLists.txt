@@ -5,7 +5,7 @@
 # e.g. by passing `-DROOT_DIR="/path/to/root/installation` at cmake configuration time.
 
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(SandReco LANGUAGES CXX VERSION 1.0.0)
+project(SandReco LANGUAGES CXX VERSION 01.00.00)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -34,12 +34,12 @@ target_include_directories(Struct PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Struct PUBLIC)
-ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/Linkdef.h)
+ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/StructLinkDef.h)
 
 # Create SANDGeoManager lib
-add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDSTTTubeInfo.cpp src/SANDECALCellInfo.cpp)
+add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDWireInfo.cpp src/SANDECALCellInfo.cpp)
 target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
-ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDSTTTubeInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/Linkdef.h)
+ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDWireInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerLinkDef.h)
 
 # Creates a libUtils shared library
 add_library(Utils SHARED src/utils.cpp src/transf.cpp)
@@ -54,7 +54,7 @@ target_include_directories(SANDRecoUtils PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(SANDRecoUtils PUBLIC Struct Utils SANDGeoManager ROOT::EG)
-ROOT_GENERATE_DICTIONARY(SANDRecoUtilsDict SANDRecoUtils.h SANDSTTTubeInfo.h struct.h utils.h MODULE SANDRecoUtils LINKDEF include/SANDRecoUtilsLinkDef.h)
+ROOT_GENERATE_DICTIONARY(SANDRecoUtilsDict SANDRecoUtils.h SANDWireInfo.h struct.h utils.h MODULE SANDRecoUtils LINKDEF include/SANDRecoUtilsLinkDef.h)
 # ROOT_GENERATE_DICTIONARY(SANDRecoUtilsDict SANDRecoUtils.h MODULE SANDRecoUtils LINKDEF include/SANDRecoUtilsLinkDef.h)
 
 # Creates Digitize executable.
@@ -65,21 +65,26 @@ target_link_libraries(Digitize Struct SANDGeoManager Utils)
 add_executable(Reconstruct src/reconstruction.cpp)
 target_link_libraries(Reconstruct Struct Utils SANDGeoManager)
 
+# Creates DigitizeDrift executable.
+add_executable(DigitizeDrift src/SANDDigitizeDrift.cpp)
+target_link_libraries(DigitizeDrift Struct Utils SANDRecoUtils)
+
 # Creates ReconstructNLLmethod executable.
 add_executable(ReconstructNLLmethod src/reconstructionNLLmethod.cpp)
 target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
 
-# ADDED TEMPORARY FOR TESTING OF THE METHOD ----
-# Creates ReconstructNLLmethod executable.
-add_executable(test_reconstructNLL tests/test_reconstructionNLL.cpp)
-target_link_libraries(test_reconstructNLL Struct Utils SANDRecoUtils)
+# ADDED FOR TESTING ----
+# # Creates DigitizeDrift executable for testing.
+# add_executable(test_DigitizeDrift tests/test_DigitizeDrift.cpp)
+# target_link_libraries(test_DigitizeDrift Struct Utils SANDRecoUtils)
 
-add_executable(test_DigitizeDrift tests/test_DigitizeDrift.cpp)
-target_link_libraries(test_DigitizeDrift Struct Utils SANDRecoUtils)
-
+# # Creates ReconstructNLLmethod executable for testing.
+# add_executable(test_reconstructNLL tests/test_reconstructionNLL.cpp)
+# target_link_libraries(test_reconstructNLL Struct Utils SANDRecoUtils)
+# ----
+# Creates DisplayReco executable for testing.
 add_executable(test_DisplayReco tests/test_DisplayReco.cpp)
 target_link_libraries(test_DisplayReco Struct Utils)
-# ----
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)
