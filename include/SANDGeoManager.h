@@ -212,13 +212,12 @@ class SANDGeoManager : public TObject
   void set_wire_info();
 
   // STT
+  long get_stt_module_id(const TString& volume_path) const;
   bool is_stt_tube(const TString& volume_name) const;
   bool is_stt_plane(const TString& volume_name) const;
-  int get_stt_plane_id(const TString& volume_path) const;
-  void set_stt_tube_info(const TGeoNode* const node, const TGeoHMatrix& matrix,
-                         long stt_plane_id);
-  void set_stt_info(const TGeoHMatrix& matrix);
-  // void set_stt_info();
+  int get_stt_plane_id(const TString& volume_path, bool justLocal) const;
+  void set_stt_wire_info(SANDTrackerPlane& plane, const TGeoNode* const node, const TGeoHMatrix& matrix);
+  void set_stt_plane_info(const TGeoNode* const node, const TGeoHMatrix& matrix);
 
   // DRIFT CHAMEBER
   void set_wire_info(const TGeoHMatrix& matrix);
