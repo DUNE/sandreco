@@ -77,6 +77,8 @@ double dwz = 2500.;
 double kloe_int_R = 2000.;
 double kloe_int_dx = 1690.;
 
+Long64_t nEntries = 0;
+
 //files
 TFile* f = 0;
 TFile* fmc = 0;
@@ -1424,7 +1426,7 @@ void comparison()
   }
 
   //Loop on tDigit entries
-  Long64_t nEntries = tDigit->GetEntries();
+  if (nEntries == 0) nEntries = tDigit->GetEntries();
 
   TH1* hist1;
   TH1* hist2;
@@ -1481,7 +1483,7 @@ void help()
   std::cout << "Display -e <event number> -mc <MC file>"
                "[-f <input file1> -f <input file2> ... ] [-o <output file>] "
                "[--batch] [options]\n\n"
-               "--compare      -- to wirte a file over all events\n"
+               "--compare  <nEntries>    -- to wirte a file over n events. 0 means all events\n"
                "--trj          -- to show trajectories\n"
                "--ede          -- to show energy deposits\n"
                "--dgt          -- to show digits\n"
@@ -1536,6 +1538,14 @@ int main(int argc, char* argv[])
         std::cerr << e.what() << '\n';
         return 1;
       }
+    } else if (opt.CompareTo("--compare") == 0) {
+      try {
+        nEntries = atoi(argv[++index]);
+        compare = true;
+      } catch (const std::exception& e) {
+        std::cerr << e.what() << '\n';
+        return 1;
+      }
     }
     else if (opt.CompareTo("--trj") == 0)
       showtrj = true;
@@ -1549,8 +1559,6 @@ int main(int argc, char* argv[])
       showdig = true;
     else if (opt.CompareTo("--rec") == 0)
       showrec = true;
-    else if (opt.CompareTo("--compare") == 0)
-      compare = true;
     index++;
   }
 
