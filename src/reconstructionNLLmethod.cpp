@@ -242,14 +242,14 @@ std::string GetVolumeFromCoordinates(std::string units, double x, double y, doub
         std::cout<<"GEO not initialized in "<<__FILE__<<" "<<__LINE__<<"\n";
         throw "";
     }
-    if(units == "mm"){ // convert to cm
-        x = x * 0.1;
-        y = y * 0.1;
-        z = z * 0.1;
-    }else if(units == "m"){ // convert to cm
-        x = x * 100.;
-        y = y * 100.;
-        z = z * 100.;
+    if(units == "cm"){ // convert to mm
+        x = x * 10.;
+        y = y * 10.;
+        z = z * 10.;
+    }else if(units == "m"){ // convert to mm
+        x = x * 1000.;
+        y = y * 1000.;
+        z = z * 1000.;
     }
 
     auto navigator = geo->GetCurrentNavigator();
@@ -275,9 +275,9 @@ bool IsInFiducialVolume(std::string units, double x, double y, double z){
     if(units == "m"){ // convert to mm
         x = x*1e3; y = y*1e3; z = z*1e3;
     }else if(units == "cm"){ // convert to mm
-        x = x*1e2; y = y*1e2; z = z*1e2;
+        x = x*1e1; y = y*1e1; z = z*1e1;
     }else{}
-    // std::cout << "volName : "<< volName_ << "\n";
+    std::cout << "volName : "<< volName_ << "\n";
     if(volName_.Contains("Frame")){
         return false;
     }else if(volName_.Contains("_A")){ // one of 2 supermod A
@@ -1167,8 +1167,8 @@ int main(int argc, char* argv[]){
     TTree* tEdep = (TTree*)fEDep.Get("EDepSimEvents");
     
     LOG("I","Open TGeoManager from edepsim file");
-    // geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
-    geo = TGeoManager::Import("/storage/gpfs_data/neutrino/users/gi/dunendggd/SAND_opt3_DRIFT1.root");
+    geo = (TGeoManager*)fEDep.Get("EDepSimGeometry");
+    //geo = TGeoManager::Import("/storage/gpfs_data/neutrino/users/gi/dunendggd/SAND_opt3_DRIFT1.root");
     
     TTree* tDigit = (TTree*)fDigit.Get("tDigit");
     
