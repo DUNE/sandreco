@@ -73,7 +73,7 @@ std::map<int, TVector3>
   }
   return ecal_barrel_cell_center_local_positions;
 }
-
+//- I guess this should be updated?
 std::map<int, TVector3>
     SANDGeoManager::get_ecal_endcap_cell_center_local_position(
         const std::vector<double>& zlevels, double rmin, double rmax) const
@@ -84,9 +84,15 @@ std::map<int, TVector3>
     auto z_this_layer = 0.5 * (zlevels.at(i) + zlevels.at(i + 1));
 
     // cell width at the z position of the center of the cell
+    //- I'm not sure how the cell width is defined --> need to look at the
+    // geometry
+    //- This bit may need to be changed depending on the shape of the new cells
+    // x seems the direction along which the endcap is segmented (| | | |o| | |
+    // |)
     double x_cell_width =
         2 * rmax / sand_geometry::ecal::number_of_cells_per_endcap_layer;
 
+    //- the x position of the cells now varies over the endcap
     // position of the center of the cells
     for (int j = 0; j < sand_geometry::ecal::number_of_cells_per_endcap_layer;
          j++) {
@@ -138,8 +144,16 @@ bool SANDGeoManager::is_ecal_endcap(const TString& volume_name) const
          volume_name.Contains("Active") == true;
 }
 
+bool SANDGeoManager::is_endcap_mod(const TString& volume_name) const
+{
+  return volume_name.Contains(endcap_mod_regex_);
+}
+
 bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path) const
 {
+  // this bit seems strange: what if other paths end up having more than 8
+  // tokens?
+
   // ENDCAP ==> something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_18/volECALActiveSlab_21_PV_0"
   // BARREL ==> something like:
@@ -158,13 +172,14 @@ bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path) const
 
   return true;
 }
-
+// Note: I think plane_id should be renamed to layer_id for consistency with
+// function calls also plane_id is used in the STT functions
 void SANDGeoManager::get_ecal_barrel_module_and_layer(
     const TString& volume_name, const TString& volume_path, int& detector_id,
-    int& module_id, int& plane_id) const
+    int& module_id, int& layer_id) const
 {
   TObjArray* obja1 =
-      volume_name.Tokenize("_");  // BARERL => volECALActiveSlab_21_PV_0
+      volume_name.Tokenize("_");  // BARREL => volECALActiveSlab_21_PV_0
   TObjArray* obja2 = volume_path.Tokenize("_");  // BARREL => ECAL_lv_PV_18
 
   // top module => modID == 0
@@ -177,16 +192,20 @@ void SANDGeoManager::get_ecal_barrel_module_and_layer(
   delete obja1;
   delete obja2;
 
-  // planeID==0 -> smallest slab -> internal
-  // planeID==208 -> biggest slab -> external
-  plane_id = slab_id / 40;
+  // layer_id==0 -> smallest slab -> internal (slab_id==0 ?)
+  // layer_id==208 -> biggest slab -> external (slab_id==208 ?)
+  // why layer_id = slab_id / 40? Because const int number_of_layers = 5 =
+  // 208//40
+  layer_id = slab_id / 40;
 
-  if (plane_id > 4) plane_id = 4;
+  if (layer_id > 4) layer_id = 4;
 }
 
+// Note: I think plane_id should be renamed to layer_id for consistency with
+// function calls
 void SANDGeoManager::get_ecal_endcap_module_and_layer(
     const TString& volume_name, const TString& volume_path, int& detector_id,
-    int& module_id, int& plane_id) const
+    int& module_id, int& layer_id) const
 {
   TObjArray* obja1 =
       volume_name.Tokenize("_");  // ENDCAP => endvolECALActiveSlab_0_PV_0
@@ -208,11 +227,11 @@ void SANDGeoManager::get_ecal_endcap_module_and_layer(
   delete obja1;
   delete obja2;
 
-  // planeID==0 -> internal
-  // planeID==208 -> external
-  plane_id = slab_id / 40;
+  // layer_id==0 -> internal (slab_id==0 ?)
+  // layer_id==208 -> external (slab_id==208 ?)
+  layer_id = slab_id / 40;
 
-  if (plane_id > 4) plane_id = 4;
+  if (layer_id > 4) layer_id = 4;
 }
 
 void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
@@ -247,6 +266,7 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
   cell_local_id = (local[0] + dx) / cell_width;
 }
 
+// cell_local structure should be changed
 void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
                                                    const TGeoNode* const node,
                                                    int& cell_local_id) const
@@ -276,7 +296,8 @@ void SANDGeoManager::set_ecal_info()
   // GetDx1() half length in x at -Dz
   // GetDx2() half length in x at +Dz
   // Dx1 < Dx2 => -Dz corresponds to minor width => internal side
-
+  //-- TGeoTrd2 methods, which defines a trapezoid with up and down faces
+  // parallel to zy and oblique sides along xz
   TGeoTrd2* mod =
       (TGeoTrd2*)geo_->FindVolumeFast(sand_geometry::ecal::barrel_module_name)
           ->GetShape();
@@ -284,7 +305,10 @@ void SANDGeoManager::set_ecal_info()
   double ecal_barrel_xmax = mod->GetDx2();
   double ecal_barrel_dz = mod->GetDz();
   double ecal_barrel_dy = mod->GetDy1();
-
+  //-- the geometry probably does not have an endcap_module_name volume anymore
+  //-- the TGeoTube must be split into separate parts, corresponding to the
+  // single module sections
+  //--
   TGeoTube* ec =
       (TGeoTube*)geo_->FindVolumeFast(sand_geometry::ecal::endcap_module_name)
           ->GetShape();
@@ -292,14 +316,18 @@ void SANDGeoManager::set_ecal_info()
   double ecal_endcap_rmin = ec->GetRmin();
 
   // get z of the levels between the layers
+  /* This bit seems to be still viable: ECAL_lv is the valid barrel module
+   * volume name now (again: volume not node as with the regexs)*/
   auto z_levels = get_levels_z(ecal_barrel_dz);
 
-  // get slop of the edge of the barrel module
+  // get slope of the edge of the barrel module
+  //-- the height of the module is 2 * ecal_barrel_dz, hence 0.5
   auto ecal_barrel_edge_slope =
       0.5 * (ecal_barrel_xmax - ecal_barrel_xmin) / ecal_barrel_dz;
   auto ecal_barrel_edge_position = 0.5 * (ecal_barrel_xmax + ecal_barrel_xmin);
 
-  // eval barrel cell center global position
+  // eval barrel cell (within each module) center local position (relative to
+  // the module) this is an std::map<int,TVector3>
   auto ecal_barrel_cell_center_local_positions =
       get_ecal_barrel_cell_center_local_position(
           z_levels, ecal_barrel_edge_slope, ecal_barrel_edge_position);
@@ -310,6 +338,7 @@ void SANDGeoManager::set_ecal_info()
   for (int module_id = 0;
        module_id < sand_geometry::ecal::number_of_barrel_modules; module_id++) {
     for (auto cell_position : ecal_barrel_cell_center_local_positions) {
+      // first/second stands for the key/value in a map
       local[0] = cell_position.second.X();
       local[1] = cell_position.second.Y();
       local[2] = cell_position.second.Z();
@@ -319,9 +348,12 @@ void SANDGeoManager::set_ecal_info()
       auto layer_id = cell_and_layer_id.first;
       auto cell_local_id = cell_and_layer_id.second;
 
+      // module_id is just an integer from o to n_modules
+      // local and master are the coordinate vectors
       geo_->cd(
           TString::Format(sand_geometry::ecal::path_barrel_template, module_id)
               .Data());
+
       geo_->LocalToMaster(local, master);
 
       // here we create new cellInfo
@@ -334,7 +366,7 @@ void SANDGeoManager::set_ecal_info()
     }
   }
 
-  // eval barrel cell center global position
+  // eval endcap cell center global position
   auto ecal_endcap_cell_center_local_positions =
       get_ecal_endcap_cell_center_local_position(z_levels, ecal_endcap_rmin,
                                                  ecal_endcap_rmax);
@@ -361,7 +393,9 @@ void SANDGeoManager::set_ecal_info()
         detector_id = 1;
         geo_->cd(sand_geometry::ecal::path_endcapL_template);
       }
-
+      // as if in the geometry the ECAL endcaps were not divided into modules
+      // so one has to compute the local position w.r.t. the endcap and
+      // transform
       geo_->LocalToMaster(local, master);
 
       // here we create new cellInfo
@@ -372,6 +406,78 @@ void SANDGeoManager::set_ecal_info()
                            cell_length, SANDECALCellInfo::Orient::kVertical);
     }
   }
+}
+
+//  #######################################################
+//  ##                     ECAL_ENDCAP                   ##
+//  #######################################################
+
+int SANDGeoManager::encode_endcap_mod_id(int module_id, int module_replica_id,
+                                         int endcap_side_id)
+{
+  return module_id * 100 + module_replica_id * 10 + endcap_side_id;
+}
+
+void SANDGeoManager::decode_endcap_mod_id(int endcap_mod_global_id,
+                                          int& module_id,
+                                          int& module_replica_id,
+                                          int& endcap_side_id)
+{
+  module_id = endcap_mod_global_id / 100;
+  module_replica_id = (endcap_mod_global_id - module_id * 100) / 10;
+  endcap_side_id = endcap_mod_global_id % 10;
+}
+
+int SANDGeoManager::get_endcap_mod_id(const TString& volume_path) const
+{
+  auto module_matches = endcap_mod_path_regex_.MatchS(volume_path);
+
+  // endcap side matching
+  int endcap_side_id = (reinterpret_cast<TObjString*>(module_matches->At(1)))
+                           ->GetString()
+                           .Atoi();
+  int module_id = (reinterpret_cast<TObjString*>(module_matches->At(2)))
+                      ->GetString()
+                      .Atoi();
+  int module_replica_id = (reinterpret_cast<TObjString*>(module_matches->At(3)))
+                              ->GetString()
+                              .Atoi();
+
+  delete module_matches;
+
+  return encode_endcap_mod_id(module_id, module_replica_id, endcap_side_id);
+}
+void SANDGeoManager::set_ecal_endcap_info(const TGeoHMatrix& matrix)
+{
+  TGeoNode* node = gGeoManager->GetCurrentNode();
+  TString node_path = gGeoManager->GetPath();
+  TString node_name = node->GetName();
+  TGeoMatrix* node_matrix = node->GetMatrix();
+  TGeoHMatrix node_hmatrix = matrix * (*node_matrix);
+
+  if (is_endcap_mod(node_name)) {
+
+    int mod_id = get_endcap_mod_id(node_path);
+    // set the module info
+    endcapmap_[mod_id] = SANDENDCAPModInfo(mod_id, node, node_hmatrix);
+  } else {
+    for (int i = 0; i < node->GetNdaughters(); i++) {
+      gGeoManager->CdDown(i);
+      set_ecal_endcap_info(node_hmatrix);
+      gGeoManager->CdUp();
+    }
+  }
+}
+
+void SANDGeoManager::set_ecal_endcap_info()
+{
+  TGeoHMatrix matrix = *gGeoIdentity;
+  std::cout << "> Checking endcap info\n";
+  set_ecal_endcap_info(matrix);
+
+  for (auto ec_mod : endcapmap_)
+    std::cout << "mod_name" << ec_mod.second.path() << ", id: " << ec_mod.first
+              << "\n";
 }
 
 int SANDGeoManager::encode_stt_tube_id(int stt_plane_global_id,
@@ -456,6 +562,7 @@ int SANDGeoManager::get_stt_plane_id(const TString& volume_path) const
                              2 * plane_replica_id + plane_type, plane_type);
 }
 
+//- plane_id is obtained from get_stt_plane_id(node_path)
 void SANDGeoManager::set_stt_tube_info(const TGeoNode* const node,
                                        const TGeoHMatrix& matrix,
                                        int stt_plane_id)
@@ -527,6 +634,10 @@ void SANDGeoManager::set_stt_info(const TGeoHMatrix& matrix)
   TGeoMatrix* node_matrix = node->GetMatrix();
   TGeoHMatrix node_hmatrix = matrix * (*node_matrix);
 
+  // std::cout << "node_name: " << (std::string)node_name << "\n";
+
+  //- this checks the node name with regex (names should be consistent with the
+  // new gdmls)
   if (is_stt_plane(node_name)) {
     int plane_id = get_stt_plane_id(node_path);
     set_stt_tube_info(node, node_hmatrix, plane_id);
@@ -543,19 +654,24 @@ void SANDGeoManager::set_stt_info()
 {
   geo_->CdTop();
   TGeoHMatrix matrix = *gGeoIdentity;
+  std::cout << "> Setting stt info\n";
   set_stt_info(matrix);
 }
 
 void SANDGeoManager::init(TGeoManager* const geo)
 {
+  std::cout << "> Setting geometry info\n";
   geo_ = geo;
 
   cellmap_.clear();
   sttmap_.clear();
+  endcapmap_.clear();
   stt_tube_tranverse_position_map_.clear();
 
-  set_ecal_info();
-  set_stt_info();
+  set_ecal_endcap_info();
+  std::cout << "endcap module map size: " << endcapmap_.size() << "\n";
+  // set_stt_info();
+  // set_ecal_info();
 }
 
 int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
@@ -588,6 +704,12 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
                                      module_id, layer_id);
     get_ecal_barrel_cell_local_id(x, y, z, node, cell_local_id);
   }
+
+  /* So, if all goes well in the check below, node should be a slab in one
+  sections of an endcap module. In get_ecal_endcap_cell_local_id one could use
+  geo_ to get the outer module node. Inside that: a function that computes all
+  the stuff */
+
   // end cap modules
   else if (is_ecal_endcap(volume_name)) {
 

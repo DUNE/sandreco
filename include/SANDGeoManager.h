@@ -1,4 +1,5 @@
 #include "SANDECALCellInfo.h"
+#include "SANDENDCAPModInfo.h"
 #include "SANDSTTTubeInfo.h"
 
 #include <TGeoManager.h>
@@ -47,6 +48,11 @@ const char* const path_endcapL_template =
 const char* const path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+const char* const endcap_mod_regex_string =
+    "ECAL_ec_mod_([0-9]+)_lv_PV_([0-9]+)(/|)";
+const char* const endcap_mod_path_regex_string =
+    "ECAL_endcap_lv_PV_([0-9]+)/ECAL_ec_mod_([0-9]+)_lv_PV_([0-9]+)(/|)";
+
 const char* const barrel_module_name = "ECAL_lv_PV";
 const char* const endcap_module_name = "ECAL_end_lv_PV";
 
@@ -83,6 +89,11 @@ class SANDGeoManager : public TObject
                                              // value: info on cell)
   std::map<int, SANDSTTTubeInfo> sttmap_;    // map of stt tube (key: id, value:
                                              // info on tube)
+
+  std::map<int, SANDENDCAPModInfo> endcapmap_;  // map of the endcap modules
+                                                // (key: mod id, value: mod
+                                                // info)
+
   mutable TPRegexp stt_tube_regex_{
       sand_geometry::stt::stt_tube_regex_string};  // regular expression
                                                    // to match relevant
@@ -102,6 +113,17 @@ class SANDGeoManager : public TObject
                                                      // match relevant info
                                                      // about module from volume
                                                      // path
+  mutable TPRegexp endcap_mod_regex_{
+      sand_geometry::ecal::endcap_mod_regex_string};  // regular expression to
+                                                      // match relevant info
+                                                      // about endcap module
+                                                      // from volume path
+  mutable TPRegexp endcap_mod_path_regex_{
+      sand_geometry::ecal::endcap_mod_path_regex_string};  // regular expression
+                                                           // to match relevant
+                                                           // info about endcap
+                                                           // module from volume
+                                                           // path
   std::map<int, std::map<double, int> >
       stt_tube_tranverse_position_map_;  // map (key: plane id, value: map (key:
                                          // tube id, value: 2D position [i.e. x
@@ -111,6 +133,10 @@ class SANDGeoManager : public TObject
   std::vector<double> get_levels_z(double half_module_height) const;
   int encode_ecal_barrel_cell_local_id(int layer, int cell) const;
   int encode_ecal_endcap_cell_local_id(int layer, int cell) const;
+  static int encode_endcap_mod_id(int module_id, int module_replica_id,
+                                 int endcap_side_id);
+  static void decode_endcap_mod_id(int endcap_mod_global_id, int& module_id,
+                                   int& module_replica_id, int& endcap_side_id);
   std::pair<int, int> decode_ecal_barrel_cell_local_id(int id) const;
   std::pair<int, int> decode_ecal_endcap_cell_local_id(int id) const;
   std::map<int, TVector3> get_ecal_barrel_cell_center_local_position(
@@ -119,6 +145,7 @@ class SANDGeoManager : public TObject
       const std::vector<double>& zlevels, double rmin, double rmax) const;
   bool is_ecal_barrel(const TString& volume_name) const;
   bool is_ecal_endcap(const TString& volume_name) const;
+  bool is_endcap_mod(const TString& volume_name) const;
   bool check_and_process_ecal_path(TString& volume_path) const;
   void get_ecal_barrel_module_and_layer(const TString& volume_name,
                                         const TString& volume_path,
@@ -134,7 +161,11 @@ class SANDGeoManager : public TObject
   void get_ecal_endcap_cell_local_id(double x, double y, double z,
                                      const TGeoNode* const node,
                                      int& cell_local_id) const;
+  // mod id for the new endcap modules
+  int get_endcap_mod_id(const TString& volume_path) const;
   void set_ecal_info();
+  void set_ecal_endcap_info(const TGeoHMatrix& matrix);
+  void set_ecal_endcap_info();
 
   // STT
   bool is_stt_tube(const TString& volume_name) const;
