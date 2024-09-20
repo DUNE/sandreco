@@ -66,7 +66,11 @@ class SANDTrackerCell
     h = _height;
     w = _width;
   }
-  SANDWireInfo wire() const
+  SANDWireInfo wire()
+  {
+    return _wire;
+  }
+  const SANDWireInfo& wire() const
   {
     return _wire;
   }

@@ -723,6 +723,7 @@ void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
 
     int tube_unique_id = encode_wire_id(plane.uid(), tube_id);
     w.id(tube_unique_id);
+    w.type(SANDWireInfo::Type::kSignal);
 
     TGeoMatrix* tube_matrix = tube_node->GetMatrix();
     TGeoHMatrix tube_hmatrix = matrix * (*tube_matrix);
@@ -851,14 +852,20 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
   
   std::vector<TVector2> vertices = plane.getPlaneVertices();
 
-  double transverse_position = plane.getMaxTransverseCoord() + TrackerModuleConfiguration::Drift::_id_to_offset[std::to_string(plane.lid())];
+  double transverse_position = plane.getMaxTransverseCoord() - TrackerModuleConfiguration::Drift::_id_to_offset[std::to_string(plane.lid())];
   long wire_id = 0;
   while (transverse_position > -plane.getMaxTransverseCoord()) {
     SANDWireInfo w;
 
     long wire_unique_id = encode_wire_id(plane.uid(), wire_id);
     w.id(wire_unique_id);
-    
+
+    // To Do: manage field wires
+    if (wire_id % 2 == 0) {
+      w.type(SANDWireInfo::Type::kSignal);
+    } else {
+      w.type(SANDWireInfo::Type::kSignal);
+    }
     TVector2 _rotated_transverse_position = pointInRotatedSystem(TVector2(0, transverse_position), -plane.getRotation());
     TVector3 intersection(0, 0, 0);
     if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
@@ -979,7 +986,7 @@ void SANDGeoManager::DrawModulesInfo()
 
   h.Draw();
 
-  for (auto c:plane.getIdToCellMap()) {
+  for (const auto& c:plane.getIdToCellMap()) {
     TLine* l = new TLine(c.second.wire().getPoints()[0].X(), c.second.wire().getPoints()[0].Y(),
                          c.second.wire().getPoints()[1].X(), c.second.wire().getPoints()[1].Y());
     l->Draw("same");
@@ -1174,7 +1181,7 @@ double SANDGeoManager::GetHitCellDistance(TVector2 rotated_local_yz_hit_position
   return (rotated_local_yz_hit_position - TVector2(rotated_local_wire_2d_position.Y(), local_wire_3d_position.Z())).Mod();
 }
 
-long SANDGeoManager::GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane) const
+long SANDGeoManager::GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane, bool checkCloseCells = false) const
 {
   TVector2 local_hit_2d_position(hit_center.X() - plane.getPosition().X(), hit_center.Y() - plane.getPosition().Y());
   TVector3 local_hit_3d_position(hit_center - plane.getPosition());
@@ -1197,19 +1204,22 @@ long SANDGeoManager::GetClosestCellToHit(TVector3 hit_center, const SANDTrackerP
   double distance2 = 1E9;
   while (true) {
     distance1 = GetHitCellDistance(rotated_local_yz_hit_position, cell_it, plane);
-
     distance2 = GetHitCellDistance(rotated_local_yz_hit_position, next_cell_it, plane);
 
-    // To Do: save info on tube radius in geoManager Init
-    if (distance1 > 2.5 && distance2 > 2.5) {
-      if (cell_it != plane.getIdToCellMap().cbegin()) {
-        cell_it--;
-      } 
-      if (std::next(next_cell_it) != plane.getIdToCellMap().end()) {
-        next_cell_it++;
-      }
-      if (cell_it == plane.getIdToCellMap().cbegin() && 
-          std::next(next_cell_it) == plane.getIdToCellMap().cend()) {
+    if (checkCloseCells) {
+      // To Do: save info on tube radius in geoManager Init
+      if (distance1 > 2.5 && distance2 > 2.5) {
+        if (cell_it != plane.getIdToCellMap().cbegin()) {
+          cell_it--;
+        } 
+        if (std::next(next_cell_it) != plane.getIdToCellMap().end()) {
+          next_cell_it++;
+        }
+        if (cell_it == plane.getIdToCellMap().cbegin() && 
+            std::next(next_cell_it) == plane.getIdToCellMap().cend()) {
+          break;
+        }
+      } else {
         break;
       }
     } else {
@@ -1238,17 +1248,8 @@ long SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
 
 
 
-  auto tube_matches = stt_tube_regex_.MatchS(node_path);
-  int tube_id = (reinterpret_cast<TObjString*>(tube_matches->At(4)))
-                      ->GetString()
-                      .Atoi();
-  int tube_unique_id = encode_wire_id(plane.uid(), tube_id);
-
-
-
-
   TVector3 hit_center(x, y, z);
-  long cell_id = GetClosestCellToHit(hit_center, plane);
+  long cell_id = GetClosestCellToHit(hit_center, plane, true);
 
   return cell_id;
 }
@@ -1364,6 +1365,8 @@ TVector3 SANDGeoManager::FindClosestDrift(TVector3 point,
 std::vector<long> SANDGeoManager::get_segment_ids(const TG4HitSegment& hseg)
     const
 {
+
+  // What are these?
   IsOnEdge(hseg.Start.Vect());
   IsOnEdge(hseg.Stop.Vect());
 
@@ -1377,24 +1380,15 @@ std::vector<long> SANDGeoManager::get_segment_ids(const TG4HitSegment& hseg)
   }
 
   TGeoNode* node = geo_->FindNode(middle.X(), middle.Y(), middle.Z());
-  TString volume_name = node->GetName();
+  TString node_path = gGeoManager->GetPath();
+  long drift_module_unique_id = get_drift_module_id(node_path);
+  long drift_plane_unique_id = get_drift_plane_id(node_path);
+  long drift_plane_local_id  = get_drift_plane_id(node_path, true);
 
-  long drift_plane_id = get_drift_plane_id(geo_->GetPath());
-  long drift_plane_local_id = get_drift_plane_id(volume_name, true);
+  auto& plane = _tracker_modules_map.at(drift_module_unique_id).getPlane(drift_plane_unique_id);
 
-  double transverse_coord_start, transverse_coord_stop;
+  long cell_id_start = GetClosestCellToHit(hseg.Start.Vect(), plane);
+  long cell_id_stop  = GetClosestCellToHit(hseg.Stop.Vect(),  plane);
 
-  if (drift_plane_local_id == 2) {
-    transverse_coord_start = hseg.Start.X();
-    transverse_coord_stop = hseg.Stop.X();
-  } else {
-    transverse_coord_start = hseg.Start.Y();
-    transverse_coord_stop = hseg.Stop.Y();
-  }
-
-  long id1 =
-      get_wire_id(drift_plane_id, hseg.Start.Z(), transverse_coord_start);
-  long id2 = get_wire_id(drift_plane_id, hseg.Stop.Z(), transverse_coord_stop);
-
-  return {id1, id2};
+  return {cell_id_start, cell_id_stop};
 }

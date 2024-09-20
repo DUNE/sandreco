@@ -16,6 +16,10 @@ class SANDWireInfo : public TObject
     kPlus,
     kMinus
   };
+  enum class Type {
+    kSignal,
+    kField
+  };
 
  private:
   long id_;                  // id of tube
@@ -26,6 +30,7 @@ class SANDWireInfo : public TObject
   double length_;           // length of the tube
   Orient orientation_;      // orientation of the tube
   ReadoutEnd readout_end_;  // end where signal are read
+  Type type_;
   double ax_;
   double ay_;
   double az_;
@@ -49,6 +54,7 @@ class SANDWireInfo : public TObject
   void length(double arg_length);
   void orientation(Orient arg_orientation);
   void readout_end(ReadoutEnd arg_reaodut_end);
+  void type(Type t) {type_ = t;};
   void ax(double arg_ax);
   void ay(double arg_ay);
   void az(double arg_az);
@@ -62,10 +68,12 @@ class SANDWireInfo : public TObject
   double length() const;
   Orient orientation() const;
   ReadoutEnd readout_end() const;
+  Type type() const {return type_;};
   double ax() const;
   double ay() const;
   double az() const;
   std::vector<TVector3> getPoints() {return points;};
+  const std::vector<TVector3> getPoints() const {return points;};
 
   ClassDef(SANDWireInfo, 1);
 };

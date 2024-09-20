@@ -165,7 +165,7 @@ class SANDGeoManager : public TObject
 
 
   const TVector2 pointInRotatedSystem(TVector2 v, double angle) const;
-  long GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane) const;
+  long GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane, bool checkCloseCells) const;
   double GetHitCellDistance(TVector2 rotated_local_yz_hit_position, 
                                         std::map<long, SANDTrackerCell>::const_iterator cell_it, 
                                         const SANDTrackerPlane& plane) const;
