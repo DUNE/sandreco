@@ -164,7 +164,11 @@ class SANDGeoManager : public TObject
                                                           // path
 
 
-  TVector2 pointInRotatedSystem(TVector2 v, double angle);
+  const TVector2 pointInRotatedSystem(TVector2 v, double angle) const;
+  long GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane) const;
+  double GetHitCellDistance(TVector2 rotated_local_yz_hit_position, 
+                                        std::map<long, SANDTrackerCell>::const_iterator cell_it, 
+                                        const SANDTrackerPlane& plane) const;
   bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector3& intersection);
   void set_drift_plane_info(SANDTrackerPlane& plane, double angle);
   void PrintModulesInfo(int verbose = 1);
@@ -261,10 +265,7 @@ class SANDGeoManager : public TObject
   {
     return cellmap_.at(ecal_cell_id);
   }
-  const SANDWireInfo& get_wire_info(long wire_id) const
-  {
-    return wiremap_.at(wire_id);
-  }
+  const SANDTrackerCell& get_cell_info(long wire_id) const;
   const std::map<int, SANDECALCellInfo>& get_ecal_cell_info() const
   {
     return cellmap_;
@@ -304,11 +305,12 @@ class SANDGeoManager : public TObject
                              long& wire_local_id);
   static long encode_plane_id(long unique_module_id,
                               long plane_local_id, long plane_type);
-  static void decode_plane_id(long plane_global_id, long& supermodule_id,
-                              long& module_id, long& plane_local_id,
-                              long& plane_type);
+  static void decode_plane_id(long plane_global_id, long& unique_module_id, 
+                              long& plane_local_id, long& plane_type);
   static long encode_module_id(long supermodule_id, 
                                long module_id, long module_replica_id);
+  static void decode_module_id(long unique_module_id, long& supermodule_id, 
+                               long& module_id, long& module_replica_id);
   // DRIFT CHAMBER
   // static void decode_chamber_plane_id(int wire_global_id,
   //                            int& drift_plane_global_id,

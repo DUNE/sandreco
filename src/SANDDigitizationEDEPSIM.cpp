@@ -351,34 +351,35 @@ void create_digits_from_hits(const SANDGeoManager& geo,
   for (std::map<long, std::vector<hit> >::iterator it = hits2Tube.begin();
        it != hits2Tube.end(); ++it) {
     double min_time_tub = 1E9;  // mm
-    long did = it->first;
+    long wire_global_id = it->first;
 
-    long supmod, mod, tub, type, pla, plloc;
+    auto cell_info = geo.get_cell_info(wire_global_id);
 
-    SANDGeoManager::decode_wire_id(did, pla, tub);
-    SANDGeoManager::decode_plane_id(supmod, pla, mod, plloc, type);
+    long module_unique_id, plane_global_id, plane_local_id, plane_type, wire_local_id;
 
-    auto stt_info = geo.get_wire_info(did);
+    SANDGeoManager::decode_wire_id(wire_global_id, plane_global_id, wire_local_id);
+    SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
+                    plane_local_id, plane_type);
 
     dg_wire d;
     d.det = it->second[0].det;
-    d.did = did;
+    d.did = wire_global_id;
     d.de = 0;
-    d.hor = (type % 2 == 0);
-    d.t0 = sand_reco::t0[pla];
+    d.hor = (plane_type % 2 == 0);
+    d.t0 = sand_reco::t0[plane_global_id];
     TVector2 wire;
     if (d.hor == true) {
       d.x = sand_reco::stt::stt_center[0];
-      d.y = stt_info.y();
-      d.z = stt_info.z();
-      wire.SetX(stt_info.z());
-      wire.SetY(stt_info.y());
+      d.y = cell_info.wire().y();
+      d.z = cell_info.wire().z();
+      wire.SetX(cell_info.wire().z());
+      wire.SetY(cell_info.wire().y());
     } else {
-      d.x = stt_info.x();
+      d.x = cell_info.wire().x();
       d.y = sand_reco::stt::stt_center[1];
-      d.z = stt_info.z();
-      wire.SetX(stt_info.z());
-      wire.SetY(stt_info.x());
+      d.z = cell_info.wire().z();
+      wire.SetX(cell_info.wire().z());
+      wire.SetY(cell_info.wire().x());
     }
 
     for (unsigned int i = 0; i < it->second.size(); i++) {
@@ -391,22 +392,22 @@ void create_digits_from_hits(const SANDGeoManager& geo,
       double z1, z2, z;
       double l, dwire;
 
-      if (type == 2) {
+      if (plane_type == 2) {
         y1 = it->second[i].y1;
         y2 = it->second[i].y2;
         z1 = it->second[i].x1;
         z2 = it->second[i].x2;
-        l = sand_reco::stt::getT(y1, y2, stt_info.y(), x1, x2, stt_info.z());
+        l = sand_reco::stt::getT(y1, y2, cell_info.wire().y(), x1, x2, cell_info.wire().z());
         z = z1 + (z2 - z1) * l;
-        dwire = stt_info.x() + stt_info.length() - z;
+        dwire = cell_info.wire().x() + cell_info.wire().length() - z;
       } else {
         y1 = it->second[i].x1;
         y2 = it->second[i].x2;
         z1 = it->second[i].y1;
         z2 = it->second[i].y2;
-        l = sand_reco::stt::getT(y1, y2, stt_info.x(), x1, x2, stt_info.z());
+        l = sand_reco::stt::getT(y1, y2, cell_info.wire().x(), x1, x2, cell_info.wire().z());
         z = z1 + (z2 - z1) * l;
-        dwire = stt_info.y() + stt_info.length() - z;
+        dwire = cell_info.wire().y() + cell_info.wire().length() - z;
       }
 
       double x = x1 + (x2 - x1) * l;
@@ -474,113 +475,113 @@ TVector3 IntersectHitPlane(const TG4HitSegment& hseg, double plane_coordinate,
 void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
                         std::map<long, std::vector<hit> >& hits2cell)
 {
-  hits2cell.clear();
+  // hits2cell.clear();
 
-  for (unsigned int j = 0; j < ev->SegmentDetectors["DriftVolume"].size();
-       j++) {
-    const TG4HitSegment& hseg = ev->SegmentDetectors["DriftVolume"].at(j);
+  // for (unsigned int j = 0; j < ev->SegmentDetectors["DriftVolume"].size();
+  //      j++) {
+  //   const TG4HitSegment& hseg = ev->SegmentDetectors["DriftVolume"].at(j);
 
-    int pdg = ev->Trajectories[hseg.GetPrimaryId()].GetPDGCode();
-    // std::cout<<"flag,"<<pdg<<","<<hseg.Start.X()<<","<<hseg.Start.Y()<<","<<hseg.Start.Z()<<","
-    //                                 <<hseg.Stop.X()<<","<<hseg.Stop.Y()<<","<<hseg.Stop.Z()<<"\n";
+  //   int pdg = ev->Trajectories[hseg.GetPrimaryId()].GetPDGCode();
+  //   // std::cout<<"flag,"<<pdg<<","<<hseg.Start.X()<<","<<hseg.Start.Y()<<","<<hseg.Start.Z()<<","
+  //   //                                 <<hseg.Stop.X()<<","<<hseg.Stop.Y()<<","<<hseg.Stop.Z()<<"\n";
 
-    // if(pdg!=13) continue; //->test digit only for muons
+  //   // if(pdg!=13) continue; //->test digit only for muons
 
-    std::vector<long> ids = geo.get_segment_ids(hseg);
-    long id1 = ids[0];
-    long id2 = ids[1];
+  //   std::vector<long> ids = geo.get_segment_ids(hseg);
+  //   long id1 = ids[0];
+  //   long id2 = ids[1];
 
-    if (id1 == -999) {
-      // std::cout<<"skipping this hit\n";
-      continue;
-    }
+  //   if (id1 == -999) {
+  //     // std::cout<<"skipping this hit\n";
+  //     continue;
+  //   }
 
-    long plane_global_id1;
-    long plane_global_id2;
-    long wire_local_id1;
-    long wire_local_id2;
-    geo.decode_wire_id(id1, plane_global_id1, wire_local_id1);
-    geo.decode_wire_id(id2, plane_global_id2, wire_local_id2);
+  //   long plane_global_id1;
+  //   long plane_global_id2;
+  //   long wire_local_id1;
+  //   long wire_local_id2;
+  //   geo.decode_wire_id(id1, plane_global_id1, wire_local_id1);
+  //   geo.decode_wire_id(id2, plane_global_id2, wire_local_id2);
 
-    // std::cout << id1 << " "  << id2 << " " << std::endl;
-    // std::cout << plane_global_id1 << " " << plane_global_id2 << std::endl;
-    // std::cout << wire_local_id1 << " " << wire_local_id2 << std::endl;
+  //   // std::cout << id1 << " "  << id2 << " " << std::endl;
+  //   // std::cout << plane_global_id1 << " " << plane_global_id2 << std::endl;
+  //   // std::cout << wire_local_id1 << " " << wire_local_id2 << std::endl;
 
-    if (plane_global_id1 != plane_global_id2) {
-      std::cout << "WIRE ID CORRESPONDING TO 2 DIFFERENT DIRFT PLANES"
-                << std::endl;
-      break;
-    }
+  //   if (plane_global_id1 != plane_global_id2) {
+  //     std::cout << "WIRE ID CORRESPONDING TO 2 DIFFERENT DIRFT PLANES"
+  //               << std::endl;
+  //     break;
+  //   }
 
-    long start_id = 999;
-    long stop_id = 999;
-    if (id2 > id1) {
-      start_id = id1;
-      stop_id = id2;
-    } else if (id2 < id1) {
-      start_id = id2;
-      stop_id = id1;
-    } else  // hit in 1 cell
-    {
-      hit h;
-      h.det = "DriftChamber";
-      h.did = id1;
-      h.x1 = hseg.Start.X();
-      h.y1 = hseg.Start.Y();
-      h.z1 = hseg.Start.Z();
-      h.t1 = hseg.Start.T();
-      h.x2 = hseg.Stop.X();
-      h.y2 = hseg.Stop.Y();
-      h.z2 = hseg.Stop.Z();
-      h.t2 = hseg.Stop.T();
-      h.de = hseg.EnergyDeposit;
-      h.pid = hseg.PrimaryId;
-      h.index = j;
+  //   long start_id = 999;
+  //   long stop_id = 999;
+  //   if (id2 > id1) {
+  //     start_id = id1;
+  //     stop_id = id2;
+  //   } else if (id2 < id1) {
+  //     start_id = id2;
+  //     stop_id = id1;
+  //   } else  // hit in 1 cell
+  //   {
+  //     hit h;
+  //     h.det = "DriftChamber";
+  //     h.did = id1;
+  //     h.x1 = hseg.Start.X();
+  //     h.y1 = hseg.Start.Y();
+  //     h.z1 = hseg.Start.Z();
+  //     h.t1 = hseg.Start.T();
+  //     h.x2 = hseg.Stop.X();
+  //     h.y2 = hseg.Stop.Y();
+  //     h.z2 = hseg.Stop.Z();
+  //     h.t2 = hseg.Stop.T();
+  //     h.de = hseg.EnergyDeposit;
+  //     h.pid = hseg.PrimaryId;
+  //     h.index = j;
 
-      hits2cell[id1].push_back(h);
-      continue;
-    }
+  //     hits2cell[id1].push_back(h);
+  //     continue;
+  //   }
 
-    TVector3 start = {hseg.Start.X(), hseg.Start.Y(), hseg.Start.Z()};
-    double hseg_length = (hseg.Stop - hseg.Start).Mag();
-    double hseg_dt = (hseg.Stop - hseg.Start).T();
-    double hseg_start_t = hseg.Start.T();
+  //   TVector3 start = {hseg.Start.X(), hseg.Start.Y(), hseg.Start.Z()};
+  //   double hseg_length = (hseg.Stop - hseg.Start).Mag();
+  //   double hseg_dt = (hseg.Stop - hseg.Start).T();
+  //   double hseg_start_t = hseg.Start.T();
 
-    for (auto i = start_id; i < stop_id; i++) {
-      SANDWireInfo wire1 = geo.get_wire_info(i);
-      SANDWireInfo wire2 = geo.get_wire_info(i + 1);
+  //   for (auto i = start_id; i < stop_id; i++) {
+  //     SANDWireInfo wire1 = geo.get_cell_info(i);
+  //     SANDWireInfo wire2 = geo.get_cell_info(i + 1);
 
-      double plane_coordinate =
-          (wire1.orientation() == SANDWireInfo::Orient::kHorizontal)
-              ? (wire2.y() + wire1.y()) / 2.
-              : (wire2.x() + wire1.x()) / 2.;
+  //     double plane_coordinate =
+  //         (wire1.orientation() == SANDWireInfo::Orient::kHorizontal)
+  //             ? (wire2.y() + wire1.y()) / 2.
+  //             : (wire2.x() + wire1.x()) / 2.;
 
-      TVector3 stop = digitization::edep_sim::chamber::IntersectHitPlane(
-          hseg, plane_coordinate, wire1.orientation());
+  //     TVector3 stop = digitization::edep_sim::chamber::IntersectHitPlane(
+  //         hseg, plane_coordinate, wire1.orientation());
 
-      double portion = (start - stop).Mag() / hseg_length;
+  //     double portion = (start - stop).Mag() / hseg_length;
 
-      hit h;
-      h.det = "DriftChamber";
-      h.did = i;
-      h.x1 = start.X();
-      h.y1 = start.Y();
-      h.z1 = start.Z();
-      h.t1 = hseg_start_t;
-      h.x2 = stop.X();
-      h.y2 = stop.Y();
-      h.z2 = stop.Z();
-      h.t2 = hseg_start_t + portion * hseg_dt;
-      h.de = hseg.EnergyDeposit * portion;
-      h.pid = hseg.PrimaryId;
-      h.index = j;
+  //     hit h;
+  //     h.det = "DriftChamber";
+  //     h.did = i;
+  //     h.x1 = start.X();
+  //     h.y1 = start.Y();
+  //     h.z1 = start.Z();
+  //     h.t1 = hseg_start_t;
+  //     h.x2 = stop.X();
+  //     h.y2 = stop.Y();
+  //     h.z2 = stop.Z();
+  //     h.t2 = hseg_start_t + portion * hseg_dt;
+  //     h.de = hseg.EnergyDeposit * portion;
+  //     h.pid = hseg.PrimaryId;
+  //     h.index = j;
 
-      start = stop;
-      hseg_start_t += portion * hseg_dt;
+  //     start = stop;
+  //     hseg_start_t += portion * hseg_dt;
 
-      hits2cell[i].push_back(h);
-    }
-  }
+  //     hits2cell[i].push_back(h);
+  //   }
+  // }
 }
 
 bool isInWire(SANDWireInfo& wire, TVector3& point)
@@ -698,61 +699,61 @@ void create_digits_from_hits(const SANDGeoManager& geo,
                              std::map<long, std::vector<hit> >& hits2cell,
                              std::vector<dg_wire>& wire_digits)
 {
-  wire_digits.clear();
+  // wire_digits.clear();
 
-  for (std::map<long, std::vector<hit> >::iterator it = hits2cell.begin();
-       it != hits2cell.end(); ++it)  // run over wires
-  {
-    long did = it->first;  // wire unique id
-    auto wire_info = geo.get_wire_info(did);
-    double wire_time = 999.;
-    double drift_time = 999.;
-    double signal_time = 999.;
-    double t_hit = 999.;
+  // for (std::map<long, std::vector<hit> >::iterator it = hits2cell.begin();
+  //      it != hits2cell.end(); ++it)  // run over wires
+  // {
+  //   long did = it->first;  // wire unique id
+  //   auto wire_info = geo.get_cell_info(did);
+  //   double wire_time = 999.;
+  //   double drift_time = 999.;
+  //   double signal_time = 999.;
+  //   double t_hit = 999.;
 
-    dg_wire d;
-    d.det = it->second[0].det;
-    d.did = did;
-    d.de = 0;
-    d.hor = (wire_info.orientation() == SANDWireInfo::Orient::kHorizontal);
-    d.x = wire_info.x();
-    d.y = wire_info.y();
-    d.z = wire_info.z();
-    for (unsigned int i = 0; i < it->second.size();
-         i++) {  // run over hits of given wire
-      auto running_hit = it->second[i];
-      // find hit closest point to wire
-      std::vector<TLorentzVector> ClosestPoints =
-          digitization::edep_sim::chamber::WireHitClosestPoints(running_hit,
-                                                                wire_info);
+  //   dg_wire d;
+  //   d.det = it->second[0].det;
+  //   d.did = did;
+  //   d.de = 0;
+  //   d.hor = (wire_info.orientation() == SANDWireInfo::Orient::kHorizontal);
+  //   d.x = wire_info.x();
+  //   d.y = wire_info.y();
+  //   d.z = wire_info.z();
+  //   for (unsigned int i = 0; i < it->second.size();
+  //        i++) {  // run over hits of given wire
+  //     auto running_hit = it->second[i];
+  //     // find hit closest point to wire
+  //     std::vector<TLorentzVector> ClosestPoints =
+  //         digitization::edep_sim::chamber::WireHitClosestPoints(running_hit,
+  //                                                               wire_info);
 
-      TLorentzVector closest2wire = ClosestPoints[0];
-      // find wire closest point to hit : time of closest2hit  = drift time +
-      // hit time
-      TLorentzVector closest2hit = ClosestPoints[1];
+  //     TLorentzVector closest2wire = ClosestPoints[0];
+  //     // find wire closest point to hit : time of closest2hit  = drift time +
+  //     // hit time
+  //     TLorentzVector closest2hit = ClosestPoints[1];
 
-      // total time = time 2 signal propagation + drift time + hit time
-      double hit_smallest_time =
-          digitization::edep_sim::chamber::GetMinWireTime(closest2hit,
-                                                          wire_info);
+  //     // total time = time 2 signal propagation + drift time + hit time
+  //     double hit_smallest_time =
+  //         digitization::edep_sim::chamber::GetMinWireTime(closest2hit,
+  //                                                         wire_info);
 
-      if (hit_smallest_time < wire_time) {
-        wire_time = hit_smallest_time;
-        t_hit = closest2wire.T();
-        drift_time = closest2hit.T() - t_hit;
-        signal_time = hit_smallest_time - closest2hit.T();
-      }
-      d.de += running_hit.de;
-      d.hindex.push_back(running_hit.index);
-    }
-    d.tdc = wire_time + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
-    d.t_hit = t_hit;
-    d.drift_time = drift_time;
-    d.signal_time = signal_time;
-    d.adc = d.de;
+  //     if (hit_smallest_time < wire_time) {
+  //       wire_time = hit_smallest_time;
+  //       t_hit = closest2wire.T();
+  //       drift_time = closest2hit.T() - t_hit;
+  //       signal_time = hit_smallest_time - closest2hit.T();
+  //     }
+  //     d.de += running_hit.de;
+  //     d.hindex.push_back(running_hit.index);
+  //   }
+  //   d.tdc = wire_time + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
+  //   d.t_hit = t_hit;
+  //   d.drift_time = drift_time;
+  //   d.signal_time = signal_time;
+  //   d.adc = d.de;
 
-    wire_digits.push_back(d);
-  }
+  //   wire_digits.push_back(d);
+  // }
 }
 
 // simulate wire responce for whole event
