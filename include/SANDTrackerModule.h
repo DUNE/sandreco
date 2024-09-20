@@ -42,6 +42,7 @@ class SANDTrackerModule
 
   bool addPlane(const SANDTrackerPlane plane);
   SANDTrackerPlane& getPlane(long index);
+  const SANDTrackerPlane& getPlane(long index) const;
 
   int nPlanes() const
   {

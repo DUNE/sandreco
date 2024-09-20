@@ -39,15 +39,20 @@ class SANDTrackerPlane
       _id_to_cell_map.insert({w.id(), SANDTrackerCell(w)});
     }
   }
-  const std::map<long, SANDTrackerCell>& getIdToCellMap() {return _id_to_cell_map;};
+  const std::map<long, SANDTrackerCell>& getIdToCellMap() const {return _id_to_cell_map;};
   int nCells() const
   {
     return _coord_to_id_map.size();
   }
+
   void computePlaneVertices();
   void computeMaxTransversePosition();
-  SANDTrackerCell &getCell(long);
-  SANDTrackerCell &getCell(double);
+  SANDTrackerCell& getCell(long);
+  const SANDTrackerCell& getCell(long) const;
+  SANDTrackerCell& getCell(double);
+  const SANDTrackerCell& getCell(double) const;
+  std::map<long, SANDTrackerCell>::iterator getLowerBoundCell(double);
+  const std::map<long, SANDTrackerCell>::const_iterator getLowerBoundCell(double) const;
   TVector3 getPosition()  const {return _position;} ;
   TVector3 getDimension() const {return _dimension;} ;
   double getRotation() const {return _rotation;} ;
