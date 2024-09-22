@@ -158,9 +158,14 @@ class SANDGeoManager : public TObject
   void get_ecal_barrel_cell_local_id(double x, double y, double z,
                                      const TGeoNode* const node,
                                      int& cell_local_id) const;
+//   void get_ecal_endcap_cell_local_id(double x, double y, double z,
+//                                      const TGeoNode* const node,
+//                                      int& cell_local_id) const;
   void get_ecal_endcap_cell_local_id(double x, double y, double z,
-                                     const TGeoNode* const node,
+                                     const int& endcap_mod_id,
                                      int& cell_local_id) const;
+  int get_hit_path_len(const double& hx, const double& hy, const double& hz,
+                       const int& endcap_mod_id, double& d1, double& d2) const;
   // mod id for the new endcap modules
   int get_endcap_mod_id(const TString& volume_path) const;
   void set_ecal_info();
