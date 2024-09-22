@@ -164,7 +164,6 @@ class SANDGeoManager : public TObject
                                                           // path
 
 
-  const TVector2 pointInRotatedSystem(TVector2 v, double angle) const;
   long GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane, bool checkCloseCells) const;
   double GetHitCellDistance(TVector2 rotated_local_yz_hit_position, 
                                         std::map<long, SANDTrackerCell>::const_iterator cell_it, 
@@ -289,6 +288,14 @@ class SANDGeoManager : public TObject
   TVector3 FindClosestDrift(TVector3 point, double epsilon) const;
   TVector3 SmearPoint(TVector3 point, double epsilon) const;
   bool IsOnEdge(TVector3 point) const;
+  
+  const TVector2 pointInRotatedSystem(TVector2 v, double angle) const;
+  const TVector2 GlobalToLocal(TVector2 global, SANDTrackerPlane plane) const;
+  const TVector2 LocalToRotated(TVector2 local, SANDTrackerPlane plane) const;
+  const TVector2 GlobalToRotated(TVector2 global, SANDTrackerPlane plane) const;
+  const TVector2 RotatedToLocal(TVector2 rotated, SANDTrackerPlane plane) const;
+  const TVector2 LocalToGlobal(TVector2 local, SANDTrackerPlane plane) const;
+  const TVector2 RotatedToGlobal(TVector2 rotated, SANDTrackerPlane plane) const;
 
   // ECAL
   static int encode_ecal_cell_id(int detector_id, int module_id, int layer_id,

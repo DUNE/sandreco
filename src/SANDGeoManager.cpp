@@ -771,6 +771,31 @@ const TVector2 SANDGeoManager::pointInRotatedSystem(TVector2 v, double angle) co
 
   return rotated_v;
 }
+const TVector2 SANDGeoManager::GlobalToLocal(TVector2 global, SANDTrackerPlane plane) const
+{
+  return TVector2(global.X() - plane.getPosition().X(), global.Y() - plane.getPosition().Y());
+}
+const TVector2 SANDGeoManager::LocalToRotated(TVector2 local, SANDTrackerPlane plane) const
+{
+  return pointInRotatedSystem(local, plane.getRotation());
+}
+const TVector2 SANDGeoManager::GlobalToRotated(TVector2 global, SANDTrackerPlane plane) const
+{
+  return LocalToRotated(GlobalToLocal(global, plane), plane);
+}
+const TVector2 SANDGeoManager::RotatedToLocal(TVector2 rotated, SANDTrackerPlane plane) const
+{
+  return pointInRotatedSystem(rotated, -plane.getRotation());
+}
+const TVector2 SANDGeoManager::LocalToGlobal(TVector2 local, SANDTrackerPlane plane) const
+{
+  return TVector2(local.X() + plane.getPosition().X(), local.Y() + plane.getPosition().Y());
+}
+const TVector2 SANDGeoManager::RotatedToGlobal(TVector2 rotated, SANDTrackerPlane plane) const
+{
+  return LocalToGlobal(RotatedToLocal(rotated, plane), plane);
+}
+
 
 bool SANDGeoManager::getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector3& intersection)
 {
