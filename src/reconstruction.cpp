@@ -50,7 +50,10 @@ void evalUV(double& u, double& v, double zv, double yv, double z, double y)
   v /= d;
 }
 
-void evalPhi(double& phi, double u, double v) { phi = TMath::ATan2(v, u); }
+void evalPhi(double& phi, double u, double v)
+{
+  phi = TMath::ATan2(v, u);
+}
 
 void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_wire>& vd,
                     double zv, double yv)
@@ -188,22 +191,21 @@ void getVertCoord(const std::vector<double>& z_v, std::vector<double>& y_v,
   dy = TMath::Sqrt(dy_sq);
   y_v.push_back(tr.yc + sign * dy);
 
+  int i1 = 1;
+  if (forward == 0) {
+    i1 = 2;
+    if (z_v.size() >= 2) {
+      forward = z_v[i1] - z_v[i1 - 1] > 0 ? 1 : -1;
+      if (forward == 0) {
+        i1 = 3;
+        if (z_v.size() >= 3) {
+          forward = z_v[i1] - z_v[i1 - 1] > 0 ? 1 : -1;
+        }
+      }
+    }
+  }
 
-    int i1=1;
-    if (forward == 0) {
-       i1 = 2;
-       if (z_v.size() >= 2) {
-	  forward = z_v[i1] - z_v[i1-1] > 0 ? 1 : -1;
-	  if (forward == 0) {
-	     i1 = 3;
-	     if (z_v.size() >= 3) {
-		forward = z_v[i1] - z_v[i1-1] > 0 ? 1 : -1;
-		}
-	     }
-	   }
-         }
-
-    for (unsigned int i = i1; i < z_v.size(); i++) {
+  for (unsigned int i = i1; i < z_v.size(); i++) {
     if ((z_v[i] - z_v[i - 1]) * forward >= 0.) {
       dy_sq = tr.r * tr.r - (z_v[i] - tr.zc) * (z_v[i] - tr.zc);
 
@@ -446,7 +448,10 @@ void fillInfoCircFit(int n, const std::vector<double>& z,
   tr.ysig = evalYSign(y, tr.yc);
 }
 
-enum class TrackFilter { all_tracks, only_primaries };
+enum class TrackFilter {
+  all_tracks,
+  only_primaries
+};
 
 void TrackFind(TG4Event* ev, std::vector<dg_wire>* vec_digi,
                std::vector<track>& vec_tr,
@@ -479,8 +484,8 @@ void TrackFind(TG4Event* ev, std::vector<dg_wire>* vec_digi,
       std::vector<TG4HitSegment> vhits;
 
       for (unsigned int m = 0; m < vec_digi->at(k).hindex.size(); m++) {
-        const TG4HitSegment& hseg =
-            ev->SegmentDetectors[trackerType.c_str()].at(vec_digi->at(k).hindex.at(m));
+        const TG4HitSegment& hseg = ev->SegmentDetectors[trackerType.c_str()]
+                                        .at(vec_digi->at(k).hindex.at(m));
 
         if (hseg.PrimaryId == tr.tid)
           if (ishitok(ev, tr.tid, hseg)) vhits.push_back(hseg);
@@ -489,9 +494,9 @@ void TrackFind(TG4Event* ev, std::vector<dg_wire>* vec_digi,
       if (vhits.size() > 0u) {
         std::sort(vhits.begin(), vhits.end(),
                   [](const TG4HitSegment& h1, const TG4HitSegment& h2) {
-                    return (h1.GetStart().T() + h1.GetStop().T()) <
-                           (h2.GetStart().T() + h2.GetStop().T());
-                  });
+          return (h1.GetStart().T() + h1.GetStop().T()) <
+                 (h2.GetStart().T() + h2.GetStop().T());
+        });
         auto& fdig = vhits.front().GetStart();
         auto& ldig = vhits.back().GetStop();
 
@@ -1607,8 +1612,14 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   binning.push_back(last_z);
 }
 
-enum class STT_Mode { fast_only_primaries, fast, full };
-enum class ECAL_Mode { fast };
+enum class STT_Mode {
+  fast_only_primaries,
+  fast,
+  full
+};
+enum class ECAL_Mode {
+  fast
+};
 
 void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
                  std::string const& fname_out, STT_Mode stt_mode,
@@ -1638,23 +1649,21 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
               << (tDigit == nullptr ? "tDigit " : "") << '\n';
     exit(-1);
   }
-    
-  std::string trackerType="";
 
-  if(geo->FindVolumeFast("STTtracker_PV")){
-      std::cout<<"\n--- STT based simulation ---\n";
-      trackerType="Straw";
+  std::string trackerType = "";
+
+  if (geo->FindVolumeFast("STTtracker_PV")) {
+    std::cout << "\n--- STT based simulation ---\n";
+    trackerType = "Straw";
+  } else if (geo->FindVolumeFast("SANDtracker_PV")) {
+    std::cout << "\n--- Drift based simulation ---\n";
+    trackerType = "DriftVolume";
+  } else {
+    std::cout << "Error in retriving volume information from Geo Manager, "
+                 "exiting...\n";
+    exit(-1);
   }
-  else if (geo->FindVolumeFast("SANDtracker_PV")){
-      std::cout<<"\n--- Drift based simulation ---\n";
-      trackerType="DriftVolume";
-  }
-  else{
-      std::cout<<"Error in retriving volume information from Geo Manager, exiting...\n";
-      exit(-1);
-  }
-    
-    
+
   std::vector<double> sampling;
 
   DetermineModulesPosition(geo, sampling);
@@ -1708,7 +1717,8 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 
     switch (stt_mode) {
       case STT_Mode::fast_only_primaries:
-        TrackFind(ev, vec_digi, vec_tr, trackerType, TrackFilter::only_primaries);
+        TrackFind(ev, vec_digi, vec_tr, trackerType,
+                  TrackFilter::only_primaries);
         TrackFit(vec_tr);
         break;
       case STT_Mode::fast:
@@ -1779,7 +1789,7 @@ int main(int argc, char* argv[])
   } else {
     std::cout << "STT_Mode: fast_only_primaries\n";
   }
-    
+
   Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast);
   return 0;
 }

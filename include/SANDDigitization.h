@@ -10,8 +10,14 @@ using namespace sand_reco;
 namespace digitization
 {
 
-enum class DETSIM_TYPE { kEdepsim, kFluka };
-enum class ECAL_digi_mode { const_fract, fixed_thresh };
+enum class DETSIM_TYPE {
+  kEdepsim,
+  kFluka
+};
+enum class ECAL_digi_mode {
+  const_fract,
+  fixed_thresh
+};
 
 extern TRandom3 rand;
 

@@ -37,7 +37,7 @@ target_link_libraries(Struct PUBLIC)
 ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/StructLinkDef.h)
 
 # Create SANDGeoManager lib
-add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDWireInfo.cpp src/SANDECALCellInfo.cpp)
+add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDWireInfo.cpp src/SANDECALCellInfo.cpp src/SANDTrackerModule.cpp src/SANDTrackerPlane.cpp src/SANDTrackerCell.cpp src/CLine3D.cpp)
 target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
 ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDWireInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerLinkDef.h)
 

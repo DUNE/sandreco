@@ -7,7 +7,10 @@
 class SANDECALCellInfo : public TObject
 {
  public:
-  enum class Orient { kHorizontal, kVertical };
+  enum class Orient {
+    kHorizontal,
+    kVertical
+  };
 
  private:
   int id_;              // id of the cell
