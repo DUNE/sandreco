@@ -291,12 +291,12 @@ class SANDGeoManager : public TObject
   bool IsOnEdge(TVector3 point) const;
   
   const TVector2 pointInRotatedSystem(TVector2 v, double angle) const;
-  const TVector2 GlobalToLocal(TVector2 global, SANDTrackerPlane plane) const;
-  const TVector2 LocalToRotated(TVector2 local, SANDTrackerPlane plane) const;
-  const TVector2 GlobalToRotated(TVector2 global, SANDTrackerPlane plane) const;
-  const TVector2 RotatedToLocal(TVector2 rotated, SANDTrackerPlane plane) const;
-  const TVector2 LocalToGlobal(TVector2 local, SANDTrackerPlane plane) const;
-  const TVector2 RotatedToGlobal(TVector2 rotated, SANDTrackerPlane plane) const;
+  const TVector2 GlobalToLocal(TVector2 global, const SANDTrackerPlane& plane) const;
+  const TVector2 LocalToRotated(TVector2 local, const SANDTrackerPlane& plane) const;
+  const TVector2 GlobalToRotated(TVector2 global, const SANDTrackerPlane& plane) const;
+  const TVector2 RotatedToLocal(TVector2 rotated, const SANDTrackerPlane& plane) const;
+  const TVector2 LocalToGlobal(TVector2 local, const SANDTrackerPlane& plane) const;
+  const TVector2 RotatedToGlobal(TVector2 rotated, const SANDTrackerPlane& plane) const;
 
   // ECAL
   static int encode_ecal_cell_id(int detector_id, int module_id, int layer_id,

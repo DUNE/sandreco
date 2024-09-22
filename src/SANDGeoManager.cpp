@@ -686,37 +686,39 @@ void SANDGeoManager::set_stt_plane_info(const TGeoNode* const node,
 
   auto insert_result = _tracker_modules_map.insert({stt_module_unique_id, SANDTrackerModule(stt_module_unique_id)});
   bool added = _tracker_modules_map[stt_module_unique_id].addPlane(SANDTrackerPlane(stt_plane_unique_id, stt_plane_local_id));
-  auto& plane = _tracker_modules_map[stt_module_unique_id].getPlane(stt_plane_unique_id);
   
-  double angle = TrackerModuleConfiguration::STT::_id_to_angle[std::to_string(stt_plane_local_id)];
+  if (added) {
+    auto& plane = _tracker_modules_map[stt_module_unique_id].getPlane(stt_plane_unique_id);
+    double angle = TrackerModuleConfiguration::STT::_id_to_angle[std::to_string(stt_plane_local_id)];
 
-  plane.setRotation(angle);
-  
-  TGeoMatrix* plane_matrix = node->GetMatrix();
-  TGeoHMatrix plane_hmatrix = matrix * (*plane_matrix);
-  TGeoBBox* plane_shape = (TGeoBBox*)node->GetVolume()->GetShape();
-  TVector3 plane_dimension;
-  if(angle == 0) {
-    plane_dimension.SetX(2 * plane_shape->GetDZ());
-    plane_dimension.SetY(2 * plane_shape->GetDY());
-  } else {
-    plane_dimension.SetY(2 * plane_shape->GetDZ());
-    plane_dimension.SetX(2 * plane_shape->GetDY());
+    plane.setRotation(angle);
+    
+    TGeoMatrix* plane_matrix = node->GetMatrix();
+    TGeoHMatrix plane_hmatrix = matrix * (*plane_matrix);
+    TGeoBBox* plane_shape = (TGeoBBox*)node->GetVolume()->GetShape();
+    TVector3 plane_dimension;
+    if(angle == 0) {
+      plane_dimension.SetX(2 * plane_shape->GetDZ());
+      plane_dimension.SetY(2 * plane_shape->GetDY());
+    } else {
+      plane_dimension.SetY(2 * plane_shape->GetDZ());
+      plane_dimension.SetX(2 * plane_shape->GetDY());
+    }
+    plane_dimension.SetZ(2 * plane_shape->GetDX());
+
+    TVector3 plane_position;
+    plane_position.SetX(plane_hmatrix.GetTranslation()[0]);
+    plane_position.SetY(plane_hmatrix.GetTranslation()[1]);
+    plane_position.SetZ(plane_hmatrix.GetTranslation()[2]);
+
+    plane.setPosition(plane_position);
+    plane.setDimension(plane_dimension);
+    
+    plane.computePlaneVertices();
+    plane.computeMaxTransversePosition();
+
+    set_stt_wire_info(plane, node, matrix);
   }
-  plane_dimension.SetZ(2 * plane_shape->GetDX());
-
-  TVector3 plane_position;
-  plane_position.SetX(plane_hmatrix.GetTranslation()[0]);
-  plane_position.SetY(plane_hmatrix.GetTranslation()[1]);
-  plane_position.SetZ(plane_hmatrix.GetTranslation()[2]);
-
-  plane.setPosition(plane_position);
-  plane.setDimension(plane_dimension);
-  
-  plane.computePlaneVertices();
-  plane.computeMaxTransversePosition();
-
-  set_stt_wire_info(plane, node, matrix);
 }
 
 void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
@@ -785,27 +787,27 @@ const TVector2 SANDGeoManager::pointInRotatedSystem(TVector2 v, double angle) co
 
   return rotated_v;
 }
-const TVector2 SANDGeoManager::GlobalToLocal(TVector2 global, SANDTrackerPlane plane) const
+const TVector2 SANDGeoManager::GlobalToLocal(TVector2 global, const SANDTrackerPlane& plane) const
 {
   return TVector2(global.X() - plane.getPosition().X(), global.Y() - plane.getPosition().Y());
 }
-const TVector2 SANDGeoManager::LocalToRotated(TVector2 local, SANDTrackerPlane plane) const
+const TVector2 SANDGeoManager::LocalToRotated(TVector2 local, const SANDTrackerPlane& plane) const
 {
   return pointInRotatedSystem(local, plane.getRotation());
 }
-const TVector2 SANDGeoManager::GlobalToRotated(TVector2 global, SANDTrackerPlane plane) const
+const TVector2 SANDGeoManager::GlobalToRotated(TVector2 global, const SANDTrackerPlane& plane) const
 {
   return LocalToRotated(GlobalToLocal(global, plane), plane);
 }
-const TVector2 SANDGeoManager::RotatedToLocal(TVector2 rotated, SANDTrackerPlane plane) const
+const TVector2 SANDGeoManager::RotatedToLocal(TVector2 rotated, const SANDTrackerPlane& plane) const
 {
   return pointInRotatedSystem(rotated, -plane.getRotation());
 }
-const TVector2 SANDGeoManager::LocalToGlobal(TVector2 local, SANDTrackerPlane plane) const
+const TVector2 SANDGeoManager::LocalToGlobal(TVector2 local, const SANDTrackerPlane& plane) const
 {
   return TVector2(local.X() + plane.getPosition().X(), local.Y() + plane.getPosition().Y());
 }
-const TVector2 SANDGeoManager::RotatedToGlobal(TVector2 rotated, SANDTrackerPlane plane) const
+const TVector2 SANDGeoManager::RotatedToGlobal(TVector2 rotated, const SANDTrackerPlane& plane) const
 {
   return LocalToGlobal(RotatedToLocal(rotated, plane), plane);
 }
@@ -850,37 +852,39 @@ void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
 
   auto insert_result = _tracker_modules_map.insert({drift_module_unique_id, SANDTrackerModule(drift_module_unique_id)});
   bool added = _tracker_modules_map[drift_module_unique_id].addPlane(SANDTrackerPlane(drift_plane_unique_id, drift_plane_local_id));
-  auto& plane = _tracker_modules_map[drift_module_unique_id].getPlane(drift_plane_unique_id);
 
-  double angle = TrackerModuleConfiguration::Drift::_id_to_angle[std::to_string(drift_plane_local_id)];
+  if (added) {
+    auto& plane = _tracker_modules_map[drift_module_unique_id].getPlane(drift_plane_unique_id);
+    double angle = TrackerModuleConfiguration::Drift::_id_to_angle[std::to_string(drift_plane_local_id)];
 
-  plane.setRotation(angle);
+    plane.setRotation(angle);
 
-  TGeoMatrix* plane_matrix = node->GetMatrix();
-  TGeoHMatrix plane_hmatrix = matrix * (*plane_matrix);
-  TGeoBBox* plane_shape = (TGeoBBox*)node->GetVolume()->GetShape();
-  TVector3 plane_dimension;
-  if(angle == 0) {
-    plane_dimension.SetX(2 * plane_shape->GetDZ());
-    plane_dimension.SetY(2 * plane_shape->GetDY());
-  } else {
-    plane_dimension.SetY(2 * plane_shape->GetDZ());
-    plane_dimension.SetX(2 * plane_shape->GetDY());
+    TGeoMatrix* plane_matrix = node->GetMatrix();
+    TGeoHMatrix plane_hmatrix = matrix * (*plane_matrix);
+    TGeoBBox* plane_shape = (TGeoBBox*)node->GetVolume()->GetShape();
+    TVector3 plane_dimension;
+    if(angle == 0) {
+      plane_dimension.SetX(2 * plane_shape->GetDZ());
+      plane_dimension.SetY(2 * plane_shape->GetDY());
+    } else {
+      plane_dimension.SetY(2 * plane_shape->GetDZ());
+      plane_dimension.SetX(2 * plane_shape->GetDY());
+    }
+    plane_dimension.SetZ(2 * plane_shape->GetDX());
+
+    TVector3 plane_position;
+    plane_position.SetX(plane_hmatrix.GetTranslation()[0]);
+    plane_position.SetY(plane_hmatrix.GetTranslation()[1]);
+    plane_position.SetZ(plane_hmatrix.GetTranslation()[2]);
+
+    plane.setPosition(plane_position);
+    plane.setDimension(plane_dimension);
+    
+    plane.computePlaneVertices();
+    plane.computeMaxTransversePosition();
+
+    set_drift_wire_info(plane);
   }
-  plane_dimension.SetZ(2 * plane_shape->GetDX());
-
-  TVector3 plane_position;
-  plane_position.SetX(plane_hmatrix.GetTranslation()[0]);
-  plane_position.SetY(plane_hmatrix.GetTranslation()[1]);
-  plane_position.SetZ(plane_hmatrix.GetTranslation()[2]);
-
-  plane.setPosition(plane_position);
-  plane.setDimension(plane_dimension);
-  
-  plane.computePlaneVertices();
-  plane.computeMaxTransversePosition();
-
-  set_drift_wire_info(plane);
 }
 
 void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
