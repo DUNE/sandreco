@@ -264,7 +264,8 @@ class SANDGeoManager : public TObject
   {
     return cellmap_.at(ecal_cell_id);
   }
-  const SANDTrackerCell& get_cell_info(long wire_id) const;
+  std::map<long, SANDTrackerCell>::const_iterator get_cell_info(long wire_id) const;
+  const SANDTrackerPlane& get_plane_info(long wire_id) const;
   const std::map<int, SANDECALCellInfo>& get_ecal_cell_info() const
   {
     return cellmap_;

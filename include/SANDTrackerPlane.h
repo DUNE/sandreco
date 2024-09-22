@@ -48,7 +48,7 @@ class SANDTrackerPlane
   void computePlaneVertices();
   void computeMaxTransversePosition();
   SANDTrackerCell& getCell(long);
-  const SANDTrackerCell& getCell(long) const;
+  std::map<long, SANDTrackerCell>::const_iterator  getCell(long) const;
   SANDTrackerCell& getCell(double);
   const SANDTrackerCell& getCell(double) const;
   std::map<long, SANDTrackerCell>::iterator getLowerBoundCell(double);

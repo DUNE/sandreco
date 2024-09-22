@@ -448,7 +448,21 @@ void SANDGeoManager::set_ecal_info()
   }
 }
 
-const SANDTrackerCell& SANDGeoManager::get_cell_info(long wire_global_id) const
+const SANDTrackerPlane& SANDGeoManager::get_plane_info(long wire_global_id) const
+{
+  long supermodule_id, module_unique_id, local_module_id, module_replica_id,
+       plane_global_id, plane_local_id, plane_type, wire_local_id;
+
+  decode_wire_id(wire_global_id, plane_global_id, wire_local_id);
+  decode_plane_id(plane_global_id, module_unique_id, 
+                  plane_local_id, plane_type);
+  decode_module_id(module_unique_id, supermodule_id, 
+                  local_module_id,  module_replica_id);
+                  
+  return _tracker_modules_map.at(module_unique_id).getPlane(plane_global_id);
+}
+
+std::map<long, SANDTrackerCell>::const_iterator SANDGeoManager::get_cell_info(long wire_global_id) const
 {
   long supermodule_id, module_unique_id, local_module_id, module_replica_id,
        plane_global_id, plane_local_id, plane_type, wire_local_id;

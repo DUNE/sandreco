@@ -10,13 +10,9 @@ SANDTrackerCell &SANDTrackerPlane::getCell(long index)
     throw "cell not found...i should impelent a class for exception and "
           "handling of that";
 }
-const SANDTrackerCell &SANDTrackerPlane::getCell(long index) const
+std::map<long, SANDTrackerCell>::const_iterator SANDTrackerPlane::getCell(long index) const
 {
-  if (_id_to_cell_map.find(index) != _id_to_cell_map.end())
-    return _id_to_cell_map.at(index);
-  else
-    throw "cell not found...i should impelent a class for exception and "
-          "handling of that";
+  return _id_to_cell_map.find(index);
 }
 
 SANDTrackerCell &SANDTrackerPlane::getCell(double coord)

@@ -353,7 +353,7 @@ void create_digits_from_hits(const SANDGeoManager& geo,
     double min_time_tub = 1E9;  // mm
     long wire_global_id = it->first;
 
-    auto cell_info = geo.get_cell_info(wire_global_id);
+    auto cell_info = geo.get_cell_info(wire_global_id)->second;
 
     long module_unique_id, plane_global_id, plane_local_id, plane_type, wire_local_id;
 
@@ -497,9 +497,9 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     geo.decode_wire_id(id1, plane_global_id1, wire_local_id1);
     geo.decode_wire_id(id2, plane_global_id2, wire_local_id2);
 
-    std::cout << id1 << " "  << id2 << " " << std::endl;
-    std::cout << plane_global_id1 << " " << plane_global_id2 << std::endl;
-    std::cout << wire_local_id1 << " " << wire_local_id2 << std::endl;
+    // std::cout << id1 << " "  << id2 << " " << std::endl;
+    // std::cout << plane_global_id1 << " " << plane_global_id2 << std::endl;
+    // std::cout << wire_local_id1 << " " << wire_local_id2 << std::endl;
 
     if (plane_global_id1 != plane_global_id2) {
       std::cout << "WIRE ID CORRESPONDING TO 2 DIFFERENT DIRFT PLANES"
@@ -541,43 +541,88 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     double hseg_dt = (hseg.Stop - hseg.Start).T();
     double hseg_start_t = hseg.Start.T();
 
-    for (auto i = start_id; i < stop_id; i++) {
-      SANDTrackerCell wire1 = geo.get_cell_info(i);
-      SANDTrackerCell wire2 = geo.get_cell_info(i + 1);
+    SANDTrackerPlane plane = geo.get_plane_info(start_id);
 
-      // To Do: compute length of hit in each cell
+    TVector2 rotated_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
+    TVector2 rotated_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
 
+    auto rotated_delta_x = rotated_stop_2d_position.X() - rotated_start_2d_position.X();
+    auto rotated_delta_y = rotated_stop_2d_position.Y() - rotated_start_2d_position.Y();
+    auto rotated_delta_z = hseg.Stop.Z() - hseg.Start.Z();
 
-      // auto plane_coordinates = 
-      // double plane_coordinate =
-      //     (wire1.orientation() == SANDWireInfo::Orient::kHorizontal)
-      //         ? (wire2.y() + wire1.y()) / 2.
-      //         : (wire2.x() + wire1.x()) / 2.;
+    for (auto i = start_id; i <= stop_id; i++) {
+      auto cell1 = geo.get_cell_info(i);
+      auto cell2 = geo.get_cell_info(i + 1);
 
-      // TVector3 stop = digitization::edep_sim::chamber::IntersectHitPlane(
-      //     hseg, plane_coordinate, wire1.orientation());
+      
+      TVector2 rotated_start_2d_position = geo.GlobalToRotated(TVector2(start.X(), start.Y()), plane);
+      double transverse_coord_start = rotated_start_2d_position.Y();
 
-      // double portion = (start - stop).Mag() / hseg_length;
+      double step_coordinate;
 
-      // hit h;
-      // h.det = "DriftChamber";
-      // h.did = i;
-      // h.x1 = start.X();
-      // h.y1 = start.Y();
-      // h.z1 = start.Z();
-      // h.t1 = hseg_start_t;
-      // h.x2 = stop.X();
-      // h.y2 = stop.Y();
-      // h.z2 = stop.Z();
-      // h.t2 = hseg_start_t + portion * hseg_dt;
-      // h.de = hseg.EnergyDeposit * portion;
-      // h.pid = hseg.PrimaryId;
-      // h.index = j;
+      if (cell2 != geo.get_plane_info(i+1).getIdToCellMap().end()) {
 
-      // start = stop;
-      // hseg_start_t += portion * hseg_dt;
+        SANDWireInfo wire1 = cell1->second.wire();
+        SANDWireInfo wire2 = cell2->second.wire();
+        
+        TVector2 rotated_wire_center1_2d_position = geo.GlobalToRotated(TVector2(wire1.center().X(), wire1.center().Y()), plane);
+        double transverse_coord1 = rotated_wire_center1_2d_position.Y();
+ 
+        TVector2 rotated_wire_center2_2d_position = geo.GlobalToRotated(TVector2(wire2.center().X(), wire2.center().Y()), plane);
+        double transverse_coord2 = rotated_wire_center2_2d_position.Y();
 
-      // hits2cell[i].push_back(h);
+        double plane_coordinate = (transverse_coord1 + transverse_coord2) * 0.5;
+        
+        if (fabs(plane_coordinate - transverse_coord_start) < 
+            fabs(rotated_stop_2d_position.Y() - transverse_coord_start)) {
+          step_coordinate = plane_coordinate;
+        } else {
+          step_coordinate = rotated_stop_2d_position.Y();
+        }
+      } else {
+        step_coordinate = rotated_stop_2d_position.Y();
+      }
+      double t = (step_coordinate - transverse_coord_start) / rotated_delta_y;
+      
+      // std::cout << transverse_coord_start << " " << step_coordinate << " " << rotated_delta_y << " " << t << std::endl;
+      TVector2 rotated_crossing_point(rotated_start_2d_position.X() + rotated_delta_x * t, 
+                                      rotated_start_2d_position.Y() + rotated_delta_y * t);
+
+      TVector2 global_crossing_point = geo.RotatedToGlobal(TVector2(rotated_crossing_point.X(), rotated_crossing_point.Y()), plane);
+
+      TVector3 stop(global_crossing_point.X(), 
+                    global_crossing_point.Y(), 
+                    start.Z() + rotated_delta_z * t);
+
+      double portion = (start - stop).Mag() / hseg_length;
+
+      // start.Print();
+      // start_2d_position.Print();
+      // crossing_point.Print();
+      // crossing_point_2d.Print();
+      // stop.Print();
+      // hseg.Stop.Print();
+      // std::cout << t << " " << portion << std::endl;
+
+      hit h;
+      h.det = "DriftChamber";
+      h.did = i;
+      h.x1 = start.X();
+      h.y1 = start.Y();
+      h.z1 = start.Z();
+      h.t1 = hseg_start_t;
+      h.x2 = stop.X();
+      h.y2 = stop.Y();
+      h.z2 = stop.Z();
+      h.t2 = hseg_start_t + t * hseg_dt;
+      h.de = hseg.EnergyDeposit * t;
+      h.pid = hseg.PrimaryId;
+      h.index = j;
+
+      start = stop;
+      hseg_start_t += t * hseg_dt;
+
+      hits2cell[i].push_back(h);
     }
   }
 }
@@ -596,7 +641,7 @@ bool isInHit(hit& h, TVector3& point)
   return ((point - middle).Mag() <= (start - middle).Mag());
 }
 
-std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& arg_wire)
+std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& wire)
 {
   // return hit closest point to wire between hit start and stop and viceversa
   // -----------------------------------------------------------
@@ -604,38 +649,35 @@ std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& arg_wire)
   TVector3 stop = {h.x2, h.y2, h.z2};   // hit end
   TVector3 s = stop - start;            // hit direction
 
-  TVector3 wire = {arg_wire.x(), arg_wire.y(), arg_wire.z()};
+  // TVector3 wire = {arg_wire.x(), arg_wire.y(), arg_wire.z()};
   TVector3 r0 = {-999., -999., -999.};  // point on the wire
   TVector3 r = {-999., -999., -999.};   // wire direction
-  double angle = 0.;                    // wire.angle();
-  double m = -999.;                     // angular coeffcient
-  TVector3 leftend = {arg_wire.x() - arg_wire.length() * std::cos(angle),
-                      arg_wire.y() - arg_wire.length() * std::sin(angle),
-                      arg_wire.z()};  // wire left/bottom end
+  // double angle = 0.;                    // wire.angle();
+  // double m = -999.;                     // angular coeffcient
+  TVector3 leftend(wire.getPoints()[0].X(),
+                   wire.getPoints()[0].Y(),
+                   wire.getPoints()[0].Z());
 
-  TVector3 rightend = {arg_wire.x() + arg_wire.length() * std::cos(angle),
-                       arg_wire.y() + arg_wire.length() * std::sin(angle),
-                       arg_wire.z()};  // wire right/top
+  TVector3 rightend(wire.getPoints()[1].X(),
+                    wire.getPoints()[1].Y(),
+                    wire.getPoints()[1].Z());
 
   double t = -999.;  // real number to find the closest hit point to the wire
-  double t_prime =
-      -999.;  // real number to find the closest wire point to the hit
+  double t_prime = -999.;  // real number to find the closest wire point to the hit
+  
   // 1 check wire orientation: horizontal, vertical or inclined
-  if (arg_wire.orientation() == SANDWireInfo::Orient::kVertical) {
-    m = 0.;
-    r = {0., 1., 0.};
-    r0 = {wire.x(), 0., wire.z()};
-  } else {
-    m = std::tan(angle);
-    r = {1., m, 0.};
-    r0 = {0., wire.y() - m * wire.x(), wire.z()};
-  }
+  r = (leftend - rightend);
+  r = r * (1. / r.Mag());
+  // r.Print();
+  r0 = wire.center();
+
   // 2 find closest point
   t = (r0.Dot(s) + start.Dot(r) * s.Dot(r) / (r.Mag() * r.Mag()) -
        start.Dot(s) - r0.Dot(r) * r.Dot(s) / (r.Mag() * r.Mag())) /
       ((s.Mag() * s.Mag()) - (r.Dot(s) * r.Dot(s)) / (r.Mag() * r.Mag()));
 
   t_prime = (start.Dot(r) + t * s.Dot(r) - r0.Dot(r)) / (r.Mag() * r.Mag());
+  
   // check if it is between start and stop, otherwise set the closest to be
   // either start or stop
   TVector3 v_closest2Wire = {start.X() + t * s.X(), start.Y() + t * s.Y(),
@@ -646,7 +688,7 @@ std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& arg_wire)
 
   TLorentzVector closest2Wire, closest2Hit;
 
-  if (digitization::edep_sim::chamber::isInWire(arg_wire, v_closest2Hit)) {
+  if (digitization::edep_sim::chamber::isInWire(wire, v_closest2Hit)) {
     closest2Hit.SetXYZT(v_closest2Hit.X(), v_closest2Hit.Y(), v_closest2Hit.Z(),
                         0.);
   } else {
@@ -697,61 +739,62 @@ void create_digits_from_hits(const SANDGeoManager& geo,
                              std::map<long, std::vector<hit> >& hits2cell,
                              std::vector<dg_wire>& wire_digits)
 {
-  // wire_digits.clear();
+  wire_digits.clear();
 
-  // for (std::map<long, std::vector<hit> >::iterator it = hits2cell.begin();
-  //      it != hits2cell.end(); ++it)  // run over wires
-  // {
-  //   long did = it->first;  // wire unique id
-  //   auto wire_info = geo.get_cell_info(did);
-  //   double wire_time = 999.;
-  //   double drift_time = 999.;
-  //   double signal_time = 999.;
-  //   double t_hit = 999.;
+  for (std::map<long, std::vector<hit> >::iterator it = hits2cell.begin();
+       it != hits2cell.end(); ++it)  // run over wires
+  {
+    long did = it->first;  // wire unique id
+    auto wire_info = geo.get_cell_info(did)->second.wire();
+    double wire_time = 999.;
+    double drift_time = 999.;
+    double signal_time = 999.;
+    double t_hit = 999.;
 
-  //   dg_wire d;
-  //   d.det = it->second[0].det;
-  //   d.did = did;
-  //   d.de = 0;
-  //   d.hor = (wire_info.orientation() == SANDWireInfo::Orient::kHorizontal);
-  //   d.x = wire_info.x();
-  //   d.y = wire_info.y();
-  //   d.z = wire_info.z();
-  //   for (unsigned int i = 0; i < it->second.size();
-  //        i++) {  // run over hits of given wire
-  //     auto running_hit = it->second[i];
-  //     // find hit closest point to wire
-  //     std::vector<TLorentzVector> ClosestPoints =
-  //         digitization::edep_sim::chamber::WireHitClosestPoints(running_hit,
-  //                                                               wire_info);
+    dg_wire d;
+    d.det = it->second[0].det;
+    d.did = did;
+    d.de = 0;
+    // To Do: what point do we want to save? 
+    // Center or one of the attachment points?
+    d.x = wire_info.center().X();
+    d.y = wire_info.center().Y();
+    d.z = wire_info.center().Z();
+    for (unsigned int i = 0; i < it->second.size();
+         i++) {  // run over hits of given wire
+      auto running_hit = it->second[i];
+      // find hit closest point to wire
+      std::vector<TLorentzVector> ClosestPoints =
+          digitization::edep_sim::chamber::WireHitClosestPoints(running_hit,
+                                                                wire_info);
 
-  //     TLorentzVector closest2wire = ClosestPoints[0];
-  //     // find wire closest point to hit : time of closest2hit  = drift time +
-  //     // hit time
-  //     TLorentzVector closest2hit = ClosestPoints[1];
+      TLorentzVector closest2wire = ClosestPoints[0];
+      // find wire closest point to hit : time of closest2hit  = drift time +
+      // hit time
+      TLorentzVector closest2hit = ClosestPoints[1];
 
-  //     // total time = time 2 signal propagation + drift time + hit time
-  //     double hit_smallest_time =
-  //         digitization::edep_sim::chamber::GetMinWireTime(closest2hit,
-  //                                                         wire_info);
+      // total time = time 2 signal propagation + drift time + hit time
+      double hit_smallest_time =
+          digitization::edep_sim::chamber::GetMinWireTime(closest2hit,
+                                                          wire_info);
 
-  //     if (hit_smallest_time < wire_time) {
-  //       wire_time = hit_smallest_time;
-  //       t_hit = closest2wire.T();
-  //       drift_time = closest2hit.T() - t_hit;
-  //       signal_time = hit_smallest_time - closest2hit.T();
-  //     }
-  //     d.de += running_hit.de;
-  //     d.hindex.push_back(running_hit.index);
-  //   }
-  //   d.tdc = wire_time + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
-  //   d.t_hit = t_hit;
-  //   d.drift_time = drift_time;
-  //   d.signal_time = signal_time;
-  //   d.adc = d.de;
+      if (hit_smallest_time < wire_time) {
+        wire_time = hit_smallest_time;
+        t_hit = closest2wire.T();
+        drift_time = closest2hit.T() - t_hit;
+        signal_time = hit_smallest_time - closest2hit.T();
+      }
+      d.de += running_hit.de;
+      d.hindex.push_back(running_hit.index);
+    }
+    d.tdc = wire_time + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
+    d.t_hit = t_hit;
+    d.drift_time = drift_time;
+    d.signal_time = signal_time;
+    d.adc = d.de;
 
-  //   wire_digits.push_back(d);
-  // }
+    wire_digits.push_back(d);
+  }
 }
 
 // simulate wire responce for whole event
@@ -762,9 +805,9 @@ void digitize_drift(TG4Event* ev, const SANDGeoManager& geo,
   wire_digits.clear();
 
   group_hits_by_cell(ev, geo, hits2cell);
+  digitization::edep_sim::chamber::create_digits_from_hits(geo, hits2cell,
+                                                           wire_digits);
   std::cout << "DONE" << std::endl;
-  // digitization::edep_sim::chamber::create_digits_from_hits(geo, hits2cell,
-  //                                                          wire_digits);
 }
 
 }  // namespace chamber
