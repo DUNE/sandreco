@@ -16,6 +16,7 @@
 #include <TLine.h>
 #include <TCanvas.h>
 #include <TMatrixD.h>
+#include <TStyle.h>
 
 Counter counter_;
 
@@ -722,7 +723,7 @@ void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
                                        const TGeoNode* const node,
                                        const TGeoHMatrix& matrix)
 {
-  TVector2 local_plane_x_axis = pointInRotatedSystem(TVector2(1, 0), -plane.getRotation());
+  TVector2 local_plane_x_axis = RotatedToLocal(TVector2(1, 0), plane);
   std::vector<TVector2> vertices = plane.getPlaneVertices();
 
   for (int i = 0; i < node->GetNdaughters(); i++) {
@@ -746,11 +747,9 @@ void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
     tube_position.SetX(tube_hmatrix.GetTranslation()[0]);
     tube_position.SetY(tube_hmatrix.GetTranslation()[1]);
     tube_position.SetZ(tube_hmatrix.GetTranslation()[2]);
-    TVector2 local_2d_position(tube_position.X() - plane.getPosition().X(), tube_position.Y() - plane.getPosition().Y());
-    TVector3 local_3d_position(tube_position.X() - plane.getPosition().X(), tube_position.Y() - plane.getPosition().Y(), tube_position.Z() - plane.getPosition().Z());
+    TVector2 local_2d_position = GlobalToLocal(TVector2(tube_position.X(), tube_position.Y()), plane);
     
-    TVector2 rotated_local_2d_position = pointInRotatedSystem(local_2d_position, plane.getRotation());
-    TVector3 intersection(0, 0, local_3d_position.Z());
+    TVector3 intersection(0, 0, tube_position.Z() - plane.getPosition().Z());
     if (getLineSegmentIntersection(local_2d_position, local_plane_x_axis, 
                                vertices[0], vertices[1], intersection)) {
       w.setPoint(intersection + plane.getPosition());
@@ -773,7 +772,8 @@ void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
       w.length((w.getPoints()[1] - w.getPoints()[0]).Mag());
     }
 
-    plane.addCell(rotated_local_2d_position.Y(), w);
+    TVector2 rotated_2d_position = LocalToRotated(local_2d_position, plane);
+    plane.addCell(rotated_2d_position.Y(), w);
   }
 }
 
@@ -886,7 +886,7 @@ void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
 void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
 {
 
-  TVector2 local_plane_x_axis = pointInRotatedSystem(TVector2(1, 0), -plane.getRotation());
+  TVector2 local_plane_x_axis = RotatedToLocal(TVector2(1, 0), plane);
   // local_plane_x_axis.Print();
   
   std::vector<TVector2> vertices = plane.getPlaneVertices();
@@ -905,21 +905,21 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
     } else {
       w.type(SANDWireInfo::Type::kSignal);
     }
-    TVector2 _rotated_transverse_position = pointInRotatedSystem(TVector2(0, transverse_position), -plane.getRotation());
+    TVector2 rotated_transverse_position = RotatedToLocal(TVector2(0, transverse_position), plane);
     TVector3 intersection(0, 0, 0);
-    if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
+    if (getLineSegmentIntersection(rotated_transverse_position, local_plane_x_axis, 
                                vertices[0], vertices[1], intersection)) {
       w.setPoint(intersection + plane.getPosition());
     };
-    if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
+    if (getLineSegmentIntersection(rotated_transverse_position, local_plane_x_axis, 
                                vertices[1], vertices[2], intersection)) {
       w.setPoint(intersection + plane.getPosition());
     };
-    if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
+    if (getLineSegmentIntersection(rotated_transverse_position, local_plane_x_axis, 
                                vertices[2], vertices[3], intersection)) {
       w.setPoint(intersection + plane.getPosition());
     };
-    if (getLineSegmentIntersection(_rotated_transverse_position, local_plane_x_axis, 
+    if (getLineSegmentIntersection(rotated_transverse_position, local_plane_x_axis, 
                                vertices[3], vertices[0], intersection)) {
       w.setPoint(intersection + plane.getPosition());
     };
@@ -927,13 +927,16 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
     if (w.getPoints().size() == 2) {
       w.center((w.getPoints()[0] + w.getPoints()[1]) * 0.5);
       w.length((w.getPoints()[1] - w.getPoints()[0]).Mag());
-
     }
-    plane.addCell(transverse_position, w);
 
-    wire_id++;
+    if (w.length() > TrackerModuleConfiguration::Drift::_id_to_length[std::to_string(plane.lid())]) {
+      plane.addCell(transverse_position, w);
+      wire_id++;
+    }
     transverse_position -= TrackerModuleConfiguration::Drift::_id_to_spacing[std::to_string(plane.lid())];
+
   }
+
 }
 
 
@@ -1012,6 +1015,7 @@ void SANDGeoManager::PrintModulesInfo(int verbose)
 
 void SANDGeoManager::DrawModulesInfo()
 {
+  gStyle->SetOptStat(0);
   TCanvas cc("", "", 1000, 1000);
   cc.cd();
 
@@ -1209,26 +1213,25 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   return cell_unique_id;
 }
 
-double SANDGeoManager::GetHitCellDistance(TVector2 rotated_local_yz_hit_position, 
+double SANDGeoManager::GetHitCellDistance(TVector2 rotated_yz_hit_position, 
                                         std::map<long, SANDTrackerCell>::const_iterator cell_it, 
                                         const SANDTrackerPlane& plane) const
 {
-  TVector2 local_wire_2d_position(cell_it->second.wire().center().X() - plane.getPosition().X(), cell_it->second.wire().center().Y() - plane.getPosition().Y());
-  TVector3 local_wire_3d_position(cell_it->second.wire().center() - plane.getPosition());
-  TVector2 rotated_local_wire_2d_position = pointInRotatedSystem(local_wire_2d_position, plane.getRotation());
+  TVector2 global_wire_xy_position(cell_it->second.wire().center().X(), cell_it->second.wire().center().Y());
+  TVector2 rotated_wire_2d_position = GlobalToRotated(global_wire_xy_position, plane);
   
-  return (rotated_local_yz_hit_position - TVector2(rotated_local_wire_2d_position.Y(), local_wire_3d_position.Z())).Mod();
+  TVector2 rotated_yz_wire_position(rotated_wire_2d_position.Y(), 
+                                    cell_it->second.wire().center().Z() - plane.getPosition().Z());
+  return (rotated_yz_hit_position - rotated_yz_wire_position).Mod();
 }
 
 long SANDGeoManager::GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane, bool checkCloseCells = false) const
 {
-  TVector2 local_hit_2d_position(hit_center.X() - plane.getPosition().X(), hit_center.Y() - plane.getPosition().Y());
-  TVector3 local_hit_3d_position(hit_center - plane.getPosition());
-    
-  TVector2 rotated_local_hit_2d_position = pointInRotatedSystem(local_hit_2d_position, plane.getRotation());
-
-  double transverse_coord = rotated_local_hit_2d_position.Y();
-  TVector2 rotated_local_yz_hit_position(transverse_coord, local_hit_3d_position.Z());
+  TVector2 global_hit_xy_position(hit_center.X(), hit_center.Y());
+  TVector2 rotated_hit_xy_position = GlobalToRotated(global_hit_xy_position, plane);
+  double transverse_coord = rotated_hit_xy_position.Y();
+  
+  TVector2 rotated_yz_hit_position(transverse_coord, hit_center.Z() - plane.getPosition().Z());
 
   std::map<long, SANDTrackerCell>::const_iterator cell_it = plane.getLowerBoundCell(transverse_coord);
   if (cell_it == plane.getIdToCellMap().cend()) {
@@ -1242,8 +1245,8 @@ long SANDGeoManager::GetClosestCellToHit(TVector3 hit_center, const SANDTrackerP
   double distance1 = 1E9;
   double distance2 = 1E9;
   while (true) {
-    distance1 = GetHitCellDistance(rotated_local_yz_hit_position, cell_it, plane);
-    distance2 = GetHitCellDistance(rotated_local_yz_hit_position, next_cell_it, plane);
+    distance1 = GetHitCellDistance(rotated_yz_hit_position, cell_it, plane);
+    distance2 = GetHitCellDistance(rotated_yz_hit_position, next_cell_it, plane);
 
     if (checkCloseCells) {
       // To Do: save info on tube radius in geoManager Init

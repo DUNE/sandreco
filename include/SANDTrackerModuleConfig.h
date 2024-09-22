@@ -22,7 +22,14 @@ namespace TrackerModuleConfiguration
     {
       {"0", 10},
       {"1", 10},
-      {"2", 10}
+      {"2", 20}
+    };
+    
+    std::map<std::string, double> _id_to_length =
+    {
+      {"0", 500},
+      {"1", 500},
+      {"2", 500}
     };
   };
   
