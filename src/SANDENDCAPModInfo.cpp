@@ -20,11 +20,13 @@ SANDENDCAPModInfo::SANDENDCAPModInfo(int arg_id, TGeoNode* arg_mod_node, const T
   x_ = mod_hmatrix_.GetTranslation()[0];
   y_ = mod_hmatrix_.GetTranslation()[1];
   z_ = mod_hmatrix_.GetTranslation()[2];
+  // set the number of sections
+  n_sec_ = mod_node_->GetNdaughters();
   // set the module width
   width_ = 2 * ((TGeoBBox*)mod_node_->GetVolume()->GetShape())->GetDX();
-  // set the Al_thick
-  get_Al_thick();
-  //set the node path
+  // set the Al_dz
+  get_Al_dz();
+  // set the node path
   path_ = gGeoManager->GetPath();
 }
 
@@ -34,59 +36,87 @@ void SANDENDCAPModInfo::x(double arg_x) { x_ = arg_x; }
 void SANDENDCAPModInfo::y(double arg_y) { y_ = arg_y; }
 void SANDENDCAPModInfo::z(double arg_z) { z_ = arg_z; }
 void SANDENDCAPModInfo::width(double arg_width) { width_ = arg_width; }
-// private setter that computes the Al layer thickness from a module section
-void SANDENDCAPModInfo::Al_thick(double arg_Al_thick){
-  Al_thick_ = arg_Al_thick;
-}
-void SANDENDCAPModInfo::get_Al_thick()
+// private setter that computes the Al layer dzness from a module section
+void SANDENDCAPModInfo::Al_dz(double arg_Al_dz) { Al_dz_ = arg_Al_dz; }
+void SANDENDCAPModInfo::get_Al_dz()
 {
-  Al_thick_ = 0;
+  Al_dz_ = 0;
   auto temp_d_node = mod_node_->GetDaughter(0);
   for (int i = 0; i < temp_d_node->GetNdaughters(); i++) {
     if (((TString)temp_d_node->GetDaughter(i)->GetName()).Contains("Alplate"))
-      Al_thick_ =
-          2 * ((TGeoBBox*)temp_d_node->GetDaughter(i)->GetVolume()->GetShape())
-                  ->GetDZ();
+      Al_dz_ = ((TGeoBBox*)temp_d_node->GetDaughter(i)->GetVolume()->GetShape())
+                   ->GetDZ();
   }
 }
+
+void SANDENDCAPModInfo::compute_min_max_l()
+{
+  for (int i = 0; i < n_sec_; i++) {
+    if (((TString)mod_node_->GetDaughter(i)->GetName()).Contains("vert")) {
+      l_vert_ =
+          2 * ((TGeoBBox*)mod_node_->GetDaughter(i)->GetVolume()->GetShape())
+                  ->GetDY();
+      mod_dz_ =
+          2 * ((TGeoBBox*)mod_node_->GetDaughter(i)->GetVolume()->GetShape())
+                  ->GetDZ();
+      break;
+    }
+  }
+  for (int i = 0; i < n_sec_; i++) {
+    if (((TString)mod_node_->GetDaughter(i)->GetName()).Contains("hor")) {
+      l_hor_ =
+          2 * ((TGeoBBox*)mod_node_->GetDaughter(i)->GetVolume()->GetShape())
+                  ->GetDY();
+      break;
+    }
+  }
+  for (int i = 0; i < n_sec_; i++) {
+    if (((TString)mod_node_->GetDaughter(i)->GetName()).Contains("curv")) {
+      r_max_ =
+          ((TGeoTubeSeg*)mod_node_->GetDaughter(i)->GetVolume()->GetShape())
+              ->GetRmax();
+      // correct the min radius for the Al plate thickness
+      r_min_ =
+          ((TGeoTubeSeg*)mod_node_->GetDaughter(i)->GetVolume()->GetShape())
+              ->GetRmin() +
+          2 * Al_dz_;
+      break;
+    }
+  }
+
+  // compute lmax_ and lmin_ based on the number of sections
+  lmax_ =
+      l_vert_ + 2 * (0.5 * M_PI * r_max_) + ((n_sec_ == 5) ? 2 : 1) * l_hor_;
+  lmin_ =
+      l_vert_ + 2 * (0.5 * M_PI * r_min_) + ((n_sec_ == 5) ? 2 : 1) * l_hor_;
+}
+
 // void SANDENDCAPModInfo::orientation(Orient arg_orientation)
 // {
 //   orientation_ = arg_orientation;
 // }
 
 // Getter methods for the attributes
-int SANDENDCAPModInfo::id() { return id_; }
-double SANDENDCAPModInfo::x() { return x_; }
-double SANDENDCAPModInfo::y() { return y_; }
-double SANDENDCAPModInfo::z() { return z_; }
-double SANDENDCAPModInfo::width() { return width_; }
-double SANDENDCAPModInfo::Al_thick() { return Al_thick_; }
-TString SANDENDCAPModInfo::path() { return path_; }
-TGeoNode* SANDENDCAPModInfo::mod_node() { return mod_node_; }
-TGeoHMatrix SANDENDCAPModInfo::mod_hmatrix() { return mod_hmatrix_; }
-// SANDENDCAPModInfo::Orient SANDENDCAPModInfo::orientation()
-// {
-//   return orientation_;
-// }
+int SANDENDCAPModInfo::id() const { return id_; }
+double SANDENDCAPModInfo::x() const { return x_; }
+double SANDENDCAPModInfo::y() const { return y_; }
+double SANDENDCAPModInfo::z() const { return z_; }
+double SANDENDCAPModInfo::width() const { return width_; }
+double SANDENDCAPModInfo::mod_dz() const { return mod_dz_; }
+double SANDENDCAPModInfo::l_hor() const { return l_hor_; }
+double SANDENDCAPModInfo::l_vert() const { return l_hor_; }
+double SANDENDCAPModInfo::rmin() const { return r_min_; }
+double SANDENDCAPModInfo::Al_dz() const { return Al_dz_; }
+TString SANDENDCAPModInfo::path() const { return path_; }
+TGeoNode* SANDENDCAPModInfo::mod_node() const { return mod_node_; }
+TGeoHMatrix SANDENDCAPModInfo::mod_hmatrix() const { return mod_hmatrix_; }
 
-// PMT local_id and path length computation (could be split into two either)
-// this should be equivalent to the older get_ecal_endcap_cell_local_id function
-// void get_ecal_endcap_cell_local_id(double x, double y, double z, const TGeoNode* const slab_node,int& cell_local_id/* ,
-//                           std::pair<double, double> path_lens */) const
-// {
-//   // convert (x,y,z) to local module coordinates
-//   double master[3];
-//   double local[3];
-//   master[0] = x;
-//   master[1] = y;
-//   master[2] = z;
+double SANDENDCAPModInfo::get_curv_arc_len(double depth) const {
+  return 0.5 * M_PI * (r_min_ + depth);
+}
+// compute the total cell path length given the depth along the module (w.r.t.
+// the outer layer)
+double SANDENDCAPModInfo::get_cell_tot_len(double depth) const {
+  return lmin_ + M_PI * depth;
+}
 
-//   mod_node_->MasterToLocal(master, local);
-
-//   for (int i = 0; i < mod_node_->GetNdaughters(); i++) {
-//     auto sec_node = mod_node_->GetDaughter(i);
-//     // this won't work: both curved and horizontal sections have the same name
-//     if (slab_node->GetPath().Contains(sec_node->GetName())) {
-//     }
-//   }
-// }
