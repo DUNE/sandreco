@@ -59,6 +59,8 @@ struct reco_cell {
   int lay;
   double e;
   double t; 
+  dg_ps ps1;
+  dg_ps ps2;
 };
 
 struct dg_tube {
@@ -91,7 +93,7 @@ struct cluster {
   double varx;
   double vary;
   double varz;
-  std::vector<dg_cell> cells;
+  //std::vector<dg_cell> cells;
   std::vector<reco_cell> reco_cells; 
 };
 

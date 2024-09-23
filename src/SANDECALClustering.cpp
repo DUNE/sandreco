@@ -2,7 +2,7 @@
 
 int clustering(std::string const& input)
 {
-
+  
   const char* finname = input.c_str();
   TFile f(finname, "READ");
   TTree* t = (TTree*)f.Get("tDigit");
@@ -15,14 +15,21 @@ int clustering(std::string const& input)
   TTree tout("tCluster", "Clustering");
   tout.Branch("cluster", "std::vector<cluster>", &f_clust);
   t->SetBranchAddress("dg_cell", &cell);
-
+  
   for (int i = 0; i < nEvents; i++) {
       //std::cout <<"EVENT: " << i <<std::endl; 
     t->GetEntry(i);
     std::vector<cluster> clust = Clusterize(std::move(cell));
-
+    
     double CluEn = 0;
-
+    int n_clu = 0;
+    std::cout << "ENTRY: "<< i << ", FINAL CONFIGURATION: " << std::endl;
+    for (auto const& clu_info : clust) {
+        std::cout << "Cluster number: " << n_clu << std::endl;
+        Clust_info(clu_info);
+        std::cout << std::endl;
+        n_clu++;
+    }
     f_clust = clust;
     tout.Fill();
     clust.clear();
@@ -72,7 +79,7 @@ int main(int argc, char* argv[])
 {
 
   if (argc < 2) {
-    std::cerr << "Usage: Clustering" << " -d <file.digit.root>" << std::endl;
+    std::cerr << "Usage: SANDECALClustering" << " -d <file.digit.root>" << std::endl;
     return 1;
   }
   std::string digitFileName;
