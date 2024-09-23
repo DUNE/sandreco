@@ -629,7 +629,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
 
 bool isInWire(SANDWireInfo& wire, TVector3& point)
 {
-  TVector3 wire3 = {wire.x(), wire.y(), wire.z()};
+  TVector3 wire3 = {wire.center().x(), wire.center().y(), wire.center().z()};
   return ((wire3 - point).Mag() <= wire.length() * 0.5);
 }
 
