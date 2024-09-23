@@ -17,7 +17,8 @@ for a specific tag or branch do `mrb g -t $TAG sandreco` or `mrb g -b $BRANCH sa
 
 
 In the `bin` folder, there will be five executables:
-- **Digitize** will perform digitization, 
+- **Digitize** will perform digitization,
+- **SANDECALClustering** will clusterize the ECAL DAQ digit in clusters of reconstructed cells, 
 - **Reconstruct** will reconstruct tracks in STT and clusters in ECAL
 - **Analyze** will identify particles and assign them a momentum
 - **FastCheck** will produce a lot of plots to check everything is ok
@@ -42,6 +43,12 @@ $ source setup.sh
 
 ```console
 $ Digitize <MC file> <digit file>
+```
+### SANDECALClustering 
+- Create clusters of ECAL reconstructed cells 
+
+```console
+$ SANDECALClustering -d <digit file>
 ```
 
 ### Reconstruct
