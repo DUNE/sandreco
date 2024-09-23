@@ -684,7 +684,7 @@ void SANDGeoManager::set_stt_plane_info(const TGeoNode* const node,
   long stt_plane_unique_id = get_stt_plane_id(node_path);
   long stt_plane_local_id  = get_stt_plane_id(node_path, true);
 
-  auto insert_result = _tracker_modules_map.insert({stt_module_unique_id, SANDTrackerModule(stt_module_unique_id)});
+  _tracker_modules_map.insert({stt_module_unique_id, SANDTrackerModule(stt_module_unique_id)});
   bool added = _tracker_modules_map[stt_module_unique_id].addPlane(SANDTrackerPlane(stt_plane_unique_id, stt_plane_local_id));
   
   if (added) {
@@ -851,7 +851,7 @@ void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
   long drift_plane_unique_id = get_drift_plane_id(node_path);
   long drift_plane_local_id  = get_drift_plane_id(node_path, true);  // 0,1 or 2
 
-  auto insert_result = _tracker_modules_map.insert({drift_module_unique_id, SANDTrackerModule(drift_module_unique_id)});
+  _tracker_modules_map.insert({drift_module_unique_id, SANDTrackerModule(drift_module_unique_id)});
   bool added = _tracker_modules_map[drift_module_unique_id].addPlane(SANDTrackerPlane(drift_plane_unique_id, drift_plane_local_id));
 
   if (added) {

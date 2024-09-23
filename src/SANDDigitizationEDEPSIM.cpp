@@ -543,11 +543,11 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
 
     SANDTrackerPlane plane = geo.get_plane_info(start_id);
 
-    TVector2 rotated_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
-    TVector2 rotated_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
+    TVector2 rotated_hit_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
+    TVector2 rotated_hit_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
 
-    auto rotated_delta_x = rotated_stop_2d_position.X() - rotated_start_2d_position.X();
-    auto rotated_delta_y = rotated_stop_2d_position.Y() - rotated_start_2d_position.Y();
+    auto rotated_delta_x = rotated_hit_stop_2d_position.X() - rotated_hit_start_2d_position.X();
+    auto rotated_delta_y = rotated_hit_stop_2d_position.Y() - rotated_hit_start_2d_position.Y();
     auto rotated_delta_z = hseg.Stop.Z() - hseg.Start.Z();
 
     for (auto i = start_id; i <= stop_id; i++) {
@@ -574,13 +574,13 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
         double plane_coordinate = (transverse_coord1 + transverse_coord2) * 0.5;
         
         if (fabs(plane_coordinate - transverse_coord_start) < 
-            fabs(rotated_stop_2d_position.Y() - transverse_coord_start)) {
+            fabs(rotated_hit_stop_2d_position.Y() - transverse_coord_start)) {
           step_coordinate = plane_coordinate;
         } else {
-          step_coordinate = rotated_stop_2d_position.Y();
+          step_coordinate = rotated_hit_stop_2d_position.Y();
         }
       } else {
-        step_coordinate = rotated_stop_2d_position.Y();
+        step_coordinate = rotated_hit_stop_2d_position.Y();
       }
       double t = (step_coordinate - transverse_coord_start) / rotated_delta_y;
       

@@ -31,7 +31,7 @@ namespace TrackerModuleConfiguration
       {"1", 500},
       {"2", 500}
     };
-  };
+  }
   
   namespace STT
   {
@@ -41,4 +41,4 @@ namespace TrackerModuleConfiguration
       {"2", 0}
     };
   }
-};
+}

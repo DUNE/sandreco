@@ -240,13 +240,13 @@ class SANDGeoManager : public TObject
   SANDGeoManager()
       : cellmap_(),
         wiremap_(),
+        wire_tranverse_position_map_(),
         stt_tube_regex_(sand_geometry::stt::stt_single_tube_regex_string),
         // stt_two_tubes_regex_(sand_geometry::stt::stt_two_tubes_regex_string),
         stt_plane_regex_(sand_geometry::stt::stt_plane_regex_string),
         stt_module_regex_(sand_geometry::stt::stt_module_regex_string),
         stt_supermodule_regex_(
-            sand_geometry::stt::stt_supermodule_regex_string),
-        wire_tranverse_position_map_()
+            sand_geometry::stt::stt_supermodule_regex_string)
   {
   }
   void init(TGeoManager* const geo);

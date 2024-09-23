@@ -19,10 +19,10 @@ class SANDTrackerPlane
 
  public:
   SANDTrackerPlane() {};
-  SANDTrackerPlane(long uid, long lid)
+  SANDTrackerPlane(long u_id, long l_id)
   {
-    _unique_id = uid;
-    _local_id  = lid;
+    _unique_id = u_id;
+    _local_id  = l_id;
   }
   long uid() const
   {

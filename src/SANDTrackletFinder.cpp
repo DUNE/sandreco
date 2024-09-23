@@ -313,7 +313,7 @@ void TrackletFinder::Draw2DDistance()
       min = 1E9;
       for (int angle_xz = theta_xz - 400; angle_xz < theta_xz + 400 ; angle_xz+=10) {
         for (int angle_yz = theta_yz - 400; angle_yz < theta_yz + 400; angle_yz+=10) {
-          double p[4] = {px, py, angle_xz / 1000., angle_yz / 1000.};
+          double p[4] = {px / 1., py / 1., angle_xz / 1000., angle_yz / 1000.};
           double tmp_min = MinimizingFunction(p, cells);
           if (tmp_min < min) {
             min = tmp_min;
