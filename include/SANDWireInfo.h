@@ -74,6 +74,7 @@ class SANDWireInfo : public TObject
   double az() const;
   std::vector<TVector3> getPoints() {return points;};
   const std::vector<TVector3> getPoints() const {return points;};
+  const TVector3 getDirection() const {return (points[0] - points[1]) * (1. / (points[0] - points[1]).Mag());};
 
   ClassDef(SANDWireInfo, 1);
 };

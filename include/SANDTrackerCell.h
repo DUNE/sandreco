@@ -5,9 +5,9 @@
 class SANDTrackerCell
 {
   SANDWireInfo _wire;
+  long _wireID;
   double _width;
   double _height;
-  long _wireID;
 
   double _timeResponse;   // time response in nanoseconds
   double _driftVelocity;  // drift velocity in um/ns
@@ -15,16 +15,28 @@ class SANDTrackerCell
 
  public:
   SANDTrackerCell() {};
-  SANDTrackerCell(const SANDWireInfo &l, const double time, const double vd,
-                  const bool fired, const long wID, const double w,
-                  const double h)
+  SANDTrackerCell(const SANDWireInfo &l, const long wID, const double w, const double h, 
+                  const double time, const double vd, const bool fired)
       : _wire(l),
-        _timeResponse(time),
-        _driftVelocity(vd),
-        _isFired(fired),
         _wireID(l.id()),
         _width(w),
-        _height(h)
+        _height(h),
+        _timeResponse(time),
+        _driftVelocity(vd),
+        _isFired(fired)
+
+  {
+  }
+  
+  SANDTrackerCell(const SANDWireInfo &l, 
+                  const double w,
+                  const double h,
+                  const double v)
+      : _wire(l),
+        _wireID(l.id()),
+        _width(w),
+        _height(h),
+        _driftVelocity(v)
 
   {
   }

@@ -7,7 +7,7 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(SandReco LANGUAGES CXX VERSION 01.00.00)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
@@ -48,6 +48,10 @@ target_include_directories(Utils PUBLIC
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Utils PUBLIC SANDGeoManager EDepSim::edepsim_io)
 
+# Creates TrackletFinder library
+add_library(TrackletFinder SHARED src/SANDTrackletFinder.cpp)
+target_link_libraries(TrackletFinder SANDGeoManager Struct Utils)
+
 # Creates a libSANDRecoUtils shared library
 add_library(SANDRecoUtils SHARED src/SANDRecoUtils.cpp  )
 target_include_directories(SANDRecoUtils PUBLIC
@@ -81,6 +85,10 @@ target_link_libraries(Display Struct Utils)
 add_executable(FastCheck src/fastcheck.cpp)
 target_link_libraries(FastCheck Struct Utils)
 
+# Creates MeasurementBuilder executable.
+add_executable(Measurements src/SANDMeasurementsBuilder.cpp)
+target_link_libraries(Measurements SANDGeoManager Struct Utils TrackletFinder)
+
 # Creates a libSANDEventDisplay shared library
 add_library(SANDEventDisplay SHARED src/SANDEventDisplay.cpp src/SANDDisplayUtils.cpp SANDEventDisplayDict.cxx)
 target_include_directories(SANDEventDisplay PUBLIC ${EDepSim_INCLUDE_DIR}
@@ -100,7 +108,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager SANDRecoUtils Digitize Reconstruct Analyze Display FastCheck eventDisplay
+install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager SANDRecoUtils Digitize Reconstruct Analyze Display FastCheck eventDisplay Measurements
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"

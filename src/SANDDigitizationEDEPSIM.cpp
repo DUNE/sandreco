@@ -350,7 +350,8 @@ void create_digits_from_hits(const SANDGeoManager& geo,
 
   for (std::map<long, std::vector<hit> >::iterator it = hits2Tube.begin();
        it != hits2Tube.end(); ++it) {
-    double min_time_tub = 1E9;  // mm
+    double min_time_tub   = 1E9;  // mm
+    double min_drift_time = 1E9;  // mm
     long wire_global_id = it->first;
 
     auto cell_info = geo.get_cell_info(wire_global_id)->second;
@@ -359,7 +360,7 @@ void create_digits_from_hits(const SANDGeoManager& geo,
 
     SANDGeoManager::decode_wire_id(wire_global_id, plane_global_id, wire_local_id);
     SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
-                    plane_local_id, plane_type);
+                                    plane_local_id, plane_type);
 
     dg_wire d;
     d.det = it->second[0].det;
@@ -416,11 +417,15 @@ void create_digits_from_hits(const SANDGeoManager& geo,
 
       TVector2 min_dist_point(x, y);
       double min_dist_hit = (min_dist_point - wire).Mod();
-      double min_time_hit = t + (min_dist_hit - sand_reco::stt::wire_radius) /
-                                    sand_reco::stt::v_drift +
+      double min_drift_hit = (min_dist_hit - sand_reco::stt::wire_radius) /
+                                    sand_reco::stt::v_drift;
+      double min_time_hit = t + min_drift_hit +
                             dwire / sand_reco::stt::v_signal_inwire;
 
-      if (min_time_hit < min_time_tub) min_time_tub = min_time_hit;
+      if (min_time_hit < min_time_tub) {
+        min_time_tub = min_time_hit;
+        min_drift_time = min_drift_hit;
+      }
 
       if (t - d.t0 < sand_reco::stt::stt_int_time) d.de += it->second[i].de;
 
@@ -428,6 +433,7 @@ void create_digits_from_hits(const SANDGeoManager& geo,
     }
 
     d.tdc = min_time_tub + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
+    d.drift_time = min_drift_time;
     d.adc = d.de;
 
     wire_digits.push_back(d);
@@ -543,11 +549,11 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
 
     SANDTrackerPlane plane = geo.get_plane_info(start_id);
 
-    TVector2 rotated_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
-    TVector2 rotated_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
+    TVector2 rotated_hit_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
+    TVector2 rotated_hit_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
 
-    auto rotated_delta_x = rotated_stop_2d_position.X() - rotated_start_2d_position.X();
-    auto rotated_delta_y = rotated_stop_2d_position.Y() - rotated_start_2d_position.Y();
+    auto rotated_delta_x = rotated_hit_stop_2d_position.X() - rotated_hit_start_2d_position.X();
+    auto rotated_delta_y = rotated_hit_stop_2d_position.Y() - rotated_hit_start_2d_position.Y();
     auto rotated_delta_z = hseg.Stop.Z() - hseg.Start.Z();
 
     for (auto i = start_id; i <= stop_id; i++) {
@@ -574,13 +580,13 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
         double plane_coordinate = (transverse_coord1 + transverse_coord2) * 0.5;
         
         if (fabs(plane_coordinate - transverse_coord_start) < 
-            fabs(rotated_stop_2d_position.Y() - transverse_coord_start)) {
+            fabs(rotated_hit_stop_2d_position.Y() - transverse_coord_start)) {
           step_coordinate = plane_coordinate;
         } else {
-          step_coordinate = rotated_stop_2d_position.Y();
+          step_coordinate = rotated_hit_stop_2d_position.Y();
         }
       } else {
-        step_coordinate = rotated_stop_2d_position.Y();
+        step_coordinate = rotated_hit_stop_2d_position.Y();
       }
       double t = (step_coordinate - transverse_coord_start) / rotated_delta_y;
       
@@ -629,7 +635,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
 
 bool isInWire(SANDWireInfo& wire, TVector3& point)
 {
-  TVector3 wire3 = {wire.x(), wire.y(), wire.z()};
+  TVector3 wire3 = {wire.center().x(), wire.center().y(), wire.center().z()};
   return ((wire3 - point).Mag() <= wire.length() * 0.5);
 }
 
@@ -667,7 +673,6 @@ std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& wire)
   
   // 1 check wire orientation: horizontal, vertical or inclined
   r = (leftend - rightend);
-  r = r * (1. / r.Mag());
   // r.Print();
   r0 = wire.center();
 
@@ -677,7 +682,7 @@ std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& wire)
       ((s.Mag() * s.Mag()) - (r.Dot(s) * r.Dot(s)) / (r.Mag() * r.Mag()));
 
   t_prime = (start.Dot(r) + t * s.Dot(r) - r0.Dot(r)) / (r.Mag() * r.Mag());
-  
+
   // check if it is between start and stop, otherwise set the closest to be
   // either start or stop
   TVector3 v_closest2Wire = {start.X() + t * s.X(), start.Y() + t * s.Y(),

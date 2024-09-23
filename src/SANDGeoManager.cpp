@@ -684,7 +684,7 @@ void SANDGeoManager::set_stt_plane_info(const TGeoNode* const node,
   long stt_plane_unique_id = get_stt_plane_id(node_path);
   long stt_plane_local_id  = get_stt_plane_id(node_path, true);
 
-  auto insert_result = _tracker_modules_map.insert({stt_module_unique_id, SANDTrackerModule(stt_module_unique_id)});
+  _tracker_modules_map.insert({stt_module_unique_id, SANDTrackerModule(stt_module_unique_id)});
   bool added = _tracker_modules_map[stt_module_unique_id].addPlane(SANDTrackerPlane(stt_plane_unique_id, stt_plane_local_id));
   
   if (added) {
@@ -775,7 +775,9 @@ void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
     }
 
     TVector2 rotated_2d_position = LocalToRotated(local_2d_position, plane);
-    plane.addCell(rotated_2d_position.Y(), w);
+    // To Do: use the true radius of the tube
+    plane.addCell(rotated_2d_position.Y(), w, 2.5, 2.5, 
+                  TrackerModuleConfiguration::STT::_id_to_velocity[std::to_string(plane.lid())]);
   }
 }
 
@@ -850,7 +852,7 @@ void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
   long drift_plane_unique_id = get_drift_plane_id(node_path);
   long drift_plane_local_id  = get_drift_plane_id(node_path, true);  // 0,1 or 2
 
-  auto insert_result = _tracker_modules_map.insert({drift_module_unique_id, SANDTrackerModule(drift_module_unique_id)});
+  _tracker_modules_map.insert({drift_module_unique_id, SANDTrackerModule(drift_module_unique_id)});
   bool added = _tracker_modules_map[drift_module_unique_id].addPlane(SANDTrackerPlane(drift_plane_unique_id, drift_plane_local_id));
 
   if (added) {
@@ -859,8 +861,6 @@ void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
 
     plane.setRotation(angle);
 
-    TGeoMatrix* plane_matrix = node->GetMatrix();
-    TGeoHMatrix plane_hmatrix = matrix * (*plane_matrix);
     TGeoBBox* plane_shape = (TGeoBBox*)node->GetVolume()->GetShape();
     TVector3 plane_dimension;
     if(angle == 0) {
@@ -873,9 +873,9 @@ void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
     plane_dimension.SetZ(2 * plane_shape->GetDX());
 
     TVector3 plane_position;
-    plane_position.SetX(plane_hmatrix.GetTranslation()[0]);
-    plane_position.SetY(plane_hmatrix.GetTranslation()[1]);
-    plane_position.SetZ(plane_hmatrix.GetTranslation()[2]);
+    plane_position.SetX(matrix.GetTranslation()[0]);
+    plane_position.SetY(matrix.GetTranslation()[1]);
+    plane_position.SetZ(matrix.GetTranslation()[2]);
 
     plane.setPosition(plane_position);
     plane.setDimension(plane_dimension);
@@ -902,13 +902,7 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
 
     long wire_unique_id = encode_wire_id(plane.uid(), wire_id);
     w.id(wire_unique_id);
-
-    // To Do: manage field wires
-    if (wire_id % 2 == 0) {
-      w.type(SANDWireInfo::Type::kSignal);
-    } else {
-      w.type(SANDWireInfo::Type::kSignal);
-    }
+    w.type(SANDWireInfo::Type::kSignal);
     TVector2 rotated_transverse_position = RotatedToLocal(TVector2(0, transverse_position), plane);
     TVector3 intersection(0, 0, 0);
     if (getLineSegmentIntersection(rotated_transverse_position, local_plane_x_axis, 
@@ -934,7 +928,10 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
     }
 
     if (w.length() > TrackerModuleConfiguration::Drift::_id_to_length[std::to_string(plane.lid())]) {
-      plane.addCell(transverse_position, w);
+      plane.addCell(transverse_position, w, 
+                    TrackerModuleConfiguration::Drift::_id_to_offset[std::to_string(plane.lid())],
+                    plane.getDimension().Z(),
+                    TrackerModuleConfiguration::Drift::_id_to_velocity[std::to_string(plane.lid())]);
       wire_id++;
     }
     transverse_position -= TrackerModuleConfiguration::Drift::_id_to_spacing[std::to_string(plane.lid())];
