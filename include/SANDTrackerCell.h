@@ -30,11 +30,13 @@ class SANDTrackerCell
   
   SANDTrackerCell(const SANDWireInfo &l, 
                   const double w,
-                  const double h)
+                  const double h,
+                  const double v)
       : _wire(l),
         _wireID(l.id()),
         _width(w),
-        _height(h)
+        _height(h),
+        _driftVelocity(v)
 
   {
   }

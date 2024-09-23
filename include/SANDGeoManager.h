@@ -279,6 +279,11 @@ class SANDGeoManager : public TObject
   {
     return wire_tranverse_position_map_;
   }
+  const std::map<long, SANDTrackerModule>&
+      get_modules_map() const
+  {
+    return _tracker_modules_map;
+  }
   int get_ecal_cell_id(double x, double y, double z) const;
   long get_stt_tube_id(double x, double y, double z) const;
   long print_stt_tube_id(double x, double y, double z) const;

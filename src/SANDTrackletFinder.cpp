@@ -1,5 +1,25 @@
 #include "SANDTrackletFinder.h"
 
+double MinimizingFunction(const double* params, const std::map<double, SANDTrackerCell>* cells)
+{
+  double dx = cos(params[2]);
+  double dy = sin(params[3]);
+  double dz = sin(params[2]);
+  // TVector3 pos(params[0], params[1], (*cells)[0].wire().center().Z());
+  TVector3 pos(params[0], params[1], 2391);
+  TVector3 dir(dx, dy, dz);
+  dir = dir * (1. / dir.Mag());
+
+  double sum = 0.0;
+  for (const auto& c : (*cells)) {
+    TVector3 n = c.second.wire().getDirection().Cross(dir);
+    double d = fabs(n.Dot(c.second.wire().center() - pos)) / n.Mag();
+    sum += (d - c.second.driftVelocity() * c.first) 
+            * (d - c.second.driftVelocity() * c.first); 
+  }
+  return sum;
+}
+
 bool TrackletFinder::CheckParallel(TVector3 d1, TVector3 d2)
 {
   return d1.Dot(d2) == 1;
@@ -35,8 +55,8 @@ void TrackletFinder::ComputeCellsIntersections()
   if (_fired_cells) {
     for (auto c:(*_fired_cells)) {
       double h, w;
-      c.size(h, w);
-      CLine3D line_from_wire(c.wire().center(), c.wire().getDirection());
+      c.second.size(h, w);
+      CLine3D line_from_wire(c.second.wire().center(), c.second.wire().getDirection());
       LinesParallelToWire(line_from_wire, w, lines);
     }
   }
@@ -100,8 +120,8 @@ void TrackletFinder::ComputeCellsBands()
   if (_fired_cells) {
     for (auto c:(*_fired_cells)) {
       double h, w;
-      c.size(h, w);
-      CLine3D line_from_wire(c.wire().center(), c.wire().getDirection());
+      c.second.size(h, w);
+      CLine3D line_from_wire(c.second.wire().center(), c.second.wire().getDirection());
       LinesParallelToWire(line_from_wire, w, _cells_bands);
     }
   }
@@ -201,19 +221,18 @@ void TrackletFinder::Clear()
 
 void TrackletFinder::Draw3DWires() {
   gStyle->SetOptStat(0);
-  if (!_c3) {
-    _c3 = new TCanvas("c3D","c3D",1500,1500);
-    TH3D h("", "", _volume_parameters[0],_volume_parameters[1], _volume_parameters[2],
-                   _volume_parameters[3],_volume_parameters[4], _volume_parameters[5],
-                   _volume_parameters[6],_volume_parameters[7], _volume_parameters[8]);
-    h.Draw();
-  }
+  _c3 = new TCanvas("c3D","c3D",1500,1500);
+  TH3D h("", "", _volume_parameters[0],_volume_parameters[1], _volume_parameters[2],
+                  _volume_parameters[3],_volume_parameters[4], _volume_parameters[5],
+                  _volume_parameters[6],_volume_parameters[7], _volume_parameters[8]);
+  h.SetTitle(";x;y;z");
+  h.Draw();
 
   for (auto c:(*_fired_cells)) {  
     TPolyLine3D* pl2 = new TPolyLine3D(2);
-    TVector3 l_start = c.wire().getPoints()[0];
+    TVector3 l_start = c.second.wire().getPoints()[0];
     pl2->SetPoint(0, l_start.X(), l_start.Y(), l_start.Z());
-    TVector3 l_end = c.wire().getPoints()[1];
+    TVector3 l_end = c.second.wire().getPoints()[1];
     pl2->SetPoint(1, l_end.X(), l_end.Y(), l_end.Z());
     pl2->Draw("same");
   }
@@ -241,11 +260,12 @@ void TrackletFinder::Draw3D()
     TH3D* h2 = new TH3D("", "", _volume_parameters[0],_volume_parameters[1], _volume_parameters[2],
                                 _volume_parameters[3],_volume_parameters[4], _volume_parameters[5],
                                 _volume_parameters[6],_volume_parameters[7], _volume_parameters[8]);
+    h2->SetTitle(";x;y;z");
     h2->SetMarkerColor(ccc);
-    CLine3D line_from_wire(c.wire().center(), c.wire().getDirection());
+    CLine3D line_from_wire(c.second.wire().center(), c.second.wire().getDirection());
     for (int t = -100; t < 100; t++) {
       for (int theta = 0; theta < 628; theta++) {
-        TVector3 p = GetCylinderCoordinates(line_from_wire, (double)t, c.evaluateDriftRadius(), theta/100.);
+        TVector3 p = GetCylinderCoordinates(line_from_wire, (double)t, c.second.driftVelocity() * c.first, theta/100.);
         h2->Fill(p.X(), p.Y(), p.Z());
       }
     }
@@ -277,8 +297,8 @@ void TrackletFinder::Draw2DWires()
   }
   
   for (auto c:(*_fired_cells)) {
-    TVector3 l_start = c.wire().getPoints()[0];
-    TVector3 l_end   = c.wire().getPoints()[1];
+    TVector3 l_start = c.second.wire().getPoints()[0];
+    TVector3 l_end   = c.second.wire().getPoints()[1];
 
     TLine* tl = new TLine(l_start.X(), l_start.Y(), l_end.X(), l_end.Y());
     tl->Draw("same");

@@ -44,11 +44,15 @@ class SANDTrackerModule
   SANDTrackerPlane& getPlane(long index);
   const SANDTrackerPlane& getPlane(long index) const;
 
-  int nPlanes() const
+  int nPlanes()
   {
     return _vPlanes.size();
   }
   std::map<long, SANDTrackerPlane>& planes()
+  {
+    return _vPlanes;
+  };
+  const std::map<long, SANDTrackerPlane>& planes() const
   {
     return _vPlanes;
   };

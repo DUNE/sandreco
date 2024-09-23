@@ -14,7 +14,7 @@ namespace TrackerModuleConfiguration
     std::map<std::string, double> _id_to_offset =
     {
       {"0", 10},
-      {"1", 5},
+      {"1", 10},
       {"2", 10}
     };
     
@@ -22,7 +22,7 @@ namespace TrackerModuleConfiguration
     {
       {"0", 10},
       {"1", 10},
-      {"2", 20}
+      {"2", 10}
     };
     
     std::map<std::string, double> _id_to_length =
@@ -30,6 +30,13 @@ namespace TrackerModuleConfiguration
       {"0", 500},
       {"1", 500},
       {"2", 500}
+    };
+
+    std::map<std::string, double> _id_to_velocity =
+    {
+      {"0", 0.05},
+      {"1", 0.05},
+      {"2", 0.05}
     };
   }
   
@@ -39,6 +46,12 @@ namespace TrackerModuleConfiguration
     {
       {"1", M_PI_2},
       {"2", 0}
+    };
+
+    std::map<std::string, double> _id_to_velocity =
+    {
+      {"0", 52},
+      {"1", 52},
     };
   }
 }

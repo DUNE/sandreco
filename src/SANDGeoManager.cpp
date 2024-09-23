@@ -776,7 +776,8 @@ void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
 
     TVector2 rotated_2d_position = LocalToRotated(local_2d_position, plane);
     // To Do: use the true radius of the tube
-    plane.addCell(rotated_2d_position.Y(), w, 2.5, 2.5);
+    plane.addCell(rotated_2d_position.Y(), w, 2.5, 2.5, 
+                  TrackerModuleConfiguration::STT::_id_to_velocity[std::to_string(plane.lid())]);
   }
 }
 
@@ -860,8 +861,6 @@ void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
 
     plane.setRotation(angle);
 
-    TGeoMatrix* plane_matrix = node->GetMatrix();
-    TGeoHMatrix plane_hmatrix = matrix * (*plane_matrix);
     TGeoBBox* plane_shape = (TGeoBBox*)node->GetVolume()->GetShape();
     TVector3 plane_dimension;
     if(angle == 0) {
@@ -874,9 +873,9 @@ void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
     plane_dimension.SetZ(2 * plane_shape->GetDX());
 
     TVector3 plane_position;
-    plane_position.SetX(plane_hmatrix.GetTranslation()[0]);
-    plane_position.SetY(plane_hmatrix.GetTranslation()[1]);
-    plane_position.SetZ(plane_hmatrix.GetTranslation()[2]);
+    plane_position.SetX(matrix.GetTranslation()[0]);
+    plane_position.SetY(matrix.GetTranslation()[1]);
+    plane_position.SetZ(matrix.GetTranslation()[2]);
 
     plane.setPosition(plane_position);
     plane.setDimension(plane_dimension);
@@ -931,7 +930,8 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
     if (w.length() > TrackerModuleConfiguration::Drift::_id_to_length[std::to_string(plane.lid())]) {
       plane.addCell(transverse_position, w, 
                     TrackerModuleConfiguration::Drift::_id_to_offset[std::to_string(plane.lid())],
-                    plane.getDimension().Z());
+                    plane.getDimension().Z(),
+                    TrackerModuleConfiguration::Drift::_id_to_velocity[std::to_string(plane.lid())]);
       wire_id++;
     }
     transverse_position -= TrackerModuleConfiguration::Drift::_id_to_spacing[std::to_string(plane.lid())];
