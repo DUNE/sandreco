@@ -28,6 +28,17 @@ class SANDTrackerCell
 
   {
   }
+  
+  SANDTrackerCell(const SANDWireInfo &l, 
+                  const double w,
+                  const double h)
+      : _wire(l),
+        _wireID(l.id()),
+        _width(w),
+        _height(h)
+
+  {
+  }
 
   SANDTrackerCell(const SANDWireInfo &l): _wire(l),
         _wireID(l.id())

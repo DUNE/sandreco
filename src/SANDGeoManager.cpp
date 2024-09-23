@@ -775,7 +775,8 @@ void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
     }
 
     TVector2 rotated_2d_position = LocalToRotated(local_2d_position, plane);
-    plane.addCell(rotated_2d_position.Y(), w);
+    // To Do: use the true radius of the tube
+    plane.addCell(rotated_2d_position.Y(), w, 2.5, 2.5);
   }
 }
 
@@ -902,13 +903,7 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
 
     long wire_unique_id = encode_wire_id(plane.uid(), wire_id);
     w.id(wire_unique_id);
-
-    // To Do: manage field wires
-    if (wire_id % 2 == 0) {
-      w.type(SANDWireInfo::Type::kSignal);
-    } else {
-      w.type(SANDWireInfo::Type::kSignal);
-    }
+    w.type(SANDWireInfo::Type::kSignal);
     TVector2 rotated_transverse_position = RotatedToLocal(TVector2(0, transverse_position), plane);
     TVector3 intersection(0, 0, 0);
     if (getLineSegmentIntersection(rotated_transverse_position, local_plane_x_axis, 
@@ -934,7 +929,9 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
     }
 
     if (w.length() > TrackerModuleConfiguration::Drift::_id_to_length[std::to_string(plane.lid())]) {
-      plane.addCell(transverse_position, w);
+      plane.addCell(transverse_position, w, 
+                    TrackerModuleConfiguration::Drift::_id_to_offset[std::to_string(plane.lid())],
+                    plane.getDimension().Z());
       wire_id++;
     }
     transverse_position -= TrackerModuleConfiguration::Drift::_id_to_spacing[std::to_string(plane.lid())];

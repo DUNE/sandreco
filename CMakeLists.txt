@@ -48,6 +48,10 @@ target_include_directories(Utils PUBLIC
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Utils PUBLIC SANDGeoManager EDepSim::edepsim_io)
 
+# Creates TrackletFinder library
+add_library(TrackletFinder SHARED src/SANDTrackletFinder.cpp)
+target_link_libraries(TrackletFinder SANDGeoManager Struct Utils)
+
 # Creates a libSANDRecoUtils shared library
 add_library(SANDRecoUtils SHARED src/SANDRecoUtils.cpp  )
 target_include_directories(SANDRecoUtils PUBLIC
