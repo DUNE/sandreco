@@ -38,9 +38,7 @@ int main(int argc, char* argv[])
   tracklet_finder.SetSigmaAngle(0.2);    // rad
 
   std::map<double, SANDTrackerCell> cell_digit_map;
-  // int i = 0;
-  // int j = 0;
-  for (int i = 0; i < digits->size(); i++) {
+  for (int i = 0; i < (int)digits->size(); i++) {
     for (const auto& m : modules_map) {
       auto planes = m.second.planes();
       for (const auto& p:planes) {
@@ -49,13 +47,9 @@ int main(int argc, char* argv[])
           if (c.second.wire().id() == digits->at(i).did) {
             cell_digit_map.insert({i, c.second});
             std::cout << digits->at(i).did << std::endl;
-
-            // i++;
           }
         }
       }
-      // if (j == 3) break;
-      // j++;
     }
   }
   std::cout << cell_digit_map.size() << std::endl;

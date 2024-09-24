@@ -13,8 +13,8 @@ class SANDWireInfo : public TObject
     kVertical
   };
   enum class ReadoutEnd {
-    kPlus,
-    kMinus
+    kLeft,
+    kRight
   };
   enum class Type {
     kSignal,

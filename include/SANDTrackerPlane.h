@@ -47,7 +47,7 @@ class SANDTrackerPlane
     }
   }
   const std::map<long, SANDTrackerCell>& getIdToCellMap() const {return _id_to_cell_map;};
-  const int nCells() const
+  int nCells() const
   {
     return _coord_to_id_map.size();
   }

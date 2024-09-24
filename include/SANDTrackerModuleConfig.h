@@ -50,8 +50,8 @@ namespace TrackerModuleConfiguration
 
     std::map<std::string, double> _id_to_velocity =
     {
-      {"0", 52},
-      {"1", 52},
+      {"0", 0.05},
+      {"1", 0.05},
     };
   }
 }

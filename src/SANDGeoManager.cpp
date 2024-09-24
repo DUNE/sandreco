@@ -772,6 +772,19 @@ void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
     if (w.getPoints().size() == 2) {
       w.center((w.getPoints()[0] + w.getPoints()[1]) * 0.5);
       w.length((w.getPoints()[1] - w.getPoints()[0]).Mag());
+
+      if (fabs(w.getPoints()[0].Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kLeft);
+      }
+      if (fabs(w.getPoints()[0].X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kLeft);
+      }
+      if (fabs(w.getPoints()[1].Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kRight);
+      }
+      if (fabs(w.getPoints()[1].X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kRight);
+      }
     }
 
     TVector2 rotated_2d_position = LocalToRotated(local_2d_position, plane);
@@ -925,6 +938,18 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
     if (w.getPoints().size() == 2) {
       w.center((w.getPoints()[0] + w.getPoints()[1]) * 0.5);
       w.length((w.getPoints()[1] - w.getPoints()[0]).Mag());
+      if (fabs(w.getPoints()[0].Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kLeft);
+      }
+      if (fabs(w.getPoints()[0].X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kLeft);
+      }
+      if (fabs(w.getPoints()[1].Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kRight);
+      }
+      if (fabs(w.getPoints()[1].X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kRight);
+      }
     }
 
     if (w.length() > TrackerModuleConfiguration::Drift::_id_to_length[std::to_string(plane.lid())]) {
