@@ -449,7 +449,7 @@ void SANDGeoManager::set_ecal_info()
   }
 }
 
-const SANDTrackerPlane& SANDGeoManager::get_plane_info(long wire_global_id) const
+std::map<long, SANDTrackerPlane>::const_iterator SANDGeoManager::get_plane_info(long wire_global_id) const
 {
   long supermodule_id, module_unique_id, local_module_id, module_replica_id,
        plane_global_id, plane_local_id, plane_type, wire_local_id;
@@ -474,7 +474,7 @@ std::map<long, SANDTrackerCell>::const_iterator SANDGeoManager::get_cell_info(lo
   decode_module_id(module_unique_id, supermodule_id, 
                   local_module_id,  module_replica_id);
                   
-  return _tracker_modules_map.at(module_unique_id).getPlane(plane_global_id).getCell(wire_global_id);
+  return _tracker_modules_map.at(module_unique_id).getPlane(plane_global_id)->second.getCell(wire_global_id);
 }
 
 long SANDGeoManager::encode_wire_id(long plane_global_id, long wire_local_id)
@@ -540,8 +540,7 @@ long SANDGeoManager::get_stt_module_id(const TString& volume_path) const
   if (supermodule_matches->GetEntries() == 0) {
     supermodule_id = 0;
   } else {
-    // To Do
-    // Currently there are no supermodules in the stt geometry
+    // To Do: Currently there are no supermodules in the stt geometry
   }
 
   auto module_matches = stt_module_regex_.MatchS(volume_path);
@@ -685,10 +684,10 @@ void SANDGeoManager::set_stt_plane_info(const TGeoNode* const node,
   long stt_plane_local_id  = get_stt_plane_id(node_path, true);
 
   _tracker_modules_map.insert({stt_module_unique_id, SANDTrackerModule(stt_module_unique_id)});
-  bool added = _tracker_modules_map[stt_module_unique_id].addPlane(SANDTrackerPlane(stt_plane_unique_id, stt_plane_local_id));
+  bool added = _tracker_modules_map[stt_module_unique_id].addPlane(stt_plane_unique_id, stt_plane_local_id);
   
   if (added) {
-    auto& plane = _tracker_modules_map[stt_module_unique_id].getPlane(stt_plane_unique_id);
+    auto& plane = _tracker_modules_map[stt_module_unique_id].getPlane(stt_plane_unique_id)->second;
     double angle = TrackerModuleConfiguration::STT::_id_to_angle[std::to_string(stt_plane_local_id)];
 
     plane.setRotation(angle);
@@ -855,7 +854,7 @@ bool SANDGeoManager::getLineSegmentIntersection(TVector2 p, TVector2 dir, TVecto
 void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
                                           const TGeoHMatrix& matrix)
 {
-  // To Do
+  // To Do:
   // Check rotation of modules in the drift geometry.
   // Currently the rotation of the wire is obtained by rotating 
   // the whole plane. This results is the x-y dimensions being swapped
@@ -866,10 +865,10 @@ void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
   long drift_plane_local_id  = get_drift_plane_id(node_path, true);  // 0,1 or 2
 
   _tracker_modules_map.insert({drift_module_unique_id, SANDTrackerModule(drift_module_unique_id)});
-  bool added = _tracker_modules_map[drift_module_unique_id].addPlane(SANDTrackerPlane(drift_plane_unique_id, drift_plane_local_id));
+  bool added = _tracker_modules_map[drift_module_unique_id].addPlane(drift_plane_unique_id, drift_plane_local_id);
 
   if (added) {
-    auto& plane = _tracker_modules_map[drift_module_unique_id].getPlane(drift_plane_unique_id);
+    auto& plane = _tracker_modules_map[drift_module_unique_id].getPlane(drift_plane_unique_id)->second;
     double angle = TrackerModuleConfiguration::Drift::_id_to_angle[std::to_string(drift_plane_local_id)];
 
     plane.setRotation(angle);
@@ -1312,7 +1311,7 @@ long SANDGeoManager::get_stt_tube_id(double x, double y, double z) const
   long stt_plane_unique_id = get_stt_plane_id(node_path);
   long stt_plane_local_id  = get_stt_plane_id(node_path, true);
 
-  auto& plane = _tracker_modules_map.at(stt_module_unique_id).getPlane(stt_plane_unique_id);
+  auto& plane = _tracker_modules_map.at(stt_module_unique_id).getPlane(stt_plane_unique_id)->second;
 
 
 
@@ -1453,7 +1452,7 @@ std::vector<long> SANDGeoManager::get_segment_ids(const TG4HitSegment& hseg)
   long drift_plane_unique_id = get_drift_plane_id(node_path);
   long drift_plane_local_id  = get_drift_plane_id(node_path, true);
 
-  auto& plane = _tracker_modules_map.at(drift_module_unique_id).getPlane(drift_plane_unique_id);
+  auto& plane = _tracker_modules_map.at(drift_module_unique_id).getPlane(drift_plane_unique_id)->second;
 
   long cell_id_start = GetClosestCellToHit(hseg.Start.Vect(), plane);
   long cell_id_stop  = GetClosestCellToHit(hseg.Stop.Vect(),  plane);

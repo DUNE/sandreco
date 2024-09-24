@@ -653,11 +653,9 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     if (id2 > id1) {
       start_id = id1;
       stop_id = id2;
-      continue;
     } else if (id2 < id1) {
       start_id = id2;
       stop_id = id1;
-      continue;
     } else  // hit in 1 cell
     {
       hit h;
@@ -674,7 +672,6 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
       h.de = hseg.EnergyDeposit;
       h.pid = hseg.PrimaryId;
       h.index = j;
-
       hits2cell[id1].push_back(h);
       continue;
     }
@@ -684,7 +681,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     double hseg_dt = (hseg.Stop - hseg.Start).T();
     double hseg_start_t = hseg.Start.T();
 
-    SANDTrackerPlane plane = geo.get_plane_info(start_id);
+    auto& plane = geo.get_plane_info(start_id)->second;
 
     TVector2 rotated_hit_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
     TVector2 rotated_hit_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
@@ -703,7 +700,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
 
       double step_coordinate;
 
-      if (cell2 != geo.get_plane_info(i+1).getIdToCellMap().end()) {
+      if (cell2 != plane.getIdToCellMapEnd()) {
 
         SANDWireInfo wire1 = cell1->second.wire();
         SANDWireInfo wire2 = cell2->second.wire();
@@ -725,7 +722,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
       } else {
         step_coordinate = rotated_hit_stop_2d_position.Y();
       }
-      double t = (step_coordinate - transverse_coord_start) / rotated_delta_y;
+      double t = fabs((step_coordinate - transverse_coord_start) / rotated_delta_y);
       
       TVector2 rotated_crossing_point(rotated_start_2d_position.X() + rotated_delta_x * t, 
                                       rotated_start_2d_position.Y() + rotated_delta_y * t);
@@ -761,10 +758,16 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
       h.pid = hseg.PrimaryId;
       h.index = j;
 
+      hits2cell[i].push_back(h);
+
       start = stop;
       hseg_start_t += t * hseg_dt;
 
-      hits2cell[i].push_back(h);
+      std::cout << (start - hseg.Stop.Vect()).Mag() << std::endl;
+      if ((start - hseg.Stop.Vect()).Mag() < 1E-6) {
+        break;
+      }
+
     }
   }
 }

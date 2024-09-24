@@ -40,9 +40,9 @@ class SANDTrackerModule
     return _target;
   }
 
-  bool addPlane(const SANDTrackerPlane plane);
-  SANDTrackerPlane& getPlane(long index);
-  const SANDTrackerPlane& getPlane(long index) const;
+  bool addPlane(long plane_unique_id, long plane_local_id);
+  std::map<long, SANDTrackerPlane>::iterator getPlane(long index);
+  std::map<long, SANDTrackerPlane>::const_iterator getPlane(long index) const;
 
   int nPlanes()
   {

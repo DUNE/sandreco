@@ -2,6 +2,8 @@
 
 #include "SANDWireInfo.h"
 
+class SANDTrackerPlane;
+
 class SANDTrackerCell
 {
   SANDWireInfo _wire;
@@ -13,17 +15,20 @@ class SANDTrackerCell
   double _driftVelocity;  // drift velocity in um/ns
   bool _isFired;
 
+  SANDTrackerPlane* _plane;
+
  public:
   SANDTrackerCell() {};
   SANDTrackerCell(const SANDWireInfo &l, const long wID, const double w, const double h, 
-                  const double time, const double vd, const bool fired)
+                  const double time, const double vd, const bool fired, SANDTrackerPlane* plane)
       : _wire(l),
         _wireID(l.id()),
         _width(w),
         _height(h),
         _timeResponse(time),
         _driftVelocity(vd),
-        _isFired(fired)
+        _isFired(fired),
+        _plane(plane)
 
   {
   }
@@ -31,18 +36,20 @@ class SANDTrackerCell
   SANDTrackerCell(const SANDWireInfo &l, 
                   const double w,
                   const double h,
-                  const double v)
+                  const double v,
+                  SANDTrackerPlane* plane)
       : _wire(l),
         _wireID(l.id()),
         _width(w),
         _height(h),
-        _driftVelocity(v)
+        _driftVelocity(v),
+        _plane(plane)
 
   {
   }
 
-  SANDTrackerCell(const SANDWireInfo &l): _wire(l),
-        _wireID(l.id())
+  SANDTrackerCell(const SANDWireInfo &l, SANDTrackerPlane* plane): _wire(l),
+        _wireID(l.id()), _plane(plane)
   {
   }
 
@@ -68,6 +75,10 @@ class SANDTrackerCell
   bool isFired() const
   {
     return _isFired;
+  }
+  SANDTrackerPlane* getPlane() const 
+  {
+    return _plane;
   }
   long id() const
   {

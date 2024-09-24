@@ -1,29 +1,19 @@
 #include "SANDTrackerModule.h"
 #include <iostream>
 
-SANDTrackerPlane &SANDTrackerModule::getPlane(long index)
+std::map<long, SANDTrackerPlane>::iterator SANDTrackerModule::getPlane(long index)
 {
-  if (_vPlanes.find(index) != _vPlanes.end()) {
-    return _vPlanes.at(index);
-  } else {
-    throw "plane not found...i should impelent a class for exception and "
-          "handling of that";
-  }
+  return _vPlanes.find(index);
 }
 
-const SANDTrackerPlane &SANDTrackerModule::getPlane(long index) const
-{
-  if (_vPlanes.find(index) != _vPlanes.end()) {
-    return _vPlanes.at(index);
-  } else {
-    throw "plane not found...i should impelent a class for exception and "
-          "handling of that";
-  }
+std::map<long, SANDTrackerPlane>::const_iterator SANDTrackerModule::getPlane(long index) const
+{  
+  return _vPlanes.find(index);
 }
 
-bool SANDTrackerModule::addPlane(const SANDTrackerPlane plane)
+bool SANDTrackerModule::addPlane(long plane_unique_id, long plane_local_id)
 {
-  long ui = plane.uid();
-  auto it = _vPlanes.insert({ui, plane});
+  auto it = _vPlanes.insert({plane_unique_id, 
+                             SANDTrackerPlane(plane_unique_id, plane_local_id, this)});
   return it.second;
 }
