@@ -1,7 +1,6 @@
 #include "SANDClustering.h"
 #include "utils.h"
 
-
 std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 {
   std::vector<dg_cell> complete_cells, broken_cells, multicomplete_cells;
@@ -20,8 +19,6 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
       complete_cells.push_back(cell);
     }
   }
-
-
 
   std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells =
       ProcessMultiHits(complete_cells, broken_cells);
@@ -52,53 +49,46 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
     struct cluster Clust;
 
     Clust = Create_cluster(v_cell);
-    // Clust = Calc_variables(v_cell);
+
     vec_clust.push_back(Clust);
   }
   // SPLIT
   int n_clu = 0;
-  
+
   bool HasSplit = false;
   int iteration = 0;
   do {
-    
+
     vec_clust = Split(vec_clust, HasSplit);
     iteration++;
   } while (HasSplit);
   // MERGE
-  
+
   vec_clust = Merge(vec_clust);
 
   // Track Fit
   vec_clust = TrackFit(vec_clust);
 
- 
-  
-vec_clust = RecoverIncomplete(vec_clust, broken_cells);
-  n_clu = 0;
-  std::cout << "Recover Incomplete: " <<std::endl; 
-  for (auto const& clu_info : vec_clust) {
-      std::cout << "Cluster number: " << n_clu << std::endl;
-     Clust_info(clu_info);
-     std::cout << std::endl;
-    n_clu++;
-  }
+  vec_clust = RecoverIncomplete(vec_clust, broken_cells);
+
   return vec_clust;
 }
 
 void Clust_info(cluster clus)
 {
   std::cout << "Cluster Energy " << clus.e << " MeV" << std::endl;
-  std::cout << "Coordinate centroide: " << clus.x << " [X] " << clus.y << " [Y] "
-           << clus.z << " [z] e tempo di arrivo medio " << clus.t << " ns"
-           << std::endl;
+  std::cout << "Coordinate centroide: " << clus.x << " [X] " << clus.y
+            << " [Y] " << clus.z << " [z] e tempo di arrivo medio " << clus.t
+            << " ns" << std::endl;
   std::cout << "Varianza: " << clus.varx << " [X] " << clus.vary << " [Y] "
-           << clus.varz << " [z]" << std::endl;
+            << clus.varz << " [z]" << std::endl;
   std::cout << "Composto dalle seguenti celle: ";
   for (int i = 0; i < clus.reco_cells.size(); i++) {
-    std::cout << "Cell: " << clus.reco_cells.at(i).id << " X: " << clus.reco_cells.at(i).x
-             << " Y: " << clus.reco_cells.at(i).y << " Z: " << clus.reco_cells.at(i).z << ", Energy: " << clus.reco_cells.at(i).e << std::endl; 
-            
+    std::cout << "Cell: " << clus.reco_cells.at(i).id
+              << " X: " << clus.reco_cells.at(i).x
+              << " Y: " << clus.reco_cells.at(i).y
+              << " Z: " << clus.reco_cells.at(i).z
+              << ", Energy: " << clus.reco_cells.at(i).e << std::endl;
   }
 
   std::cout << std::endl;
@@ -182,9 +172,8 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
 
   std::vector<double> tAvec;
   std::vector<double> tBvec;
-  int n_inc_cells=0;
+  int n_inc_cells = 0;
   for (auto const& brok_cells : incomplete_cells) {
-    std::cout << "INCOMPLETE cell n: " << n_inc_cells << std::endl;  
     int isbarrel = 0;
     if (brok_cells.mod == 30) isbarrel = 1;
     if (brok_cells.mod == 40) isbarrel = 2;
@@ -201,12 +190,10 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
       double rec_en = 0;
       bool hasNeigh = false;
       int nclusterC = 0;
-      std::cout << "Looking at cluster " << j << std::endl; 
       for (int i = 0; i < clus.at(j).reco_cells.size(); i++) {
 
         if (isNeighbour(brok_cells.id, clus.at(j).reco_cells.at(i).id)) {
-            std::cout << "incomplete cell number " << n_inc_cells << ", id: "<< brok_cells.id << " is near cluster " << j << " at reco_cell id: "<< clus.at(j).reco_cells.at(i).id<< std::endl; 
-            
+
           hasNeigh = true;
           nclusterC++;
 
@@ -221,17 +208,15 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
 
         minentry = j;
         found = 1;
-        std::cout << "              cluster "<< minentry << " has at least one NEAR incomplete cell"<<std::endl;
+
       } else if (found == 0) {
-        std::cout << "              cluster "<< j << " has NO NEAR incomplete cell, calculate clu centroids "<<std::endl;
         double clus_phi =
             atan((clus.at(j).z - 23910.00) / (clus.at(j).y + 2384.73)) * 180 /
             TMath::Pi();
-        // if (isbarrel != 0) cout << "Cluster Phi: " << clus_phi << std::endl;
+
         double clus_theta = atan((clus.at(j).z - 23910.00) / (clus.at(j).x)) *
                             180 / TMath::Pi();
-        // if (isbarrel == 0) cout << "Cluster Theta: " << clus_theta <<
-        // std::endl;
+
         double minphi = 999, mintheta = 999;
         int isbarrelc = 0;
         if (clus.at(j).reco_cells[0].mod == 30) isbarrelc = 1;
@@ -243,31 +228,24 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
               (brok_cells.z - clus.at(j).z) * (brok_cells.z - clus.at(j).z) +
               (brok_cells.y - clus.at(j).y) * (brok_cells.y - clus.at(j).y));
           if (abs(cell_phi - clus_phi) < minphi && dist < 2000) {
-            std::cout << "cluster "<< j << " is in the barrel and phi <3, dist < 2000" << std::endl; 
-            
             minphi = abs(cell_phi - clus_phi);
             minentry = j;
           }
-          std::cout << "and phi, dist NOT GOOD -> continue" << std::endl; 
           continue;
         }
         if (isbarrel == isbarrelc && isbarrel != 0) {
-          std::cout << "cluster "<< j << " is in the endcap " ; 
+
           if (abs(cell_theta - clus_theta) < 3) {
-            std::cout << "and phi <3, dist < 2000" << std::endl; 
-            
             found = 1;
             mintheta = abs(cell_theta - clus_theta);
             minentry = j;
           }
-          std::cout << "and phi, dist NOT GOOD -> continue" << std::endl;
           continue;
         }
       }
     }
     if (found == 1 && isbarrel == 0) {
-      std::cout << "Cluster "<< minentry << " is near the broken cell " << n_inc_cells << std::endl; 
-      std::cout << "(barrel)" << std::endl; 
+
       double rec_en = 0;
       double DpmA = clus.at(minentry).x / 10 + 215;
       double DpmB = -clus.at(minentry).x / 10 + 215;
@@ -277,35 +255,30 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
         rec_en =
             sand_reco::ecal::reco::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
-        // clus.at(minentry).cells.push_back(brok_cells);
-        std::cout << "SHOULD NOT HAPPEN "<< std::endl;  
+
       } else if (brok_cells.ps1.size() != 0) {
-        std::cout << "ps1 only "<< std::endl; 
+
         int laycell = brok_cells.lay;
-        std::cout << "energy of cluster initial: " << clus.at(minentry).e << std::endl; 
+
         double f =
             sand_reco::ecal::attenuation::AttenuationFactor(DpmA, laycell);
         rec_en = EfromADCsingle(brok_cells.ps1.at(0).adc, f);
-        std::cout << "recovered energy: " << rec_en << std::endl; 
+
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
-        
-        std::cout << "updated energy of cluster: " << clus.at(minentry).e << std::endl; 
+
       } else if (brok_cells.ps2.size() != 0) {
-        std::cout << "ps2 only "<< std::endl; 
+
         int laycell = brok_cells.lay;
-        std::cout << "energy of cluster initial: " << clus.at(minentry).e << std::endl; 
+
         double f =
             sand_reco::ecal::attenuation::AttenuationFactor(DpmB, laycell);
         rec_en = EfromADCsingle(brok_cells.ps2.at(0).adc, f);
-        std::cout << "recovered energy: " << rec_en << std::endl; 
+
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
-        
-        std::cout << "updated energy of cluster: " << clus.at(minentry).e << std::endl; 
       }
     }
     if (found == 1 && isbarrel != 0) {
-      std::cout << "Cluster "<< minentry << " is near the broken cell " << n_inc_cells << std::endl; 
-      std::cout << "(endcap)" << std::endl; 
+
       double rec_en = 0;
       double ecl = brok_cells.l;
       double DpmA = clus.at(minentry).z / 10 + ecl / 20;
@@ -316,105 +289,86 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
         rec_en =
             sand_reco::ecal::reco::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
-        
-        
-        std::cout << "SHOULD NOT HAPPEN "<< std::endl;  
+
       } else if (brok_cells.ps1.size() != 0) {
-        std::cout << "ps1 only "<< std::endl; 
+
         int laycell = brok_cells.lay;
-        std::cout << "energy of cluster initial: " << clus.at(minentry).e << std::endl; 
+
         double f =
             sand_reco::ecal::attenuation::AttenuationFactor(DpmA, laycell);
         rec_en = EfromADCsingle(brok_cells.ps1.at(0).adc, f);
-        std::cout << "recovered energy: " << rec_en << std::endl; 
+
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
-        std::cout << "updated energy of cluster: " << clus.at(minentry).e << std::endl; 
-        
+
       } else if (brok_cells.ps2.size() != 0) {
-        std::cout << "ps2 only "<< std::endl; 
+
         int laycell = brok_cells.lay;
-        std::cout << "energy of cluster initial: " << clus.at(minentry).e << std::endl; 
+
         double f =
             sand_reco::ecal::attenuation::AttenuationFactor(DpmB, laycell);
         rec_en = EfromADCsingle(brok_cells.ps2.at(0).adc, f);
-        std::cout << "recovered energy: " << rec_en << std::endl; 
+
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
-        std::cout << "updated energy of cluster: " << clus.at(minentry).e << std::endl; 
-        
       }
     }
     n_inc_cells++;
-    std::cout << std::endl << std::endl; 
+    std::cout << std::endl << std::endl;
   }
 
   return clus;
 }
 
-
 std::vector<cluster> Split(std::vector<cluster> original_clu_vec,
-                           bool &HasSplit)
+                           bool& HasSplit)
 {
   std::vector<cluster> clu_vec;
   std::vector<reco_cell> all_cells;
 
   int num_c = 0;
-  
+
   HasSplit = false;
   for (auto const& clus : original_clu_vec) {
-    
+
     int splitted = 0;
     double tA = 0, tB = 0, tA2 = 0, tB2 = 0;
     double EA, EB, EAtot = 0, EBtot = 0, EA2tot = 0, EB2tot = 0;
     double tRMS_A, tRMS_B, dist;
-    
+
     all_cells = clus.reco_cells;
     for (int j = 0; j < all_cells.size(); j++) {
-      
+
       EA = all_cells.at(j).ps1.adc;
-      
+
       EB = all_cells.at(j).ps2.adc;
       EAtot += EA;
       EA2tot += EA * EA;
       EBtot += EB;
       EB2tot += EB * EB;
-      //double d =
-        //  DfromTDC(all_cells[j].ps1.at(0).tdc, all_cells[j].ps2.at(0).tdc);
+
       double d = DfromTDC(all_cells[j].ps1.tdc, all_cells[j].ps2.tdc);
       double d1, d2, d3;
       d1 = 0.5 * all_cells[j].l + d;
       d2 = 0.5 * all_cells[j].l - d;
-      // double cell_E = kloe_simu::EfromADC(all_cells[j].ps1.at(0).adc,
-      //                                     all_cells[j].ps2.at(0).adc, d1, d2,
-      //                                     all_cells[j].lay);
+
       double cell_E = sand_reco::ecal::reco::EfromADC(
           all_cells[j].ps1.adc, all_cells[j].ps2.adc, d1, d2, all_cells[j].lay);
-      // tA += (all_cells.at(j).ps1.at(0).tdc -
-      //        kloe_simu::vlfb * d1 / kloe_simu::m_to_mm) *
-      //       EA;
+
       tA +=
           (all_cells.at(j).ps1.tdc - sand_reco::ecal::scintillation::vlfb * d1 /
                                          sand_reco::conversion::m_to_mm) *
           EA;
-      // tA2 += std::pow(all_cells.at(j).ps1.at(0).tdc -
-      //                     kloe_simu::vlfb * d1 / kloe_simu::m_to_mm,
-      //                 2) *
-      //        EA;
+
       tA2 += std::pow(all_cells.at(j).ps1.tdc -
                           sand_reco::ecal::scintillation::vlfb * d1 /
                               sand_reco::conversion::m_to_mm,
                       2) *
              EA;
-      // tB += (all_cells.at(j).ps2.at(0).tdc -
-      //        kloe_simu::vlfb * d2 / kloe_simu::m_to_mm) *
-      //       EB;
+
       tB +=
           (all_cells.at(j).ps2.tdc - sand_reco::ecal::scintillation::vlfb * d2 /
                                          sand_reco::conversion::m_to_mm) *
           EB;
-      // tB2 += std::pow(all_cells.at(j).ps2.at(0).tdc -
-      //                     kloe_simu::vlfb * d2 / kloe_simu::m_to_mm,
-      //                 2) *
-      //        EB;
+
       tB2 += std::pow(all_cells.at(j).ps2.tdc -
                           sand_reco::ecal::scintillation::vlfb * d2 /
                               sand_reco::conversion::m_to_mm,
@@ -422,89 +376,83 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec,
              EB;
     }
     tA = tA / EAtot;
-    
+
     tA2 = tA2 / EAtot;
     tB = tB / EBtot;
-    
+
     tB2 = tB2 / EBtot;
     tRMS_A = sqrt(abs((tA2 - tA * tA) * (EA2tot - EAtot * EAtot) / EA2tot));
-    
+
     tRMS_B = sqrt(abs((tB2 - tB * tB) * (EB2tot - EBtot * EBtot) / EB2tot));
-    
+
     dist = std::sqrt(tRMS_A * tRMS_A + tRMS_B * tRMS_B);
-    
+
     if (dist > 5) {
       HasSplit = true;
       std::vector<reco_cell> q1_cells, q2_cells, q3_cells, q4_cells;
-      //std::vector<dg_cell> q1_cells, q2_cells, q3_cells, q4_cells;
+
       int n_cella = 0;
       for (auto const& a_cells : all_cells) {
-        // std::cout << "cell id: " << a_cells.id << std::endl;
-        //double d = DfromTDC(a_cells.ps1.at(0).tdc, a_cells.ps2.at(0).tdc);
+
         double d = DfromTDC(a_cells.ps1.tdc, a_cells.ps2.tdc);
         double d1, d2, d3;
         d1 = 0.5 * a_cells.l + d;
         d2 = 0.5 * a_cells.l - d;
-        
-        // double t_difA = a_cells.ps1.at(0).tdc -
-        //                 (kloe_simu::vlfb * d1 / kloe_simu::m_to_mm) - tA;
+
         double t_difA = a_cells.ps1.tdc -
                         (sand_reco::ecal::scintillation::vlfb * d1 /
                          sand_reco::conversion::m_to_mm) -
                         tA;
-        // double t_difB = a_cells.ps2.at(0).tdc -
-        //                 (kloe_simu::vlfb * d2 / kloe_simu::m_to_mm) - tB;
-double t_difB = a_cells.ps2.tdc -
+
+        double t_difB = a_cells.ps2.tdc -
                         (sand_reco::ecal::scintillation::vlfb * d2 /
                          sand_reco::conversion::m_to_mm) -
                         tB;
-         
-        //double t_difA_old = a_cells.ps1.at(0).tdc - tA;
+
         double t_difA_old = a_cells.ps1.tdc - tA;
-        //double t_difB_old = a_cells.ps2.at(0).tdc - tB;
+        
         double t_difB_old = a_cells.ps2.tdc - tB;
 
         if (t_difA > 0) {
           if (t_difB > 0) {
             q1_cells.push_back(a_cells);
-            
+
           } else {
             q2_cells.push_back(a_cells);
-            
           }
         } else {
           if (t_difB > 0) {
             q3_cells.push_back(a_cells);
-            
+
           } else {
-            
+
             q4_cells.push_back(a_cells);
           }
         }
         n_cella++;
       }
-      std::vector<cluster> quadrant_cluster;  
+      std::vector<cluster> quadrant_cluster;
       if (q1_cells.size() != 0) {
         cluster clus = Calc_variables(q1_cells);
-        // quadrant_cluster.push_back(clus); 
+        
         clu_vec.push_back(clus);
         splitted++;
       }
       if (q2_cells.size() != 0) {
         cluster clus = Calc_variables(q2_cells);
-        // quadrant_cluster.push_back(clus); 
+        
         clu_vec.push_back(clus);
         splitted++;
       }
       if (q3_cells.size() != 0) {
         cluster clus = Calc_variables(q3_cells);
-        // quadrant_cluster.push_back(clus); 
+        
         clu_vec.push_back(clus);
         splitted++;
       }
       if (q4_cells.size() != 0) {
         cluster clus = Calc_variables(q4_cells);
-        // quadrant_cluster.push_back(clus); 
+        
         clu_vec.push_back(clus);
         splitted++;
       }
@@ -512,19 +460,17 @@ double t_difB = a_cells.ps2.tdc -
       q2_cells.clear();
       q3_cells.clear();
       q4_cells.clear();
-      
+
     } else {
       clu_vec.push_back(clus);
     }
     all_cells.clear();
     num_c++;
-    
   }
-  
+
   original_clu_vec.clear();
   return clu_vec;
 }
-
 
 std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
 {
@@ -555,7 +501,6 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
     clust.varx = Og_cluster.at(i).varx;
     clust.vary = Og_cluster.at(i).vary;
     clust.varz = Og_cluster.at(i).varz;
-    // clust.cells = Og_cluster.at(i).cells;
     clust.reco_cells = Og_cluster.at(i).reco_cells;
 
     for (int j = i; j < Og_cluster.size(); j++) {
@@ -579,7 +524,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
       double dy = sqrt(std::pow(yi - yj, 2));
       double dz = sqrt(std::pow(zi - zj, 2));
 
-      if (D < 600 && DT < 2.5) {
+      if (D < 250 && DT < 2.5) {
 
         bool endcap = false;
         if (clust.reco_cells[0].id > 25000) {
@@ -588,7 +533,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
         if (endcap == true) {
           double Dz_ec = abs(yi - yj);
           D = sqrt((xi - xj) * (xi - xj) + (zi - zj) * (zi - zj));
-          if (Dz_ec < 600 && D < 600) {
+          if (Dz_ec < 250 && D < 250) {
             std::vector<reco_cell> vec_cells_j = Og_cluster.at(j).reco_cells;
             for (int k = 0; k < vec_cells_j.size(); k++) {
               clust.reco_cells.push_back(vec_cells_j.at(k));
@@ -599,7 +544,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
         } else if (endcap == false) {
           double Dz_bar = abs(xi - xj);
           D = sqrt((zi - zj) * (zi - zj) + (yi - yj) * (yi - yj));
-          if (Dz_bar < 600 && D < 600) {
+          if (Dz_bar < 250 && D < 250) {
             std::vector<reco_cell> vec_cells_j = Og_cluster.at(j).reco_cells;
             for (int k = 0; k < vec_cells_j.size(); k++) {
               clust.reco_cells.push_back(vec_cells_j.at(k));
@@ -743,7 +688,7 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
 
     int Q = 0, L = 0;
     for (int k = first_lay; k <= 5; k++) {
-      if (Q == 0 && (LayE[k - 1] >= 0.05 * clu_vec.at(i).e)) {  // 0.5?
+      if (Q == 0 && (LayE[k - 1] >= 0.05 * clu_vec.at(i).e)) {  
         Q = k;
       }
       L++;
@@ -903,7 +848,7 @@ cluster Create_cluster(std::vector<dg_cell> cells)
     rec_cell.ps1 = cell.ps1.at(0);
     rec_cell.ps2 = cell.ps2.at(0);
 
-    if (cell.mod > 25) {  
+    if (cell.mod > 25) {
       d3 = cell.y - d;
 
       rec_cell.y = d3;
@@ -914,7 +859,7 @@ cluster Create_cluster(std::vector<dg_cell> cells)
       y2_weighted = y2_weighted + (d3 * d3 * cell_E);
       x_weighted = x_weighted + (cell.x * cell_E);
       x2_weighted = x2_weighted + (cell.x * cell.x * cell_E);
-    } else {  
+    } else {
       d3 = cell.x - d;
 
       rec_cell.x = d3;
@@ -979,13 +924,11 @@ cluster Create_cluster(std::vector<dg_cell> cells)
   clust.varx = dx;
   clust.vary = dy;
   clust.varz = dz;
-  // clust.cells = cells;
   clust.reco_cells = reconstructed_cells;
 
   return clust;
 }
 
-// cluster Calc_variables(std::vector<dg_cell> cells)
 cluster Calc_variables(std::vector<reco_cell> cells)
 {
 
@@ -1059,7 +1002,6 @@ cluster Calc_variables(std::vector<reco_cell> cells)
   clust.varx = dx;
   clust.vary = dy;
   clust.varz = dz;
-  // clust.cells = cells;
   clust.reco_cells = reconstructed_cells;
 
   return clust;
@@ -1181,17 +1123,6 @@ double TfromTDC(double t1, double t2, double L)
                 sand_reco::ecal::scintillation::vlfb * L /
                     sand_reco::conversion::m_to_mm);
 }
-
-// double EfromADC(double adc1, double adc2, double d1, double d2, int planeID)
-// {
-//   double f1 = AttenuationFactor(d1, planeID);
-//   double f2 = AttenuationFactor(d2, planeID);
-
-//   double const attpassratio = 0.187;
-//   return 0.5 * (adc1 / f1 + adc2 / f2) /
-//          (attpassratio * sand_reco::ecal::acquisition::pe2ADC *
-//           sand_reco::ecal::photo_sensor::e2pe);
-// }
 
 double EfromADCsingle(double adc, double f)
 {
