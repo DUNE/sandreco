@@ -361,20 +361,20 @@ double sand_reco::stt::getT(double y1, double y2, double y, double z1,
 //   return encodeSTID(pid, sid);
 // }
 
-bool sand_reco::ecal::isCluBigger(const std::vector<dg_tube>& v1,
-                                  const std::vector<dg_tube>& v2)
+bool sand_reco::ecal::isCluBigger(const std::vector<dg_wire>& v1,
+                                  const std::vector<dg_wire>& v2)
 {
   return v1.size() > v2.size();
 }
 
-bool sand_reco::stt::isDigUpstream(const dg_tube& d1, const dg_tube& d2)
+bool sand_reco::stt::isDigUpstream(const dg_wire& d1, const dg_wire& d2)
 {
   return d1.z < d2.z;
 }
 
 bool sand_reco::ecal::isHitBefore(hit h1, hit h2) { return h1.t1 < h2.t1; }
 
-bool sand_reco::stt::isDigBefore(dg_tube d1, dg_tube d2)
+bool sand_reco::stt::isDigBefore(dg_wire d1, dg_wire d2)
 {
   return d1.tdc < d2.tdc;
 }
@@ -618,14 +618,11 @@ void sand_reco::fluka::ecal::CellPosition(TGeoManager* geo, int det, int mod,
                                           int lay, int cel, double& x,
                                           double& y, double& z)
 {
-  x = 0;
-  y = 0;
-  z = 0;
-
-  double dummyLoc[3];
-  double dummyMas[3];
+  double dummyMas[3] = {0., 0., 0.};
 
   if (mod < 24) {
+
+    double dummyLoc[3];
 
     // Local coordinates calculation
     dummyLoc[0] = cellCoordBarrel[mod][lay][cel][0];
@@ -641,6 +638,8 @@ void sand_reco::fluka::ecal::CellPosition(TGeoManager* geo, int det, int mod,
   // right x > 0 : c->mod = 30
   // left  x < 0 : c->mod = 40
   {
+
+    double dummyLoc[3];
 
     // Local coordinates calculation
     dummyLoc[0] = cellCoordEndcap[int(mod / 10)][lay][cel][0];
@@ -793,10 +792,10 @@ void sand_reco::stt::initT0(TG4Event* ev, SANDGeoManager& geo)
                    ev->Primaries[0].Position.Z() / sand_reco::constant::c +
                    r.Gaus(0, bucket_rms);
 
-  for (auto& tube : geo.get_stt_tube_info()) {
-    int plane_global_id;
-    int tube_local_id;
-    geo.decode_stt_tube_id(tube.first, plane_global_id, tube_local_id);
+  for (auto& tube : geo.get_wire_info()) {
+    long plane_global_id;
+    long tube_local_id;
+    geo.decode_wire_id(tube.first, plane_global_id, tube_local_id);
 
     if (t0.find(plane_global_id) == t0.end()) {
       auto tube_info = tube.second;

@@ -51,23 +51,9 @@ struct dg_cell {
   std::vector<dg_ps> ps2;
 };
 
-struct dg_tube {
-  std::string det;
-  int did;
-  double x;
-  double y;
-  double z;
-  double t0;
-  double de;
-  double adc;
-  double tdc; 
-  bool hor;
-  std::vector<int> hindex;
-};
-
 struct dg_wire{
   std::string det;
-  int did;
+  long did; 
   double x;
   double y;
   double z;
@@ -129,8 +115,8 @@ struct track {
   double chi2_ln;
   int ret_cr;
   double chi2_cr;
-  std::vector<dg_tube> clX;
-  std::vector<dg_tube> clY;
+  std::vector<dg_wire> clX;
+  std::vector<dg_wire> clY;
 };
 
 struct particle {

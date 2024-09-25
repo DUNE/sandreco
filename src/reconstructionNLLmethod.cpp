@@ -416,7 +416,7 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
                           int PDG_hits_filter,
                           const std::vector<dg_wire>& wire_infos, 
                           std::vector<dg_wire>& fired_wires){
-    /*
+    /*,
     Perform digitization of edepsim hits
     */
     fired_wires.clear();
@@ -426,7 +426,6 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
     auto muon_hits = FilterHits(hits, PDG_hits_filter);
 
     for(auto& hit : muon_hits){
-        
         for(auto& wire : wire_infos){
 
             auto hit_middle = (hit.GetStart()+hit.GetStop())*0.5;
@@ -1016,55 +1015,55 @@ TF1* GetRecoXZTrack(TF1* first_guess,
     return SinFinalFit;
 }
 
-Helix Reconstruct(Circle FittedCircle,
-                  Line2D FittedLine,
-                  const std::vector<dg_wire*>& hor_wires,
-                  const std::vector<dg_wire*>& ver_wires
-                  ){
-    /*
-        Define the reconstructed helix from
-        the separate reconstruction of the 
-        track in the XZ plane and ZY plane
-    */
-    double zc = FittedCircle.center_x();
-    double yc = FittedCircle.center_y();
-    double R = FittedCircle.R();
-    double m = FittedLine.m();
-    double q = FittedLine.q();
+// Helix Reconstruct(Circle FittedCircle,
+//                   Line2D FittedLine,
+//                   const std::vector<dg_wire*>& hor_wires,
+//                   const std::vector<dg_wire*>& ver_wires
+//                   ){
+//     /*
+//         Define the reconstructed helix from
+//         the separate reconstruction of the 
+//         track in the XZ plane and ZY plane
+//     */
+//     double zc = FittedCircle.center_x();
+//     double yc = FittedCircle.center_y();
+//     double R = FittedCircle.R();
+//     double m = FittedLine.m();
+//     double q = FittedLine.q();
     
-    bool forward_track = (ver_wires[0]->z < ver_wires[1]->z) ? 1 : 0;
+//     bool forward_track = (ver_wires[0]->z < ver_wires[1]->z) ? 1 : 0;
 
-    TVector2 vertex_XZ = {ver_wires[0]->x, ver_wires[0]->x * m + q};
+//     TVector2 vertex_XZ = {ver_wires[0]->x, ver_wires[0]->x * m + q};
 
-    TVector2 vertex_ZY;
-    double upper_y = FittedCircle.GetUpperSemiCircle()->Eval(hor_wires[0]->z);
-    double lower_y = FittedCircle.GetLowerSemiCircle()->Eval(hor_wires[0]->z);
-    if(fabs(upper_y - hor_wires[0]->y) < fabs(lower_y - hor_wires[0]->y)){
-       vertex_ZY = {hor_wires[0]->z, upper_y};
-     }else{
-       vertex_ZY = {hor_wires[0]->z, lower_y};
-     }
+//     TVector2 vertex_ZY;
+//     double upper_y = FittedCircle.GetUpperSemiCircle()->Eval(hor_wires[0]->z);
+//     double lower_y = FittedCircle.GetLowerSemiCircle()->Eval(hor_wires[0]->z);
+//     if(fabs(upper_y - hor_wires[0]->y) < fabs(lower_y - hor_wires[0]->y)){
+//        vertex_ZY = {hor_wires[0]->z, upper_y};
+//      }else{
+//        vertex_ZY = {hor_wires[0]->z, lower_y};
+//      }
     
     
-    double Phi0 = FittedCircle.GetAngleFromPoint(vertex_ZY.X(), vertex_ZY.Y());
-    auto track_direction_ZY = FittedCircle.GetDerivativeAt(vertex_ZY.X(), vertex_ZY.Y()).Unit();
-    TVector2 pt = R*0.3*0.6 * track_direction_ZY;
-    /*
-        reconstructed pt is the value of the tangent0 
-        to the circle in the first point of the curve
-    */
-    double pz = (forward_track) ? -1. * fabs(pt.X()) : fabs(pt.X());
-    double py = pt.Y();
-    double px = pz / FittedLine.m();
+//     double Phi0 = FittedCircle.GetAngleFromPoint(vertex_ZY.X(), vertex_ZY.Y());
+//     auto track_direction_ZY = FittedCircle.GetDerivativeAt(vertex_ZY.X(), vertex_ZY.Y()).Unit();
+//     TVector2 pt = R*0.3*0.6 * track_direction_ZY;
+//     /*
+//         reconstructed pt is the value of the tangent0 
+//         to the circle in the first point of the curve
+//     */
+//     double pz = (forward_track) ? -1. * fabs(pt.X()) : fabs(pt.X());
+//     double py = pt.Y();
+//     double px = pz / FittedLine.m();
     
-    LOG("R", TString::Format("Reconstructed muon (px, py, pz) : (%f, %f, %f)",px,py,pz).Data());
+//     LOG("R", TString::Format("Reconstructed muon (px, py, pz) : (%f, %f, %f)",px,py,pz).Data());
 
-    double dip = atan2(px, pt.Mod());
+//     double dip = atan2(px, pt.Mod());
     
-    Helix h(R, dip, Phi0, 1, {vertex_XZ.X(), vertex_ZY.Y(), vertex_XZ.Y()});
+//     Helix h(R, dip, Phi0, 1, {vertex_XZ.X(), vertex_ZY.Y(), vertex_XZ.Y()});
 
-    return h;
-}
+//     return h;
+// }
 
 // MAIN________________________________________________________________________
 
@@ -1095,6 +1094,8 @@ int main(int argc, char* argv[]){
     const char* fWireInfo;
 
     int index = 1;
+
+    std::string trackerType = "DriftVolume";
     
     LOG("","\n");
     LOG("I","Reading inputs");
@@ -1155,9 +1156,6 @@ int main(int argc, char* argv[]){
         index++;
     }
 
-    std::cout << "Signal propagation..." << (INCLUDE_SIGNAL_PROPAGATION ? "enabled" : "disabled") << std::endl;
-    std::cout << "Hit time............." << (INCLUDE_HIT_TIME ? "enabled" : "disabled") << std::endl;
-    std::cout << "Debug mode..........." << (_DEBUG_ ? "enabled" : "disabled") << std::endl;
     std::cout << "\n";
     
     TFile fEDep(fEDepInput, "READ");

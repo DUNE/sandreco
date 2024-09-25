@@ -1,4 +1,5 @@
 #include "SANDRecoUtils.h"
+#include <numeric>
 
 SANDGeoManager geo_manager;
 
@@ -323,7 +324,7 @@ TF1* RecoUtils::WiresSinFit(const std::vector<dg_wire>& wires){
     }
     std::cout << "number of zy hits: " << z.size() << "\n";
 
-    // Create a TGraph object and fill it with the data
+    // Create a TGraph object and fill it with the data 
     TGraph *graph = new TGraph(z.size(), &x[0], &z[0]);
 
     double x_min = *std::min_element(x.begin(), x.end());
@@ -570,9 +571,9 @@ Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle,
 
     double pt = circle.R() * 0.29979 * 0.6;
     
-    double pz = pt * (helicity * (vertex.Y() - circle.center_y()) / circle.R())
+    double pz = pt * (helicity * (vertex.Y() - circle.center_y()) / circle.R());
     
-    double py = pt * (-helicity * (vertex.Z() - circle.center_x()) / circle.R())
+    double py = pt * (-helicity * (vertex.Z() - circle.center_x()) / circle.R());
     
     double pz_over_px = line.m();
     
@@ -581,6 +582,8 @@ Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle,
     double Phi0 = TMath::ATan2(py, pz) + helicity * TMath::Pi()*0.5;;
 
     momentum = {px, py, pz};
+
+    double dip_angle = TMath::ATan2(px, pt);
     
     return Helix(circle.R(), dip_angle, Phi0, helicity, vertex);
 }

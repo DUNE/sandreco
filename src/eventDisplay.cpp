@@ -19,8 +19,8 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-  int     eventNumber   = 0;
-  TString simFileName   = "";
+  int eventNumber = 0;
+  TString simFileName = "";
   TString digitFileName = "";
 
   // read command line arguments
@@ -28,52 +28,46 @@ int main(int argc, char* argv[])
   for (int iParam = 1; iParam < argc; iParam++) {
 
     if (argv[iParam][0] == '-') {
-      if (!strcmp(argv[iParam],"--sim")) {
+      if (!strcmp(argv[iParam], "--sim")) {
         iParam++;
         if (iParam < argc && argv[iParam][0] != '-') {
           simFileName = argv[iParam];
           continue;
-        }
-        else {
+        } else {
           cerr << "simulated file name missing" << endl;
           exit(1);
         }
-      }
-      else if (!strcmp(argv[iParam],"--digit")) {
+      } else if (!strcmp(argv[iParam], "--digit")) {
         iParam++;
         if (iParam < argc && argv[iParam][0] != '-') {
           digitFileName = argv[iParam];
           continue;
-        }
-        else {
+        } else {
           cerr << "digit file name missing" << endl;
           exit(1);
         }
       }
 
-      switch(argv[iParam][1]) {
+      switch (argv[iParam][1]) {
         case 'e':
-        iParam++;
-        if (iParam < argc && argv[iParam][0] != '-')
-        eventNumber = ((TString)argv[iParam]).Atoll();
-        else {
-          cerr << "event number is missing" << endl;
-          exit(0);
-        }
-        break;
+          iParam++;
+          if (iParam < argc && argv[iParam][0] != '-')
+            eventNumber = ((TString)argv[iParam]).Atoll();
+          else {
+            cerr << "event number is missing" << endl;
+            exit(0);
+          }
+          break;
         case 'h':
-        usage();
-        exit(0);
+          usage();
+          exit(0);
         default:
-        cerr << "unknown command " << argv[iParam] << endl;
-        usage();
-        exit(0);
+          cerr << "unknown command " << argv[iParam] << endl;
+          usage();
+          exit(0);
       }
     }
   }
-
-
-
 
   // TFile* fIn = 0;
   // TFile* fMc = 0;
@@ -82,11 +76,6 @@ int main(int argc, char* argv[])
   // TTree* tIn = 0;
   // TTree* tMc = 0;
   // TGeoManager* geo = 0;
-
-
-
-
-
 
   // try {
   //   ientry = std::atoi(argv[1]);
@@ -98,8 +87,8 @@ int main(int argc, char* argv[])
   //   }
   //   catch(...)
   //   {
-  //     std::cout << "<ERROR> tKF Tree not found in " << fIn->GetName() << std::endl;
-  //     return 1;
+  //     std::cout << "<ERROR> tKF Tree not found in " << fIn->GetName() <<
+  //     std::endl; return 1;
   //   }
 
   //   try {
@@ -108,16 +97,15 @@ int main(int argc, char* argv[])
   //   }
   //   catch(...)
   //   {
-  //     std::cout << "<ERROR> EDepSimGeometry TGeoManager not found in " << fMc->GetName() << std::endl;
-  //     return 1;
+  //     std::cout << "<ERROR> EDepSimGeometry TGeoManager not found in " <<
+  //     fMc->GetName() << std::endl; return 1;
   //   }
   // }
   // catch(...)
   // {
-  //   std::cout << "<ERROR> Usage: " << argv[0] << " <entry> <input file> <edep file>" << std::endl;
-  //   return 1;
+  //   std::cout << "<ERROR> Usage: " << argv[0] << " <entry> <input file> <edep
+  //   file>" << std::endl; return 1;
   // }
-
 
   TApplication application("SAND event viewer", &argc, argv);
   // SANDEventDisplay::Init(geo);
@@ -139,14 +127,16 @@ int main(int argc, char* argv[])
   // tMc->GetEntry(ientry);
 
   SANDEventDisplay eventDisplay(gClient->GetRoot(), 1600, 800);
-  //   SANDEventDisplay eventDisplay(gClient->GetRoot(), gClient->GetDisplayWidth(), gClient->GetDisplayHeight());
+  //   SANDEventDisplay eventDisplay(gClient->GetRoot(),
+  //   gClient->GetDisplayWidth(), gClient->GetDisplayHeight());
   eventDisplay.SetEventNumber(eventNumber);
-  if (simFileName != "")   eventDisplay.SetSimData(simFileName);
+  if (simFileName != "") eventDisplay.SetSimData(simFileName);
   if (digitFileName != "") eventDisplay.SetDigitData(digitFileName);
 
   eventDisplay.Run();
 
-  // cout << gClient->GetDisplayWidth() << " " << gClient->GetDisplayHeight() << endl;
+  // cout << gClient->GetDisplayWidth() << " " << gClient->GetDisplayHeight() <<
+  // endl;
 
   // tIn->GetEntry(ientry);
 
@@ -176,15 +166,17 @@ int main(int argc, char* argv[])
   //       auto& cluster = *thisCluster;
   //       auto m = SANDEventDisplay::GetMarkerFromCluster(cluster, trackColor);
   //
-  //       c->cd(cluster.GetOrientation() == STTPlane::EOrientation::kHorizontal ? 2 : 1);
-  //       m->Draw();
+  //       c->cd(cluster.GetOrientation() == STTPlane::EOrientation::kHorizontal
+  //       ? 2 : 1); m->Draw();
   //     }
   //     else
   //     {
-  //       std::cout << "<ERROR>: cluster with ID: " << clusterID << " not found" << std::endl;
+  //       std::cout << "<ERROR>: cluster with ID: " << clusterID << " not
+  //       found" << std::endl;
   //     }
   //
-  //     auto lines = SANDEventDisplay::GetFilterToPredictionLines(tr, istep, trackColor);
+  //     auto lines = SANDEventDisplay::GetFilterToPredictionLines(tr, istep,
+  //     trackColor);
   //
   //     c->cd(1)->cd();
   //     lines[0]->Draw();
@@ -200,13 +192,13 @@ int main(int argc, char* argv[])
   return 0;
 }
 
-
 //----------------------------------------------------------------------------
 void usage()
 {
   cout << "SAND EVENT VIEWER PACKAGE" << endl;
   cout << "usage:\n";
-  cout << "   eventDisplay [-h] [-e <eventNumber>] [--sim <fileName> | --digit <fileName>]\n";
+  cout << "   eventDisplay [-h] [-e <eventNumber>] [--sim <fileName> | --digit "
+          "<fileName>]\n";
   cout << "command are:\n";
   cout << "  -e     <eventNumber> : Event number\n";
   cout << " --sim   <fileName>    : file with simulated information\n";

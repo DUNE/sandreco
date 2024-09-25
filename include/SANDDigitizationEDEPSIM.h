@@ -48,10 +48,10 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
 
 void create_digits_from_hits(const SANDGeoManager& geo,
                              std::map<int, std::vector<hit> >& hits2Tube,
-                             std::vector<dg_tube>& digit_vec);
+                             std::vector<dg_wire>& digit_vec);
 
 void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
-                  std::vector<dg_tube>& digit_vec);
+                  std::vector<dg_wire>& digit_vec);
 }  // namespace stt
 
 namespace chamber
