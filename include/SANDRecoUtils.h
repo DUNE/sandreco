@@ -253,23 +253,14 @@ class Circle
             return {x_l(angle), y_l(angle)};
         }
 
-        TVector2 GetDerivativeAt(double angle) const {
-            return {dx_derivative(angle), dy_derivative(angle)};
-        }
+        // TVector2 GetDerivativeAt(double angle) const {
+        //     return {dx_derivative(angle), dy_derivative(angle)};
+        // }
 
-        TVector2 GetDerivativeAt(double arg_x, double arg_y) const {
-            double angle = GetAngleFromPoint(arg_x, arg_y);
-            return {dx_derivative(angle), dy_derivative(angle)};
-        }
-
-        double GetAngleFromPoint(double arg_x, double arg_y) const {
-            // return the angle [0, 2pi) corresponding to the point (x,y)
-            if(arg_y -  center_y_ > 0){
-                return atan2(arg_y - center_y_, arg_x - center_x_);
-            }else{
-                return atan2(arg_y - center_y_, arg_x - center_x_) + 2 * TMath::Pi();
-            }
-        }
+        // TVector2 GetDerivativeAt(double arg_x, double arg_y) const {
+        //     double angle = GetAngleFromPoint(arg_x, arg_y);
+        //     return {dx_derivative(angle), dy_derivative(angle)};
+        // }
 
         TF1* GetUpperSemiCircle() const {
             // y as function of the x coordinate
@@ -658,12 +649,6 @@ TF1*                InvertSin(TF1* fSin);
 double              NLL(Helix& h,const std::vector<dg_wire>& digits); // negative log likelihood function
 
 double              FunctorNLL(const double* p);
-
-double              GetDipAngleFromCircleLine(const Circle& circle, 
-                                             const Line2D& line, 
-                                             double Phi0,
-                                             int helicity,
-                                             TVector3& Momentum);
 
 Helix               GetHelixFromCircleLine(const Circle& circle, 
                                            const Line2D& line, 
