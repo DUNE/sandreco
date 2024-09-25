@@ -56,6 +56,7 @@ const char* const endcap_mod_path_regex_string =
 const char* const barrel_module_name = "ECAL_lv_PV";
 const char* const endcap_module_name = "ECAL_end_lv_PV";
 
+const double endcap_cell_width = 4.44;
 const int number_of_layers = 5;
 const int number_of_cells_per_barrel_layer = 12;
 const int number_of_barrel_modules = 24;

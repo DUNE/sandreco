@@ -172,9 +172,15 @@ bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path) const
 
   // BARREL => ECAL_lv_PV_18
   // ENDCAP => ECAL_end_lv_PV_0/ECAL_ec_mod_4_lv_PV_1
-  volume_path = ((TObjString*)obj->At(6))->GetString() + "_" +
-                ((TObjString*)obj->At(7))->GetString() + "_" +
-                ((TObjString*)obj->At(8))->GetString();
+  if (size == 8) {  // barrel module path
+    volume_path = ((TObjString*)obj->At(6))->GetString();
+  } else if (size == 10) {  // endcap module path
+    volume_path = ((TObjString*)obj->At(6))->GetString() + "_" +
+                  ((TObjString*)obj->At(7))->GetString() + "_" +
+                  ((TObjString*)obj->At(8))->GetString();
+  }
+  else
+    return false;
   delete obj;
 
   return true;
@@ -266,11 +272,13 @@ void SANDGeoManager::get_ecal_endcap_module_and_layer(
   // from the map in get_ecal_endcap_cell_local_id (which uses the module
   // width)-->extract the side and replica indices
 
-  int side_id = ((TObjString*)obja2->At(4))->GetString().Atoi();
+  std::cout << "> check side_id: " << ((TObjString*)obja2->At(4))->GetString()
+            << "\n";
+  detector_id = ((TObjString*)obja2->At(4))->GetString().Atoi();
   int mod_id = ((TObjString*)obja2->At(8))->GetString().Atoi();
   int replica_id = ((TObjString*)obja2->At(11))->GetString().Atoi();
 
-  module_id = encode_endcap_mod_id(mod_id, replica_id, side_id);
+  module_id = encode_endcap_mod_id(mod_id, replica_id, detector_id);
 
   // // mod == 40 -> left  -> detID = 1
   // // mod == 30 -> right -> detID = 3
@@ -311,6 +319,8 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
   double dx2 = trd->GetDx2();
   double dz = trd->GetDz();
 
+  
+
   // http://geant4-userdoc.web.cern.ch/geant4-userdoc/UsersGuides/ForApplicationDeveloper/html/Detector/Geometry/geomSolids.html
   // if z = -dz -> dx = 2*dx1
   // if z =  dz -> dx = 2*dx2
@@ -341,8 +351,8 @@ int SANDGeoManager::get_barrel_path_len(const double& hx, const double& hy,
   TGeoTrd2* trd = (TGeoTrd2*)layer_node->GetVolume()->GetShape();
   geo_->GetCurrentNavigator()->MasterToLocal(master, local);
 
-  d1 = trd->GetDz() - local[2];
-  d2 = trd->GetDz() + local[2];
+  d1 = trd->GetDy1() - local[2];
+  d2 = trd->GetDy1() + local[2];
 
   std::cout << "Barrel layer.: " << layer_node->GetName() << "\nd1: " << d1
             << ", d2: " << d2 << "\n";
@@ -371,7 +381,8 @@ void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
 
   // Cell width at z = Plocal[2]
   double cell_width = endcapmap_.at(endcap_mod_id).width() /
-                      sand_geometry::ecal::number_of_cells_per_endcap_layer;
+                      sand_geometry::ecal::endcap_cell_width;
+
   std::cout << "endcapmap_[" << endcap_mod_id
             << "].width(): " << endcapmap_.at(endcap_mod_id).width()
             << ", cell_width: " << cell_width << "\n";
@@ -406,7 +417,11 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
 
   // check whether the layer is actually contained inside the
   // module
+  std::cout << "> vol_path: " << volume_path
+            << "\n> ec_mod.path(): " << ec_mod.path() << "\n";
+
   if (!volume_path.Contains(ec_mod.path())) return -999;
+  std::cout << "> Checked path\n";
 
   // convert to the section local coordinates (one level up)
   geo_->GetCurrentNavigator()->CdUp();
@@ -488,15 +503,16 @@ int SANDGeoManager::get_hit_path_len(const double& hx, const double& hy,
   int detID, modID, layerID, locID;
   decode_ecal_cell_id(global_cell_id, detID, modID, layerID, locID);
 
+  int exit = 0;
   if (detID == 2) {  // barrel modules
-    get_barrel_path_len(hx, hy, hz, d1, d2);
+    exit=get_barrel_path_len(hx, hy, hz, d1, d2);
   } else if (detID == 0 || detID == 1) {  // endcap modules
-    get_endcap_path_len(hx, hy, hz, modID, d1, d2);
+    exit = get_endcap_path_len(hx, hy, hz, modID, d1, d2);
   } else {
     std::cout << ">get_hit_path_len exiting with error:\n";
     return -999;
   }
-  return 1;
+  return exit;
 }
 
 // -- -- -- -- -- -- -- -- -- -- --
@@ -924,7 +940,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 
   // barrel modules
   if (is_ecal_barrel(volume_name)) {
-
     get_ecal_barrel_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
     get_ecal_barrel_cell_local_id(x, y, z, node, cell_local_id);
