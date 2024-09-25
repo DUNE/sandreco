@@ -22,3 +22,4 @@ build/*
 *.png
 *.gdml
 tests/*
+tests/python_tools/__pycache__/
