@@ -59,7 +59,7 @@ const char* const endcap_module_name = "ECAL_end_lv_PV";
 const int number_of_layers = 5;
 const int number_of_cells_per_barrel_layer = 12;
 const int number_of_barrel_modules = 24;
-const int number_of_cells_per_endcap_layer = 90;
+const int number_of_cells_per_endcap_layer = 6;
 
 // thickness of the layers in mm
 const double layer_thickness[number_of_layers] = {44., 44., 44., 44., 54.};
@@ -134,7 +134,7 @@ class SANDGeoManager : public TObject
   int encode_ecal_barrel_cell_local_id(int layer, int cell) const;
   int encode_ecal_endcap_cell_local_id(int layer, int cell) const;
   static int encode_endcap_mod_id(int module_id, int module_replica_id,
-                                 int endcap_side_id);
+                                  int endcap_side_id);
   static void decode_endcap_mod_id(int endcap_mod_global_id, int& module_id,
                                    int& module_replica_id, int& endcap_side_id);
   std::pair<int, int> decode_ecal_barrel_cell_local_id(int id) const;
@@ -158,14 +158,17 @@ class SANDGeoManager : public TObject
   void get_ecal_barrel_cell_local_id(double x, double y, double z,
                                      const TGeoNode* const node,
                                      int& cell_local_id) const;
-//   void get_ecal_endcap_cell_local_id(double x, double y, double z,
-//                                      const TGeoNode* const node,
-//                                      int& cell_local_id) const;
+  //   void get_ecal_endcap_cell_local_id(double x, double y, double z,
+  //                                      const TGeoNode* const node,
+  //                                      int& cell_local_id) const;
   void get_ecal_endcap_cell_local_id(double x, double y, double z,
                                      const int& endcap_mod_id,
                                      int& cell_local_id) const;
-  int get_hit_path_len(const double& hx, const double& hy, const double& hz,
-                       const int& endcap_mod_id, double& d1, double& d2) const;
+  int get_barrel_path_len(const double& hx, const double& hy, const double& hz,
+                          double& d1, double& d2) const;
+  int get_endcap_path_len(const double& hx, const double& hy, const double& hz,
+                          const int& endcap_mod_id, double& d1,
+                          double& d2) const;
   // mod id for the new endcap modules
   int get_endcap_mod_id(const TString& volume_path) const;
   void set_ecal_info();
@@ -223,6 +226,9 @@ class SANDGeoManager : public TObject
   static void decode_ecal_cell_id(int cell_global_id, int& detector_id,
                                   int& module_id, int& layer_id,
                                   int& cell_local_id);
+  int get_hit_path_len(const double& hx, const double& hy, const double& hz,
+                          const int& mod_id, double& d1,
+                          double& d2) const;
 
   // STT
   static int encode_stt_tube_id(int stt_plane_global_id, int stt_tube_local_id);

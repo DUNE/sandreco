@@ -26,8 +26,16 @@ SANDENDCAPModInfo::SANDENDCAPModInfo(int arg_id, TGeoNode* arg_mod_node, const T
   width_ = 2 * ((TGeoBBox*)mod_node_->GetVolume()->GetShape())->GetDX();
   // set the Al_dz
   get_Al_dz();
+  // compute the min and max path lengths (and intialize other parameters)
+  compute_min_max_l();
   // set the node path
   path_ = gGeoManager->GetPath();
+
+  // std::cout<<"vert: ("<<(mod_hmatrix_*(*mod_node_->GetDaughter(0)->GetMatrix())).GetTranslation()[0]
+  //                   <<", "<<(mod_hmatrix_*(*mod_node_->GetDaughter(0)->GetMatrix())).GetTranslation()[1]
+  //                   <<", "<<(mod_hmatrix_*(*mod_node_->GetDaughter(0)->GetMatrix())).GetTranslation()[2]
+  //                   <<")\n";
+
 }
 
 // Setter methods for the attributes
@@ -56,9 +64,8 @@ void SANDENDCAPModInfo::compute_min_max_l()
       l_vert_ =
           2 * ((TGeoBBox*)mod_node_->GetDaughter(i)->GetVolume()->GetShape())
                   ->GetDY();
-      mod_dz_ =
-          2 * ((TGeoBBox*)mod_node_->GetDaughter(i)->GetVolume()->GetShape())
-                  ->GetDZ();
+      mod_dz_ = ((TGeoBBox*)mod_node_->GetDaughter(i)->GetVolume()->GetShape())
+                    ->GetDZ();
       break;
     }
   }
@@ -104,19 +111,21 @@ double SANDENDCAPModInfo::z() const { return z_; }
 double SANDENDCAPModInfo::width() const { return width_; }
 double SANDENDCAPModInfo::mod_dz() const { return mod_dz_; }
 double SANDENDCAPModInfo::l_hor() const { return l_hor_; }
-double SANDENDCAPModInfo::l_vert() const { return l_hor_; }
+double SANDENDCAPModInfo::l_vert() const { return l_vert_; }
 double SANDENDCAPModInfo::rmin() const { return r_min_; }
+double SANDENDCAPModInfo::rmax() const { return r_max_; }
 double SANDENDCAPModInfo::Al_dz() const { return Al_dz_; }
 TString SANDENDCAPModInfo::path() const { return path_; }
 TGeoNode* SANDENDCAPModInfo::mod_node() const { return mod_node_; }
 TGeoHMatrix SANDENDCAPModInfo::mod_hmatrix() const { return mod_hmatrix_; }
 
-double SANDENDCAPModInfo::get_curv_arc_len(double depth) const {
-  return 0.5 * M_PI * (r_min_ + depth);
+double SANDENDCAPModInfo::get_curv_arc_len(double depth) const
+{
+  return 0.5 * M_PI * (r_max_ - depth);
 }
 // compute the total cell path length given the depth along the module (w.r.t.
-// the outer layer)
-double SANDENDCAPModInfo::get_cell_tot_len(double depth) const {
-  return lmin_ + M_PI * depth;
+// the inner layer)
+double SANDENDCAPModInfo::get_cell_tot_len(double depth) const
+{
+  return lmax_ - M_PI * depth;
 }
-

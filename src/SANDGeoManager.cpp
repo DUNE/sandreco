@@ -115,15 +115,15 @@ int SANDGeoManager::encode_ecal_cell_id(int detector_id, int module_id,
                                         int layer_id, int cell_local_id)
 {
   return cell_local_id + 100 * layer_id + 1000 * module_id +
-         detector_id * 100000;
+         detector_id * 1000000;
 }
 
 void SANDGeoManager::decode_ecal_cell_id(int cell_global_id, int& detector_id,
                                          int& module_id, int& layer_id,
                                          int& cell_local_id)
 {
-  detector_id = cell_global_id / 100000;
-  cell_global_id -= detector_id * 100000;
+  detector_id = cell_global_id / 1000000;
+  cell_global_id -= detector_id * 1000000;
 
   module_id = cell_global_id / 1000;
   cell_global_id -= module_id * 1000;
@@ -172,8 +172,8 @@ bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path) const
 
   // BARREL => ECAL_lv_PV_18
   // ENDCAP => ECAL_end_lv_PV_0/ECAL_ec_mod_4_lv_PV_1
-  volume_path = ((TObjString*)obj->At(6))->GetString() + "/" +
-                ((TObjString*)obj->At(7))->GetString() + "/" +
+  volume_path = ((TObjString*)obj->At(6))->GetString() + "_" +
+                ((TObjString*)obj->At(7))->GetString() + "_" +
                 ((TObjString*)obj->At(8))->GetString();
   delete obj;
 
@@ -252,14 +252,23 @@ void SANDGeoManager::get_ecal_endcap_module_and_layer(
       "_");  // ENDCAP =>
              // ECAL_end_lv_PV_0/ECAL_ec_mod_4_lv_PV_1/ECAL_ec_mod_vert_0_lv_PV
 
-  int slab_id = ((TObjString*)obja1->At(1))->GetString().Atoi();
+  std::cout << "volume_name: " << volume_name << "\n";
+  for (int i = 0; i < obja1->GetEntries(); i++)
+    std::cout << ((TObjString*)obja1->At(i))->GetString().Atoi() << "\n";
+
+  int slab_id = 0;
+  if (volume_name.Contains("curv"))
+    slab_id = ((TObjString*)obja1->At(2))->GetString().Atoi();
+  else
+    slab_id = ((TObjString*)obja1->At(3))->GetString().Atoi();
 
   // I'm fairly sure the module_id should be encoded here to get the endcap_mod
   // from the map in get_ecal_endcap_cell_local_id (which uses the module
   // width)-->extract the side and replica indices
+
   int side_id = ((TObjString*)obja2->At(4))->GetString().Atoi();
   int mod_id = ((TObjString*)obja2->At(8))->GetString().Atoi();
-  int replica_id = ((TObjString*)obja2->At(10))->GetString().Atoi();
+  int replica_id = ((TObjString*)obja2->At(11))->GetString().Atoi();
 
   module_id = encode_endcap_mod_id(mod_id, replica_id, side_id);
 
@@ -316,29 +325,30 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
   cell_local_id = (local[0] + dx) / cell_width;
 }
 
-/* // cell_local structure should be changed
-void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
-                                                   const TGeoNode* const node,
-                                                   int& cell_local_id) const
+int SANDGeoManager::get_barrel_path_len(const double& hx, const double& hy,
+                                        const double& hz, double& d1,
+                                        double& d2) const
 {
   double master[3];
   double local[3];
-  master[0] = x;
-  master[1] = y;
-  master[2] = z;
+  master[0] = hx;
+  master[1] = hy;
+  master[2] = hz;
 
+  TGeoNode* layer_node = geo_->FindNode(hx, hy, hz);
+  if (layer_node == 0) return -999;
+
+  TGeoTrd2* trd = (TGeoTrd2*)layer_node->GetVolume()->GetShape();
   geo_->GetCurrentNavigator()->MasterToLocal(master, local);
 
-  TGeoTube* tub = (TGeoTube*)node->GetVolume()->GetShape();
+  d1 = trd->GetDz() - local[2];
+  d2 = trd->GetDz() + local[2];
 
-  double rmin = tub->GetRmin();
-  double rmax = tub->GetRmax();
-  double dz = tub->GetDz();
+  std::cout << "Barrel layer.: " << layer_node->GetName() << "\nd1: " << d1
+            << ", d2: " << d2 << "\n";
 
-  cell_local_id =
-      int((local[0] / rmax + 1.) *
-          sand_geometry::ecal::number_of_cells_per_endcap_layer * 0.5);
-} */
+  return 1;
+}
 
 // NEW VERSION --> This needs to be reviewed
 void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
@@ -360,17 +370,24 @@ void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
   // double dz = tub->GetDz();
 
   // Cell width at z = Plocal[2]
-  double cell_width = 2. * endcapmap_.at(endcap_mod_id).width() /
-                      sand_geometry::ecal::number_of_cells_per_barrel_layer;
-
+  double cell_width = endcapmap_.at(endcap_mod_id).width() /
+                      sand_geometry::ecal::number_of_cells_per_endcap_layer;
+  std::cout << "endcapmap_[" << endcap_mod_id
+            << "].width(): " << endcapmap_.at(endcap_mod_id).width()
+            << ", cell_width: " << cell_width << "\n";
   // cellID = distanza dall'estremo diviso larghezza cella
   cell_local_id =
-      (local[0] + endcapmap_.at(endcap_mod_id).width()) / cell_width;
+      (local[0] + 0.5 * endcapmap_.at(endcap_mod_id).width()) / cell_width;
+
+  std::cout << "local[0]: " << local[0]
+            << ", Dx: " << local[0] + 0.5 * endcapmap_.at(endcap_mod_id).width()
+            << "\n";
 }
 
-int SANDGeoManager::get_hit_path_len(const double& hx, const double& hy,
-                                     const double& hz, const int& endcap_mod_id,
-                                     double& d1, double& d2) const
+int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
+                                        const double& hz,
+                                        const int& endcap_mod_id, double& d1,
+                                        double& d2) const
 {
   double master[3];
   double local[3];
@@ -382,48 +399,107 @@ int SANDGeoManager::get_hit_path_len(const double& hx, const double& hy,
   auto ec_mod = endcapmap_.at(endcap_mod_id);
 
   TGeoNode* layer_node = geo_->FindNode(hx, hy, hz);
-
   if (layer_node == 0) return -999;
+
   TString volume_name = layer_node->GetName();
   TString volume_path = geo_->GetPath();
-  // check whether the layer is actually contained inside the module
+
+  // check whether the layer is actually contained inside the
+  // module
   if (!volume_path.Contains(ec_mod.path())) return -999;
 
-  // convert to layer local coordinates
-  geo_->GetCurrentNavigator()->MasterToLocal(master, local);
+  // convert to the section local coordinates (one level up)
+  geo_->GetCurrentNavigator()->CdUp();
+  geo_->MasterToLocal(master, local);
+
+  std::cout << "local: (" << local[0] << ", " << local[1] << ", " << local[2]
+            << ")\n";
 
   // manage each section separately
   if (volume_path.Contains("vert")) {
-    auto depth = (ec_mod.mod_dz() - 2 * ec_mod.Al_dz())-local[2];
+    auto depth = local[2] + ec_mod.mod_dz();
     d1 =
         0.5 * ec_mod.l_vert() + ec_mod.get_curv_arc_len(depth) + ec_mod.l_hor();
     d2 = ec_mod.get_cell_tot_len(depth) - d1;
+    std::cout << "> In vert\n";
+    std::cout << "depth: " << depth << ", ec_mod.l_vert(): " << ec_mod.l_vert()
+              << ", arc_len: " << ec_mod.get_curv_arc_len(depth)
+              << ", l_hor:" << ec_mod.l_hor()
+              << ", tot_len: " << ec_mod.get_cell_tot_len(depth)
+              << ", mod_dz: " << ec_mod.mod_dz() << "\n";
   } else if (volume_path.Contains("hor") && volume_path.Contains("lv_PV_0")) {
-    auto depth = (ec_mod.mod_dz() - 2 * ec_mod.Al_dz())-local[2];
+    std::cout << "> In hor0\n";
+    auto depth = local[2] + ec_mod.mod_dz();
     d1 = 0.5 * ec_mod.l_hor() - local[1];
     d2 = ec_mod.get_cell_tot_len(depth) - d1;
   } else if (volume_path.Contains("hor") && volume_path.Contains("lv_PV_1")) {
-    auto depth = (ec_mod.mod_dz() - 2 * ec_mod.Al_dz()) - local[2];
+    std::cout << "> In hor1\n";
+    auto depth = local[2] + ec_mod.mod_dz();
     d2 = 0.5 * ec_mod.l_hor() - local[1];
     d1 = ec_mod.get_cell_tot_len(depth) - d2;
-  } else if (volume_path.Contains("curv") && volume_path.Contains("lv_PV_0")) {
-    auto depth = std::sqrt(std::pow(local[1], 2) + std::pow(local[2], 2)) -
-                 ec_mod.rmin();
-    d1 = std::sqrt(std::pow(local[1], 2) + std::pow(local[2], 2)) *
-             std::atan(std::abs(local[2] / local[1])) +
+  } else if (volume_path.Contains("curv") &&
+             volume_path.Contains("lv_PV_0/endvol")) {
+    auto depth = ec_mod.rmax() -
+                 std::sqrt(std::pow(local[0], 2) + std::pow(local[1], 2));
+    d1 = std::sqrt(std::pow(local[0], 2) + std::pow(local[1], 2)) *
+             std::atan(std::abs(local[0] / local[1])) +
          ec_mod.l_hor();
     d2 = ec_mod.get_cell_tot_len(depth) - d1;
-  } else if (volume_path.Contains("curv") && volume_path.Contains("lv_PV_1")) {
-    auto depth = std::sqrt(std::pow(local[1], 2) + std::pow(local[2], 2)) -
-                 ec_mod.rmin();
-    d2 = std::sqrt(std::pow(local[1], 2) + std::pow(local[2], 2)) *
-             std::atan(std::abs(local[2] / local[1])) +
+    std::cout << "> In curv0\n";
+    std::cout << "depth: " << depth << ", ec_mod.l_vert(): " << ec_mod.l_vert()
+              << ", r: "
+              << std::sqrt(std::pow(local[0], 2) + std::pow(local[1], 2))
+              << ", arc_len: " << ec_mod.get_curv_arc_len(depth)
+              << ", l_hor:" << ec_mod.l_hor()
+              << ", tot_len: " << ec_mod.get_cell_tot_len(depth) << "\n";
+  } else if (volume_path.Contains("curv") &&
+             volume_path.Contains("lv_PV_1/endvol")) {
+    std::cout << "> In curv1\n";
+    auto depth = ec_mod.rmax() -
+                 std::sqrt(std::pow(local[0], 2) + std::pow(local[1], 2));
+    d2 = std::sqrt(std::pow(local[0], 2) + std::pow(local[1], 2)) *
+             std::atan(std::abs(local[0] / local[1])) +
          ec_mod.l_hor();
     d1 = ec_mod.get_cell_tot_len(depth) - d2;
-  }
+
+    std::cout << "depth: " << depth << ", ec_mod.l_vert(): " << ec_mod.l_vert()
+              << ", r: "
+              << std::sqrt(std::pow(local[0], 2) + std::pow(local[1], 2))
+              << ", arc_len: " << ec_mod.get_curv_arc_len(depth)
+              << ", l_hor:" << ec_mod.l_hor()
+              << ", tot_len: " << ec_mod.get_cell_tot_len(depth) << "\n";
+  } else
+    return 0;
 
   return 1;
 }
+
+int SANDGeoManager::get_hit_path_len(const double& hx, const double& hy,
+                                     const double& hz,
+                                     const int& global_cell_id, double& d1,
+                                     double& d2) const
+{
+  if (geo_ == 0) {
+    std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
+    return -999;
+  }
+
+  // decode the global_cell_id to extract detID and modID
+  int detID, modID, layerID, locID;
+  decode_ecal_cell_id(global_cell_id, detID, modID, layerID, locID);
+
+  if (detID == 2) {  // barrel modules
+    get_barrel_path_len(hx, hy, hz, d1, d2);
+  } else if (detID == 0 || detID == 1) {  // endcap modules
+    get_endcap_path_len(hx, hy, hz, modID, d1, d2);
+  } else {
+    std::cout << ">get_hit_path_len exiting with error:\n";
+    return -999;
+  }
+  return 1;
+}
+
+// -- -- -- -- -- -- -- -- -- -- --
 
 void SANDGeoManager::set_ecal_info()
 {
@@ -595,6 +671,11 @@ void SANDGeoManager::set_ecal_endcap_info(const TGeoHMatrix& matrix)
     int mod_id = get_endcap_mod_id(node_path);
     // set the module info
     endcapmap_[mod_id] = SANDENDCAPModInfo(mod_id, node, node_hmatrix);
+
+    std::cout << mod_id << ": (" << endcapmap_[mod_id].x() << ", "
+              << endcapmap_[mod_id].y() << ", " << endcapmap_[mod_id].z()
+              << ")\n";
+
   } else {
     for (int i = 0; i < node->GetNdaughters(); i++) {
       gGeoManager->CdDown(i);
@@ -828,6 +909,9 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   TString volume_name = node->GetName();
   TString volume_path = geo_->GetPath();
 
+  std::cout << "vol_path: " << volume_path << "\n";
+  std::cout << "vol name: " << volume_name << "\n";
+
   if (check_and_process_ecal_path(volume_path) == false) return -999;
   //////
 
@@ -854,11 +938,16 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   // end cap modules --> NEED TO UPDATE THESE TWO FUNCTIONS!! (Do the new endcap
   // IDs conflict with the barrel IDs?)
   else if (is_ecal_endcap(volume_name)) {
-
     get_ecal_endcap_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
     get_ecal_endcap_cell_local_id(x, y, z, module_id, cell_local_id);
+
+    std::cout << "detID: " << detector_id << ", modID: " << module_id
+              << ", planeID: " << layer_id
+              << ", cell_local_id: " << cell_local_id << "\n";
   } else {
+    std::cout << ">get_ecal_cell_id exiting with error:\n"
+              << volume_name << "\n";
     return -999;
   }
 

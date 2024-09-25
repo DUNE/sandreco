@@ -67,6 +67,14 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   if (cell_global_id == 999 || cell_global_id == -999) return false;
 
   g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
+
+  // extract the optical path length to both cell ends --> BUT one must
+  // distinguish barrel and endcaps
+  // if(detID==0 &&  detID == 1)
+  //  g.endcapmap_.at(modID).get_cell_path_len(x,y,z)
+  // else if(detID==2)
+  //  get_barrel_cell_path_len(x,y,z) // or something 
+
   return true;
 
   // /////

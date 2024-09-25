@@ -70,6 +70,7 @@ class SANDENDCAPModInfo : public TObject
   double l_hor() const;
   double l_vert() const;
   double rmin() const;
+  double rmax() const;
   double Al_dz() const;
   TString path() const;
   TGeoNode* mod_node() const;
