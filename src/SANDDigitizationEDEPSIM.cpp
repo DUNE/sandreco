@@ -29,13 +29,26 @@ namespace tracker
   TVector3 stop = {h.x2, h.y2, h.z2};   // hit end
   TVector3 s = stop - start;            // hit direction
 
-  TVector3 leftend(wire.getPoints()[0].X(),
-                   wire.getPoints()[0].Y(),
-                   wire.getPoints()[0].Z());
+  TVector3 leftend;
+  TVector3 rightend;
+  if (wire.readout_end() == SANDWireInfo::ReadoutEnd::kLeft) {
+    leftend = TVector3(wire.getPoints()[0].X(),
+                       wire.getPoints()[0].Y(),
+                       wire.getPoints()[0].Z());
 
-  TVector3 rightend(wire.getPoints()[1].X(),
-                    wire.getPoints()[1].Y(),
-                    wire.getPoints()[1].Z());
+    rightend = TVector3(wire.getPoints()[1].X(),
+                        wire.getPoints()[1].Y(),
+                        wire.getPoints()[1].Z());
+  } else {
+    rightend = TVector3(wire.getPoints()[0].X(),
+                        wire.getPoints()[0].Y(),
+                        wire.getPoints()[0].Z());
+
+    leftend = TVector3(wire.getPoints()[1].X(),
+                       wire.getPoints()[1].Y(),
+                       wire.getPoints()[1].Z());
+  }
+  
 
   TVector3 r(rightend - leftend); // wire direction
 
@@ -55,6 +68,13 @@ namespace tracker
     t_prime = std::max(0.0, std::min(1.0, t_prime));
 
     TVector3 closest_point_hit = start + t * s;
+    
+    if (t == 0 || t == 1) {
+      TVector3 AP = closest_point_hit - leftend; 
+      t_prime = AP.Dot(r) / r.Mag2();
+      t_prime = std::max(0.0, std::min(1.0, t_prime));
+    }
+
     TVector3 closest_point_wire = leftend + t_prime * r;
 
     TLorentzVector closest_point_hit_l;
@@ -763,7 +783,6 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
       start = stop;
       hseg_start_t += t * hseg_dt;
 
-      std::cout << (start - hseg.Stop.Vect()).Mag() << std::endl;
       if ((start - hseg.Stop.Vect()).Mag() < 1E-6) {
         break;
       }
@@ -798,7 +817,6 @@ void digitize_drift(TG4Event* ev, const SANDGeoManager& geo,
   group_hits_by_cell(ev, geo, hits2cell);
   digitization::edep_sim::tracker::create_digits_from_hits(geo, hits2cell,
                                                            wire_digits);
-  std::cout << "DONE" << std::endl;
 }
 
 }  // namespace chamber

@@ -31,7 +31,6 @@ int main(int argc, char* argv[])
   std::vector<dg_wire>* digits = 0;
   t->SetBranchAddress("dg_wire", &digits);
   t->GetEntry(std::stoi(argv[1]));
-  std::cout << digits->size() << std::endl;
 
   TrackletFinder tracklet_finder;
   tracklet_finder.SetSigmaPosition(0.2); // mm
@@ -41,18 +40,17 @@ int main(int argc, char* argv[])
   for (int i = 0; i < (int)digits->size(); i++) {
     for (const auto& m : modules_map) {
       auto planes = m.second.planes();
-      for (const auto& p:planes) {
-        auto cells = p.second.getIdToCellMap();
-        for (const auto& c:cells) {
-          if (c.second.wire().id() == digits->at(i).did) {
-            cell_digit_map.insert({i, c.second});
-            std::cout << digits->at(i).did << std::endl;
+      for (auto& p:planes) {
+          auto cells = p.second.getIdToCellMap();
+          for (const auto& c:cells) {
+            if (c.second.wire().id() == digits->at(i).did) {
+              cell_digit_map.insert({digits->at(i).drift_time, c.second});
+              cell_digit_map[digits->at(i).drift_time].setPlane(&(p.second));
+            }
           }
-        }
       }
     }
   }
-  std::cout << cell_digit_map.size() << std::endl;
   int p[9] = {100, -2000, 2000, 100, -4000, 0, 100, 21000, 28000};
   tracklet_finder.SetVolumeParameters(p);
 
@@ -63,5 +61,6 @@ int main(int argc, char* argv[])
   // tracklet_finder.Draw3D();
   // tracklet_finder.Draw2DDistance();
   // tracklet_finder.Draw2DWires();
+  tracklet_finder.Draw2DDigits();
   tracklet_finder.Clear();
 }

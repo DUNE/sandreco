@@ -282,8 +282,8 @@ void TrackletFinder::Draw2DWires()
   gStyle->SetOptStat(0);
   if (!_c2) {
     _c2 = new TCanvas("c2D","c2D",1500,1500);
-    TH2D* h2 = new TH2D("h","h", std::ceil(_cells_intersections[1].X())  - std::floor(_cells_intersections[0].X()), std::floor(_cells_intersections[0].X()), std::ceil(_cells_intersections[1].X()),
-                                 std::ceil(_cells_intersections[1].Y())  - std::floor(_cells_intersections[0].Y()), std::floor(_cells_intersections[0].Y()), std::ceil(_cells_intersections[1].Y()));
+    TH2D* h2 = new TH2D("h","h", _cells_intersections[1].X()  - _cells_intersections[0].X(), _cells_intersections[0].X(), _cells_intersections[1].X(),
+                                 _cells_intersections[1].Y()  - _cells_intersections[0].Y(), _cells_intersections[0].Y(), _cells_intersections[1].Y());
 
     h2->Draw();
   }
@@ -317,10 +317,10 @@ void TrackletFinder::Draw2DDistance()
 
   }
   
-  TH2D* h2 = new TH2D("h","h", std::ceil(_cells_intersections[1].X())  - std::floor(_cells_intersections[0].X()), 
-                               std::floor(_cells_intersections[0].X()), std::ceil(_cells_intersections[1].X()),
-                               std::ceil(_cells_intersections[1].Y())  - std::floor(_cells_intersections[0].Y()), 
-                               std::floor(_cells_intersections[0].Y()), std::ceil(_cells_intersections[1].Y()));
+  TH2D* h2 = new TH2D("h","h", _cells_intersections[1].X()  - _cells_intersections[0].X(), 
+                               _cells_intersections[0].X(), _cells_intersections[1].X(),
+                               _cells_intersections[1].Y()  - _cells_intersections[0].Y(), 
+                               _cells_intersections[0].Y(), _cells_intersections[1].Y());
 
   double min;
   auto cells = _fired_cells;
@@ -328,8 +328,8 @@ void TrackletFinder::Draw2DDistance()
   double theta_xz = atan(_trajectory.getDirection().Z() / _trajectory.getDirection().X()) * 1000;
   double theta_yz = atan(_trajectory.getDirection().Y() / _trajectory.getDirection().Z()) * 1000;
   int count = 0;
-  for (int px = std::floor(_cells_intersections[0].X()); px <= std::ceil(_cells_intersections[1].X()); px++) {
-    for (int py = std::floor(_cells_intersections[0].Y()); py <= std::ceil(_cells_intersections[1].Y()); py++) {
+  for (int px = _cells_intersections[0].X(); px <= _cells_intersections[1].X(); px++) {
+    for (int py = _cells_intersections[0].Y(); py <= _cells_intersections[1].Y(); py++) {
       min = 1E9;
       for (int angle_xz = theta_xz - 400; angle_xz < theta_xz + 400 ; angle_xz+=10) {
         for (int angle_yz = theta_yz - 400; angle_yz < theta_yz + 400; angle_yz+=10) {
@@ -348,6 +348,52 @@ void TrackletFinder::Draw2DDistance()
   h2->GetZaxis()->SetRangeUser(0, 10e-1);
   h2->Draw("colz");
 
+  _c2->SaveAs("./c2D.png");
+
+}
+
+void TrackletFinder::Draw2DDigits()
+{
+  gStyle->SetOptStat(0);
+  TCanvas c("c2DMinimization","c2DMinimization",1500,1500);
+  if (!_c2) {
+    _c2 = new TCanvas("c2D","c2D",1500,1500);
+
+  }
+  
+  TH2D* h2 = new TH2D("h","h", _volume_parameters[6],_volume_parameters[7], _volume_parameters[8],
+                               _volume_parameters[3],_volume_parameters[4], _volume_parameters[5]);
+  h2->Draw();
+
+  auto cells = _fired_cells;
+
+  int ccc = 0;
+  std::map<long, int> id_to_color;
+  for (const auto& c:(*cells)) {
+    if (ccc > 10) {
+      ccc = 0;
+    }
+    long module_unique_id, plane_global_id, plane_local_id, plane_type, wire_local_id;
+
+    SANDGeoManager::decode_wire_id(c.second.id(), plane_global_id, wire_local_id);
+    SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
+                                    plane_local_id, plane_type);
+    id_to_color[module_unique_id] = ccc;
+    ccc++;
+  }
+  for (const auto& c:(*cells)) {
+    long module_unique_id, plane_global_id, plane_local_id, plane_type, wire_local_id;
+
+    SANDGeoManager::decode_wire_id(c.second.id(), plane_global_id, wire_local_id);
+    SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
+                                    plane_local_id, plane_type);
+    TEllipse* el = new TEllipse(c.second.wire().center().Z(), c.second.wire().center().Y(), c.second.driftVelocity() * c.first);
+    // el->SetLineColor(id_to_color[module_unique_id]);
+    el->Draw("same");
+  }
+
+
+  _c2->SaveAs("./c2D.C");
   _c2->SaveAs("./c2D.png");
 
 }

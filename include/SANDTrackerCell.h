@@ -76,6 +76,10 @@ class SANDTrackerCell
   {
     return _isFired;
   }
+  void setPlane(SANDTrackerPlane* p) 
+  {
+    _plane = p;
+  }
   SANDTrackerPlane* getPlane() const 
   {
     return _plane;

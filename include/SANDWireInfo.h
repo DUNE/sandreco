@@ -4,6 +4,11 @@
 #ifndef SANDWireInfo_H
 #define SANDWireInfo_H
 
+
+// To Do: Add getLeft and getRight for wire points
+// To Do: rename left and right with first and second
+
+
 // class for storing the STT tubes geometrical info
 class SANDWireInfo : public TObject
 {

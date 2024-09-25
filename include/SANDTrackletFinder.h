@@ -23,6 +23,7 @@
 
 #include "iostream"
 #include "math.h"
+#include "TEllipse.h"
 
 class TrackletFinder {
   public:
@@ -48,6 +49,7 @@ class TrackletFinder {
     void Draw3DWires();
     void Draw2DWires();
     void Draw2DDistance();
+    void Draw2DDigits();
 
   private:
     const std::map<double, SANDTrackerCell>* _fired_cells = nullptr;

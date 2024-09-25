@@ -1259,12 +1259,12 @@ long SANDGeoManager::GetClosestCellToHit(TVector3 hit_center, const SANDTrackerP
   TVector2 rotated_yz_hit_position(transverse_coord, hit_center.Z() - plane.getPosition().Z());
 
   std::map<long, SANDTrackerCell>::const_iterator cell_it = plane.getLowerBoundCell(transverse_coord);
-  if (cell_it == plane.getIdToCellMap().cend()) {
-    cell_it--;
+  if (cell_it == plane.getIdToCellMapEnd()) {
+    cell_it = plane.getIdToCellMap().begin();
   }
   std::map<long, SANDTrackerCell>::const_iterator next_cell_it = std::next(cell_it);
-  if (next_cell_it == plane.getIdToCellMap().cend()) {
-    next_cell_it--;
+  if (next_cell_it == plane.getIdToCellMapEnd()) {
+    next_cell_it = plane.getIdToCellMap().begin();
   }
  
   double distance1 = 1E9;
