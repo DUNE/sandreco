@@ -530,16 +530,41 @@ Line2D RecoUtils::WiresLinearFit(const std::vector<dg_wire*>& wires)
   // graph->Draw("AP");
   // linearFit->Draw("same");
 
-  // Optionally save the plot and parameters to a file
-  // c1->SaveAs("linear_fit.png");
+  
+Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle, 
+                                        const Line2D& line, 
+                                        const Helix& true_helix,
+                                        TVector3& momentum){
+    /*
+        input:
+            circle : fitted trajectory in the ZY bending plane
+            line : fitted trajectory in the XZ plane
+            point x0 : trajectory stariting point (x0 <-> Phi0)
+            momentum : passed as reference to be filled
+        construct a helix from these inputs
+        NOTE: a guess for the initial vertex is needed because related to the dip angle
+    */
+    auto vertex = true_helix.x0();
 
-  // Print out the fit parameters
-  Line2D fitted_line(slope, intercept);
+    auto helicity = true_helix.h();
 
-  // std::cout << " Slope (m): " << fitted_line.m() << ", Intercept (q): " <<
-  // fitted_line.q() << std::endl;
+    double pt = circle.R() * 0.29979 * 0.6;
+    
+    double pz = pt * (helicity * (vertex.Y() - circle.center_y()) / circle.R());
+    
+    double py = pt * (-helicity * (vertex.Z() - circle.center_x()) / circle.R());
+    
+    double pz_over_px = line.m();
+    
+    double px = pz / pz_over_px;
+    
+    double Phi0 = TMath::ATan2(py, pz) + helicity * TMath::Pi()*0.5;;
 
-  return fitted_line;
+    momentum = {px, py, pz};
+
+    double dip_angle = TMath::ATan2(px, pt);
+    
+    return Helix(circle.R(), dip_angle, Phi0, helicity, vertex);
 }
 
 double RecoUtils::NLL(Helix& h, const std::vector<dg_wire>& digits)

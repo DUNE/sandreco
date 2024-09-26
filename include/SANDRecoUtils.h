@@ -289,121 +289,85 @@ class Helix
 
 class Circle
 {
- public:
-  Circle(double arg_center_x, double arg_center_y, double arg_R)
-      : center_x_(arg_center_x), center_y_(arg_center_y), R_(arg_R)
-  {
-  }
+    public:
+        Circle(double arg_center_x, double arg_center_y, double arg_R) :
+            center_x_(arg_center_x), center_y_(arg_center_y), R_(arg_R) {}
 
-  Circle() : center_x_(0), center_y_(0), R_(1)
-  {
-  }
+        Circle() :
+            center_x_(0), center_y_(0), R_(1) {}
+        
+        double x_l(double angle) const {
+            // angle should be in [0, 2pi)
+            return center_x_ + R_ * cos(angle);
+        }
+        double y_l(double angle) const {
+            // angle should be in [0, 2pi)
+            return center_y_ + R_ * sin(angle);
+        }
 
-  double x_l(double angle) const
-  {
-    // angle should be in [0, 2pi)
-    return center_x_ + R_ * cos(angle);
-  }
-  double y_l(double angle) const
-  {
-    // angle should be in [0, 2pi)
-    return center_y_ + R_ * sin(angle);
-  }
+        double dx_derivative(double angle) const {
+            return -1. * R_ * sin(angle);
+        }
+        
+        double dy_derivative(double angle) const {
+            return R_ * cos(angle);
+        }
 
-  double dx_derivative(double angle) const
-  {
-    return -1. * R_ * sin(angle);
-  }
+        TVector2 GetPointAt(double angle) const {
+            return {x_l(angle), y_l(angle)};
+        }
 
-  double dy_derivative(double angle) const
-  {
-    return R_ * cos(angle);
-  }
+        // TVector2 GetDerivativeAt(double angle) const {
+        //     return {dx_derivative(angle), dy_derivative(angle)};
+        // }
 
-  TVector2 GetPointAt(double angle) const
-  {
-    return {x_l(angle), y_l(angle)};
-  }
+        // TVector2 GetDerivativeAt(double arg_x, double arg_y) const {
+        //     double angle = GetAngleFromPoint(arg_x, arg_y);
+        //     return {dx_derivative(angle), dy_derivative(angle)};
+        // }
 
-  TVector2 GetDerivativeAt(double angle) const
-  {
-    return {dx_derivative(angle), dy_derivative(angle)};
-  }
+        TF1* GetUpperSemiCircle() const {
+            // y as function of the x coordinate
+            TF1* up_circle = new TF1("UpperCircle", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))");
+            up_circle->SetParameters(center_y_, R_, center_x_);
+            return up_circle;
+        }
 
-  TVector2 GetDerivativeAt(double arg_x, double arg_y) const
-  {
-    double angle = GetAngleFromPoint(arg_x, arg_y);
-    return {dx_derivative(angle), dy_derivative(angle)};
-  }
+        TF1* GetLowerSemiCircle() const {
+            // y as function of the x coordinate
+            TF1* up_circle = new TF1("LowerCircle", "[0] - sqrt([1]*[1] - (x-[2])*(x-[2]))");
+            up_circle->SetParameters(center_y_, R_, center_x_);
+            return up_circle;
+        }
 
-  double GetAngleFromPoint(double arg_x, double arg_y) const
-  {
-    // return the angle [0, 2pi) corresponding to the point (x,y)
-    if (arg_y - center_y_ > 0) {
-      return atan2(arg_y - center_y_, arg_x - center_x_);
-    } else {
-      return atan2(arg_y - center_y_, arg_x - center_x_) + 2 * TMath::Pi();
-    }
-  }
+        double Distance2Point(TVector2 point) const {
+            return fabs((center() - point).Mod() - R());
+        }
 
-  TF1* GetUpperSemiCircle() const
-  {
-    // y as function of the x coordinate
-    TF1* up_circle =
-        new TF1("UpperCircle", "[0] + sqrt([1]*[1] - (x-[2])*(x-[2]))");
-    up_circle->SetParameters(center_y_, R_, center_x_);
-    return up_circle;
-  }
+        TVector2 center() const {
+            TVector2 c = {center_x_, center_y_};
+            return c;
+        }
 
-  TF1* GetLowerSemiCircle() const
-  {
-    // y as function of the x coordinate
-    TF1* up_circle =
-        new TF1("LowerCircle", "[0] - sqrt([1]*[1] - (x-[2])*(x-[2]))");
-    up_circle->SetParameters(center_y_, R_, center_x_);
-    return up_circle;
-  }
+        void PrintCircleInfo() const {
+            std::cout << "circle center (x,y) : ("
+                      << center_x_ << ", "
+                      << center_y_ << "), R : "
+                      << R_ << "\n";
+        }
 
-  double Distance2Point(TVector2 point) const
-  {
-    return fabs((center() - point).Mod() - R());
-  }
+        double center_x() const {return center_x_;};
+        double center_y() const {return center_y_;};
+        double R() const {return R_;};
 
-  TVector2 center() const
-  {
-    TVector2 c = {center_x_, center_y_};
-    return c;
-  }
+        virtual ~Circle() {}
 
-  void PrintCircleInfo() const
-  {
-    std::cout << "circle center (x,y) : (" << center_x_ << ", " << center_y_
-              << "), R : " << R_ << "\n";
-  }
-
-  double center_x() const
-  {
-    return center_x_;
-  };
-  double center_y() const
-  {
-    return center_y_;
-  };
-  double R() const
-  {
-    return R_;
-  };
-
-  virtual ~Circle()
-  {
-  }
-
- private:
-  double center_x_;
-  double center_y_;
-  double R_;
-
-  ClassDef(Circle, 1);
+    private:
+        double center_x_;
+        double center_y_;
+        double R_;
+    
+    ClassDef(Circle, 1);
 };
 
 class Spiral2D
@@ -865,11 +829,11 @@ double NLL(Helix& h, const std::vector<dg_wire>& digits);  // negative log
 
 double FunctorNLL(const double* p);
 
-double GetDipAngleFromCircleLine(const Circle& circle, const Line2D& line,
-                                 double Phi0, int helicity, TVector3& Momentum);
 
-Helix GetHelixFromCircleLine(const Circle& circle, const Line2D& line,
-                             const Helix& true_helix, TVector3& momentum);
+Helix               GetHelixFromCircleLine(const Circle& circle, 
+                                           const Line2D& line, 
+                                           const Helix& true_helix,
+                                           TVector3& momentum);
 
 const double* GetHelixParameters(const Helix& helix_initial_guess,
                                  int& TMinuitStatus);
@@ -889,68 +853,78 @@ Line2D GetBestTangent2NCircles(const std::vector<Circle>& circles);
 
 struct Parameter
 {
-  std::string name;
-  int id;
-  bool fixed_in_fit;
-  double initial_guess;
-  double value;
-  double error;
-  // Parameter()
-  //     : name(""), fixed_in_fit(false), initial_guess(0.0), value(0.0),
-  // error(0.0) {}
-  // Parameter(std::string n, int i, bool f, double ig, double v, double e)
-  //     : name(n), id(i), fixed_in_fit(f), initial_guess(ig), value(v),
-  // error(e) {}
+    std::string name;
+    int id;
+    bool fixed_in_fit;
+    double initial_guess;
+    double value;
+    double error;
+    // default constuctor
+    Parameter() 
+        : name(""), fixed_in_fit(false), initial_guess(-999.), value(-999.), error(-999.) {}
+    Parameter(std::string n, int i, bool f, double ig, double v, double e) 
+        : name(n), id(i), fixed_in_fit(f), initial_guess(ig), value(v), error(e) {}
 };
 
 struct MinuitFitInfos
 {
-  // std::string                 Auxiliary_name;
-  const char* Auxiliary_name;
-  int TMinuitFinalStatus;  // 0 if converged, 4 if falied
-  int NIterations;         // number of iterations to reach the minimum
-  double MinValue;         // value of the func to minimize at its minimum
-  std::vector<Parameter> fitted_parameters;
+    // std::string                 Auxiliary_name;
+    const char*                 Auxiliary_name;
+    int                         TMinuitFinalStatus; // 0 if converged, 4 if falied
+    int                         NIterations; // number of iterations to reach the minimum
+    double                      MinValue; // value of the func to minimize at its minimum
+    std::vector<Parameter>      fitted_parameters;
+
+    // default constructor
+    MinuitFitInfos() 
+        : Auxiliary_name("Dummy"), TMinuitFinalStatus(-999), NIterations(-999), MinValue(-999.), fitted_parameters() {}
 };
 
 struct RecoObject
 {
-  // edepsim info of the reconstructed track_____________________
-  std::vector<TLorentzVector> trj_points;
+    // edepsim info of the reconstructed track_____________________
+    std::vector<TLorentzVector> trj_points;
+    
+    // digitization info___________________________________________
+    /*
+      fired_wires : 
+        all the fired wires related to the reconstructed obj.
+        These should be provided by some pattern (track) reco algo.
+    */
+    std::vector<dg_wire>        fired_wires;
+    /*
+        impact_par_estimated : distance track (helix, 
+        circle or sin) to the wire center.  
+    */
+    std::vector<double>         impact_par_estimated;
 
-  // digitization info___________________________________________
-  /*
-    fired_wires :
-      all the fired wires related to the reconstructed obj.
-      These should be provided by some pattern (track) reco algo.
-  */
-  std::vector<dg_wire> fired_wires;
-  /*
-      impact_par_estimated : distance track (helix,
-      circle or sin) to the wire center.
-  */
-  std::vector<double> impact_par_estimated;
+    /* local fit of 3 circles (segmented track)____________________   
+        track_segments : vector of segments tangent to the
+        measured impact parameters
+    */
+    
+    // std::vector<Line2D>         track_segments_ZY;
+    // std::vector<Line2D>         track_segments_XZ;
+    
+    Helix                       true_helix;
+    Helix                       reco_helix;
 
-  /* local fit of 3 circles (segmented track)____________________
-      track_segments : vector of segments tangent to the
-      measured impact parameters
-  */
+    double                      pt_true;
+    double                      pt_reco;
 
-  // std::vector<Line2D>         track_segments_ZY;
-  // std::vector<Line2D>         track_segments_XZ;
+    TVector3                    p_true;
+    TVector3                    p_reco;
 
-  Helix true_helix;
-  Helix reco_helix;
+    // fitting info TMinuit _______________________________________
+    MinuitFitInfos              fit_infos_xz;
+    MinuitFitInfos              fit_infos_zy;
 
-  double pt_true;
-  double pt_reco;
-
-  TVector3 p_true;
-  TVector3 p_reco;
-
-  // fitting info TMinuit _______________________________________
-  MinuitFitInfos fit_infos_xz;
-  MinuitFitInfos fit_infos_zy;
+    // defaul constructor
+    RecoObject() 
+        : trj_points(), fired_wires(), impact_par_estimated(),
+          pt_true(-999.), pt_reco(-999.), 
+          p_true(TVector3(-999.,-999.,-999.)), p_reco(TVector3(-999.,-999.,-999.)), 
+          fit_infos_xz(), fit_infos_zy() {}
 };
 
 namespace Color

@@ -69,9 +69,26 @@ target_link_libraries(Digitize Struct SANDGeoManager Utils)
 add_executable(Reconstruct src/reconstruction.cpp)
 target_link_libraries(Reconstruct Struct Utils SANDGeoManager)
 
+# Creates DigitizeDrift executable.
+add_executable(DigitizeDrift src/SANDDigitizeDrift.cpp)
+target_link_libraries(DigitizeDrift Struct Utils SANDRecoUtils)
+
 # Creates ReconstructNLLmethod executable.
-# add_executable(ReconstructNLLmethod src/reconstructionNLLmethod.cpp)
-# target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
+add_executable(ReconstructNLLmethod src/reconstructionNLLmethod.cpp)
+target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
+
+# ADDED FOR TESTING ----
+# # Creates DigitizeDrift executable for testing.
+# add_executable(test_DigitizeDrift tests/test_DigitizeDrift.cpp)
+# target_link_libraries(test_DigitizeDrift Struct Utils SANDRecoUtils)
+
+# # Creates ReconstructNLLmethod executable for testing.
+# add_executable(test_reconstructNLL tests/test_reconstructionNLL.cpp)
+# target_link_libraries(test_reconstructNLL Struct Utils SANDRecoUtils)
+# ----
+# Creates DisplayReco executable for testing.
+add_executable(test_DisplayReco tests/test_DisplayReco.cpp)
+target_link_libraries(test_DisplayReco Struct Utils)
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)
