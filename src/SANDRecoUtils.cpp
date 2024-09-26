@@ -552,36 +552,6 @@ double RecoUtils::FunctorNLL(const double* p)
     return nll;
 }
 
-double RecoUtils::GetDipAngleFromCircleLine(const Circle& circle, 
-                                            const Line2D& line, 
-                                            double Phi0,
-                                            int helicity,
-                                            TVector3& momentum){
-    /*
-        input:
-            circle : fitted trajectory in the ZY bending plane
-            line : fitted trajectory in the XZ plane
-            Phi0 : angle corresponding to the trajecotry starting point
-            Momentum : reference TVector3 that will be filled with particle
-                       total momentum
-        NOTE: a guess for the initial vertex is needed because related to the dip angle
-    */
-    double pt = circle.R() * 0.3 * 0.6;
-    // define theta as the angle [0, 2 pi) between the momentum vector and z axis
-    double theta = Phi0 - helicity * TMath::Pi() / 2.;
-    double py = pt * sin(theta);
-    double pz = pt * cos(theta);
-
-    // slope of the tangent in the zx plane
-    double pz_over_px = line.m();
-    double px = pz / pz_over_px;
-
-    // fill momentum
-    momentum = {px, py, pz};
-
-    return atan2(px, pt);
-}
-
 Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle, 
                                         const Line2D& line, 
                                         const Helix& true_helix,
@@ -599,10 +569,22 @@ Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle,
 
     auto helicity = true_helix.h();
 
-    double Phi0 = circle.GetAngleFromPoint(vertex.Z() ,vertex.Y());
+    double pt = circle.R() * 0.29979 * 0.6;
     
-    double dip_angle = RecoUtils::GetDipAngleFromCircleLine(circle, line, Phi0, helicity, momentum);
+    double pz = pt * (helicity * (vertex.Y() - circle.center_y()) / circle.R());
+    
+    double py = pt * (-helicity * (vertex.Z() - circle.center_x()) / circle.R());
+    
+    double pz_over_px = line.m();
+    
+    double px = pz / pz_over_px;
+    
+    double Phi0 = TMath::ATan2(py, pz) + helicity * TMath::Pi()*0.5;;
 
+    momentum = {px, py, pz};
+
+    double dip_angle = TMath::ATan2(px, pt);
+    
     return Helix(circle.R(), dip_angle, Phi0, helicity, vertex);
 }
 

@@ -21,4 +21,5 @@ build/*
 *.sh
 *.png
 *.gdml
-# tests/*
+tests/*
+tests/python_tools/__pycache__/
