@@ -258,11 +258,11 @@ int main(int argc, char* argv[]){
     return -1;
     }
 
-    const char* fEDepInput;
+    const char* fEDepInput = "";
 
-    const char* fDigitOutput;
+    const char* fDigitOutput = "";
 
-    const char* fWireInfo;
+    const char* fWireInfo = "";
 
     int index = 1;
     

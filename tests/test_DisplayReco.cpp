@@ -753,7 +753,7 @@ void show(int index)
       else if (lw > 10.)
         lw = 10.;
 
-      if (isnan(vec_cl->at(i).sz)) {
+      if (std::isnan(vec_cl->at(i).sz)) {
         TMarker* m1 = new TMarker(vec_cl->at(i).z, vec_cl->at(i).y, 20);
         m1->SetMarkerColor(kBlue);
         m1->SetMarkerSize(lw);
