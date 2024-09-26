@@ -30,37 +30,27 @@ using namespace std;
 
 ClassImp(SANDEventDisplay)
 
-    enum ETestCommandIdentifiers {
-      M_FILE_OPEN,
-      M_SAVE_PICTURE,
-      M_SAVE_PICTURE_PNG,
-      M_SAVE_PICTURE_PDF,
-      M_PREVIOUS_EVENT,
-      M_EXECUTE_EVENT,
-      M_NEXT_EVENT,
-      M_ZOOM_IN,
-      M_ZOOM_OUT,
-      M_ZOOM_EVENT,
-      M_ZOOM_VERTEX,
-      M_ZOOM_DETECTOR,
-      M_FILE_EXIT
-    };
+enum ETestCommandIdentifiers {
+  M_FILE_OPEN,
+  M_SAVE_PICTURE,
+  M_SAVE_PICTURE_PNG,
+  M_SAVE_PICTURE_PDF,
+  M_PREVIOUS_EVENT,
+  M_EXECUTE_EVENT,
+  M_NEXT_EVENT,
+  M_ZOOM_IN,
+  M_ZOOM_OUT,
+  M_ZOOM_EVENT,
+  M_ZOOM_VERTEX,
+  M_ZOOM_DETECTOR,
+  M_FILE_EXIT
+};
 
-const char *EVXpmNames[] = {"open.xpm",
-                            "save-picture.xpm",
-                            "",
-                            "previous.xpm",
-                            "reload.xpm",
-                            "next.xpm",
-                            "",
-                            "zoom-in.xpm",
-                            "zoom-out.xpm",
-                            "zoom-event.xpm",
-                            "zoom-vertex.xpm",
-                            "zoom-detector.xpm",
-                            "",
-                            "exit.xpm",
-                            0};
+const char *EVXpmNames[] = {
+    "open.xpm",     "save-picture.xpm", "",                "previous.xpm",
+    "reload.xpm",   "next.xpm",         "",                "zoom-in.xpm",
+    "zoom-out.xpm", "zoom-event.xpm",   "zoom-vertex.xpm", "zoom-detector.xpm",
+    "",             "exit.xpm",         0};
 
 ToolBarData_t EVTbData[] = {
     {"", "Open Root event file", kFALSE, M_FILE_OPEN, NULL},
@@ -299,14 +289,13 @@ void SANDEventDisplay::FillDigitHits()
 
   for (auto &wire : *fWireDigitVect) {
     hit.particle = 0;
-    hit.z = wire.z/10;
+    hit.z = wire.z / 10;
     hit.e = wire.de;
     if (wire.hor) {
-      hit.x = wire.y/10;
+      hit.x = wire.y / 10;
       fWireDigitHitsZY.push_back(hit);
-    }
-    else {
-      hit.x = wire.x/10;
+    } else {
+      hit.x = wire.x / 10;
       fWireDigitHitsZX.push_back(hit);
     }
   }
@@ -315,14 +304,13 @@ void SANDEventDisplay::FillDigitHits()
 
   for (auto &wire : *fWireDigitVect) {
     hit.particle = 0;
-    hit.z = wire.z/10;
+    hit.z = wire.z / 10;
     hit.e = wire.de;
     if (wire.hor) {
-      hit.x = wire.y/10;
+      hit.x = wire.y / 10;
       fWireDigitHitsZY.push_back(hit);
-    }
-    else {
-      hit.x = wire.x/10;
+    } else {
+      hit.x = wire.x / 10;
       fWireDigitHitsZX.push_back(hit);
     }
   }
@@ -376,10 +364,10 @@ void SANDEventDisplay::DrawTracks()
       ellipse = new TEllipse(hit.z, hit.x, 1, 1, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, hit.color, 1001);
     }
-  }
-  else if (fDrawHits == kDigitHits) {
-    auto DigitHitsZY = (fTubeDigitHitsZY.size()!=0) ? fTubeDigitHitsZY : fWireDigitHitsZY;
-    for (auto &hit : DigitHitsZY){
+  } else if (fDrawHits == kDigitHits) {
+    auto DigitHitsZY =
+        (fTubeDigitHitsZY.size() != 0) ? fTubeDigitHitsZY : fWireDigitHitsZY;
+    for (auto &hit : DigitHitsZY) {
       ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
@@ -398,10 +386,10 @@ void SANDEventDisplay::DrawTracks()
       ellipse = new TEllipse(hit.z, hit.x, 1, 1, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, hit.color, 1001);
     }
-  }
-  else if (fDrawHits == kDigitHits) {
-    auto DigitHitsZX = (fTubeDigitHitsZX.size()!=0) ? fTubeDigitHitsZX : fWireDigitHitsZX;
-    for (auto &hit : DigitHitsZX){
+  } else if (fDrawHits == kDigitHits) {
+    auto DigitHitsZX =
+        (fTubeDigitHitsZX.size() != 0) ? fTubeDigitHitsZX : fWireDigitHitsZX;
+    for (auto &hit : DigitHitsZX) {
       ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
     }
@@ -772,8 +760,8 @@ void SANDEventDisplay::AddRunEventFrame(TGHorizontalFrame *workframe)
     GroupEnergyMode->AddFrame(
         fRadioEnergyMode[i],
         new TGLayoutHints(kLHintsTop | kLHintsLeft, 2, 2, 2, 2));
-    fRadioEnergyMode[i]->Connect("Clicked()", "SANDEventDisplay", this,
-                                 "SetHitsMode()");
+    fRadioEnergyMode[i]
+        ->Connect("Clicked()", "SANDEventDisplay", this, "SetHitsMode()");
   }
 
   fRadioEnergyMode[fSetHitsMode]->SetState(kButtonDown);
@@ -798,8 +786,8 @@ void SANDEventDisplay::AddRunEventFrame(TGHorizontalFrame *workframe)
     GroupHitsType->AddFrame(
         fRadioHitsType[i],
         new TGLayoutHints(kLHintsTop | kLHintsLeft, 2, 2, 2, 2));
-    fRadioHitsType[i]->Connect("Clicked()", "SANDEventDisplay", this,
-                               "SetHitsType()");
+    fRadioHitsType[i]
+        ->Connect("Clicked()", "SANDEventDisplay", this, "SetHitsType()");
   }
 
   for (int i = 0; i < 3; ++i) fRadioHitsType[i]->SetState(kButtonDisabled);
@@ -997,54 +985,54 @@ bool SANDEventDisplay::ProcessMessage(Long_t msg, Long_t param1, Long_t)
   switch (GET_MSG(msg)) {
     case kC_COMMAND:
       switch (GET_SUBMSG(msg)) {
-          //   case kCM_COMBOBOX:
-          //   if (param1 == 100 && fSM) DrawDetector(kFALSE);
-          //   break;
-          //   case kCM_CHECKBUTTON:
-          //   if (param1 == 101) fSetNavigateMode=fCheckNavigateMode->IsDown();
-          //   else if (param1 == 103) {
-          //     fSetBrickFinderInfo = fCheckBrickFinderInfo->IsDown();
-          //     DrawDetector();
-          //   }
-          //   else if (param1 == 104) SetViewToBrick();
-          //   else if (param1 == 105) {
-          //     fSetPresentationMode = fCheckPresentationMode->IsDown();
-          //     DrawDetector(kFALSE);
-          //   }
-          //   else if (param1 >= 120 && param1 <= 123 && fSM)
-          //   DrawDetector(kFALSE); else if (param1 == 174) {
-          //     fTTCSConnection->SetDrawVetoTracks(fCheckDrawVetoTracks->IsDown());
-          //     DrawDetector(kFALSE);
-          //   }
-          //   else if (param1 == 175) {
-          //     fTTCSConnection->SetRemoveSelectedTracks(fCheckRemoveSelectedTracks->IsDown());
-          //     DrawDetector(kFALSE);
-          //   }
-          //   break;
-          //      case kCM_RADIOBUTTON:
-          //   if (param1 == 100) fSetZoomTo = 0;
-          //   else if (param1 == 101) fSetZoomTo = 1;
-          //   else if (param1 == 102) fSetZoomTo = 2;
-          // if (param1 == 130) fSetHitsMode = 0;
-          // else if (param1 == 131) fSetHitsMode = 1;
-          // else if (param1 == 132) fSetHitsMode = 2;
-          // else if (param1 == 140) fDrawHits = kSimHits;
-          // else if (param1 == 141) fDrawHits = kDigitHits;
-          // else if (param1 == 142) fDrawHits = kRecHits;
-          //   else if (param1 == 140) fSetShiftAxis = 0;
-          //   else if (param1 == 141) fSetShiftAxis = 1;
-          //   else if (param1 == 142) fSetShiftAxis = 2;
-          // if (param1 >= 130 && param1 <= 142) Run();
-          // break;
-          //   case kCM_LISTBOX:
-          //   if (param1 == 125 && fSM) DrawDetector(kFALSE);
-          //   break;
-          //   case kCM_BUTTON:
-          //   if (param1 == 171) fTTCSConnection->SetStep(0);
-          //   else if (param1 == 172) fTTCSConnection->SetStep(-1);
-          //   else if (param1 == 173) fTTCSConnection->SetStep(1);
-          //   if (param1 >= 171 && param1 <= 173) DrawDetector(kFALSE);
-          // break; // We do not needed "break" in this case!
+        //   case kCM_COMBOBOX:
+        //   if (param1 == 100 && fSM) DrawDetector(kFALSE);
+        //   break;
+        //   case kCM_CHECKBUTTON:
+        //   if (param1 == 101) fSetNavigateMode=fCheckNavigateMode->IsDown();
+        //   else if (param1 == 103) {
+        //     fSetBrickFinderInfo = fCheckBrickFinderInfo->IsDown();
+        //     DrawDetector();
+        //   }
+        //   else if (param1 == 104) SetViewToBrick();
+        //   else if (param1 == 105) {
+        //     fSetPresentationMode = fCheckPresentationMode->IsDown();
+        //     DrawDetector(kFALSE);
+        //   }
+        //   else if (param1 >= 120 && param1 <= 123 && fSM)
+        //   DrawDetector(kFALSE); else if (param1 == 174) {
+        //     fTTCSConnection->SetDrawVetoTracks(fCheckDrawVetoTracks->IsDown());
+        //     DrawDetector(kFALSE);
+        //   }
+        //   else if (param1 == 175) {
+        //     fTTCSConnection->SetRemoveSelectedTracks(fCheckRemoveSelectedTracks->IsDown());
+        //     DrawDetector(kFALSE);
+        //   }
+        //   break;
+        //      case kCM_RADIOBUTTON:
+        //   if (param1 == 100) fSetZoomTo = 0;
+        //   else if (param1 == 101) fSetZoomTo = 1;
+        //   else if (param1 == 102) fSetZoomTo = 2;
+        // if (param1 == 130) fSetHitsMode = 0;
+        // else if (param1 == 131) fSetHitsMode = 1;
+        // else if (param1 == 132) fSetHitsMode = 2;
+        // else if (param1 == 140) fDrawHits = kSimHits;
+        // else if (param1 == 141) fDrawHits = kDigitHits;
+        // else if (param1 == 142) fDrawHits = kRecHits;
+        //   else if (param1 == 140) fSetShiftAxis = 0;
+        //   else if (param1 == 141) fSetShiftAxis = 1;
+        //   else if (param1 == 142) fSetShiftAxis = 2;
+        // if (param1 >= 130 && param1 <= 142) Run();
+        // break;
+        //   case kCM_LISTBOX:
+        //   if (param1 == 125 && fSM) DrawDetector(kFALSE);
+        //   break;
+        //   case kCM_BUTTON:
+        //   if (param1 == 171) fTTCSConnection->SetStep(0);
+        //   else if (param1 == 172) fTTCSConnection->SetStep(-1);
+        //   else if (param1 == 173) fTTCSConnection->SetStep(1);
+        //   if (param1 >= 171 && param1 <= 173) DrawDetector(kFALSE);
+        // break; // We do not needed "break" in this case!
         case kCM_BUTTON:
           switch (param1) {
             // case M_FILE_OPEN: {
@@ -1202,18 +1190,24 @@ void SANDEventDisplay::SetSimData(TString fileName)
 {
   TGeoManager *geo = 0;
 
-  try {
+  try
+  {
     fFileSimData = new TFile(fileName, "READ");
-    try {
+    try
+    {
       if (!fGeomInitialized)
         geo = static_cast<TGeoManager *>(fFileSimData->Get("EDepSimGeometry"));
       fTreeSimData = static_cast<TTree *>(fFileSimData->Get("EDepSimEvents"));
-    } catch (...) {
+    }
+    catch (...)
+    {
       cout << "<ERROR> MC info not found in " << fFileSimData->GetName()
            << endl;
       return;
     }
-  } catch (...) {
+  }
+  catch (...)
+  {
     cout << "<ERROR> MC file can not be opened " << fileName << endl;
     return;
   }
@@ -1238,18 +1232,24 @@ void SANDEventDisplay::SetDigitData(TString fileName)
 {
   TGeoManager *geo = 0;
 
-  try {
+  try
+  {
     fFileDigitData = new TFile(fileName, "READ");
-    try {
+    try
+    {
       if (!fGeomInitialized)
         geo = static_cast<TGeoManager *>(fFileSimData->Get("EDepSimGeometry"));
       fTreeDigitData = static_cast<TTree *>(fFileDigitData->Get("tDigit"));
-    } catch (...) {
+    }
+    catch (...)
+    {
       cout << "<ERROR> Digit info not found in " << fFileDigitData->GetName()
            << endl;
       return;
     }
-  } catch (...) {
+  }
+  catch (...)
+  {
     cout << "<ERROR> Digit file can not be opened " << fileName << endl;
     return;
   }
@@ -1268,8 +1268,8 @@ void SANDEventDisplay::SetDigitData(TString fileName)
 
   fWireDigitVect = new std::vector<dg_wire>;
   fCellDigitVect = new std::vector<dg_cell>;
-  
-  fTreeDigitData ->SetBranchAddress("dg_wire", &fWireDigitVect);
+
+  fTreeDigitData->SetBranchAddress("dg_wire", &fWireDigitVect);
   fTreeDigitData->SetBranchAddress("dg_cell", &fCellDigitVect);
 }
 
@@ -1331,4 +1331,7 @@ void SANDEventDisplay::SetHistoStyle(TH2F *histo)
 }
 
 //----------------------------------------------------------------------------
-void SANDEventDisplay::ExitApplication() { gApplication->Terminate(); }
+void SANDEventDisplay::ExitApplication()
+{
+  gApplication->Terminate();
+}

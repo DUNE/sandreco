@@ -26,7 +26,7 @@ double energy_to_photo_electrons(double E)
 {
   if (debug)
     std::cout << "E = " << E
-              << " -> p.e. = " << sand_reco::fluka::ecal::e2p2_fluka * E
+              << " -> p.e. = " << sand_reco::fluka::ecal::e2p2_fluka* E
               << std::endl;
 
   return sand_reco::fluka::ecal::e2p2_fluka * E;
@@ -195,15 +195,16 @@ bool process_hit(const TG4HitSegment& hit, int& detID, int& modID, int& planeID,
     sand_reco::fluka::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID]
                                            [1] = 0;
     if (modID == 40)
-      sand_reco::fluka::ecal::cellCoordEndcap[int(modID /
-                                                  10)][planeID][cellID][2] =
-          44 / 2 + cellID * 44 -
-          sand_reco::fluka::ecal::ec_rf;  // crescono all'aumentare di cellID
+      sand_reco::fluka::ecal::cellCoordEndcap
+          [int(modID / 10)][planeID][cellID][2] =
+              44 / 2 + cellID * 44 -
+              sand_reco::fluka::ecal::ec_rf;  // crescono all'aumentare di
+                                              // cellID
     else
-      sand_reco::fluka::ecal::cellCoordEndcap[int(modID /
-                                                  10)][planeID][cellID][2] =
-          44 / 2 - (cellID)*44 +
-          sand_reco::fluka::ecal::ec_rf;  // crescono al diminuire di cellID
+      sand_reco::fluka::ecal::cellCoordEndcap
+          [int(modID / 10)][planeID][cellID][2] =
+              44 / 2 - (cellID) * 44 +
+              sand_reco::fluka::ecal::ec_rf;  // crescono al diminuire di cellID
 
   } else if (str == "tracker" || str == "outside") {
     if (debug) std::cout << std::endl;
@@ -475,9 +476,8 @@ void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
 
       TVector2 min_dist_point(x, y);
       double min_dist_hit = (min_dist_point - wire).Mod();
-      double min_time_hit = t +
-                            (min_dist_hit - sand_reco::stt::wire_radius) /
-                                sand_reco::stt::v_drift +
+      double min_time_hit = t + (min_dist_hit - sand_reco::stt::wire_radius) /
+                                    sand_reco::stt::v_drift +
                             dwire / sand_reco::stt::v_signal_inwire;
 
       if (min_time_hit < min_time_tub) min_time_tub = min_time_hit;

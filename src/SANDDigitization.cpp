@@ -47,7 +47,7 @@ C                      + 1ns  uncertainty
     std::cout << "t0   : " << t0 << std::endl;
     std::cout << "scint: " << tdec << std::endl;
     std::cout << "prop : "
-              << sand_reco::ecal::scintillation::vlfb * d * conversion::mm_to_m
+              << sand_reco::ecal::scintillation::vlfb* d* conversion::mm_to_m
               << std::endl;
   }
 

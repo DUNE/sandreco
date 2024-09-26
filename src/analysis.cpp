@@ -852,7 +852,10 @@ void Analyze(const char* fMc, const char* fIn)
   delete vec_cl;
 }
 
-void help_ana() { std::cout << "Analyze <MC file> <reco file>" << std::endl; }
+void help_ana()
+{
+  std::cout << "Analyze <MC file> <reco file>" << std::endl;
+}
 
 int main(int argc, char* argv[])
 {

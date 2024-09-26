@@ -56,9 +56,8 @@ void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
 
 namespace chamber
 {
-TVector3 IntersectHitPlane(const TG4HitSegment& hseg, 
-                      double plane_coordinate,
-                      SANDWireInfo::Orient plane_orientation);  
+TVector3 IntersectHitPlane(const TG4HitSegment& hseg, double plane_coordinate,
+                           SANDWireInfo::Orient plane_orientation);
 
 void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
                         std::map<int, std::vector<hit> >& hits2wire);
@@ -67,7 +66,8 @@ bool isInWire(SANDWireInfo& wire, TVector3& point);
 
 bool isInHit(hit& h, TVector3& point);
 
-std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& arg_wire);
+std::vector<TLorentzVector> WireHitClosestPoints(hit& h,
+                                                 SANDWireInfo& arg_wire);
 
 double GetMinWireTime(TLorentzVector point, SANDWireInfo& arg_wire);
 
@@ -76,8 +76,8 @@ void create_digits_from_wire_hits(const SANDGeoManager& geo,
                                   std::vector<dg_wire>& wire_digits);
 
 void digitize_wire(TG4Event* ev, const SANDGeoManager& geo,
-                  std::vector<dg_wire>& wire_digits);                                 
-} // namespace chamber
+                   std::vector<dg_wire>& wire_digits);
+}  // namespace chamber
 
 // digitize event
 void digitize(const char* finname, const char* foutname,
