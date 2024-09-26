@@ -468,7 +468,7 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
     // if (stid == -999) continue;
 
     hit h;
-    h.det = "STT";
+    h.det = "Straw";
     h.did = stid;
     h.x1 = hseg.Start.X();
     h.y1 = hseg.Start.Y();
@@ -679,7 +679,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     } else  // hit in 1 cell
     {
       hit h;
-      h.det = "DriftChamber";
+      h.det = "DriftVolume";
       h.did = id1;
       h.x1 = hseg.Start.X();
       h.y1 = hseg.Start.Y();
@@ -701,7 +701,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     double hseg_dt = (hseg.Stop - hseg.Start).T();
     double hseg_start_t = hseg.Start.T();
 
-    auto& plane = geo.get_plane_info(start_id)->second;
+    const auto& plane = geo.get_plane_info(start_id)->second;
 
     TVector2 rotated_hit_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
     TVector2 rotated_hit_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
@@ -755,17 +755,20 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
 
       double portion = (start - stop).Mag() / hseg_length;
 
+      TVector3 center = (start + stop) * 0.5;
+
       // start.Print();
       // start_2d_position.Print();
       // crossing_point.Print();
       // crossing_point_2d.Print();
       // stop.Print();
       // hseg.Stop.Print();
-      // std::cout << t << " " << portion << std::endl;
+
+      long cell_id = geo.GetClosestCellToHit(center, plane, false);
 
       hit h;
-      h.det = "DriftChamber";
-      h.did = i;
+      h.det = "DriftVolume";
+      h.did = cell_id;
       h.x1 = start.X();
       h.y1 = start.Y();
       h.z1 = start.Z();
@@ -778,7 +781,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
       h.pid = hseg.PrimaryId;
       h.index = j;
 
-      hits2cell[i].push_back(h);
+      hits2cell[cell_id].push_back(h);
 
       start = stop;
       hseg_start_t += t * hseg_dt;
