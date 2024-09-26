@@ -1,6 +1,6 @@
 #include "SANDTrackletFinder.h"
 
-double MinimizingFunction(const double* params, const std::map<double, SANDTrackerCell>* cells)
+double MinimizingFunction(const double* params, const  std::map<std::pair<double, double>, SANDTrackerCell>* cells)
 {
   double dx = cos(params[2]);
   double dy = sin(params[3]);
@@ -14,8 +14,8 @@ double MinimizingFunction(const double* params, const std::map<double, SANDTrack
   for (const auto& c : (*cells)) {
     TVector3 n = c.second.wire().getDirection().Cross(dir);
     double d = fabs(n.Dot(c.second.wire().center() - pos)) / n.Mag();
-    sum += (d - c.second.driftVelocity() * c.first) 
-            * (d - c.second.driftVelocity() * c.first); 
+    sum += (d - c.second.driftVelocity() * c.first.first) 
+            * (d - c.second.driftVelocity() * c.first.first); 
   }
   return sum;
 }
@@ -265,7 +265,7 @@ void TrackletFinder::Draw3D()
     CLine3D line_from_wire(c.second.wire().center(), c.second.wire().getDirection());
     for (int t = -100; t < 100; t++) {
       for (int theta = 0; theta < 628; theta++) {
-        TVector3 p = GetCylinderCoordinates(line_from_wire, (double)t, c.second.driftVelocity() * c.first, theta/100.);
+        TVector3 p = GetCylinderCoordinates(line_from_wire, (double)t, c.second.driftVelocity() * c.first.first, theta/100.);
         h2->Fill(p.X(), p.Y(), p.Z());
       }
     }
@@ -348,52 +348,6 @@ void TrackletFinder::Draw2DDistance()
   h2->GetZaxis()->SetRangeUser(0, 10e-1);
   h2->Draw("colz");
 
-  _c2->SaveAs("./c2D.png");
-
-}
-
-void TrackletFinder::Draw2DDigits()
-{
-  gStyle->SetOptStat(0);
-  TCanvas c("c2DMinimization","c2DMinimization",1500,1500);
-  if (!_c2) {
-    _c2 = new TCanvas("c2D","c2D",1500,1500);
-
-  }
-  
-  TH2D* h2 = new TH2D("h","h", _volume_parameters[6],_volume_parameters[7], _volume_parameters[8],
-                               _volume_parameters[3],_volume_parameters[4], _volume_parameters[5]);
-  h2->Draw();
-
-  auto cells = _fired_cells;
-
-  int ccc = 0;
-  std::map<long, int> id_to_color;
-  for (const auto& c:(*cells)) {
-    if (ccc > 10) {
-      ccc = 0;
-    }
-    long module_unique_id, plane_global_id, plane_local_id, plane_type, wire_local_id;
-
-    SANDGeoManager::decode_wire_id(c.second.id(), plane_global_id, wire_local_id);
-    SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
-                                    plane_local_id, plane_type);
-    id_to_color[module_unique_id] = ccc;
-    ccc++;
-  }
-  for (const auto& c:(*cells)) {
-    long module_unique_id, plane_global_id, plane_local_id, plane_type, wire_local_id;
-
-    SANDGeoManager::decode_wire_id(c.second.id(), plane_global_id, wire_local_id);
-    SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
-                                    plane_local_id, plane_type);
-    TEllipse* el = new TEllipse(c.second.wire().center().Z(), c.second.wire().center().Y(), c.second.driftVelocity() * c.first);
-    // el->SetLineColor(id_to_color[module_unique_id]);
-    el->Draw("same");
-  }
-
-
-  _c2->SaveAs("./c2D.C");
   _c2->SaveAs("./c2D.png");
 
 }

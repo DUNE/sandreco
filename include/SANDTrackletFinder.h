@@ -8,6 +8,8 @@
 #include "TH2D.h"
 #include <TDecompLU.h>
 #include <TStyle.h>
+#include "TEllipse.h"
+#include "TBox.h"
 
 
 #include <Math/Factory.h>
@@ -21,9 +23,9 @@
 #include <CLine3D.h>
 #include "utils.h"
 
+#include <algorithm>
 #include "iostream"
 #include "math.h"
-#include "TEllipse.h"
 
 class TrackletFinder {
   public:
@@ -33,7 +35,7 @@ class TrackletFinder {
     void SetVolumeParameters(int* p) {_volume_parameters = p;};
     void SetSigmaPosition(double sp) {_sigma_pos = sp;};
     void SetSigmaAngle(double sa)    {_sigma_ang = sa;};
-    void SetCells(std::map<double, SANDTrackerCell>* cells) {_fired_cells = cells;};
+    void SetCells( std::map<std::pair<double, double>, SANDTrackerCell>* cells) {_fired_cells = cells;};
     void SetTrajectory(TVector3 tp, TVector3 td)       {_trajectory = CLine3D(tp, td);};
 
     bool CheckParallel(TVector3 d1, TVector3 d2);
@@ -52,7 +54,7 @@ class TrackletFinder {
     void Draw2DDigits();
 
   private:
-    const std::map<double, SANDTrackerCell>* _fired_cells = nullptr;
+    const  std::map<std::pair<double, double>, SANDTrackerCell>* _fired_cells = nullptr;
     CLine3D _trajectory;
 
     std::vector<TVector3> _cells_intersections;
