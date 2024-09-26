@@ -60,7 +60,7 @@ const double endcap_cell_width = 4.44;
 const int number_of_layers = 5;
 const int number_of_cells_per_barrel_layer = 12;
 const int number_of_barrel_modules = 24;
-const int number_of_cells_per_endcap_layer = 6;
+// const int number_of_cells_per_endcap_layer = 6;
 
 // thickness of the layers in mm
 const double layer_thickness[number_of_layers] = {44., 44., 44., 44., 54.};
@@ -140,10 +140,10 @@ class SANDGeoManager : public TObject
                                    int& module_replica_id, int& endcap_side_id);
   std::pair<int, int> decode_ecal_barrel_cell_local_id(int id) const;
   std::pair<int, int> decode_ecal_endcap_cell_local_id(int id) const;
-  std::map<int, TVector3> get_ecal_barrel_cell_center_local_position(
-      const std::vector<double>& zlevels, double m, double q) const;
-  std::map<int, TVector3> get_ecal_endcap_cell_center_local_position(
-      const std::vector<double>& zlevels, double rmin, double rmax) const;
+//   std::map<int, TVector3> get_ecal_barrel_cell_center_local_position(
+//       const std::vector<double>& zlevels, double m, double q) const;
+//   std::map<int, TVector3> get_ecal_endcap_cell_center_local_position(
+//       const std::vector<double>& zlevels, double rmin, double rmax) const;
   bool is_ecal_barrel(const TString& volume_name) const;
   bool is_ecal_endcap(const TString& volume_name) const;
   bool is_endcap_mod(const TString& volume_name) const;
@@ -172,7 +172,7 @@ class SANDGeoManager : public TObject
                           double& d2) const;
   // mod id for the new endcap modules
   int get_endcap_mod_id(const TString& volume_path) const;
-  void set_ecal_info();
+  //   void set_ecal_info();
   void set_ecal_endcap_info(const TGeoHMatrix& matrix);
   void set_ecal_endcap_info();
 
@@ -228,8 +228,7 @@ class SANDGeoManager : public TObject
                                   int& module_id, int& layer_id,
                                   int& cell_local_id);
   int get_hit_path_len(const double& hx, const double& hy, const double& hz,
-                          const int& mod_id, double& d1,
-                          double& d2) const;
+                       const int& global_cell_id, double& d1, double& d2) const;
 
   // STT
   static int encode_stt_tube_id(int stt_plane_global_id, int stt_tube_local_id);
