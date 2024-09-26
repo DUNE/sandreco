@@ -1077,21 +1077,21 @@ int main(int argc, char* argv[]){
        provide edepsim input to run the reconstruction on non-smeared muon tracks
        (for testing used file "/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/test_drift_edep.root")
     */
-    const char* fEDepInput;
+    const char* fEDepInput = "";
     
     /*
        provide digit file input to run the reconstruction on edep smeared muon tracks
     */
-    const char* fDigitInput;
+    const char* fDigitInput = "";
     
-    const char* fOutput;
+    const char* fOutput = "";
     
     /* 
        look up table previously created in the Digitization as csv file that contains
        all info about wires in the geometry
        for testing used file  "/storage/gpfs_data/neutrino/users/gi/sand-reco/tests/wireinfo.txt"
     */
-    const char* fWireInfo;
+    const char* fWireInfo = "";
 
     int index = 1;
 
@@ -1267,8 +1267,8 @@ int main(int argc, char* argv[]){
         LOG("I", "Group wires in vertical and horizontal");
         SplitWiresHorVer(selected_wires);
 
-        LOG("ii", TString::Format("number of horizontal fired wires for trackid %d : %d", muon_trj.GetTrackId(), horizontal_fired_wires.size()).Data());
-        LOG("ii", TString::Format("number of vertical fired wires for trackid %d : %d", muon_trj.GetTrackId(), vertical_fired_wires.size()).Data());
+        LOG("ii", TString::Format("number of horizontal fired wires for trackid %d : %d", muon_trj.GetTrackId(), (int)horizontal_fired_wires.size()).Data());
+        LOG("ii", TString::Format("number of vertical fired wires for trackid %d : %d", muon_trj.GetTrackId(), (int)vertical_fired_wires.size()).Data());
         LOG("I", "Check event with enough hits");
         
         KeepThisEvent = PassSelectionNofHits(horizontal_fired_wires.size(), vertical_fired_wires.size());

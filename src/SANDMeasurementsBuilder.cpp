@@ -150,8 +150,8 @@ int main(int argc, char* argv[])
     box_xz->Draw();
 
 
-    for (auto& h:dc.first.hindex) {
-      const TG4HitSegment& hseg = ev->SegmentDetectors[dc.first.det].at(h);
+    for (auto& i:dc.first.hindex) {
+      const TG4HitSegment& hseg = ev->SegmentDetectors[dc.first.det].at(i);
       TLine* l_yz = new TLine(hseg.Start.Z(), hseg.Start.Y(), hseg.Stop.Z(), hseg.Stop.Y());
       l_yz->SetLineColor(id_to_color[module_unique_id]);
       c->cd(1);

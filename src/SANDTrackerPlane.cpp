@@ -4,7 +4,7 @@
 
 std::map<long, SANDTrackerCell>::iterator SANDTrackerPlane::getCell(long index)
 {
-  _id_to_cell_map.find(index);
+  return _id_to_cell_map.find(index);
 }
 std::map<long, SANDTrackerCell>::const_iterator SANDTrackerPlane::getCell(long index) const
 {
