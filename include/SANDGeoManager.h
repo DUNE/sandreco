@@ -164,10 +164,6 @@ class SANDGeoManager : public TObject
                                                           // path
 
 
-  long GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane, bool checkCloseCells) const;
-  double GetHitCellDistance(TVector2 rotated_local_yz_hit_position, 
-                                        std::map<long, SANDTrackerCell>::const_iterator cell_it, 
-                                        const SANDTrackerPlane& plane) const;
   bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector3& intersection);
   void set_drift_plane_info(SANDTrackerPlane& plane, double angle);
   void PrintModulesInfo(int verbose = 1);
@@ -302,6 +298,10 @@ class SANDGeoManager : public TObject
   const TVector2 RotatedToLocal(TVector2 rotated, const SANDTrackerPlane& plane) const;
   const TVector2 LocalToGlobal(TVector2 local, const SANDTrackerPlane& plane) const;
   const TVector2 RotatedToGlobal(TVector2 rotated, const SANDTrackerPlane& plane) const;
+  long GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane, bool checkCloseCells) const;
+  double GetHitCellDistance(TVector2 rotated_local_yz_hit_position, 
+                                        std::map<long, SANDTrackerCell>::const_iterator cell_it, 
+                                        const SANDTrackerPlane& plane) const;
 
   // ECAL
   static int encode_ecal_cell_id(int detector_id, int module_id, int layer_id,
