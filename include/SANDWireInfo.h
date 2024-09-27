@@ -4,11 +4,6 @@
 #ifndef SANDWireInfo_H
 #define SANDWireInfo_H
 
-
-// To Do: Add getLeft and getRight for wire points
-// To Do: rename left and right with first and second
-
-
 // class for storing the STT tubes geometrical info
 class SANDWireInfo : public TObject
 {
@@ -18,8 +13,8 @@ class SANDWireInfo : public TObject
     kVertical
   };
   enum class ReadoutEnd {
-    kLeft,
-    kRight
+    kFirst,
+    kSecond
   };
   enum class Type {
     kSignal,
@@ -80,7 +75,9 @@ class SANDWireInfo : public TObject
   std::vector<TVector3> getPoints() {return points;};
   const std::vector<TVector3> getPoints() const {return points;};
   const TVector3 getDirection() const {return (points[0] - points[1]) * (1. / (points[0] - points[1]).Mag());};
-
+  const TVector3 getFirstPoint()  const {return points[0];};
+  const TVector3 getSecondPoint() const {return points[1];};
+  const TVector3& getReadoutPoint() const { return (readout_end_ == ReadoutEnd::kFirst) ? points[0] : points[1];};
   ClassDef(SANDWireInfo, 1);
 };
 

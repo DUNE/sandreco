@@ -769,20 +769,20 @@ void SANDGeoManager::set_stt_wire_info(SANDTrackerPlane& plane,
     };
 
     if (w.getPoints().size() == 2) {
-      w.center((w.getPoints()[0] + w.getPoints()[1]) * 0.5);
-      w.length((w.getPoints()[1] - w.getPoints()[0]).Mag());
+      w.center((w.getFirstPoint() + w.getSecondPoint()) * 0.5);
+      w.length((w.getSecondPoint() - w.getFirstPoint()).Mag());
 
-      if (fabs(w.getPoints()[0].Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
-        w.readout_end(SANDWireInfo::ReadoutEnd::kLeft);
+      if (fabs(w.getFirstPoint().Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kFirst);
       }
-      if (fabs(w.getPoints()[0].X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
-        w.readout_end(SANDWireInfo::ReadoutEnd::kLeft);
+      if (fabs(w.getFirstPoint().X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kFirst);
       }
-      if (fabs(w.getPoints()[1].Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
-        w.readout_end(SANDWireInfo::ReadoutEnd::kRight);
+      if (fabs(w.getSecondPoint().Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kSecond);
       }
-      if (fabs(w.getPoints()[1].X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
-        w.readout_end(SANDWireInfo::ReadoutEnd::kRight);
+      if (fabs(w.getSecondPoint().X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kSecond);
       }
     }
 
@@ -936,19 +936,19 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
     };
 
     if (w.getPoints().size() == 2) {
-      w.center((w.getPoints()[0] + w.getPoints()[1]) * 0.5);
-      w.length((w.getPoints()[1] - w.getPoints()[0]).Mag());
-      if (fabs(w.getPoints()[0].Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
-        w.readout_end(SANDWireInfo::ReadoutEnd::kLeft);
+      w.center((w.getFirstPoint() + w.getSecondPoint()) * 0.5);
+      w.length((w.getSecondPoint() - w.getFirstPoint()).Mag());
+      if (fabs(w.getFirstPoint().Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kFirst);
       }
-      if (fabs(w.getPoints()[0].X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
-        w.readout_end(SANDWireInfo::ReadoutEnd::kLeft);
+      if (fabs(w.getFirstPoint().X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kFirst);
       }
-      if (fabs(w.getPoints()[1].Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
-        w.readout_end(SANDWireInfo::ReadoutEnd::kRight);
+      if (fabs(w.getSecondPoint().Y() - plane.getPosition().Y() + vertices[0].Y()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kSecond);
       }
-      if (fabs(w.getPoints()[1].X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
-        w.readout_end(SANDWireInfo::ReadoutEnd::kRight);
+      if (fabs(w.getSecondPoint().X() - plane.getPosition().X() + vertices[0].X()) < 1E-3) {
+        w.readout_end(SANDWireInfo::ReadoutEnd::kSecond);
       }
     }
 
@@ -1027,12 +1027,12 @@ void SANDGeoManager::PrintModulesInfo(int verbose)
                                           << c.second.wire().center().Y() << " "
                                           << c.second.wire().center().Z() << std::endl;
           std::cout << "          Length: " << c.second.wire().length()     << std::endl;
-          std::cout << "          Point1: " << c.second.wire().getPoints()[0].X() << " "
-                                          << c.second.wire().getPoints()[0].Y() << " "
-                                          << c.second.wire().getPoints()[0].Z() << std::endl;
-          std::cout << "          Point2: " << c.second.wire().getPoints()[1].X() << " "
-                                          << c.second.wire().getPoints()[1].Y() << " "
-                                          << c.second.wire().getPoints()[1].Z() << std::endl;
+          std::cout << "          Point1: " << c.second.wire().getFirstPoint().X() << " "
+                                          << c.second.wire().getFirstPoint().Y() << " "
+                                          << c.second.wire().getFirstPoint().Z() << std::endl;
+          std::cout << "          Point2: " << c.second.wire().getSecondPoint().X() << " "
+                                          << c.second.wire().getSecondPoint().Y() << " "
+                                          << c.second.wire().getSecondPoint().Z() << std::endl;
         }
       }
     }
@@ -1056,8 +1056,8 @@ void SANDGeoManager::DrawModulesInfo()
   h.Draw();
 
   for (const auto& c:plane.getIdToCellMap()) {
-    TLine* l = new TLine(c.second.wire().getPoints()[0].X(), c.second.wire().getPoints()[0].Y(),
-                         c.second.wire().getPoints()[1].X(), c.second.wire().getPoints()[1].Y());
+    TLine* l = new TLine(c.second.wire().getFirstPoint().X(), c.second.wire().getFirstPoint().Y(),
+                         c.second.wire().getSecondPoint().X(), c.second.wire().getSecondPoint().Y());
     l->Draw("same");
   }
   

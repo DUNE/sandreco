@@ -31,22 +31,12 @@ namespace tracker
 
   TVector3 leftend;
   TVector3 rightend;
-  if (wire.readout_end() == SANDWireInfo::ReadoutEnd::kLeft) {
-    leftend = TVector3(wire.getPoints()[0].X(),
-                       wire.getPoints()[0].Y(),
-                       wire.getPoints()[0].Z());
-
-    rightend = TVector3(wire.getPoints()[1].X(),
-                        wire.getPoints()[1].Y(),
-                        wire.getPoints()[1].Z());
+  if (wire.readout_end() == SANDWireInfo::ReadoutEnd::kFirst) {
+    leftend  = wire.getFirstPoint();
+    rightend = wire.getSecondPoint();
   } else {
-    rightend = TVector3(wire.getPoints()[0].X(),
-                        wire.getPoints()[0].Y(),
-                        wire.getPoints()[0].Z());
-
-    leftend = TVector3(wire.getPoints()[1].X(),
-                       wire.getPoints()[1].Y(),
-                       wire.getPoints()[1].Z());
+    leftend  = wire.getSecondPoint();
+    rightend = wire.getFirstPoint();
   }
   
 
@@ -99,12 +89,7 @@ namespace tracker
 
 double GetMinWireTime(TLorentzVector point, SANDWireInfo& wire)
 {
-  TVector3 wire_point;
-  if (wire.readout_end() == SANDWireInfo::ReadoutEnd::kLeft) {
-    wire_point = wire.getPoints()[0];
-  } else {
-    wire_point = wire.getPoints()[1];
-  }
+  TVector3 wire_point = wire.getReadoutPoint();
 
   return point.T() +
          (point.Vect() - wire_point).Mag() / sand_reco::stt::v_signal_inwire;

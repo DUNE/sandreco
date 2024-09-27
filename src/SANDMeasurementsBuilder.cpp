@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
 
   TH2D* h_yz = new TH2D("h","h", p[6],p[7], p[8],
                                p[3],p[4], p[5]);
-  TH2D* h_xz = new TH2D("h","h", p[6],p[7], p[8],
+  TH2D* h_xz = new TH2D("h2","h2", p[6],p[7], p[8],
                                p[0],p[1], p[2]);
   c->cd(1);
   h_yz->Draw();
@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
     c->cd(1);
     mark_yz->Draw();
 
-    TMarker* mark_xz = new TMarker(dc.second.wire().center().Z(), dc.second.wire().center().Y(), 5);
+    TMarker* mark_xz = new TMarker(dc.second.wire().center().Z(), dc.second.wire().center().X(), 5);
     mark_xz->SetMarkerColor(id_to_color[module_unique_id]);
     mark_xz->SetMarkerSize(0.5);
     c->cd(2);

@@ -230,9 +230,9 @@ void TrackletFinder::Draw3DWires() {
 
   for (auto c:(*_fired_cells)) {  
     TPolyLine3D* pl2 = new TPolyLine3D(2);
-    TVector3 l_start = c.second.wire().getPoints()[0];
+    TVector3 l_start = c.second.wire().getFirstPoint();
     pl2->SetPoint(0, l_start.X(), l_start.Y(), l_start.Z());
-    TVector3 l_end = c.second.wire().getPoints()[1];
+    TVector3 l_end = c.second.wire().getSecondPoint();
     pl2->SetPoint(1, l_end.X(), l_end.Y(), l_end.Z());
     pl2->Draw("same");
   }
@@ -297,8 +297,8 @@ void TrackletFinder::Draw2DWires()
   }
   
   for (auto c:(*_fired_cells)) {
-    TVector3 l_start = c.second.wire().getPoints()[0];
-    TVector3 l_end   = c.second.wire().getPoints()[1];
+    TVector3 l_start = c.second.wire().getFirstPoint();
+    TVector3 l_end   = c.second.wire().getSecondPoint();
 
     TLine* tl = new TLine(l_start.X(), l_start.Y(), l_end.X(), l_end.Y());
     tl->Draw("same");
