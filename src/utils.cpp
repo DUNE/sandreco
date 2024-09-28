@@ -802,13 +802,13 @@ void sand_reco::stt::initT0(TG4Event* ev, SANDGeoManager& geo)
                    r.Gaus(0, bucket_rms);
 
   for (auto& tube : geo.get_wire_info()) {
-    long plane_global_id;
-    long tube_local_id;
-    geo.decode_wire_id(tube.first, plane_global_id, tube_local_id);
+    SANDTrackerPlaneID plane_global_id;
+    SANDTrackerCellID tube_local_id;
+    geo.decode_cell_id(SANDTrackerCellID(tube.first()), plane_global_id, tube_local_id);
 
-    if (t0.find(plane_global_id) == t0.end()) {
+    if (t0.find(plane_global_id()) == t0.end()) {
       auto tube_info = tube.second;
-      t0[plane_global_id] = t0_beam + tube_info.z() / sand_reco::constant::c;
+      t0[plane_global_id()] = t0_beam + tube_info.z() / sand_reco::constant::c;
     }
   }
 }
@@ -823,10 +823,10 @@ void sand_reco::chamber::initT0(TG4Event* ev, SANDGeoManager& geo)
                    r.Gaus(0, sand_reco::stt::bucket_rms);
   // wiremap_ is ordered, and wires id of 2 following planes differ
   // by at least 1000 - nof wires of previous plane (about 300, to be safe 500)
-  int previous_id = geo.get_wire_info().begin()->first;
+  int previous_id = geo.get_wire_info().begin()->first();
   for (auto& wire : geo.get_wire_info()) {
     auto wire_info = wire.second;
-    auto new_id = wire_info.id();
+    auto new_id = wire_info.id()();
     if (abs(new_id - previous_id) > 500)  // plane has changed
     {
       t0[new_id] = t0_beam + wire_info.z() / sand_reco::constant::c;

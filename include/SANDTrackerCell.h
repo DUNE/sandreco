@@ -4,10 +4,17 @@
 
 class SANDTrackerPlane;
 
+class SANDTrackerCellID : public SingleElStruct<unsigned long>
+{
+ public:
+  SANDTrackerCellID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  SANDTrackerCellID() : SingleElStruct<unsigned long>(){};
+};
+
 class SANDTrackerCell
 {
+  SANDTrackerCellID _id;
   SANDWireInfo _wire;
-  long _wireID;
   double _width;
   double _height;
 
@@ -19,10 +26,10 @@ class SANDTrackerCell
 
  public:
   SANDTrackerCell() {};
-  SANDTrackerCell(const SANDWireInfo &l, const long wID, const double w, const double h, 
+  SANDTrackerCell(const SANDTrackerCellID cID, const SANDWireInfo &l, const double w, const double h, 
                   const double time, const double vd, const bool fired, SANDTrackerPlane* plane)
-      : _wire(l),
-        _wireID(l.id()),
+      : _id(cID),
+        _wire(l),
         _width(w),
         _height(h),
         _timeResponse(time),
@@ -33,13 +40,14 @@ class SANDTrackerCell
   {
   }
   
-  SANDTrackerCell(const SANDWireInfo &l, 
+  SANDTrackerCell(const SANDTrackerCellID cID,
+                  const SANDWireInfo &l, 
                   const double w,
                   const double h,
                   const double v,
                   SANDTrackerPlane* plane)
-      : _wire(l),
-        _wireID(l.id()),
+      : _id(cID),
+        _wire(l),
         _width(w),
         _height(h),
         _driftVelocity(v),
@@ -47,9 +55,22 @@ class SANDTrackerCell
 
   {
   }
+  SANDTrackerCell(const SANDTrackerCellID cID,
+                  const SANDWireInfo &l, 
+                  const double w,
+                  const double h,
+                  const double v)
+      : _id(cID),
+        _wire(l),
+        _width(w),
+        _height(h),
+        _driftVelocity(v)
 
-  SANDTrackerCell(const SANDWireInfo &l, SANDTrackerPlane* plane): _wire(l),
-        _wireID(l.id()), _plane(plane)
+  {
+  }
+
+  SANDTrackerCell(const SANDTrackerCellID cID, const SANDWireInfo &l, SANDTrackerPlane* plane): 
+        _id(cID), _wire(l), _plane(plane)
   {
   }
 
@@ -63,9 +84,9 @@ class SANDTrackerCell
   {
     _isFired = fired;
   }
-  void id(long wID)
+  void id(SANDTrackerCellID wID)
   {
-    _wireID = wID;
+    _id = wID;
   }
 
   double timeResponse() const
@@ -84,9 +105,9 @@ class SANDTrackerCell
   {
     return _plane;
   }
-  long id() const
+  SANDTrackerCellID id() const
   {
-    return _wireID;
+    return _id;
   }
   void size(double &h, double &w) const
   {

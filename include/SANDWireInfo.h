@@ -4,6 +4,46 @@
 #ifndef SANDWireInfo_H
 #define SANDWireInfo_H
 
+template <typename T>
+struct SingleElStruct {
+ protected:
+  T el;
+
+ public:
+  SingleElStruct() = default;
+  SingleElStruct(T val) { el = val; };
+  SingleElStruct(const SingleElStruct &other) { el = other.el; };
+  inline T operator()() const { return el; };
+  inline bool operator<(const SingleElStruct &other) const
+  {
+    return el < other.el;
+  };
+  inline bool operator>(const SingleElStruct &other) const
+  {
+    return el > other.el;
+  };
+  inline bool operator==(const SingleElStruct &other) const
+  {
+    return el == other.el;
+  };
+  inline bool operator!=(const SingleElStruct &other) const
+  {
+    return el != other.el;
+  };
+  inline int operator-(const SingleElStruct &other) const
+  {
+    return el - other.el;
+  }
+};
+
+class SANDWireID : public SingleElStruct<unsigned long>
+{
+ public:
+  SANDWireID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  SANDWireID() : SingleElStruct<unsigned long>(){};
+};
+
+
 // class for storing the STT tubes geometrical info
 class SANDWireInfo : public TObject
 {
@@ -22,7 +62,7 @@ class SANDWireInfo : public TObject
   };
 
  private:
-  long id_;                  // id of tube
+  SANDWireID id_;                  // id of tube
   double x_;                // x position of the center of the tube
   double y_;                // y position of the center of the tube
   double z_;                // z position of the center of the tube
@@ -38,15 +78,15 @@ class SANDWireInfo : public TObject
 
  public:
   SANDWireInfo();  // Default constructor
-  SANDWireInfo(long id, double x, double y, double z, double length,
+  SANDWireInfo(SANDWireID id, double x, double y, double z, double length,
                Orient orientation,
                ReadoutEnd readout_end);  // parametric constructor
-  SANDWireInfo(long id, double x, double y, double z, double length,
+  SANDWireInfo(SANDWireID id, double x, double y, double z, double length,
                Orient orientation, ReadoutEnd readout_end, double arg_ax,
                double arg_ay, double arg_az);  // parametric constructor
 
   // Setter methods for the attributes
-  void id(long arg_id);
+  void id(SANDWireID arg_id);
   void x(double arg_x);
   void y(double arg_y);
   void z(double arg_z);
@@ -60,7 +100,7 @@ class SANDWireInfo : public TObject
   void az(double arg_az);
   void setPoint(TVector3 p) {points.push_back(p);};
   // Getter methods for the attributes
-  long id() const;
+  SANDWireID id() const;
   double x() const;
   double y() const;
   double z() const;

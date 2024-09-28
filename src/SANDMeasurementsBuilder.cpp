@@ -79,16 +79,19 @@ int main(int argc, char* argv[])
 
   // Setting color id based on moduli id. Ugly but it works
   int ccc = 1;
-  std::map<long, int> id_to_color;
+  std::map<SANDTrackerModuleID, int> id_to_color;
   for (const auto& dc:digit_cell_pairs) {
     if (ccc > 3) {
       ccc = 1;
     }
-    long module_unique_id, plane_global_id, plane_local_id, plane_type, wire_local_id;
+    SANDTrackerModuleID module_unique_id;
+    SANDTrackerPlaneID plane_global_id, plane_local_id, plane_type;
+    SANDTrackerCellID cell_local_id;
 
-    SANDGeoManager::decode_wire_id(dc.second.id(), plane_global_id, wire_local_id);
+    SANDGeoManager::decode_cell_id(dc.second.id(), plane_global_id, cell_local_id);
     SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
                                     plane_local_id, plane_type);
+
     id_to_color[module_unique_id] = ccc;
     ccc++;
   }
@@ -114,8 +117,11 @@ int main(int argc, char* argv[])
 
   for (const auto& dc:digit_cell_pairs) {
 
-    long module_unique_id, plane_global_id, plane_local_id, plane_type, wire_local_id;
-    SANDGeoManager::decode_wire_id(dc.second.id(), plane_global_id, wire_local_id);
+    SANDTrackerModuleID module_unique_id;
+    SANDTrackerPlaneID plane_global_id, plane_local_id, plane_type;
+    SANDTrackerCellID cell_local_id;
+
+    SANDGeoManager::decode_cell_id(dc.second.id(), plane_global_id, cell_local_id);
     SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
                                     plane_local_id, plane_type);
 
