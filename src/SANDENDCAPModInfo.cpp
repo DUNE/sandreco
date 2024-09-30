@@ -1,5 +1,5 @@
-/*Implementation of the SANDECALCellInfo class,
-for storing geometric info of the SAND ECAL cells*/
+/*Implementation of the SANDENDCAPModInfo class,
+for storing geometric info of the composite endcap modules*/
 
 #include "SANDENDCAPModInfo.h"
 
@@ -31,11 +31,18 @@ SANDENDCAPModInfo::SANDENDCAPModInfo(int arg_id, TGeoNode* arg_mod_node, const T
   // set the node path
   path_ = gGeoManager->GetPath();
 
-  // std::cout<<"vert: ("<<(mod_hmatrix_*(*mod_node_->GetDaughter(0)->GetMatrix())).GetTranslation()[0]
-  //                   <<", "<<(mod_hmatrix_*(*mod_node_->GetDaughter(0)->GetMatrix())).GetTranslation()[1]
-  //                   <<", "<<(mod_hmatrix_*(*mod_node_->GetDaughter(0)->GetMatrix())).GetTranslation()[2]
-  //                   <<")\n";
-
+  // if (mod_node_->GetNdaughters() > 4) {
+  //   std::cout << "hor: ("
+  //             << (mod_hmatrix_ * (*mod_node_->GetDaughter(4)->GetMatrix()))
+  //                    .GetTranslation()[0]
+  //             << ", "
+  //             << (mod_hmatrix_ * (*mod_node_->GetDaughter(4)->GetMatrix()))
+  //                    .GetTranslation()[1]
+  //             << ", "
+  //             << (mod_hmatrix_ * (*mod_node_->GetDaughter(4)->GetMatrix()))
+  //                    .GetTranslation()[2]
+  //             << ")\n";
+  // }
 }
 
 // Setter methods for the attributes
