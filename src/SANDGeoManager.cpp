@@ -78,7 +78,6 @@ std::map<int, TVector3>
   return ecal_barrel_cell_center_local_positions;
 }
 
-
 std::map<int, TVector3>
     SANDGeoManager::get_ecal_endcap_cell_center_local_position(
         const std::vector<double>& zlevels, double rmin, double rmax) const
@@ -132,8 +131,7 @@ std::map<int, TVector3> SANDGeoManager::get_ec_cell_center_local_position(
 int SANDGeoManager::encode_ecal_cell_id(int detector_id, int module_id,
                                         int layer_id, int cell_local_id)
 {
-  return cell_local_id + 100 * layer_id + 1000 * module_id +
-         detector_id * 1e7;
+  return cell_local_id + 100 * layer_id + 1000 * module_id + detector_id * 1e7;
 }
 
 void SANDGeoManager::decode_ecal_cell_id(int cell_global_id, int& detector_id,
@@ -558,13 +556,23 @@ void SANDGeoManager::set_ecal_info()
   // Dx1 < Dx2 => -Dz corresponds to minor width => internal side
   //-- TGeoTrd2 methods, which defines a trapezoid with up and down faces
   // parallel to zy and oblique sides along xz
+
+  // this is potentially outdated: barrel-module volumes contain both trapezoid
+  // layers and the Al plate for dz the old code should be valid: 127.5 is the
+  // same Dz as the endcaps (which have the same layers) I'm not sure about
+  // xmax, though
   TGeoTrd2* mod =
       (TGeoTrd2*)geo_->FindVolumeFast(sand_geometry::ecal::barrel_module_name)
           ->GetShape();
   double ecal_barrel_xmin = mod->GetDx1();
-  double ecal_barrel_xmax = mod->GetDx2();
+
   double ecal_barrel_dz = mod->GetDz();
   double ecal_barrel_dy = mod->GetDy1();
+  TGeoTrd2* last_passive_slab =
+      (TGeoTrd2*)geo_
+          ->FindVolumeFast(sand_geometry::ecal::barrel_last_passive_slab_name)
+          ->GetShape();
+  double ecal_barrel_xmax = last_passive_slab->GetDx2();
 
   // This is outdated
   // TGeoTube* ec =
@@ -670,7 +678,8 @@ void SANDGeoManager::set_ecal_info()
     }
   }
   std::cout << "> Endcap cells info. set\n";
-  // for (auto module : cellmap_) std::cout << "cellID: " << module.first << "\n";
+  // for (auto module : cellmap_) std::cout << "cellID: " << module.first <<
+  // "\n";
   std::cout << "> cellmap_ size: " << cellmap_.size() << "\n";
 }
 
@@ -997,8 +1006,8 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
     //           << ", planeID: " << layer_id
     //           << ", cell_local_id: " << cell_local_id << "\n";
   } else {
-    std::cout << ">get_ecal_cell_id exiting with error:\n"
-              << volume_name << "\n";
+    // std::cout << ">get_ecal_cell_id exiting with error:\n"
+    //           << volume_name << "\n";
     return -999;
   }
 
