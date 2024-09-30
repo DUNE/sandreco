@@ -449,32 +449,39 @@ void SANDGeoManager::set_ecal_info()
   }
 }
 
+std::map<SANDTrackerPlaneID, SANDTrackerPlane>::const_iterator SANDGeoManager::get_plane_info(SANDTrackerPlaneID plane_global_id) const
+{
+  SANDTrackerModuleID module_unique_id;
+  SANDTrackerPlaneID  plane_local_id, plane_type;
+
+  decode_plane_id(plane_global_id, module_unique_id, 
+                  plane_local_id, plane_type);
+                  
+  return _tracker_modules_map.at(module_unique_id).getPlane(plane_global_id);
+}
+
 std::map<SANDTrackerPlaneID, SANDTrackerPlane>::const_iterator SANDGeoManager::get_plane_info(SANDTrackerCellID cell_global_id) const
 {
-  SANDTrackerModuleID supermodule_id, module_unique_id, local_module_id, module_replica_id;
+  SANDTrackerModuleID module_unique_id;
   SANDTrackerPlaneID  plane_global_id, plane_local_id, plane_type;
   SANDTrackerCellID   cell_local_id;
 
   decode_cell_id(cell_global_id, plane_global_id, cell_local_id);
   decode_plane_id(plane_global_id, module_unique_id, 
                   plane_local_id, plane_type);
-  decode_module_id(module_unique_id, supermodule_id, 
-                  local_module_id,  module_replica_id);
                   
   return _tracker_modules_map.at(module_unique_id).getPlane(plane_global_id);
 }
 
 std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator SANDGeoManager::get_cell_info(SANDTrackerCellID cell_global_id) const
 {
-  SANDTrackerModuleID supermodule_id, module_unique_id, local_module_id, module_replica_id;
+  SANDTrackerModuleID module_unique_id;
   SANDTrackerPlaneID  plane_global_id, plane_local_id, plane_type;
   SANDTrackerCellID   cell_local_id;
 
   decode_cell_id(cell_global_id, plane_global_id, cell_local_id);
   decode_plane_id(plane_global_id, module_unique_id, 
                   plane_local_id, plane_type);
-  decode_module_id(module_unique_id, supermodule_id, 
-                  local_module_id,  module_replica_id);
                   
   return _tracker_modules_map.at(module_unique_id).getPlane(plane_global_id)->second.getCell(cell_global_id);
 }

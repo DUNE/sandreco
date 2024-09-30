@@ -688,7 +688,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     double hseg_dt = (hseg.Stop - hseg.Start).T();
     double hseg_start_t = hseg.Start.T();
 
-    const auto& plane = geo.get_plane_info(start_id)->second;
+    const auto& plane = geo.get_plane_info(SANDTrackerCellID(start_id))->second;
 
     TVector2 rotated_hit_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
     TVector2 rotated_hit_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);

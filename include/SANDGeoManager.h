@@ -262,6 +262,7 @@ class SANDGeoManager : public TObject
   }
   std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator get_cell_info(SANDTrackerCellID cell_id) const;
   std::map<SANDTrackerPlaneID, SANDTrackerPlane>::const_iterator get_plane_info(SANDTrackerCellID cell_id) const;
+  std::map<SANDTrackerPlaneID, SANDTrackerPlane>::const_iterator get_plane_info(SANDTrackerPlaneID cell_id) const;
   const std::map<int, SANDECALCellInfo>& get_ecal_cell_info() const
   {
     return cellmap_;

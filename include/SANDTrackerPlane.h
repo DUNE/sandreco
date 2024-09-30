@@ -11,6 +11,15 @@ class SANDTrackerPlaneID : public SingleElStruct<unsigned long>
   SANDTrackerPlaneID() : SingleElStruct<unsigned long>(){};
 };
 
+class SANDTrackerPlaneLocalID : public SingleElStruct<unsigned long>
+{
+ public:
+  SANDTrackerPlaneLocalID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  SANDTrackerPlaneLocalID() : SingleElStruct<unsigned long>(){};
+};
+
+// To Do: Use the local id
+
 class SANDTrackerPlane
 {
  private:
