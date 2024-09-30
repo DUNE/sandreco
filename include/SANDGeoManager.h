@@ -60,10 +60,13 @@ const double endcap_cell_width = 4.44;
 const int number_of_layers = 5;
 const int number_of_cells_per_barrel_layer = 12;
 const int number_of_barrel_modules = 24;
-// const int number_of_cells_per_endcap_layer = 6;
+const int number_of_cells_per_endcap_layer = 6;
 
-// thickness of the layers in mm
+// thickness of the layers in mm (barrel)
 const double layer_thickness[number_of_layers] = {44., 44., 44., 44., 54.};
+// thickness of the cell layers in mm (endcap)
+const double ec_layer_thickness[number_of_layers] = {44.4, 44.4, 44.4, 44.4,
+                                                     52.4};
 
 // endcap module id
 const int endcap_module_ids[2] = {30, 40};
@@ -131,7 +134,8 @@ class SANDGeoManager : public TObject
                                          // = z, y = transversal coord]))
 
   // ECAL
-  std::vector<double> get_levels_z(double half_module_height) const;
+  std::vector<double> get_levels_z(double half_module_height,
+                                   const double (&layers_thickness)[5]) const;
   int encode_ecal_barrel_cell_local_id(int layer, int cell) const;
   int encode_ecal_endcap_cell_local_id(int layer, int cell) const;
   static int encode_endcap_mod_id(int module_id, int module_replica_id,
@@ -140,10 +144,15 @@ class SANDGeoManager : public TObject
                                    int& module_replica_id, int& endcap_side_id);
   std::pair<int, int> decode_ecal_barrel_cell_local_id(int id) const;
   std::pair<int, int> decode_ecal_endcap_cell_local_id(int id) const;
-//   std::map<int, TVector3> get_ecal_barrel_cell_center_local_position(
-//       const std::vector<double>& zlevels, double m, double q) const;
-//   std::map<int, TVector3> get_ecal_endcap_cell_center_local_position(
-//       const std::vector<double>& zlevels, double rmin, double rmax) const;
+  std::map<int, TVector3> get_ecal_barrel_cell_center_local_position(
+      const std::vector<double>& zlevels, double m, double q) const;
+  std::map<int, TVector3> get_ecal_endcap_cell_center_local_position(
+      const std::vector<double>& zlevels, double rmin, double rmax) const;
+  // new (alternative version)
+  std::map<int, TVector3> get_ec_cell_center_local_position(
+      const std::vector<double>& zlevels,
+      const SANDENDCAPModInfo& module) const;
+
   bool is_ecal_barrel(const TString& volume_name) const;
   bool is_ecal_endcap(const TString& volume_name) const;
   bool is_endcap_mod(const TString& volume_name) const;
@@ -172,7 +181,7 @@ class SANDGeoManager : public TObject
                           double& d2) const;
   // mod id for the new endcap modules
   int get_endcap_mod_id(const TString& volume_path) const;
-  //   void set_ecal_info();
+  void set_ecal_info();
   void set_ecal_endcap_info(const TGeoHMatrix& matrix);
   void set_ecal_endcap_info();
 

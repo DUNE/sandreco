@@ -806,14 +806,14 @@ void sand_reco::stt::initT0(TG4Event* ev, SANDGeoManager& geo)
 
 int sand_reco::ecal::decoder::EncodeID(int det, int mod, int lay, int cel)
 {
-  return cel + 100 * lay + 1000 * mod + det * 100000;
+  return cel + 100 * lay + 1000 * mod + det * 1e7;
 }
 
 void sand_reco::ecal::decoder::DecodeID(int id, int& det, int& mod, int& lay,
                                         int& cel)
 {
-  det = id / 100000;
-  id -= det * 100000;
+  det = id / 1e7;
+  id -= det * 1e7;
 
   mod = id / 1000;
   id -= mod * 1000;
