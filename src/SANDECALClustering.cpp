@@ -6,6 +6,17 @@ int clustering(std::string const& input)
   const char* finname = input.c_str();
   TFile f(finname, "READ");
   TTree* t = (TTree*)f.Get("tDigit");
+  
+  if (f.IsZombie()){
+    std::cout << "Error in opening file\n";
+    exit(1);
+  }
+  
+  if (t == nullptr ){
+    std::cout << "Error in retrieving objects from root file: tDigit" << std::endl; 
+    exit(-1);
+  }
+
   int nEvents = t->GetEntries();
   std::vector<dg_cell>* cell = new std::vector<dg_cell>;
   std::vector<cluster> f_clust, og_clust;
@@ -17,19 +28,9 @@ int clustering(std::string const& input)
   t->SetBranchAddress("dg_cell", &cell);
   
   for (int i = 0; i < nEvents; i++) {
-      //std::cout <<"EVENT: " << i <<std::endl; 
     t->GetEntry(i);
     std::vector<cluster> clust = Clusterize(std::move(cell));
     
-    double CluEn = 0;
-    int n_clu = 0;
-    std::cout << "ENTRY: "<< i << ", FINAL CONFIGURATION: " << std::endl;
-    for (auto const& clu_info : clust) {
-        std::cout << "Cluster number: " << n_clu << std::endl;
-        Clust_info(clu_info);
-        std::cout << std::endl;
-        n_clu++;
-    }
     f_clust = clust;
     tout.Fill();
     clust.clear();

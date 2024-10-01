@@ -27,7 +27,6 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 
   std::vector<int> checked_array;
   std::vector<int> vec_cell;
-
   std::vector<int> chck;
 
   for (int i = 0; i < multicomplete_cells.size(); i++) {
@@ -77,12 +76,12 @@ std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
 void Clust_info(cluster clus)
 {
   std::cout << "Cluster Energy " << clus.e << " MeV" << std::endl;
-  std::cout << "Coordinate centroide: " << clus.x << " [X] " << clus.y
-            << " [Y] " << clus.z << " [z] e tempo di arrivo medio " << clus.t
-            << " ns" << std::endl;
-  std::cout << "Varianza: " << clus.varx << " [X] " << clus.vary << " [Y] "
+  std::cout << "Centroid coordinates: " << clus.x << " [X] " << clus.y
+            << " [Y] " << clus.z << " [z] , and mean arrival time: " << clus.t
+            << " ns." << std::endl;
+  std::cout << "Variance: " << clus.varx << " [X] " << clus.vary << " [Y] "
             << clus.varz << " [z]" << std::endl;
-  std::cout << "Composto dalle seguenti celle: ";
+  std::cout << "Composed by the following cells: ";
   for (int i = 0; i < clus.reco_cells.size(); i++) {
     std::cout << "Cell: " << clus.reco_cells.at(i).id
               << " X: " << clus.reco_cells.at(i).x
@@ -1073,56 +1072,7 @@ std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
   return std::make_pair(neigh_chain, checked);
 }
 
-double AttenuationFactor(double d, int planeID)
-{
-  /*
-       dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
-         d    distance from photocatode - 2 cells/cell; d1 and d2
-        atl1  50. cm
-        atl2  430 cm planes 1-2    innermost plane is 1
-              380 cm plane 3
-              330 cm planes 4-5
-         p1   0.35
-  */
-  double atl2 = 0.0;
 
-  switch (planeID) {
-    case 0:
-      atl2 = sand_reco::ecal::attenuation::atl2_01;
-      break;
-    case 1:
-      atl2 = sand_reco::ecal::attenuation::atl2_01;
-      break;
-
-    case 2:
-      atl2 = sand_reco::ecal::attenuation::atl2_2;
-      break;
-
-    case 3:
-      atl2 = sand_reco::ecal::attenuation::atl2_34;
-      break;
-
-    case 4:
-      atl2 = sand_reco::ecal::attenuation::atl2_34;
-      break;
-
-    default:
-
-      atl2 = -999.0;
-      break;
-  }
-
-  return sand_reco::ecal::attenuation::p1 *
-             TMath::Exp(-d / sand_reco::ecal::attenuation::atl1) +
-         (1. - sand_reco::ecal::attenuation::p1) * TMath::Exp(-d / atl2);
-}
-
-double TfromTDC(double t1, double t2, double L)
-{
-  return 0.5 * (t1 + t2 -
-                sand_reco::ecal::scintillation::vlfb * L /
-                    sand_reco::conversion::m_to_mm);
-}
 
 double EfromADCsingle(double adc, double f)
 {
@@ -1133,8 +1083,8 @@ double EfromADCsingle(double adc, double f)
 
 double DfromTDC(double ta, double tb)
 {
-  return 0.5 * (ta - tb) / sand_reco::ecal::scintillation::vlfb *
-         sand_reco::conversion::m_to_mm;
+    return 0.5 * (ta - tb) / sand_reco::ecal::scintillation::vlfb *
+    sand_reco::conversion::m_to_mm;
 }
 
 bool endsWith(const std::string& fullString, const std::string& ending)

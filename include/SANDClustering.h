@@ -1,22 +1,14 @@
 #ifndef SANDCLUSTERING_H
 #define SANDCLUSTERING_H
 
-#include <complex>      // check if needed
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <tuple>
-#include <utility>
-#include <vector>
 
 #include "TFile.h"
-#include "TLeaf.h"
 #include "TTree.h"
-#include "TSystem.h"
 
-//#include "SANDClusteringLinkDef.h"
 #include "struct.h"
-//#include "utils.h"
 
 std::tuple<double, double, double, double> fit_ls(int, double[], double[],
                                                   double[]);
@@ -40,17 +32,10 @@ cluster Create_cluster(std::vector<dg_cell>);
 bool RepetitionCheck(std::vector<int>, int);
 bool isNeighbour(int, int);
 
-//
-/// Maybe duplication of identical functions
-//
-double TfromTDC(double t1, double t2, double L);  
-double AttenuationFactor(double d, int planeID);
-double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
 double EfromADCsingle(double adc, double f);
 double DfromTDC(double, double);
 
 bool endsWith(const std::string& fullString, const std::string& ending);
 
-// void Clust_info(cluster);
 
 #endif
