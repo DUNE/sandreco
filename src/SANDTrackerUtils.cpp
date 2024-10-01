@@ -23,60 +23,6 @@ bool SANDTrackerUtils::AreAdjacent(const SANDTrackerCellID &tub1, const SANDTrac
   return (abs(long(tub1()) - long(tub2())) <= 1);
 }
 
-const SANDTrackerCellID SANDTrackerUtils::GetTubeID(const SANDTrackerDigitID &id)
-{
-  SANDTrackerPlaneID pln;
-  SANDTrackerCellID tub;
-  std::tie(pln, tub) = GetPlaneAndTubeIds(id);
-  return tub;
-}
-
-const SANDTrackerPlaneID SANDTrackerUtils::GetPlaneID(const SANDTrackerDigitID &id)
-{
-  SANDTrackerPlaneID pln;
-  SANDTrackerCellID tub;
-  std::tie(pln, tub) = GetPlaneAndTubeIds(id);
-  return pln;
-}
-
-const SANDTrackerPlaneLocalID SANDTrackerUtils::GetPlaneLocalID(const SANDTrackerPlaneID &id)
-{
-  SANDTrackerPlaneLocalID pln;
-  SANDTrackerModuleID mid;
-  std::tie(mid, pln) = GetModuleIdAndPlaneLocalId(id);
-  return pln;
-}
-
-const SANDTrackerModuleID SANDTrackerUtils::GetModelID(const SANDTrackerPlaneID &id)
-{
-  SANDTrackerPlaneLocalID pln;
-  SANDTrackerModuleID mid;
-  std::tie(mid, pln) = GetModuleIdAndPlaneLocalId(id);
-  return mid;
-}
-
-std::tuple<SANDTrackerPlaneID, SANDTrackerCellID> SANDTrackerUtils::GetPlaneAndTubeIds(
-    const SANDTrackerDigitID &id)
-{
-  int pid, tid;
-  // sand_reco::stt::decodeSTID(id(), pid, tid);
-  // return std::make_tuple(SANDTrackerPlaneID(pid), SANDTrackerCellID(tid));
-}
-
-std::tuple<SANDTrackerModuleID, SANDTrackerPlaneLocalID> SANDTrackerUtils::GetModuleIdAndPlaneLocalId(
-    const SANDTrackerPlaneID &id)
-{
-  int mid, lid, typ;
-  // sand_reco::stt::decodePlaneID(id(), mid, lid, typ);
-  // return std::make_tuple(SANDTrackerModuleID(mid), SANDTrackerPlaneLocalID(lid));
-}
-
-// init pattern reco
-void SANDTrackerUtils::Init(TGeoManager *geo)
-{
-  InitGeo(geo);
-  // SANDTrackerStrawTubeTracker::Init();
-}
 
 double SANDTrackerUtils::GetPerpMomentumInGeVFromRadiusInMM(double radius) {
   return GetRadiusInMMToMomentumInGeVConstant() * radius * GetMagneticField(); 

@@ -33,16 +33,6 @@ class SANDTrackerClusterCollection
     return fModules;
   };
   int GetNClusters() const;
-  const SANDTrackerCluster &GetFirstDownstreamCluster() const;
-  // bool IsPlaneOK(const SANDTrackerPlaneIndex &index) const;
-  // da rimuovere add and remove
-  inline void AddCluster(const SANDTrackerCluster &cl)
-  {
-    // fPlanes.at(cl.GetPlaneIndex()()).AddCluster(cl);
-  };
-  inline void RemoveCluster(const SANDTrackerCluster &cl)
-  {
-    // fPlanes.at(cl.GetPlaneIndex()()).RemoveCluster(cl.GetId());
-  };
+  const SANDTrackerCluster &GetFirstDownstreamCluster();
 };
 #endif

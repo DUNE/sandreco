@@ -13,7 +13,7 @@ class SANDTrackerClustersInPlane
   const SANDGeoManager* _sand_geo;
 
   void Clusterize(const std::vector<SANDTrackerDigitID> &digits);
-  // inline double GetDigitCoord(const SANDTrackerDigit *dg) const;
+  inline TVector2 GetDigitCoord(const SANDTrackerDigit *dg) const;
 
  public:
   SANDTrackerClustersInPlane() {};
@@ -31,25 +31,28 @@ class SANDTrackerClustersInPlane
     Clusterize(digits);
   };
   ~SANDTrackerClustersInPlane(){};
-  // const SANDTrackerPlaneIndex GetIndex() const { return fPlane->GetIndex(); };
   inline const SANDTrackerPlaneID GetId() const 
   { 
-    // return fPlane->GetId(); 
+    return fPlane->uid(); 
   };
-  // inline SANDTrackerPlane::EOrientation GetOrientation() const
-  // {
-    // return fPlane->GetOrientation();
-  // };
+  inline double GetRotation() const
+  {
+    return fPlane->getRotation();
+  };
   inline double GetZ() const 
   { 
-    // return fPlane->GetZ(); 
+    return fPlane->getPosition().Z();
+  };
+  inline std::vector<SANDTrackerCluster> &GetClusters()
+  {
+    return fClusters;
   };
   inline const std::vector<SANDTrackerCluster> &GetClusters() const
   {
     return fClusters;
   };
   void AddCluster(const SANDTrackerCluster &clu) { fClusters.push_back(clu); };
-  void RemoveCluster(int cid)
+  void RemoveCluster(SANDTrackerClusterID cid)
   {
     auto it =
         std::find_if(fClusters.begin(), fClusters.end(),
@@ -57,7 +60,7 @@ class SANDTrackerClustersInPlane
     assert(it != fClusters.end());
     fClusters.erase(it);
   };
-  const SANDTrackerCluster &GetNearestCluster(double x) const;
-  int GetBestMatch(const SANDTrackerCluster &cl) const;
+  const SANDTrackerCluster &GetNearestCluster(double x, double y) const;
+  // int GetBestMatch(const SANDTrackerCluster &cl) const;
 };
 #endif

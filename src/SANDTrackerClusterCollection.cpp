@@ -55,18 +55,21 @@ int SANDTrackerClusterCollection::GetNClusters() const
 }
 
 // get downstream digit
-const SANDTrackerCluster &SANDTrackerClusterCollection::GetFirstDownstreamCluster() const
+const SANDTrackerCluster &SANDTrackerClusterCollection::GetFirstDownstreamCluster()
 {
-  // auto it = --fPlanes.end();
-  // while (it->second.GetClusters().size() == 0) --it;
-  // return it->second.GetClusters().front();
-}
+  double z = -1E9;
+  SANDTrackerCluster& clu = fModules.begin()->second
+                                  .begin()->second
+                                  .GetClusters().front();
 
-// // check if the module has available digits
-// bool SANDTrackerClusterCollection::IsPlaneOK(const SANDTrackerPlaneIndex &index) const
-// {
-//   if (index() >= fPlanes.size())
-//     return false;
-//   else
-//     return (fPlanes.at(index()).GetClusters().size() != 0);
-// }
+  for (const auto& mod:fModules) {
+    for (const auto& plane:mod.second) {
+      if (_sand_geo->get_plane_info(plane.first)->second.getPosition().Z() > z && 
+          plane.second.GetClusters().size() != 0) {
+        z = _sand_geo->get_plane_info(plane.first)->second.getPosition().Z();
+        clu = plane.second.GetClusters().front();
+      }
+    }
+  }
+  return clu;
+}

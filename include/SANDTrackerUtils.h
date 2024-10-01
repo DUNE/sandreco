@@ -38,15 +38,10 @@ class SANDTrackerUtils
   static const double c;
 
   
-  static void InitGeo(TGeoManager *geo) { fGeo = geo; };
   // static inline const std::map<int, std::map<int, TVector2>> &GetTubeMap()
   // {
     // return sand_reco::stt::stPos;
   // };
-  static std::tuple<SANDTrackerPlaneID, SANDTrackerCellID> GetPlaneAndTubeIds(
-      const SANDTrackerDigitID &id);
-  static std::tuple<SANDTrackerModuleID, SANDTrackerPlaneLocalID> GetModuleIdAndPlaneLocalId(
-      const SANDTrackerPlaneID &id);
 
  public:
   SANDTrackerUtils(){};

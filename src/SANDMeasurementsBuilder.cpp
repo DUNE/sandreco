@@ -64,15 +64,16 @@ int main(int argc, char* argv[])
   std::cout << "SANDTrackerDigitCollection::GetDigits().size(): " << SANDTrackerDigitCollection::GetDigits().size() << std::endl;
   SANDTrackerClusterCollection clusters(&sand_geo, SANDTrackerDigitCollection::GetDigits());
   auto digit_map =  SANDTrackerDigitCollection::GetDigits();
+  clusters.GetFirstDownstreamCluster();
 
-  int color = 1;
+  int color = 2;
   int sum = 0;
   for (const auto& clusters_in_module:clusters.GetModules()) {
     for (const auto& clusters_in_plane:clusters_in_module.second) {
 
       std::cout << clusters_in_plane.first() << " size: " << clusters_in_plane.second.GetClusters().size() << std::endl;
       for (const auto& single_cluster_in_plane:clusters_in_plane.second.GetClusters()) {
-        if(color > 9) color = 1;
+        if(color > 9) color = 2;
         std::vector<SANDTrackerDigitID> digits_cluster = single_cluster_in_plane.GetDigits();
         std::cout << "     " << digits_cluster.size() << std::endl;
         sum += digits_cluster.size();
@@ -140,6 +141,41 @@ int main(int argc, char* argv[])
           mark_xz->Draw();
         }
         color++;
+
+        digits_cluster = single_cluster_in_plane.GetExtendedDigits();
+        std::cout << "EXTENDED SIZE: " << digits_cluster.size() << std::endl; 
+        for (const auto& d:digits_cluster) {
+          auto cell = sand_geo.get_cell_info(SANDTrackerCellID(d()));
+          
+          double h,w;
+          cell->second.size(w,h);
+          TBox* box_yz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().Y() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().Y() + w/2.);
+          TBox* box_xz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().X() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().X() + w/2.);
+
+          canvas->cd(1);
+          box_yz->SetFillStyle(0);
+          box_yz->SetLineColor(1);
+          box_yz->SetLineWidth(1);
+          box_yz->Draw();
+
+          canvas->cd(2);
+          box_xz->SetFillStyle(0);
+          box_xz->SetLineColor(1);
+          box_xz->SetLineWidth(1);
+          box_xz->Draw();
+
+          TMarker* mark_yz = new TMarker(cell->second.wire().center().Z(), cell->second.wire().center().Y(), 5);
+          mark_yz->SetMarkerColor(1);
+          mark_yz->SetMarkerSize(0.5);
+          canvas->cd(1);
+          mark_yz->Draw();
+
+          TMarker* mark_xz = new TMarker(cell->second.wire().center().Z(), cell->second.wire().center().X(), 5);
+          mark_xz->SetMarkerColor(1);
+          mark_xz->SetMarkerSize(0.5);
+          canvas->cd(2);
+          mark_xz->Draw();
+        }
       }
     }
   }

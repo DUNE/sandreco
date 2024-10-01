@@ -34,6 +34,10 @@ struct SingleElStruct {
   {
     return el - other.el;
   }
+  inline T operator++(int)
+  {
+    return el++;
+  }
 };
 
 class SANDWireID : public SingleElStruct<unsigned long>
