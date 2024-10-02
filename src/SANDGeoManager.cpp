@@ -1077,6 +1077,69 @@ double SANDGeoManager::getMinDistanceBetweenSegments(TVector3 a, TVector3 b,
 
 }
 
+// To Do: I don't like geometry being a string.. maybe use an enum?
+// Notice: Currently a single dz and dy are considered. If planes will have 
+//        different thickness or different wire smaplings, this won't work
+void SANDGeoManager::fill_adjacent_cells(std::string geometry)
+{
+  double dz; 
+  double dy;
+  auto first_cell  = _planes.at(0).getIdToCellMap().begin();
+  if (geometry == "STT") {
+    first_cell->second.size(dy, dz);
+    dz = dz * sqrt(3) / 2.;
+  } else {
+    first_cell->second.size(dy, dz);
+  }
+  
+  double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
+  std::cout << "max_distance " << dy << " " << dz << " " << max_distance << std::endl;
+
+  for(auto plane_it = _planes.begin(); plane_it != _planes.end(); plane_it++) {
+    // std::cout << "Checking plane " << plane_it->uid()() << std::endl;
+    int c = 0;
+    for(auto next_plane_it = plane_it; c < 3 && next_plane_it != _planes.end(); next_plane_it++) {
+      // std::cout << "with plane " << next_plane_it->uid()() << std::endl;
+      c++;
+      auto&      plane_it_cells =      plane_it->getIdToCellMap();
+      auto& next_plane_it_cells = next_plane_it->getIdToCellMap();
+
+        
+      for(auto& plane_cell:plane_it_cells) {
+        for(auto& next_plane_cell:next_plane_it_cells) {
+          if(plane_cell.first == next_plane_cell.first) {
+            continue;
+          }
+
+          double distance = getMinDistanceBetweenSegments(plane_cell.second.wire().getFirstPoint(),
+                                                          plane_cell.second.wire().getSecondPoint(),
+                                                          next_plane_cell.second.wire().getFirstPoint(),
+                                                          next_plane_cell.second.wire().getSecondPoint());
+          // std::cout << c << " " << distance << " " << plane_cell.first() << " " << next_plane_cell.first() << std::endl;
+          if (distance < max_distance) {
+            plane_cell.second.addAdjacentCell(&(next_plane_cell.second));
+            next_plane_cell.second.addAdjacentCell(&(plane_cell.second));
+          }
+        }
+      }
+    }
+    // break;
+  }
+}
+
+void SANDGeoManager::rearrange_planes()
+{
+  _id_to_plane.clear();
+  std::sort(_planes.begin(), _planes.end(), 
+            [](const SANDTrackerPlane& p1, const SANDTrackerPlane& p2)
+              {return p1.getPosition().Z() < p2.getPosition().Z();});
+
+  for (auto it = _planes.begin();
+            it != _planes.end(); ++it) {
+    _id_to_plane[it->uid()] = it;
+  }
+}
+
 void SANDGeoManager::set_wire_info()
 {
   geo_->CdTop();
@@ -1091,6 +1154,7 @@ void SANDGeoManager::set_wire_info()
     geometry = "DRIFT";
   }
   rearrange_planes();
+  fill_adjacent_cells(geometry);
   std::cout << "writing wiremap_ info on separate file\n";
   std::cout << "wiremap_ size: " << wiremap_.size() << std::endl;
   WriteMapOnFile(geometry, wiremap_);
@@ -1124,9 +1188,10 @@ void SANDGeoManager::PrintModulesInfo(int verbose)
         std::cout << "        Point2: " << c.second.wire().getSecondPoint().X() << " "
                                         << c.second.wire().getSecondPoint().Y() << " "
                                         << c.second.wire().getSecondPoint().Z() << std::endl;
-                                          << c.second.wire().getSecondPoint().Y() << " "
-                                          << c.second.wire().getSecondPoint().Z() << std::endl;
-        }
+        std::cout << "        Adjacent ids: ";
+        for (const auto& adj:c.second.getAdjacentCell()) std::cout << adj->id()() << " ";
+        std::cout << std::endl;
+
       }
     }
   }

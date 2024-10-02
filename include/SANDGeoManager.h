@@ -212,6 +212,7 @@ class SANDGeoManager : public TObject
 
   void set_wire_info();
 
+  void fill_adjacent_cells(std::string geometry);
   void rearrange_planes();
 
   std::vector<TVector2> getLocalLinePlaneIntersections(const TVector2& local_2d_position,

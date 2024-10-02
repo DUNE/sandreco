@@ -23,6 +23,7 @@ class SANDTrackerCell
   bool _isFired;
 
   SANDTrackerPlane* _plane;
+  std::vector<SANDTrackerCell*> _adjacent_cells;
 
  public:
   SANDTrackerCell() {};
@@ -134,4 +135,7 @@ class SANDTrackerCell
     else
       return -1;
   }
+
+  void addAdjacentCell(SANDTrackerCell* adj_cell);
+  const std::vector<SANDTrackerCell*> getAdjacentCell() const {return _adjacent_cells;};
 };
