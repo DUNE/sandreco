@@ -390,15 +390,15 @@ void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
   // double dz = tub->GetDz();
 
   // Cell width at z = Plocal[2]
-  double cell_width = endcapmap_.at(endcap_mod_id).width() /
-                      sand_geometry::ecal::endcap_cell_width;
+  // double cell_width = endcapmap_.at(endcap_mod_id).width() /
+  //                     sand_geometry::ecal::endcap_cell_width;
 
   // std::cout << "endcapmap_[" << endcap_mod_id
   //           << "].width(): " << endcapmap_.at(endcap_mod_id).width()
   //           << ", cell_width: " << cell_width << "\n";
   // cellID = distanza dall'estremo diviso larghezza cella
-  cell_local_id =
-      (local[0] + 0.5 * endcapmap_.at(endcap_mod_id).width()) / cell_width;
+  cell_local_id = (local[0] + 0.5 * endcapmap_.at(endcap_mod_id).width()) /
+                  sand_geometry::ecal::endcap_cell_width;
 
   // std::cout << "local[0]: " << local[0]
   //           << ", Dx: " << local[0] + 0.5 *
@@ -668,9 +668,9 @@ void SANDGeoManager::set_ecal_info()
       geo_->LocalToMaster(local, master);
 
       // here we create new cellInfo
-      // std::cout << "ec_modID: " << module.first << "\n";
       int cell_unique_id = encode_ecal_cell_id(detector_id, module.first,
                                                layer_id, cell_local_id);
+      // std::cout << "cellID: " << cell_unique_id<<", modID: "<<m_ID<<", repID: "<<replica_id<<", detID: "<<detector_id<<", ("<<master[0]<<", "<<master[1]<<", "<<master[2]<<")\n";
 
       cellmap_[cell_unique_id] =
           SANDECALCellInfo(cell_unique_id, master[0], master[1], master[2],
@@ -1001,10 +1001,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
     get_ecal_endcap_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
     get_ecal_endcap_cell_local_id(x, y, z, module_id, cell_local_id);
-
-    // std::cout << "detID: " << detector_id << ", modID: " << module_id
-    //           << ", planeID: " << layer_id
-    //           << ", cell_local_id: " << cell_local_id << "\n";
   } else {
     // std::cout << ">get_ecal_cell_id exiting with error:\n"
     //           << volume_name << "\n";
@@ -1013,6 +1009,10 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 
   int cell_unique_id =
       encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
+
+  // std::cout << ">>uniqID: " << cell_unique_id <<", detID: " << detector_id
+  //           << ", modID: " << module_id << ", planeID: " << layer_id
+  //           << ", cell_local_id: " << cell_local_id << "\n";
 
   return cell_unique_id;
 }
