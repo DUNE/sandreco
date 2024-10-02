@@ -17,7 +17,7 @@ class SANDTrackerCluster
 {
  private:
   SANDTrackerClusterID fId;
-  const SANDTrackerPlane *fPlane;
+  plane_iterator fPlane;
   std::vector<SANDTrackerDigitID> fDigits;
   std::vector<SANDTrackerDigitID> fDigits_extended;
 

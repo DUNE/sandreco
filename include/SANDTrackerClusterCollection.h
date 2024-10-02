@@ -9,8 +9,7 @@ class SANDTrackerClusterCollection
 {
   // The idea is to make this class static and const
  private:
-  using PlanesInModule = std::map<SANDTrackerPlaneID, SANDTrackerClustersInPlane>;
-  std::map<SANDTrackerModuleID, PlanesInModule> fModules;
+  std::vector<SANDTrackerClustersInPlane> fPlanes;
   const SANDGeoManager* _sand_geo;
 
  public:
@@ -21,16 +20,11 @@ class SANDTrackerClusterCollection
       const SANDTrackerPlaneID &id
       ) const
   {
-    SANDTrackerModuleID unique_module_id;
-    SANDTrackerPlaneID plane_local_id, plane_type;
-    _sand_geo->decode_plane_id(id, unique_module_id, 
-                               plane_local_id, plane_type);
-    
-    return fModules.at(unique_module_id).at(id);
+    return fPlanes.at(_sand_geo->GetPlaneIndex(id)());
   };
-  inline const std::map<SANDTrackerModuleID, PlanesInModule> &GetModules() const
+  inline const std::vector<SANDTrackerClustersInPlane> &GetPlanes() const
   {
-    return fModules;
+    return fPlanes;
   };
   int GetNClusters() const;
   const SANDTrackerCluster &GetFirstDownstreamCluster();

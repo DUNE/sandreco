@@ -105,7 +105,7 @@ void create_digits_from_hits(const SANDGeoManager& geo,
        it != hits2cell.end(); ++it)  // run over wires
   {
     long did = it->first();  // wire unique id
-    auto wire_info = geo.get_cell_info(did)->second.wire();
+    auto wire_info = geo.get_cell_info(it->first())->second.wire();
     double wire_time = 999.;
     double drift_time = 999.;
     double signal_time = 999.;
@@ -645,9 +645,9 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     geo.decode_cell_id(id1, plane_global_id1, cell_local_id1);
     geo.decode_cell_id(id2, plane_global_id2, cell_local_id2);
 
-    // std::cout << id1 << " "  << id2 << " " << std::endl;
-    // std::cout << plane_global_id1 << " " << plane_global_id2 << std::endl;
-    // std::cout << cell_local_id1 << " " << cell_local_id2 << std::endl;
+    // std::cout << id1() << " "  << id2() << " " << std::endl;
+    // std::cout << plane_global_id1() << " " << plane_global_id2() << std::endl;
+    // std::cout << cell_local_id1() << " " << cell_local_id2() << std::endl;
 
     if (plane_global_id1 != plane_global_id2) {
       std::cout << "WIRE ID CORRESPONDING TO 2 DIFFERENT DIRFT PLANES"
@@ -688,7 +688,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     double hseg_dt = (hseg.Stop - hseg.Start).T();
     double hseg_start_t = hseg.Start.T();
 
-    const auto& plane = geo.get_plane_info(SANDTrackerCellID(start_id))->second;
+    auto& plane = *geo.get_plane_info(SANDTrackerCellID(start_id));
 
     TVector2 rotated_hit_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
     TVector2 rotated_hit_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
@@ -750,7 +750,6 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
       // crossing_point_2d.Print();
       // stop.Print();
       // hseg.Stop.Print();
-
       SANDTrackerCellID cell_id = geo.GetClosestCellToHit(center, plane, false);
 
       hit h;

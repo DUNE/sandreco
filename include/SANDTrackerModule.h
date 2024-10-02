@@ -52,7 +52,7 @@ class SANDTrackerModule
   std::map<SANDTrackerPlaneID, SANDTrackerPlane>::iterator getPlane(SANDTrackerPlaneID index);
   std::map<SANDTrackerPlaneID, SANDTrackerPlane>::const_iterator getPlane(SANDTrackerPlaneID index) const;
 
-  int nPlanes()
+  int nPlanes() const
   {
     return _vPlanes.size();
   }

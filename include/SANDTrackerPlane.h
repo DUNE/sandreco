@@ -11,6 +11,13 @@ class SANDTrackerPlaneID : public SingleElStruct<unsigned long>
   SANDTrackerPlaneID() : SingleElStruct<unsigned long>(){};
 };
 
+class SANDTrackerPlaneIndex : public SingleElStruct<unsigned long>
+{
+ public:
+  SANDTrackerPlaneIndex(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  SANDTrackerPlaneIndex() : SingleElStruct<unsigned long>(){};
+};
+
 class SANDTrackerPlaneLocalID : public SingleElStruct<unsigned long>
 {
  public:
@@ -39,6 +46,11 @@ class SANDTrackerPlane
 
  public:
   SANDTrackerPlane() {};
+  SANDTrackerPlane(SANDTrackerPlaneID u_id, SANDTrackerPlaneID l_id)
+  {
+    _unique_id = u_id;
+    _local_id  = l_id;
+  }
   SANDTrackerPlane(SANDTrackerPlaneID u_id, SANDTrackerPlaneID l_id, SANDTrackerModule* module_ptr)
   {
     _unique_id = u_id;
@@ -61,7 +73,10 @@ class SANDTrackerPlane
       _id_to_cell_map.insert({c.id(), c});
     }
   }
+        std::map<SANDTrackerCellID, SANDTrackerCell>& getIdToCellMap()       {return _id_to_cell_map;};
   const std::map<SANDTrackerCellID, SANDTrackerCell>& getIdToCellMap() const {return _id_to_cell_map;};
+        std::map<double, SANDTrackerCellID>& getCoordToIDMap()       {return _coord_to_id_map;};
+  const std::map<double, SANDTrackerCellID>& getCoordToIDMap() const {return _coord_to_id_map;};
   std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator getIdToCellMapEnd() const {return _id_to_cell_map.end();};
   int nCells() const
   {
@@ -86,3 +101,5 @@ class SANDTrackerPlane
   void setDimension(TVector3 d) { _dimension = d;};
   void setRotation(double r) {_rotation = r;};
 };
+
+using plane_iterator = std::vector<SANDTrackerPlane>::const_iterator;

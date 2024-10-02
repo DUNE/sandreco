@@ -8,7 +8,7 @@
 class SANDTrackerClustersInPlane
 {
  private:
-  const SANDTrackerPlane *fPlane;
+  plane_iterator fPlane;
   std::vector<SANDTrackerCluster> fClusters;
   const SANDGeoManager* _sand_geo;
 
@@ -20,14 +20,14 @@ class SANDTrackerClustersInPlane
   SANDTrackerClustersInPlane(const SANDGeoManager* sand_geo, const SANDTrackerPlaneID &id)
   {
     _sand_geo = sand_geo;
-    fPlane = &(_sand_geo->get_plane_info(id)->second);
+    fPlane = _sand_geo->get_plane_info(id);
   };
   SANDTrackerClustersInPlane(const SANDGeoManager* sand_geo,
                      const SANDTrackerPlaneID &id,
                      const std::vector<SANDTrackerDigitID> &digits)
   {
     _sand_geo = sand_geo;
-    fPlane = &(_sand_geo->get_plane_info(id)->second);
+    fPlane = _sand_geo->get_plane_info(id);
     Clusterize(digits);
   };
   ~SANDTrackerClustersInPlane(){};

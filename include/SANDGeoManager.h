@@ -135,7 +135,8 @@ class SANDGeoManager : public TObject
                                      // map (key: plane id, value: map (key:
                                      // wire id, value: 2D position [i.e. x
                                      // = z, y = transversal coord]))
-  std::map<SANDTrackerModuleID, SANDTrackerModule> _tracker_modules_map;
+  std::vector<SANDTrackerPlane> _planes;
+  std::map<SANDTrackerPlaneID, plane_iterator> _id_to_plane;
 
   mutable TPRegexp stt_tube_regex_{
       sand_geometry::stt::stt_single_tube_regex_string};  // regular expression
@@ -165,6 +166,7 @@ class SANDGeoManager : public TObject
 
 
   bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector3& intersection);
+  bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector2& intersection);
   void set_drift_plane_info(SANDTrackerPlane& plane, double angle);
   void PrintModulesInfo(int verbose = 1);
   void DrawModulesInfo();
@@ -210,6 +212,14 @@ class SANDGeoManager : public TObject
 
   void set_wire_info();
 
+  void rearrange_planes();
+
+  std::vector<TVector2> getLocalLinePlaneIntersections(const TVector2& local_2d_position,
+                                                       const SANDTrackerPlane& plane);
+  std::vector<TVector2> getGlobalLinePlaneIntersections(const TVector2& local_2d_position, 
+                                                        const SANDTrackerPlane& plane);
+  double getMinDistanceBetweenSegments(TVector3 a, TVector3 b,
+                                       TVector3 c, TVector3 d);
   // STT
   SANDTrackerModuleID get_stt_module_id(const TString& volume_path) const;
   bool is_stt_tube(const TString& volume_name) const;
@@ -261,8 +271,8 @@ class SANDGeoManager : public TObject
     return cellmap_.at(ecal_cell_id);
   }
   std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator get_cell_info(SANDTrackerCellID cell_id) const;
-  std::map<SANDTrackerPlaneID, SANDTrackerPlane>::const_iterator get_plane_info(SANDTrackerCellID cell_id) const;
-  std::map<SANDTrackerPlaneID, SANDTrackerPlane>::const_iterator get_plane_info(SANDTrackerPlaneID cell_id) const;
+  plane_iterator get_plane_info(SANDTrackerCellID cell_id) const;
+  plane_iterator get_plane_info(SANDTrackerPlaneID unique_plane_id) const;
   const std::map<int, SANDECALCellInfo>& get_ecal_cell_info() const
   {
     return cellmap_;
@@ -276,10 +286,20 @@ class SANDGeoManager : public TObject
   {
     return wire_tranverse_position_map_;
   }
-  const std::map<SANDTrackerModuleID, SANDTrackerModule>&
-      get_modules_map() const
+  const std::vector<SANDTrackerPlane>&
+      get_planes() const
   {
-    return _tracker_modules_map;
+    return _planes;
+  }
+  std::vector<SANDTrackerPlane>&
+      get_planes()
+  {
+    return _planes;
+  }
+
+  const SANDTrackerPlaneIndex GetPlaneIndex(const SANDTrackerPlaneID& plane_uid) const
+  {
+    return SANDTrackerPlaneIndex(std::distance(_planes.cbegin(), _id_to_plane.at(plane_uid)));
   }
   int get_ecal_cell_id(double x, double y, double z) const;
   SANDTrackerCellID get_stt_tube_id(double x, double y, double z) const;

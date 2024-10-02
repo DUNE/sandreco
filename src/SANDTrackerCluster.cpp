@@ -13,7 +13,7 @@ SANDTrackerCluster::SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vect
     : fId(fCounter++), fDigits(digits)
 {
   _sand_geo = sand_geo;
-  fPlane = &(_sand_geo->get_plane_info(id)->second);
+  fPlane = _sand_geo->get_plane_info(id);
 }
 
 void SANDTrackerCluster::GetExtendedCluster(int offset)
