@@ -56,7 +56,7 @@ target_link_libraries(SANDTrackerUtils PUBLIC Utils)
 # SANDTrackerGeoManager library
 add_library(SANDTrackerCluster SHARED src/SANDTrackerCluster.cpp
                               src/SANDTrackerClusterCollection.cpp
-                              src/SANDTrackerClustersInPlane.cpp)
+                              src/SANDTrackerClustersContainer.cpp)
 target_link_libraries(SANDTrackerCluster PUBLIC SANDTrackerUtils ROOT::Minuit SANDGeoManager)
 
 

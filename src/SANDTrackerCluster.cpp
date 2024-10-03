@@ -9,15 +9,24 @@
 
 SANDTrackerClusterID SANDTrackerCluster::fCounter(0);
 
-SANDTrackerCluster::SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vector<SANDTrackerDigitID> &digits, const SANDTrackerPlaneID &id)
+SANDTrackerCluster::SANDTrackerCluster(const SANDGeoManager* sand_geo, 
+          std::vector<SANDTrackerDigitID> &digits, plane_iterator plane)
     : fId(fCounter++), fDigits(digits)
 {
   _sand_geo = sand_geo;
-  fPlane = _sand_geo->get_plane_info(id);
+  fPlane = plane;
+}
+
+SANDTrackerCluster::SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vector<SANDTrackerDigitID> &digits)
+    : fId(fCounter++), fDigits(digits)
+{
+  _sand_geo = sand_geo;
 }
 
 void SANDTrackerCluster::GetExtendedCluster(int offset)
 {
+
+  // To Do: add case for triplet clusters, not only plane ones
   std::vector<ulong> ids;
   for (auto i = 0u; i < fDigits.size(); i++) {
     auto d = SANDTrackerDigitCollection::GetDigit(fDigits.at(i));

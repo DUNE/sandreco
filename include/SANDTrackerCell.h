@@ -138,4 +138,16 @@ class SANDTrackerCell
 
   void addAdjacentCell(SANDTrackerCell* adj_cell);
   const std::vector<SANDTrackerCell*> getAdjacentCell() const {return _adjacent_cells;};
+
+  bool isAdjacent(const SANDTrackerCellID& adj_id) const {
+    if (std::find_if(_adjacent_cells.begin(), 
+                    _adjacent_cells.end(), 
+                    [&adj_id](SANDTrackerCell* cell)
+                    { return (cell->id() == adj_id) ? true : false; })
+      != _adjacent_cells.end()) {
+        return true;
+    } else {
+      return false;
+    }
+  }
 };

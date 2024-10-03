@@ -3,30 +3,39 @@
 
 #include <vector>
 
-#include "SANDTrackerClustersInPlane.h"
+#include "SANDTrackerClustersContainer.h"
 
 class SANDTrackerClusterCollection
 {
-  // The idea is to make this class static and const
- private:
-  std::vector<SANDTrackerClustersInPlane> fPlanes;
-  const SANDGeoManager* _sand_geo;
 
- public:
-  SANDTrackerClusterCollection(const SANDGeoManager* sand_geo, const std::vector<SANDTrackerDigit> &digits);
-  SANDTrackerClusterCollection(const SANDGeoManager* sand_geo);
-  ~SANDTrackerClusterCollection(){};
-  inline const SANDTrackerClustersInPlane &GetClustersInPlane(
-      const SANDTrackerPlaneID &id
-      ) const
-  {
-    return fPlanes.at(_sand_geo->GetPlaneIndex(id)());
+  // The idea is to make this class static and const
+  public:
+  enum class ClusteringMethod {
+    kProximityInPlane,
+    kCellAdjacency
   };
-  inline const std::vector<SANDTrackerClustersInPlane> &GetPlanes() const
+  SANDTrackerClusterCollection(const SANDGeoManager* sand_geo, const std::vector<SANDTrackerDigit> &digits, ClusteringMethod clu_method);
+  ~SANDTrackerClusterCollection(){};
+
+  void ClusterProximityInPlane(const std::vector<SANDTrackerDigit>& digits);
+  void ClusterCellAdjacency(const std::vector<SANDTrackerDigit>& digits);
+  inline const ClustersContainer* GetClustersInContainerByIndex(const int& index) const
   {
-    return fPlanes;
+    return containers.at(index);
+  };
+  inline const ClustersContainer* GetClustersInContainer(const SANDTrackerPlaneID &id) const
+  {
+    return containers.at(_sand_geo->GetPlaneIndex(id)());
+  };
+  inline const std::vector<ClustersContainer*> &GetContainer() const
+  {
+    return containers;
   };
   int GetNClusters() const;
   const SANDTrackerCluster &GetFirstDownstreamCluster();
+  
+  private:
+    std::vector<ClustersContainer*> containers;
+    const SANDGeoManager* _sand_geo;
 };
 #endif

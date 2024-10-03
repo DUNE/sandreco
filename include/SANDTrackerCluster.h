@@ -25,10 +25,11 @@ class SANDTrackerCluster
 
   static SANDTrackerClusterID fCounter;
 
-  SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vector<SANDTrackerDigitID> &digits, const SANDTrackerPlaneID &id);
 
  public:
   SANDTrackerCluster() = default;
+  SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vector<SANDTrackerDigitID> &digits);
+  SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vector<SANDTrackerDigitID> &digits, plane_iterator plane);
   enum class RecoAlgo { ELikelihood, EMinuit };
   inline SANDTrackerClusterID GetId() const { return fId; };
   inline SANDTrackerPlaneID GetPlaneId() const 

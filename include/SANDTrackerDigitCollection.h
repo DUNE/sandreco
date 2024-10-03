@@ -65,7 +65,7 @@ class SANDTrackerDigitCollection
   // get i-th digit
   static const SANDTrackerDigit &GetDigit(const SANDTrackerDigitID &id)
   {
-    std::cout << "DIGIT COLLECTION: " << id() << " " << fgMapDigit[id]() << std::endl;
+    // std::cout << "DIGIT COLLECTION: " << id() << " " << fgMapDigit[id]() << std::endl;
     return SANDfgTrackerDigits.at(fgMapDigit[id]());
   };
 };

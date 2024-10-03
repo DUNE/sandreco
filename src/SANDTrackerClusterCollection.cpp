@@ -3,9 +3,7 @@
 
 #include "utils.h"
 
-SANDTrackerClusterCollection::SANDTrackerClusterCollection(const SANDGeoManager* sand_geo, const std::vector<SANDTrackerDigit>& digits)
-{
-  _sand_geo = sand_geo;
+void SANDTrackerClusterCollection::ClusterProximityInPlane(const std::vector<SANDTrackerDigit>& digits) {
   std::map<SANDTrackerPlaneIndex, std::vector<SANDTrackerDigitID>> fMapDigits;
   for (auto& dg : digits) {
     SANDTrackerPlaneID plane_global_id;
@@ -17,14 +15,27 @@ SANDTrackerClusterCollection::SANDTrackerClusterCollection(const SANDGeoManager*
   for (auto& p:fMapDigits) {
     std::sort(p.second.begin(), p.second.end(), [](SANDTrackerDigitID a, SANDTrackerDigitID b)
                                   { return a() > b(); });
-    fPlanes.push_back(SANDTrackerClustersInPlane(_sand_geo, _sand_geo->get_planes().at(p.first()).uid(), p.second));
+    containers.push_back(new SANDTrackerClustersInPlane(_sand_geo, SANDTrackerClustersContainerID(p.first()), p.second));
   }
 }
 
-SANDTrackerClusterCollection::SANDTrackerClusterCollection(const SANDGeoManager* sand_geo)
+void SANDTrackerClusterCollection::ClusterCellAdjacency(const std::vector<SANDTrackerDigit>& digits) {
+  std::vector<SANDTrackerDigitID> digitIds;
+  for (auto& dg : digits) {
+    digitIds.push_back(SANDTrackerDigitID(dg.did));
+  }
+  containers.push_back(new SANDTrackerClustersByProximity(_sand_geo, SANDTrackerClustersContainerID(0), digitIds));
+}
+
+SANDTrackerClusterCollection::SANDTrackerClusterCollection(const SANDGeoManager* sand_geo, const std::vector<SANDTrackerDigit>& digits, ClusteringMethod clu_method)
 {
-  for (const auto& p:_sand_geo->get_planes()) {
-    fPlanes.push_back(SANDTrackerClustersInPlane(_sand_geo, p.uid()));
+  _sand_geo = sand_geo;
+
+  if (clu_method == ClusteringMethod::kProximityInPlane) {
+    ClusterProximityInPlane(digits);
+  }
+  if (clu_method == ClusteringMethod::kCellAdjacency) {
+    ClusterCellAdjacency(digits);
   }
 }
 
@@ -32,16 +43,16 @@ SANDTrackerClusterCollection::SANDTrackerClusterCollection(const SANDGeoManager*
 int SANDTrackerClusterCollection::GetNClusters() const
 {
   auto n = 0;
-  std::for_each(fPlanes.begin(), fPlanes.end(),
-                 [&n](const SANDTrackerClustersInPlane& p) 
-                     { n += p.GetClusters().size(); });
+  std::for_each(containers.begin(), containers.end(),
+                 [&n](const ClustersContainer* p) 
+                     { n += p->GetClusters().size(); });
   return n;
 }
 
 // get downstream digit
 const SANDTrackerCluster &SANDTrackerClusterCollection::GetFirstDownstreamCluster()
 {
-  auto it = --fPlanes.end();
-  while (it->GetClusters().size() == 0) --it;
-  return it->GetClusters().front();
+  auto it = --containers.end();
+  while ((*it)->GetClusters().size() == 0) --it;
+  return (*it)->GetClusters().front();
 }
