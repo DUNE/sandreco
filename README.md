@@ -1,3 +1,35 @@
+# Description
+
+SANDECALClustering takes as input the digitized photodetector signals in `<digit file>` and produces clusters of reconstructed cells in the ECAL. The output `<cluster file>` has the following structure: 
+
+### `TTree tCluster`
+```
+cluster
+cluster.tid
+cluster.x (y, z) 
+cluster.t
+cluster.e
+cluster.ax (ay, az) #apex
+cluster.sx (sy, sz) #direction
+cluster.varx (vay, varz) #variance
+cluster.reco_cells 
+```
+Each `reco_cell` object has the following structure:
+```
+int id;
+double z;
+double y;
+double x;
+double l;
+int mod;
+int lay;
+double e;
+double t; 
+dg_ps ps1; #photodetector 1 digitized photo-signal
+dg_ps ps2; #photodetector 2 digitized photo-signal
+
+```
+
 # Installation
 
 Currently, there are only two supported building and development environments:
@@ -77,8 +109,9 @@ for a specific tag or branch do `mrb g -t $TAG sandreco` or `mrb g -b $BRANCH sa
 
 ## sandreco
 
-The `sandreco` project provides five executables:
-- **Digitize** will perform digitization, 
+The `sandreco` project provides six executables:
+- **Digitize** will perform digitization,
+- **SANDECALClustering** will clusterize the ECAL DAQ digit in clusters of reconstructed cells,  
 - **Reconstruct** will reconstruct tracks in STT and clusters in ECAL
 - **Analyze** will identify particles and assign them a momentum
 - **FastCheck** will produce a lot of plots to check everything is ok
@@ -95,6 +128,12 @@ The executables exploit two libraries:
 
 ```console
 $ Digitize <MC file> <digit file>
+```
+### SANDECALClustering 
+- Create clusters of ECAL reconstructed cells (output `<cluster file>` is not an input argument) 
+
+```console
+$ SANDECALClustering -d <digit file>
 ```
 
 ### Reconstruct
