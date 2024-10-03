@@ -50,7 +50,6 @@ class SANDTrackerDigitCollection
   {
     SANDfgTrackerDigits = *digits;
     for (auto i = 0u; i < SANDfgTrackerDigits.size(); i++) {
-      std::cout << SANDfgTrackerDigits.at(i).did << " " << i << std::endl; 
       fgMapDigit[SANDTrackerDigitID(static_cast<unsigned long>(
           SANDfgTrackerDigits.at(i).did))] = SANDTrackerDigitIndex(i);
     }

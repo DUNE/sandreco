@@ -27,7 +27,7 @@ class SANDTrackerClusterCollection
   {
     return containers.at(_sand_geo->GetPlaneIndex(id)());
   };
-  inline const std::vector<ClustersContainer*> &GetContainer() const
+  inline const std::vector<ClustersContainer*> &GetContainers() const
   {
     return containers;
   };
