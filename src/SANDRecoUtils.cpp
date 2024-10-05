@@ -584,7 +584,7 @@ Helix RecoUtils::GetHelixFromCircleLine(const Circle& circle,
     momentum = {px, py, pz};
 
     double dip_angle = TMath::ATan2(px, pt);
-    
+
     return Helix(circle.R(), dip_angle, Phi0, helicity, vertex);
 }
 

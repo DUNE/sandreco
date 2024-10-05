@@ -1323,9 +1323,17 @@ int main(int argc, char* argv[]){
                 pass vertex and helicity of the true helix
         */
         reco_helix = RecoUtils::GetHelixFromCircleLine(circle_ZY_plane, line_XZ_plane, true_helix, particle_momentum);
-        reco_helix.PrintHelixPars();                                     
+        // reco_helix.PrintHelixPars();
+
+        std::cout << "helicity : " << reco_helix.h()
+        //   << ", pz_true " << ", pz_reco : " << pz 
+        //   << ", py_true " << ", py_reco : " << py 
+        //   << ", px_true " << ", px_reco : " << px
+          << "\n";
+                                            
         LOG("R", TString::Format("True momentum: (%f, %f, %f)",  muon_trj.GetInitialMomentum().X(),  muon_trj.GetInitialMomentum().Y(),  muon_trj.GetInitialMomentum().Z()));
         LOG("R", TString::Format("Reco momentum: (%f, %f, %f)", particle_momentum.X(), particle_momentum.Y(), particle_momentum.Z()));
+
         // throw "";
         LOG("I", "Filling output tree");
         reco_object.fit_infos_xz = fit_XZ;
@@ -1347,6 +1355,15 @@ int main(int argc, char* argv[]){
         reco_object.p_reco = {particle_momentum.X(), 
                               particle_momentum.Y(), 
                               particle_momentum.Z()};
+        
+        // if((1/reco_object.p_true.Mag() - 1/reco_object.p_reco.Mag())/(1/reco_object.p_reco.Mag()) < - 0.8){
+        //     if(selected_wires.size() > 30u){
+        //         std::cout << "caz \n";
+        //         std::cout << "R_true " << reco_object.true_helix.R() << ", R_reco " <<  reco_object.reco_helix.R() << "\n";
+        //         std::cout << "pt_true " << reco_object.pt_true << ", pt_reco " <<  reco_object.pt_reco << "\n";
+        //         throw "";
+        //     }
+        // }
         
         tout.Fill();
     }
