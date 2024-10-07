@@ -118,10 +118,12 @@ class SANDWireInfo : public TObject
   double az() const;
   std::vector<TVector3> getPoints() {return points;};
   const std::vector<TVector3> getPoints() const {return points;};
-  const TVector3 getDirection() const {return (points[0] - points[1]) * (1. / (points[0] - points[1]).Mag());};
+  const TVector3 getDirection() const {return (points[1] - points[0]);};
+  const TVector3 getNormalizedDirection() const {return (points[1] - points[0]) * (1. / (points[1] - points[0]).Mag());};
   const TVector3 getFirstPoint()  const {return points[0];};
   const TVector3 getSecondPoint() const {return points[1];};
   const TVector3& getReadoutPoint() const { return (readout_end_ == ReadoutEnd::kFirst) ? points[0] : points[1];};
+  const TVector3& getOppositePointToReadout() const { return (readout_end_ == ReadoutEnd::kFirst) ? points[1] : points[0];};
   ClassDef(SANDWireInfo, 1);
 };
 

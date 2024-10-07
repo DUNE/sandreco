@@ -20,6 +20,8 @@ CLine3D::CLine3D(const CLine3D& line)
   _v = line._v;
 }
 
+// To Do: this is basically the same as the one in the sandgeomanager.
+//        Check if this class/function is really needed and merge if possible
 double CLine3D::distance(const CLine3D& line1, const CLine3D& line2)
 {
   TVector3 p1 = line1._point;

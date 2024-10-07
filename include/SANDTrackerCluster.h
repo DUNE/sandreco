@@ -32,6 +32,7 @@ class SANDTrackerCluster
   SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vector<SANDTrackerDigitID> &digits, plane_iterator plane);
   enum class RecoAlgo { ELikelihood, EMinuit };
   inline SANDTrackerClusterID GetId() const { return fId; };
+  inline plane_iterator GetPlane() const {return fPlane;};
   inline SANDTrackerPlaneID GetPlaneId() const 
   { 
     return fPlane->uid(); 
@@ -44,6 +45,10 @@ class SANDTrackerCluster
   { 
     return fPlane->getPosition().Z(); 
   };
+  inline const SANDGeoManager* getSandGeoManager() const
+  {
+    return _sand_geo;
+  }
   inline const std::vector<SANDTrackerDigitID> &GetDigits() const { return fDigits; };
   void GetExtendedCluster(int offset);
   inline const std::vector<SANDTrackerDigitID> &GetExtendedDigits() const { return fDigits_extended; };

@@ -29,18 +29,11 @@ namespace tracker
   TVector3 stop = {h.x2, h.y2, h.z2};   // hit end
   TVector3 s = stop - start;            // hit direction
 
-  TVector3 leftend;
-  TVector3 rightend;
-  if (wire.readout_end() == SANDWireInfo::ReadoutEnd::kFirst) {
-    leftend  = wire.getFirstPoint();
-    rightend = wire.getSecondPoint();
-  } else {
-    leftend  = wire.getSecondPoint();
-    rightend = wire.getFirstPoint();
-  }
+  TVector3 leftend = wire.getReadoutPoint();
+  TVector3 rightend = wire.getOppositePointToReadout();
   
 
-  TVector3 r(rightend - leftend); // wire direction
+  TVector3 r = wire.getDirection();
 
   TVector3 d = start - leftend;
   double A = s.Dot(s);    // s . s

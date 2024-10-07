@@ -21,6 +21,14 @@ SANDTrackerCluster::SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vect
     : fId(fCounter++), fDigits(digits)
 {
   _sand_geo = sand_geo;
+  fPlane = _sand_geo->get_plane_info(SANDTrackerCellID(digits[0]()));
+
+  for (const auto& digitID:digits) {
+    auto plane = _sand_geo->get_plane_info(SANDTrackerCellID(digitID()));
+    if (plane->getPosition().Z() < fPlane->getPosition().Z()) {
+      fPlane = plane;
+    }
+  }
 }
 
 void SANDTrackerCluster::GetExtendedCluster(int offset)
