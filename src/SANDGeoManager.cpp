@@ -310,7 +310,7 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
     std::cout<<__FILE__<<" "<<__LINE__<<"\n";
     std::cout<<"current node : "<<geo_->GetCurrentNavigator()->GetCurrentNode()->GetName()<<"\n";
     std::cout<<"invalid cell_local_id : "<<cell_local_id<<"\n";
-    throw "";
+    // throw "";
   }
 }
 
@@ -950,6 +950,7 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
     get_ecal_barrel_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
     get_ecal_barrel_cell_local_id(x, y, z, node, cell_local_id);
+    if(cell_local_id>11) return -999;
   }
   // end cap modules
   else if (is_ecal_endcap(volume_name)) {
@@ -957,6 +958,7 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
     get_ecal_endcap_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
     get_ecal_endcap_cell_local_id(x, y, z, node, cell_local_id);
+    if(cell_local_id>12) return -999;
   } else {
     return -999;
   }
