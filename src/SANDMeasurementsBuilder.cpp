@@ -66,11 +66,15 @@ int main(int argc, char* argv[])
     traklet_finder.SetSigmaAngle(0.2);
     
 
-    TCanvas* canvas_cluster = new TCanvas("canvas_cluster","canvas_cluster",20000,10000);
-    canvas_cluster->cd();
+    TCanvas* canvas_cluster = new TCanvas("canvas_cluster","canvas_cluster",2000,1000);
+    canvas_cluster->Divide(2,1);
     
     TH2D* h_cluster_yz = new TH2D("h","h", p[6],p[7], p[8], p[3],p[4], p[5]);
+    TH2D* h_cluster_xz = new TH2D("h","h", p[6],p[7], p[8], p[0],p[1], p[2]);
+    canvas_cluster->cd(1);
     h_cluster_yz->Draw();
+    canvas_cluster->cd(2);
+    h_cluster_xz->Draw();
 
     canvas_cluster->Print("clu.pdf(","pdf");
 
@@ -82,7 +86,8 @@ int main(int argc, char* argv[])
       for (const auto& cluster_in_container:container->GetClusters()) {
         std::cout << (double)gg / container->GetClusters().size() * 100 << std::endl;
         gg++;
-        if(color > 9) color = 2;
+        if (gg == 500) break;
+        if (color > 9) color = 2;
         
 
         traklet_finder.SetCells(cluster_in_container);
@@ -93,25 +98,36 @@ int main(int argc, char* argv[])
           std::sort(minima.begin(), minima.end(),
                     [](TVectorD v1, TVectorD v2){ return v1[4] < v2[4];});
           double z_start = cluster_in_container.GetZ();
-          for (int trk = 0; trk < minima.size(); trk++) {
-            std::cout << minima[trk][4] << std::endl;
+          for (uint trk = 0; trk < minima.size(); trk++) {
             h_minima1000->Fill(minima[trk][4]);
             h_minima_100->Fill(minima[trk][4]);
             h_minima_0_1->Fill(minima[trk][4]);
             h_minima_0_0001->Fill(minima[trk][4]);
             
-            if (minima[trk][4] < 1E-4) {
+            if (minima[trk][4] < 1E-2) {
+              // std::cout << minima[trk][0] << " " << minima[trk][2] << std::endl;
+              
               z_to_tracklets[cluster_in_container.GetZ()].push_back(minima[trk]);
 
-              TVector2 start_tracklet(minima[trk][1], z_start);
+              TVector2 start_tracklet_yz(z_start, minima[trk][1]);
+              TVector2 start_tracklet_xz(z_start, minima[trk][0]);
               double z_end = z_start + 5 * cos(minima[trk][3]);
               double y_end = minima[trk][1] + 5 * sin(minima[trk][3]);
-              TVector2 end_tracklet(y_end, z_end);
+              double x_end = minima[trk][0] + 5 * cos(minima[trk][2]);
+              TVector2 end_tracklet_yz(z_end, y_end);
+              TVector2 end_tracklet_xz(z_end, x_end);
               
-              TLine* line_yz_tracklet = new TLine(start_tracklet.Y(), start_tracklet.X(), end_tracklet.Y(), end_tracklet.X());
+              TLine* line_yz_tracklet = new TLine(start_tracklet_yz.X(), start_tracklet_yz.Y(), end_tracklet_yz.X(), end_tracklet_yz.Y());
+              TLine* line_xz_tracklet = new TLine(start_tracklet_xz.X(), start_tracklet_xz.Y(), end_tracklet_xz.X(), end_tracklet_xz.Y());
               line_yz_tracklet->SetLineColor(color);
               line_yz_tracklet->SetLineWidth(1);
+              line_xz_tracklet->SetLineColor(color);
+              line_xz_tracklet->SetLineWidth(1);
+              
+              canvas_cluster->cd(1);
               line_yz_tracklet->Draw();
+              canvas_cluster->cd(2);
+              line_xz_tracklet->Draw();
             }
           }
         }
@@ -119,20 +135,26 @@ int main(int argc, char* argv[])
         auto digitId_to_drift_time = traklet_finder.GetDigitToDriftTimeMap();
         
         // Draw cells of all digits
-        // for (auto digit:digit_map) {
-        //   auto cell = sand_geo.get_cell_info(SANDTrackerCellID(digit.did));
-        //   double h,w;
-        //   cell->second.size(w,h);
-        //   TBox* box_yz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().Y() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().Y() + w/2.);
-        //   box_yz->SetFillStyle(0);
-        //   box_yz->SetLineColor(1);
-        //   box_yz->SetLineWidth(1);
-        //   canvas_cluster->cd();
-        //   box_yz->Draw();
-        // }
+        for (auto digit:digit_map) {
+          auto cell = sand_geo.get_cell_info(SANDTrackerCellID(digit.did));
+          double h,w;
+          cell->second.size(w,h);
+          TBox* box_yz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().Y() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().Y() + w/2.);
+          TBox* box_xz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().X() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().X() + w/2.);
+          box_yz->SetFillStyle(0);
+          box_yz->SetLineColor(1);
+          box_yz->SetLineWidth(1);
+          box_xz->SetFillStyle(0);
+          box_xz->SetLineColor(1);
+          box_xz->SetLineWidth(1);
+          canvas_cluster->cd(1);
+          box_yz->Draw();
+          canvas_cluster->cd(2);
+          box_xz->Draw();
+        }
 
         std::vector<SANDTrackerDigitID> digits_cluster = cluster_in_container.GetDigits();
-        for (int d = 0; d < digits_cluster.size(); d++) {
+        for (uint d = 0; d < digits_cluster.size(); d++) {
           canvas_cluster->cd();
 
           auto digit = SANDTrackerDigitCollection::GetDigit(digits_cluster[d]);
@@ -153,34 +175,62 @@ int main(int argc, char* argv[])
           double h,w;
           cell->second.size(w,h);
           TBox* box_yz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().Y() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().Y() + w/2.);
+          TBox* box_xz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().X() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().X() + w/2.);
           box_yz->SetFillStyle(0);
           box_yz->SetLineColor(color);
           box_yz->SetLineWidth(1);
+          box_xz->SetFillStyle(0);
+          box_xz->SetLineColor(color);
+          box_xz->SetLineWidth(1);
+          canvas_cluster->cd(1);
           box_yz->Draw();
+          canvas_cluster->cd(2);
+          box_xz->Draw();
           
 
           // Draw reco drift time of digits in cluster
           TEllipse* el_yz_comp = new TEllipse(cell->second.wire().center().Z(), cell->second.wire().center().Y(), 
                                 sand_reco::stt::wire_radius + cell->second.driftVelocity() * digitId_to_drift_time[digits_cluster[d]]);
+          TEllipse* el_xz_comp = new TEllipse(cell->second.wire().center().Z(), cell->second.wire().center().X(), 
+                                sand_reco::stt::wire_radius + cell->second.driftVelocity() * digitId_to_drift_time[digits_cluster[d]]);
           el_yz_comp->SetFillStyle(0);
           el_yz_comp->SetLineColor(color);
           el_yz_comp->SetLineWidth(1);
+          el_xz_comp->SetFillStyle(0);
+          el_xz_comp->SetLineColor(color);
+          el_xz_comp->SetLineWidth(1);
+          canvas_cluster->cd(1);
           el_yz_comp->Draw();
+          canvas_cluster->cd(2);
+          el_xz_comp->Draw();
           
           // Draw true drift time of digits in cluster
           TEllipse* el_yz = new TEllipse(cell->second.wire().center().Z(), cell->second.wire().center().Y(), 
                                 sand_reco::stt::wire_radius + cell->second.driftVelocity() * digit.drift_time);
+          TEllipse* el_xz = new TEllipse(cell->second.wire().center().Z(), cell->second.wire().center().X(), 
+                                sand_reco::stt::wire_radius + cell->second.driftVelocity() * digit.drift_time);
           el_yz->SetFillStyle(0);
           el_yz->SetLineWidth(1);
           el_yz->SetLineColor(1);
+          el_xz->SetFillStyle(0);
+          el_xz->SetLineWidth(1);
+          el_xz->SetLineColor(1);
+          canvas_cluster->cd(1);
           el_yz->Draw();
+          canvas_cluster->cd(2);
+          el_xz->Draw();
 
           // Draw hit segments for the cluster
           for (auto& kk:digit.hindex) {
             const TG4HitSegment& hseg = ev->SegmentDetectors[digit.det].at(kk);
             TLine* l_yz = new TLine(hseg.Start.Z(), hseg.Start.Y(), hseg.Stop.Z(), hseg.Stop.Y());
+            TLine* l_xz = new TLine(hseg.Start.Z(), hseg.Start.X(), hseg.Stop.Z(), hseg.Stop.X());
             l_yz->SetLineColor(1);
+            l_xz->SetLineColor(1);
+            canvas_cluster->cd(1);
             l_yz->Draw();
+            canvas_cluster->cd(2);
+            l_xz->Draw();
           }
           
           // h_res->Fill(digitId_to_drift_time[d] - digit.drift_time);
@@ -189,7 +239,12 @@ int main(int argc, char* argv[])
         canvas_cluster->Write();
         canvas_cluster->Print("clu.pdf","pdf");
         canvas_cluster->Clear();
+
+        canvas_cluster->Divide(2,1);
+        canvas_cluster->cd(1);
         h_cluster_yz->Draw();
+        canvas_cluster->cd(2);
+        h_cluster_xz->Draw();
         traklet_finder.Clear();
 
       }
@@ -210,65 +265,68 @@ int main(int argc, char* argv[])
 
 
 
-    TCanvas* canvas_digitization = new TCanvas("canvas_digitization","canvas_digitization",2000,1000);
-    canvas_digitization->Divide(2,1);
-    TH2D* h_digitization_yz = new TH2D("h","h", p[6],p[7], p[8], p[3],p[4], p[5]);
-    TH2D* h_digitization_xz = new TH2D("h","h", p[6],p[7], p[8], p[0],p[1], p[2]);
-    canvas_digitization->cd(1);
-    h_digitization_yz->Draw();
-    canvas_digitization->cd(2);
-    h_digitization_xz->Draw();
-    for (const auto& digit:digit_map) {
-      auto cell = sand_geo.get_cell_info(SANDTrackerCellID(digit.did));
+    // TCanvas* canvas_digitization = new TCanvas("canvas_digitization","canvas_digitization",2000,1000);
+    // canvas_digitization->Divide(2,1);
+    // TH2D* h_digitization_yz = new TH2D("h","h", p[6],p[7], p[8], p[3],p[4], p[5]);
+    // TH2D* h_digitization_xz = new TH2D("h","h", p[6],p[7], p[8], p[0],p[1], p[2]);
+    // canvas_digitization->cd(1);
+    // h_digitization_yz->Draw();
+    // canvas_digitization->cd(2);
+    // h_digitization_xz->Draw();
+    // for (const auto& digit:digit_map) {
+    //   auto cell = sand_geo.get_cell_info(SANDTrackerCellID(digit.did));
           
-      TEllipse* el_yz = new TEllipse(cell->second.wire().center().Z(), cell->second.wire().center().Y(), sand_reco::stt::wire_radius + cell->second.driftVelocity() * digit.drift_time);
-      TEllipse* el_xz = new TEllipse(cell->second.wire().center().Z(), cell->second.wire().center().X(), sand_reco::stt::wire_radius + cell->second.driftVelocity() * digit.drift_time);
-      double h,w;
-      cell->second.size(w,h);
-      TBox* box_yz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().Y() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().Y() + w/2.);
-      TBox* box_xz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().X() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().X() + w/2.);
+    //   TEllipse* el_yz = new TEllipse(cell->second.wire().center().Z(), cell->second.wire().center().Y(), sand_reco::stt::wire_radius + cell->second.driftVelocity() * digit.drift_time);
+    //   TEllipse* el_xz = new TEllipse(cell->second.wire().center().Z(), cell->second.wire().center().X(), sand_reco::stt::wire_radius + cell->second.driftVelocity() * digit.drift_time);
+    //   double h,w;
+    //   cell->second.size(w,h);
+    //   TBox* box_yz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().Y() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().Y() + w/2.);
+    //   TBox* box_xz = new TBox(cell->second.wire().center().Z() - h/2., cell->second.wire().center().X() - w/2., cell->second.wire().center().Z() + h/2., cell->second.wire().center().X() + w/2.);
 
-      canvas_digitization->cd(1);
-      el_yz->SetFillStyle(0);
-      el_yz->Draw();
+    //   canvas_digitization->cd(1);
+    //   el_yz->SetFillStyle(0);
+    //   el_yz->Draw();
       
-      box_yz->SetFillStyle(0);
-      box_yz->SetLineWidth(1);
-      canvas_digitization->cd(1);
-      box_yz->Draw();
+    //   box_yz->SetFillStyle(0);
+    //   box_yz->SetLineWidth(1);
+    //   canvas_digitization->cd(1);
+    //   box_yz->Draw();
 
-      canvas_digitization->cd(2);
-      el_xz->SetFillStyle(0);
-      el_xz->Draw();
+    //   canvas_digitization->cd(2);
+    //   el_xz->SetFillStyle(0);
+    //   el_xz->Draw();
       
-      box_xz->SetFillStyle(0);
-      box_xz->SetLineWidth(1);
-      box_xz->Draw();
+    //   box_xz->SetFillStyle(0);
+    //   box_xz->SetLineWidth(1);
+    //   box_xz->Draw();
 
-      for (auto& i:digit.hindex) {
-        const TG4HitSegment& hseg = ev->SegmentDetectors[digit.det].at(i);
-        TLine* l_yz = new TLine(hseg.Start.Z(), hseg.Start.Y(), hseg.Stop.Z(), hseg.Stop.Y());
-        canvas_digitization->cd(1);
-        l_yz->Draw();
-        TLine* l_xz = new TLine(hseg.Start.Z(), hseg.Start.X(), hseg.Stop.Z(), hseg.Stop.X());
-        canvas_digitization->cd(2);
-        l_xz->Draw();
-      }
+    //   for (auto& hi:digit.hindex) {
+    //     const TG4HitSegment& hseg = ev->SegmentDetectors[digit.det].at(hi);
+    //     TLine* l_yz = new TLine(hseg.Start.Z(), hseg.Start.Y(), hseg.Stop.Z(), hseg.Stop.Y());
+    //     canvas_digitization->cd(1);
+    //     l_yz->Draw();
+    //     TLine* l_xz = new TLine(hseg.Start.Z(), hseg.Start.X(), hseg.Stop.Z(), hseg.Stop.X());
+    //     canvas_digitization->cd(2);
+    //     l_xz->Draw();
+    //   }
 
-      TMarker* mark_yz = new TMarker(cell->second.wire().center().Z(), cell->second.wire().center().Y(), 5);
-      mark_yz->SetMarkerColor(1);
-      mark_yz->SetMarkerSize(0.5);
-      canvas_digitization->cd(1);
-      mark_yz->Draw();
+    //   TMarker* mark_yz = new TMarker(cell->second.wire().center().Z(), cell->second.wire().center().Y(), 5);
+    //   mark_yz->SetMarkerColor(1);
+    //   mark_yz->SetMarkerSize(0.5);
+    //   canvas_digitization->cd(1);
+    //   mark_yz->Draw();
 
-      TMarker* mark_xz = new TMarker(cell->second.wire().center().Z(), cell->second.wire().center().X(), 5);
-      mark_xz->SetMarkerColor(1);
-      mark_xz->SetMarkerSize(0.5);
-      canvas_digitization->cd(2);
-      mark_xz->Draw();
-    }
-    canvas_digitization->SaveAs("./c2D.png");
-    canvas_digitization->SaveAs("./c2D.C");
+    //   TMarker* mark_xz = new TMarker(cell->second.wire().center().Z(), cell->second.wire().center().X(), 5);
+    //   mark_xz->SetMarkerColor(1);
+    //   mark_xz->SetMarkerSize(0.5);
+    //   canvas_digitization->cd(2);
+    //   mark_xz->Draw();
+    // }
+    // canvas_digitization->SaveAs("./c2D.png");
+    // canvas_digitization->SaveAs("./c2D.C");
+
+
+
   }
   h_res->Write();
 
