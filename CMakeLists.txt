@@ -48,6 +48,23 @@ target_include_directories(Utils PUBLIC
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(Utils PUBLIC SANDGeoManager EDepSim::edepsim_io)
 
+# SANDTrackerUtils library
+add_library(SANDTrackerUtils SHARED src/SANDTrackerUtils.cpp)
+target_link_libraries(SANDTrackerUtils PUBLIC Utils)
+
+
+# SANDTrackerGeoManager library
+add_library(SANDTrackerCluster SHARED src/SANDTrackerCluster.cpp
+                              src/SANDTrackerClusterCollection.cpp
+                              src/SANDTrackerClustersContainer.cpp)
+target_link_libraries(SANDTrackerCluster PUBLIC SANDTrackerUtils ROOT::Minuit SANDGeoManager)
+
+
+# SANDTrackerDigit library
+add_library(SANDTrackerDigit SHARED src/SANDTrackerDigitCollection.cpp)
+target_link_libraries(SANDTrackerDigit PUBLIC SANDTrackerUtils)
+
+
 # Creates TrackletFinder library
 add_library(TrackletFinder SHARED src/SANDTrackletFinder.cpp)
 target_link_libraries(TrackletFinder SANDGeoManager Struct Utils)
@@ -104,7 +121,7 @@ target_link_libraries(FastCheck Struct Utils)
 
 # Creates MeasurementBuilder executable.
 add_executable(Measurements src/SANDMeasurementsBuilder.cpp)
-target_link_libraries(Measurements SANDGeoManager Struct Utils TrackletFinder)
+target_link_libraries(Measurements SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils)
 
 # Creates a libSANDEventDisplay shared library
 add_library(SANDEventDisplay SHARED src/SANDEventDisplay.cpp src/SANDDisplayUtils.cpp SANDEventDisplayDict.cxx)

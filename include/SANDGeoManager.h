@@ -125,7 +125,7 @@ class SANDGeoManager : public TObject
   std::map<int, SANDECALCellInfo> cellmap_;  // map of ecal cell (key: id,
                                              // value: info on cell)
 
-  std::map<long, SANDWireInfo> wiremap_;  // map of wire (key : id, value:
+  std::map<SANDWireID, SANDWireInfo> wiremap_;  // map of wire (key : id, value:
                                           // info on wire)
 
   std::map<long, std::map<double, long>>
@@ -135,7 +135,8 @@ class SANDGeoManager : public TObject
                                      // map (key: plane id, value: map (key:
                                      // wire id, value: 2D position [i.e. x
                                      // = z, y = transversal coord]))
-  std::map<long, SANDTrackerModule> _tracker_modules_map;
+  std::vector<SANDTrackerPlane> _planes;
+  std::map<SANDTrackerPlaneID, plane_iterator> _id_to_plane;
 
   mutable TPRegexp stt_tube_regex_{
       sand_geometry::stt::stt_single_tube_regex_string};  // regular expression
@@ -165,6 +166,7 @@ class SANDGeoManager : public TObject
 
 
   bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector3& intersection);
+  bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector2& intersection);
   void set_drift_plane_info(SANDTrackerPlane& plane, double angle);
   void PrintModulesInfo(int verbose = 1);
   void DrawModulesInfo();
@@ -210,11 +212,20 @@ class SANDGeoManager : public TObject
 
   void set_wire_info();
 
+  void fill_adjacent_cells(std::string geometry);
+  void rearrange_planes();
+
+  std::vector<TVector2> getLocalLinePlaneIntersections(const TVector2& local_2d_position,
+                                                       const SANDTrackerPlane& plane);
+  std::vector<TVector2> getGlobalLinePlaneIntersections(const TVector2& local_2d_position, 
+                                                        const SANDTrackerPlane& plane);
+  double getMinDistanceBetweenSegments(TVector3 a, TVector3 b,
+                                       TVector3 c, TVector3 d);
   // STT
-  long get_stt_module_id(const TString& volume_path) const;
+  SANDTrackerModuleID get_stt_module_id(const TString& volume_path) const;
   bool is_stt_tube(const TString& volume_name) const;
   bool is_stt_plane(const TString& volume_name) const;
-  int get_stt_plane_id(const TString& volume_path, bool justLocal) const;
+  SANDTrackerPlaneID get_stt_plane_id(const TString& volume_path, bool justLocal) const;
   void set_stt_wire_info(SANDTrackerPlane& plane, const TGeoNode* const node, const TGeoHMatrix& matrix);
   void set_stt_plane_info(const TGeoNode* const node, const TGeoHMatrix& matrix);
 
@@ -222,15 +233,15 @@ class SANDGeoManager : public TObject
   void set_wire_info(const TGeoHMatrix& matrix);
   void set_drift_plane_info(const TGeoNode* const node, const TGeoHMatrix& matrix);
   void set_drift_wire_info(SANDTrackerPlane& plane);
-  long get_drift_plane_id(const TString& volume_path, bool JustLocalId) const;
-  long get_drift_module_id(const TString& volume_path) const;
-  int get_drift_supermodule_id(const TString& volume_path) const;
-  long get_drift_module_replica_id(const TString& volume_path) const;
-  long get_wire_id(const TString& volume_path) const;
+  SANDTrackerPlaneID get_drift_plane_id(const TString& volume_path, bool JustLocalId) const;
+  SANDTrackerModuleID get_drift_module_id(const TString& volume_path) const;
+  SANDTrackerModuleID get_drift_supermodule_id(const TString& volume_path) const;
+  SANDTrackerModuleID get_drift_module_replica_id(const TString& volume_path) const;
+  SANDWireID get_wire_id(const TString& volume_path) const;
   bool is_drift_plane(const TString& volume_name) const;
   bool isSwire(const TString& volume_path) const;
   void WriteMapOnFile(std::string fName,
-                      const std::map<long, SANDWireInfo>& map);
+                      const std::map<SANDWireID, SANDWireInfo>& map);
 
  public:
   SANDGeoManager()
@@ -260,13 +271,14 @@ class SANDGeoManager : public TObject
   {
     return cellmap_.at(ecal_cell_id);
   }
-  std::map<long, SANDTrackerCell>::const_iterator get_cell_info(long wire_id) const;
-  std::map<long, SANDTrackerPlane>::const_iterator get_plane_info(long wire_id) const;
+  std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator get_cell_info(SANDTrackerCellID cell_id) const;
+  plane_iterator get_plane_info(SANDTrackerCellID cell_id) const;
+  plane_iterator get_plane_info(SANDTrackerPlaneID unique_plane_id) const;
   const std::map<int, SANDECALCellInfo>& get_ecal_cell_info() const
   {
     return cellmap_;
   }
-  const std::map<long, SANDWireInfo>& get_wire_info() const
+  const std::map<SANDWireID, SANDWireInfo>& get_wire_info() const
   {
     return wiremap_;
   }
@@ -275,18 +287,28 @@ class SANDGeoManager : public TObject
   {
     return wire_tranverse_position_map_;
   }
-  const std::map<long, SANDTrackerModule>&
-      get_modules_map() const
+  const std::vector<SANDTrackerPlane>&
+      get_planes() const
   {
-    return _tracker_modules_map;
+    return _planes;
+  }
+  std::vector<SANDTrackerPlane>&
+      get_planes()
+  {
+    return _planes;
+  }
+
+  const SANDTrackerPlaneIndex GetPlaneIndex(const SANDTrackerPlaneID& plane_uid) const
+  {
+    return SANDTrackerPlaneIndex(std::distance(_planes.cbegin(), _id_to_plane.at(plane_uid)));
   }
   int get_ecal_cell_id(double x, double y, double z) const;
-  long get_stt_tube_id(double x, double y, double z) const;
+  SANDTrackerCellID get_stt_tube_id(double x, double y, double z) const;
   long print_stt_tube_id(double x, double y, double z) const;
 
   long get_wire_id(long drift_plane_id, double z,
                    double transverse_coord) const;
-  std::vector<long> get_segment_ids(const TG4HitSegment& hseg) const;
+  std::vector<SANDTrackerCellID> get_segment_ids(const TG4HitSegment& hseg) const;
   TVector3 FindClosestDrift(TVector3 point, double epsilon) const;
   TVector3 SmearPoint(TVector3 point, double epsilon) const;
   bool IsOnEdge(TVector3 point) const;
@@ -298,9 +320,9 @@ class SANDGeoManager : public TObject
   const TVector2 RotatedToLocal(TVector2 rotated, const SANDTrackerPlane& plane) const;
   const TVector2 LocalToGlobal(TVector2 local, const SANDTrackerPlane& plane) const;
   const TVector2 RotatedToGlobal(TVector2 rotated, const SANDTrackerPlane& plane) const;
-  long GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane, bool checkCloseCells) const;
+  SANDTrackerCellID GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane, bool checkCloseCells) const;
   double GetHitCellDistance(TVector2 rotated_local_yz_hit_position, 
-                                        std::map<long, SANDTrackerCell>::const_iterator cell_it, 
+                                        std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator cell_it, 
                                         const SANDTrackerPlane& plane) const;
 
   // ECAL
@@ -313,17 +335,18 @@ class SANDGeoManager : public TObject
                               const double* direction) const;
 
   // STT
-  static long encode_wire_id(long plane_global_id, long wire_local_id);
-  static void decode_wire_id(long wire_global_id, long& plane_global_id,
-                             long& wire_local_id);
-  static long encode_plane_id(long unique_module_id,
-                              long plane_local_id, long plane_type);
-  static void decode_plane_id(long plane_global_id, long& unique_module_id, 
-                              long& plane_local_id, long& plane_type);
-  static long encode_module_id(long supermodule_id, 
-                               long module_id, long module_replica_id);
-  static void decode_module_id(long unique_module_id, long& supermodule_id, 
-                               long& module_id, long& module_replica_id);
+  static SANDTrackerCellID encode_cell_id(SANDTrackerPlaneID plane_global_id, SANDTrackerCellID wire_local_id);
+  static void decode_cell_id(SANDTrackerCellID   cell_global_id, 
+                             SANDTrackerPlaneID& plane_global_id,
+                             SANDTrackerCellID&  cell_local_id);
+  static SANDTrackerPlaneID encode_plane_id(SANDTrackerModuleID unique_module_id,
+                              SANDTrackerPlaneID plane_local_id, SANDTrackerPlaneID plane_type);
+  static void decode_plane_id(SANDTrackerPlaneID plane_global_id, SANDTrackerModuleID& unique_module_id, 
+                              SANDTrackerPlaneID& plane_local_id, SANDTrackerPlaneID& plane_type);
+  static SANDTrackerModuleID encode_module_id(SANDTrackerModuleID supermodule_id, 
+                               SANDTrackerModuleID module_id, SANDTrackerModuleID module_replica_id);
+  static void decode_module_id(SANDTrackerModuleID unique_module_id, SANDTrackerModuleID& supermodule_id, 
+                               SANDTrackerModuleID& module_id, SANDTrackerModuleID& module_replica_id);
   // DRIFT CHAMBER
   // static void decode_chamber_plane_id(int wire_global_id,
   //                            int& drift_plane_global_id,

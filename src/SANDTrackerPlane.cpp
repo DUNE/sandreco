@@ -2,29 +2,29 @@
 
 #include <iostream>
 
-std::map<long, SANDTrackerCell>::iterator SANDTrackerPlane::getCell(long index)
+std::map<SANDTrackerCellID, SANDTrackerCell>::iterator SANDTrackerPlane::getCell(SANDTrackerCellID index)
 {
   return _id_to_cell_map.find(index);
 }
-std::map<long, SANDTrackerCell>::const_iterator SANDTrackerPlane::getCell(long index) const
+std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator SANDTrackerPlane::getCell(SANDTrackerCellID index) const
 {
   return _id_to_cell_map.find(index);
 }
 
-std::map<long, SANDTrackerCell>::iterator SANDTrackerPlane::getCell(double coord)
+std::map<SANDTrackerCellID, SANDTrackerCell>::iterator SANDTrackerPlane::getCell(double coord)
 {
   return _id_to_cell_map.find(_coord_to_id_map[coord]);
 }
-std::map<long, SANDTrackerCell>::const_iterator SANDTrackerPlane::getCell(double coord) const
+std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator SANDTrackerPlane::getCell(double coord) const
 {
   return _id_to_cell_map.find(_coord_to_id_map.at(coord));
 }
 
-std::map<long, SANDTrackerCell>::iterator SANDTrackerPlane::getLowerBoundCell(double coord)
+std::map<SANDTrackerCellID, SANDTrackerCell>::iterator SANDTrackerPlane::getLowerBoundCell(double coord)
 {
   return _id_to_cell_map.find(_coord_to_id_map.lower_bound(coord)->second);
 }
-const std::map<long, SANDTrackerCell>::const_iterator SANDTrackerPlane::getLowerBoundCell(double coord) const
+const std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator SANDTrackerPlane::getLowerBoundCell(double coord) const
 {
   return _id_to_cell_map.find(_coord_to_id_map.lower_bound(coord)->second);
 }

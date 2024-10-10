@@ -9,7 +9,7 @@ SANDWireInfo::SANDWireInfo()
 }
 
 // Parametric constructor
-SANDWireInfo::SANDWireInfo(long arg_id, double arg_x, double arg_y, double arg_z,
+SANDWireInfo::SANDWireInfo(SANDWireID arg_id, double arg_x, double arg_y, double arg_z,
                            double arg_length, Orient arg_orientation,
                            ReadoutEnd arg_readout_end)
     : id_(arg_id),
@@ -23,7 +23,7 @@ SANDWireInfo::SANDWireInfo(long arg_id, double arg_x, double arg_y, double arg_z
 }
 
 // Parametric constructor
-SANDWireInfo::SANDWireInfo(long arg_id, double arg_x, double arg_y, double arg_z,
+SANDWireInfo::SANDWireInfo(SANDWireID arg_id, double arg_x, double arg_y, double arg_z,
                            double arg_length, Orient arg_orientation,
                            ReadoutEnd arg_readout_end, double arg_ax,
                            double arg_ay, double arg_az)
@@ -41,7 +41,7 @@ SANDWireInfo::SANDWireInfo(long arg_id, double arg_x, double arg_y, double arg_z
 }
 
 // Setter methods for the attributes
-void SANDWireInfo::id(long arg_id)
+void SANDWireInfo::id(SANDWireID arg_id)
 {
   id_ = arg_id;
 }
@@ -83,7 +83,7 @@ void SANDWireInfo::readout_end(ReadoutEnd arg_readout_end)
 }
 
 // Getter methods for the attributes
-long SANDWireInfo::id() const
+SANDWireID SANDWireInfo::id() const
 {
   return id_;
 }

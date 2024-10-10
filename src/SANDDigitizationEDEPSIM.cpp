@@ -29,28 +29,11 @@ namespace tracker
   TVector3 stop = {h.x2, h.y2, h.z2};   // hit end
   TVector3 s = stop - start;            // hit direction
 
-  TVector3 leftend;
-  TVector3 rightend;
-  if (wire.readout_end() == SANDWireInfo::ReadoutEnd::kLeft) {
-    leftend = TVector3(wire.getPoints()[0].X(),
-                       wire.getPoints()[0].Y(),
-                       wire.getPoints()[0].Z());
-
-    rightend = TVector3(wire.getPoints()[1].X(),
-                        wire.getPoints()[1].Y(),
-                        wire.getPoints()[1].Z());
-  } else {
-    rightend = TVector3(wire.getPoints()[0].X(),
-                        wire.getPoints()[0].Y(),
-                        wire.getPoints()[0].Z());
-
-    leftend = TVector3(wire.getPoints()[1].X(),
-                       wire.getPoints()[1].Y(),
-                       wire.getPoints()[1].Z());
-  }
+  TVector3 leftend = wire.getReadoutPoint();
+  TVector3 rightend = wire.getOppositePointToReadout();
   
 
-  TVector3 r(rightend - leftend); // wire direction
+  TVector3 r = wire.getDirection();
 
   TVector3 d = start - leftend;
   double A = s.Dot(s);    // s . s
@@ -99,28 +82,23 @@ namespace tracker
 
 double GetMinWireTime(TLorentzVector point, SANDWireInfo& wire)
 {
-  TVector3 wire_point;
-  if (wire.readout_end() == SANDWireInfo::ReadoutEnd::kLeft) {
-    wire_point = wire.getPoints()[0];
-  } else {
-    wire_point = wire.getPoints()[1];
-  }
+  TVector3 wire_point = wire.getReadoutPoint();
 
   return point.T() +
          (point.Vect() - wire_point).Mag() / sand_reco::stt::v_signal_inwire;
 }
 
 void create_digits_from_hits(const SANDGeoManager& geo,
-                             std::map<long, std::vector<hit> >& hits2cell,
+                             std::map<SANDTrackerCellID, std::vector<hit> >& hits2cell,
                              std::vector<dg_wire>& wire_digits)
 {
   wire_digits.clear();
 
-  for (std::map<long, std::vector<hit> >::iterator it = hits2cell.begin();
+  for (std::map<SANDTrackerCellID, std::vector<hit> >::iterator it = hits2cell.begin();
        it != hits2cell.end(); ++it)  // run over wires
   {
-    long did = it->first;  // wire unique id
-    auto wire_info = geo.get_cell_info(did)->second.wire();
+    long did = it->first();  // wire unique id
+    auto wire_info = geo.get_cell_info(it->first())->second.wire();
     double wire_time = 999.;
     double drift_time = 999.;
     double signal_time = 999.;
@@ -435,7 +413,7 @@ namespace stt
 {
 // Group hits into tube
 void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
-                        std::map<long, std::vector<hit> >& hits2Tube)
+                        std::map<SANDTrackerCellID, std::vector<hit> >& hits2Tube)
 {
   hits2Tube.clear();
 
@@ -449,7 +427,7 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
     double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
     double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
 
-    long stid = geo.get_stt_tube_id(x, y, z);
+    SANDTrackerCellID stid = geo.get_stt_tube_id(x, y, z);
 
     if (stid == -999) {
       // std::cout << std::setprecision(12) << x << " " << y << " " << z <<
@@ -469,7 +447,7 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
 
     hit h;
     h.det = "Straw";
-    h.did = stid;
+    h.did = stid();
     h.x1 = hseg.Start.X();
     h.y1 = hseg.Start.Y();
     h.z1 = hseg.Start.Z();
@@ -498,31 +476,33 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
 // tdc is the time of closest point to wire + drift time
 // adc is the sum of energy deposit within integration time window
 void create_digits_from_hits(const SANDGeoManager& geo,
-                             std::map<long, std::vector<hit> >& hits2Tube,
+                             std::map<SANDTrackerCellID, std::vector<hit> >& hits2Tube,
                              std::vector<dg_wire>& wire_digits)
 {
   wire_digits.clear();
 
-  for (std::map<long, std::vector<hit> >::iterator it = hits2Tube.begin();
+  for (std::map<SANDTrackerCellID, std::vector<hit> >::iterator it = hits2Tube.begin();
        it != hits2Tube.end(); ++it) {
     double min_time_tub   = 1E9;  // mm
     double min_drift_time = 1E9;  // mm
-    long wire_global_id = it->first;
+    SANDTrackerCellID cell_global_id = it->first;
 
-    auto cell_info = geo.get_cell_info(wire_global_id)->second;
+    auto cell_info = geo.get_cell_info(cell_global_id)->second;
 
-    long module_unique_id, plane_global_id, plane_local_id, plane_type, wire_local_id;
+    SANDTrackerModuleID module_unique_id;
+    SANDTrackerPlaneID plane_global_id, plane_local_id, plane_type;
+    SANDTrackerCellID cell_local_id;
 
-    SANDGeoManager::decode_wire_id(wire_global_id, plane_global_id, wire_local_id);
+    SANDGeoManager::decode_cell_id(cell_global_id, plane_global_id, cell_local_id);
     SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
                                     plane_local_id, plane_type);
 
     dg_wire d;
     d.det = it->second[0].det;
-    d.did = wire_global_id;
+    d.did =  cell_global_id();
     d.de = 0;
-    d.hor = (plane_type % 2 == 0);
-    d.t0 = sand_reco::t0[plane_global_id];
+    d.hor = (plane_type() % 2 == 0);
+    d.t0 = sand_reco::t0[plane_global_id()];
     TVector2 wire;
     if (d.hor == true) {
       d.x = sand_reco::stt::stt_center[0];
@@ -599,7 +579,7 @@ void create_digits_from_hits(const SANDGeoManager& geo,
 void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
                   std::vector<dg_wire>& wire_digits)
 {
-  std::map<long, std::vector<hit> > hits2Tube;
+  std::map<SANDTrackerCellID, std::vector<hit> > hits2Tube;
   wire_digits.clear();
 
   group_hits_by_tube(ev, geo, hits2Tube);
@@ -634,7 +614,7 @@ TVector3 IntersectHitPlane(const TG4HitSegment& hseg, double plane_coordinate,
 }
 
 void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
-                        std::map<long, std::vector<hit> >& hits2cell)
+                        std::map<SANDTrackerCellID, std::vector<hit> >& hits2cell)
 {
   hits2cell.clear();
 
@@ -642,25 +622,25 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     const TG4HitSegment& hseg = ev->SegmentDetectors["DriftVolume"].at(j);
 
     int pdg = ev->Trajectories[hseg.GetPrimaryId()].GetPDGCode();
-    std::vector<long> ids = geo.get_segment_ids(hseg);
-    long id1 = ids[0];
-    long id2 = ids[1];
+    std::vector<SANDTrackerCellID> ids = geo.get_segment_ids(hseg);
+    SANDTrackerCellID id1 = ids[0];
+    SANDTrackerCellID id2 = ids[1];
 
     if (id1 == -999) {
       // std::cout<<"skipping this hit\n";
       continue;
     }
 
-    long plane_global_id1;
-    long plane_global_id2;
-    long wire_local_id1;
-    long wire_local_id2;
-    geo.decode_wire_id(id1, plane_global_id1, wire_local_id1);
-    geo.decode_wire_id(id2, plane_global_id2, wire_local_id2);
+    SANDTrackerPlaneID plane_global_id1;
+    SANDTrackerPlaneID plane_global_id2;
+    SANDTrackerCellID cell_local_id1;
+    SANDTrackerCellID cell_local_id2;
+    geo.decode_cell_id(id1, plane_global_id1, cell_local_id1);
+    geo.decode_cell_id(id2, plane_global_id2, cell_local_id2);
 
-    // std::cout << id1 << " "  << id2 << " " << std::endl;
-    // std::cout << plane_global_id1 << " " << plane_global_id2 << std::endl;
-    // std::cout << wire_local_id1 << " " << wire_local_id2 << std::endl;
+    // std::cout << id1() << " "  << id2() << " " << std::endl;
+    // std::cout << plane_global_id1() << " " << plane_global_id2() << std::endl;
+    // std::cout << cell_local_id1() << " " << cell_local_id2() << std::endl;
 
     if (plane_global_id1 != plane_global_id2) {
       std::cout << "WIRE ID CORRESPONDING TO 2 DIFFERENT DIRFT PLANES"
@@ -671,16 +651,16 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     long start_id = 999;
     long stop_id = 999;
     if (id2 > id1) {
-      start_id = id1;
-      stop_id = id2;
+      start_id = id1();
+      stop_id = id2();
     } else if (id2 < id1) {
-      start_id = id2;
-      stop_id = id1;
+      start_id = id2();
+      stop_id = id1();
     } else  // hit in 1 cell
     {
       hit h;
       h.det = "DriftVolume";
-      h.did = id1;
+      h.did = id1();
       h.x1 = hseg.Start.X();
       h.y1 = hseg.Start.Y();
       h.z1 = hseg.Start.Z();
@@ -701,7 +681,7 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
     double hseg_dt = (hseg.Stop - hseg.Start).T();
     double hseg_start_t = hseg.Start.T();
 
-    const auto& plane = geo.get_plane_info(start_id)->second;
+    auto& plane = *geo.get_plane_info(SANDTrackerCellID(start_id));
 
     TVector2 rotated_hit_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
     TVector2 rotated_hit_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
@@ -763,12 +743,11 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
       // crossing_point_2d.Print();
       // stop.Print();
       // hseg.Stop.Print();
-
-      long cell_id = geo.GetClosestCellToHit(center, plane, false);
+      SANDTrackerCellID cell_id = geo.GetClosestCellToHit(center, plane, false);
 
       hit h;
       h.det = "DriftVolume";
-      h.did = cell_id;
+      h.did = cell_id();
       h.x1 = start.X();
       h.y1 = start.Y();
       h.z1 = start.Z();
@@ -814,7 +793,7 @@ bool isInHit(hit& h, TVector3& point)
 void digitize_drift(TG4Event* ev, const SANDGeoManager& geo,
                     std::vector<dg_wire>& wire_digits)
 {
-  std::map<long, std::vector<hit> > hits2cell;
+  std::map<SANDTrackerCellID, std::vector<hit> > hits2cell;
   wire_digits.clear();
 
   group_hits_by_cell(ev, geo, hits2cell);
