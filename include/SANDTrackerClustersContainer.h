@@ -72,8 +72,12 @@ class SANDTrackerClustersByProximity : public ClustersContainer
   };
   ~SANDTrackerClustersByProximity(){};
   
-  bool CheckTriplet(const std::vector<SANDTrackerDigitID>& clu);
+  bool IsPermutation(const std::vector<SANDTrackerDigitID>& clu);
   const SANDTrackerCluster &GetNearestCluster(double x, double y) const override;
+  void findCluster(std::vector<SANDTrackerDigitID>& current_cluster, 
+                                                 std::map<SANDTrackerCellID, SANDTrackerDigitID>::iterator it, 
+                                                 std::map<SANDTrackerCellID, SANDTrackerDigitID>& fMap, 
+                                                 int cluster_size);
 };
 
 class SANDTrackerClustersInPlane : public ClustersContainer

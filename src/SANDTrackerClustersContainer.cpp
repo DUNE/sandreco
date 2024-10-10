@@ -9,17 +9,54 @@ inline TVector2 ClustersContainer::GetDigitCoord(const SANDTrackerDigit *dg) con
   return getSandGeoManager()->GlobalToRotated(TVector2(dg->x, dg->y), *plane);
 }
 
-bool SANDTrackerClustersByProximity::CheckTriplet(const std::vector<SANDTrackerDigitID>& clu)
+bool SANDTrackerClustersByProximity::IsPermutation(const std::vector<SANDTrackerDigitID>& clu)
 {
   for (auto& cluster:GetClusters()) {
-    if(std::find(cluster.GetDigits().begin(), cluster.GetDigits().end(), clu[0]) != cluster.GetDigits().end() &&
-       std::find(cluster.GetDigits().begin(), cluster.GetDigits().end(), clu[1]) != cluster.GetDigits().end() &&
-       std::find(cluster.GetDigits().begin(), cluster.GetDigits().end(), clu[2]) != cluster.GetDigits().end())
-      {
-        return true;
-      }
+    // Notice: this is O(n^2). is there a better way? i.e sort
+    if (std::is_permutation(clu.begin(), clu.end(), cluster.GetDigits().begin())) {
+      return true;
+    }
   }
   return false;
+}
+
+void SANDTrackerClustersByProximity::findCluster(std::vector<SANDTrackerDigitID>& current_cluster, 
+                                                 std::map<SANDTrackerCellID, SANDTrackerDigitID>::iterator it, 
+                                                 std::map<SANDTrackerCellID, SANDTrackerDigitID>& fMap, 
+                                                 int cluster_size) {
+
+    for (auto next_it = fMap.begin(); next_it != fMap.end(); next_it++) {
+      
+      const auto& next_cell = getSandGeoManager()->get_cell_info(next_it->first);
+      if (std::find(current_cluster.begin(), current_cluster.end(), next_it->first) 
+            != current_cluster.end()) {
+        continue;
+      }
+
+      int adjacent_count = 0;
+      for (const auto& digit : current_cluster) {
+        const auto& cluster_cell = getSandGeoManager()->get_cell_info(SANDTrackerCellID(digit()));
+
+        if (cluster_cell->second.isAdjacent(next_cell->first)) {
+          adjacent_count++;
+        }
+      }
+      if (adjacent_count == 0) {
+        continue;
+      }
+
+      current_cluster.push_back(next_it->second);
+
+      if (current_cluster.size() == cluster_size) {
+        if (!IsPermutation(current_cluster)) {
+          AddCluster(SANDTrackerCluster(getSandGeoManager(), current_cluster));
+        }
+        current_cluster.pop_back();
+      } else {
+        findCluster(current_cluster, next_it, fMap, cluster_size);
+      }
+    }
+    current_cluster.pop_back();
 }
 
 void SANDTrackerClustersByProximity::Clusterize(const std::vector<SANDTrackerDigitID>& digits)
@@ -30,29 +67,10 @@ void SANDTrackerClustersByProximity::Clusterize(const std::vector<SANDTrackerDig
       fMap[SANDTrackerCellID(d())] = d;
     });
 
-    std::vector<SANDTrackerDigitID> clu;
-
-    for (auto first_it = fMap.begin(); first_it != fMap.end(); first_it++) {
-      const auto& first_cell = getSandGeoManager()->get_cell_info(first_it->first);
-      for (auto second_it = fMap.begin(); second_it != fMap.end(); second_it++) {
-        if (first_it == second_it) continue;
-        const auto& second_cell = getSandGeoManager()->get_cell_info(second_it->first);
-        for (auto third_it = fMap.begin(); third_it != fMap.end(); third_it++) {
-          if (second_it == third_it || first_it == third_it) continue;
-          const auto& third_cell = getSandGeoManager()->get_cell_info(third_it->first);
-          
-          if (first_cell->second.isAdjacent(second_cell->first) && 
-              second_cell->second.isAdjacent(first_cell->first) && 
-              second_cell->second.isAdjacent(third_cell->first) && 
-              third_cell->second.isAdjacent(second_cell->first))
-          {
-            clu = {first_it->second, second_it->second, third_it->second};
-            if(!CheckTriplet(clu)) {
-              AddCluster(SANDTrackerCluster(getSandGeoManager(), clu));
-            }
-          }
-        }
-      }  
+    int cluster_size = 3;
+    for (auto it = fMap.begin(); it != fMap.end(); it++) {
+      std::vector<SANDTrackerDigitID> current_cluster = {it->second};
+      findCluster(current_cluster, it, fMap, cluster_size);
     }
   }
 }

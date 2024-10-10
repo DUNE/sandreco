@@ -74,6 +74,7 @@ class TrackletFinder {
     double _sigma_ang; // rad
 
     int* _volume_parameters;
+    TVector3 _mean_point_3d;
 
     TCanvas* _c2 = nullptr;
     TCanvas* _c3 = nullptr;
