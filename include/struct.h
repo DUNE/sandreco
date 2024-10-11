@@ -2,6 +2,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "ROOT/RDataFrame.hxx"
 
 #ifndef STRUCT_H
 #define STRUCT_H
