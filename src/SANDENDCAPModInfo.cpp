@@ -112,6 +112,7 @@ void SANDENDCAPModInfo::compute_min_max_l()
 
 // Getter methods for the attributes
 int SANDENDCAPModInfo::id() const { return id_; }
+int SANDENDCAPModInfo::n_sections() const { return n_sec_; }
 double SANDENDCAPModInfo::x() const { return x_; }
 double SANDENDCAPModInfo::y() const { return y_; }
 double SANDENDCAPModInfo::z() const { return z_; }

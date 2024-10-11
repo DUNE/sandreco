@@ -62,6 +62,7 @@ class SANDENDCAPModInfo : public TObject
   // void orientation(Orient arg_orientation);
   // Getter methods for the attributes
   int id() const;
+  int n_sections() const;
   double x() const;
   double y() const;
   double z() const;

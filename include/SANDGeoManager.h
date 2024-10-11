@@ -177,9 +177,14 @@ class SANDGeoManager : public TObject
                                      int& cell_local_id) const;
   int get_barrel_path_len(const double& hx, const double& hy, const double& hz,
                           double& d1, double& d2) const;
+  int get_barrel_hit_pos(const double& d1, const int& global_cellID,
+                         double& reco_x, double& reco_y, double& reco_z) const;
   int get_endcap_path_len(const double& hx, const double& hy, const double& hz,
                           const int& endcap_mod_id, double& d1,
                           double& d2) const;
+  int get_endcap_hit_pos(const double& d1, const int& global_cellID,
+                         const int& modID, double& reco_x, double& reco_y,
+                         double& reco_z) const;
   // mod id for the new endcap modules
   int get_endcap_mod_id(const TString& volume_path) const;
   void set_ecal_info();
@@ -239,6 +244,8 @@ class SANDGeoManager : public TObject
                                   int& cell_local_id);
   int get_hit_path_len(const double& hx, const double& hy, const double& hz,
                        const int& global_cell_id, double& d1, double& d2) const;
+  int get_reco_hit_pos(const int& cellID, const double& d1, double& reco_x,
+                       double& reco_y, double& reco_z) const;
 
   // STT
   static int encode_stt_tube_id(int stt_plane_global_id, int stt_tube_local_id);

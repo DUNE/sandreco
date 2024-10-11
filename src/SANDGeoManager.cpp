@@ -361,12 +361,39 @@ int SANDGeoManager::get_barrel_path_len(const double& hx, const double& hy,
   TGeoTrd2* trd = (TGeoTrd2*)layer_node->GetVolume()->GetShape();
   geo_->GetCurrentNavigator()->MasterToLocal(master, local);
 
-  d1 = trd->GetDy1() - local[2];
-  d2 = trd->GetDy1() + local[2];
+  d1 = trd->GetDy1() - local[1];
+  d2 = trd->GetDy1() + local[1];
 
   // std::cout << "Barrel layer: " << layer_node->GetName() << "\nd1: " << d1
   //           << ", d2: " << d2 << "\n";
 
+  return 1;
+}
+
+int SANDGeoManager::get_barrel_hit_pos(const double& d1,
+                                       const int& global_cellID, double& reco_x,
+                                       double& reco_y, double& reco_z) const
+{
+  auto current_cell = cellmap_.at(global_cellID);
+  double master[3];
+  double local[3];
+  master[0] = current_cell.x();
+  master[1] = current_cell.y();
+  master[2] = current_cell.z();
+
+  TGeoNode* layer_node = geo_->FindNode(master[0], master[1], master[2]);
+  if (layer_node == 0) return -999;
+
+  TGeoTrd2* trd = (TGeoTrd2*)layer_node->GetVolume()->GetShape();
+  geo_->GetCurrentNavigator()->MasterToLocal(master, local);
+
+  local[1] = trd->GetDy1() - d1;
+
+  geo_->GetCurrentNavigator()->LocalToMaster(local, master);
+
+  reco_x = master[0];
+  reco_y = master[1];
+  reco_z = master[2];
   return 1;
 }
 
@@ -428,8 +455,6 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
 
   // check whether the layer is actually contained inside the
   // module
-  // std::cout << "> vol_path: " << volume_path
-  //           << "\n> ec_mod.path(): " << ec_mod.path() << "\n";
 
   if (!volume_path.Contains(ec_mod.path())) return -999;
 
@@ -437,22 +462,13 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
   geo_->GetCurrentNavigator()->CdUp();
   geo_->MasterToLocal(master, local);
 
-  // std::cout << "local: (" << local[0] << ", " << local[1] << ", " << local[2]
-  //           << ")\n";
-
   // manage each section separately
   if (volume_path.Contains("vert")) {
     auto depth = local[2] + ec_mod.mod_dz();
     d1 = 0.5 * ec_mod.l_vert() - local[1] + ec_mod.get_curv_arc_len(depth) +
          ec_mod.l_hor();
     d2 = ec_mod.get_cell_tot_len(depth) - d1;
-    // std::cout << "> In vert\n";
-    // std::cout << "depth: " << depth << ", ec_mod.l_vert(): " <<
-    // ec_mod.l_vert()
-    //           << ", arc_len: " << ec_mod.get_curv_arc_len(depth)
-    //           << ", l_hor:" << ec_mod.l_hor()
-    //           << ", tot_len: " << ec_mod.get_cell_tot_len(depth)
-    //           << ", mod_dz: " << ec_mod.mod_dz() << "\n";
+
   } else if (volume_path.Contains("hor") &&
              volume_path.Contains("lv_PV_0/endvol")) {
     // std::cout << "> In hor0\n";
@@ -460,11 +476,6 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
     d1 = 0.5 * ec_mod.l_hor() +
          local[1];  // - takes into accout a coordinate rotation
     d2 = ec_mod.get_cell_tot_len(depth) - d1;
-    // std::cout << "depth: " << depth << ", ec_mod.l_hor(): " << ec_mod.l_hor()
-    //           << ", arc_len: " << ec_mod.get_curv_arc_len(depth)
-    //           << ", l_hor:" << ec_mod.l_hor()
-    //           << ", tot_len: " << ec_mod.get_cell_tot_len(depth)
-    //           << ", mod_dz: " << ec_mod.mod_dz() << "\n";
 
   } else if (volume_path.Contains("hor") &&
              volume_path.Contains("lv_PV_1/endvol")) {
@@ -472,11 +483,6 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
     auto depth = local[2] + ec_mod.mod_dz();
     d2 = 0.5 * ec_mod.l_hor() + local[1];
     d1 = ec_mod.get_cell_tot_len(depth) - d2;
-    // std::cout << "depth: " << depth << ", ec_mod.l_hor(): " << ec_mod.l_hor()
-    //           << ", arc_len: " << ec_mod.get_curv_arc_len(depth)
-    //           << ", l_hor:" << ec_mod.l_hor()
-    //           << ", tot_len: " << ec_mod.get_cell_tot_len(depth)
-    //           << ", mod_dz: " << ec_mod.mod_dz() << "\n";
 
   } else if (volume_path.Contains("curv") &&
              volume_path.Contains("lv_PV_0/endvol")) {
@@ -486,14 +492,7 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
              std::atan(std::abs(local[0] / local[1])) +
          ec_mod.l_hor();
     d2 = ec_mod.get_cell_tot_len(depth) - d1;
-    // std::cout << "> In curv0\n";
-    // std::cout << "depth: " << depth << ", ec_mod.l_vert(): " <<
-    // ec_mod.l_vert()
-    //           << ", r: "
-    //           << std::sqrt(std::pow(local[0], 2) + std::pow(local[1], 2))
-    //           << ", arc_len: " << ec_mod.get_curv_arc_len(depth)
-    //           << ", l_hor:" << ec_mod.l_hor()
-    //           << ", tot_len: " << ec_mod.get_cell_tot_len(depth) << "\n";
+
   } else if (volume_path.Contains("curv") &&
              volume_path.Contains("lv_PV_1/endvol")) {
     // std::cout << "> In curv1\n";
@@ -504,16 +503,79 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
          ec_mod.l_hor();
     d1 = ec_mod.get_cell_tot_len(depth) - d2;
 
-    // std::cout << "depth: " << depth << ", ec_mod.l_vert(): " <<
-    // ec_mod.l_vert()
-    //           << ", r: "
-    //           << std::sqrt(std::pow(local[0], 2) + std::pow(local[1], 2))
-    //           << ", arc_len: " << ec_mod.get_curv_arc_len(depth)
-    //           << ", l_hor:" << ec_mod.l_hor()
-    //           << ", tot_len: " << ec_mod.get_cell_tot_len(depth) << "\n";
   } else
     return 0;
 
+  return 1;
+}
+
+int SANDGeoManager::get_endcap_hit_pos(const double& d1,
+                                       const int& global_cellID,
+                                       const int& modID, double& reco_x,
+                                       double& reco_y, double& reco_z) const
+{
+  // extract the cell and module corresponding to the indexes from the
+  // corresponding maps
+  auto current_cell = cellmap_.at(global_cellID);
+  auto ec_mod = endcapmap_.at(modID);
+
+  double master[3];
+  double local[3];
+  master[0] = current_cell.x();
+  master[1] = current_cell.y();
+  master[2] = current_cell.z();
+
+  TGeoNode* layer_node = geo_->FindNode(master[0], master[1], master[2]);
+  if (layer_node == 0) return -999;
+
+  TString volume_name = layer_node->GetName();
+  TString volume_path = geo_->GetPath();
+
+  // check whether the layer is actually contained inside the
+  // module
+  if (!volume_path.Contains(ec_mod.path())) return -999;
+
+  // convert to the section local coordinates (one level up)
+  geo_->GetCurrentNavigator()->CdUp();
+  geo_->MasterToLocal(master, local);
+
+  // the cell center will be in the vertical section
+  auto depth = local[2] + ec_mod.mod_dz();
+  auto cell_rad = (ec_mod.rmax() - depth);
+  const double d_hor0 = ec_mod.l_hor(),
+               d_curv0 = d_hor0 + ec_mod.get_curv_arc_len(depth),
+               d_vert = d_curv0 + ec_mod.l_vert(),
+               d_curv1 = d_vert + ec_mod.get_curv_arc_len(depth),
+               d_hor1 = d_curv1 + ec_mod.l_hor();
+  // the local coordinates will always refer to the
+  // vertical section!!!!!!!!! find the right module
+  // section based on the d1 range
+  if (d1 <= d_hor0) {
+    local[1] = 0.5 * ec_mod.l_vert() + ec_mod.rmax() - depth;
+    local[2] = -0.5 * ec_mod.mod_dz() + ec_mod.rmax() - d1;
+  } else if (d1 > d_hor0 && d1 <= d_curv0) {
+    const auto sec_angle = (d1 - d_hor0) / cell_rad;
+    local[1] = 0.5 * ec_mod.l_vert() + cell_rad * std::sin(sec_angle);
+    local[2] =
+        -0.5 * ec_mod.mod_dz() + ec_mod.rmax() - cell_rad * std::cos(sec_angle);
+  } else if (d1 > d_curv0 && d1 <= d_vert) {
+    local[1] = 0.5 * ec_mod.l_vert() -
+               (d1 - ec_mod.get_curv_arc_len(depth) - ec_mod.l_hor());
+  } else if (d1 > d_vert && d1 <= d_curv1) {
+    const auto sec_angle = (d_curv1 - d1) / cell_rad;
+    local[1] = -0.5 * ec_mod.l_vert() - cell_rad * std::sin(sec_angle);
+    local[2] =
+        -0.5 * ec_mod.mod_dz() + ec_mod.rmax() - cell_rad * std::cos(sec_angle);
+  } else if (d1 > d_curv1 && ec_mod.n_sections() == 5) {
+    local[1] = -0.5 * ec_mod.l_vert() - ec_mod.rmax() + depth;
+    local[2] = -0.5 * ec_mod.mod_dz() + ec_mod.rmax() + (d1 - d_curv1);
+  } else
+    return -999;
+
+  geo_->LocalToMaster(local, master);
+  reco_x = master[0];
+  reco_y = master[1];
+  reco_z = master[2];
   return 1;
 }
 
@@ -539,6 +601,37 @@ int SANDGeoManager::get_hit_path_len(const double& hx, const double& hy,
     exit = get_barrel_path_len(hx, hy, hz, d1, d2);
   } else if (detID == 0 || detID == 1) {  // endcap modules
     exit = get_endcap_path_len(hx, hy, hz, modID, d1, d2);
+  } else {
+    std::cout << "> get_hit_path_len exiting with error:\n";
+    return -999;
+  }
+  return exit;
+}
+
+int SANDGeoManager::get_reco_hit_pos(const int& global_cell_id,
+                                     const double& d1, double& reco_x,
+                                     double& reco_y, double& reco_z) const
+{
+
+  if (geo_ == 0) {
+    std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
+    return -999;
+  }
+  if (d1 < 0) {
+    std::cout << "ERROR: negative d1 distance\n";
+    return -999;
+  }
+
+  // decode the global_cell_id to extract detID and modID
+  int detID, modID, layerID, locID;
+  decode_ecal_cell_id(global_cell_id, detID, modID, layerID, locID);
+
+  int exit = 0;
+  if (detID == 2) {  // barrel modules
+    exit = get_barrel_hit_pos(d1, global_cell_id, reco_x, reco_y, reco_z);
+  } else if (detID == 0 || detID == 1) {  // endcap modules
+    exit =
+        get_endcap_hit_pos(d1, global_cell_id, modID, reco_x, reco_y, reco_z);
   } else {
     std::cout << "> get_hit_path_len exiting with error:\n";
     return -999;
@@ -670,7 +763,11 @@ void SANDGeoManager::set_ecal_info()
       // here we create new cellInfo
       int cell_unique_id = encode_ecal_cell_id(detector_id, module.first,
                                                layer_id, cell_local_id);
-      // std::cout << "cellID: " << cell_unique_id<<", modID: "<<m_ID<<", repID: "<<replica_id<<", detID: "<<detector_id<<", ("<<master[0]<<", "<<master[1]<<", "<<master[2]<<")\n";
+      // std::cout << "cellID: " << cell_unique_id << ", modID: " << m_ID
+      //           << ", repID: " << replica_id << ", detID: " << detector_id
+      //           << ", (" << master[0] << ", " << master[1] << ", " <<
+      //           master[2]
+      //           << ")\n";
 
       cellmap_[cell_unique_id] =
           SANDECALCellInfo(cell_unique_id, master[0], master[1], master[2],
