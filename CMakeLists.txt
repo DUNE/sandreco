@@ -13,7 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
 
 # Locate the ROOT package and define a number of useful targets and variables.
-find_package(ROOT REQUIRED)
+find_package(ROOT REQUIRED COMPONENTS ROOTDataFrame)
 
 # Locate EDep-sim
 find_package(EDepSim REQUIRED)
@@ -33,7 +33,7 @@ add_library(Struct SHARED include/struct.h)
 target_include_directories(Struct PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>")
-target_link_libraries(Struct PUBLIC)
+target_link_libraries(Struct PUBLIC ROOT::ROOTDataFrame)
 ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/StructLinkDef.h)
 
 # Create SANDGeoManager lib
