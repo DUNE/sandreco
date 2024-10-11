@@ -13,14 +13,21 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
 
 # Locate the ROOT package and define a number of useful targets and variables.
-find_package(ROOT REQUIRED)
+find_package(ROOT REQUIRED COMPONENTS RIO Net EG)
 
 # Locate EDep-sim
 find_package(EDepSim REQUIRED)
 
+find_library(EDEPTree NAMES EDEPTree PATHS ENV LD_LIBRARY_PATH)
+if(NOT EDEPTree)
+  message(FATAL_ERROR "Failed to find the EDEPTree library.")
+endif()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -Wno-unused-parameter")
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+# To Do: learn how cmake works and remove hardcoded paths
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
+                    /storage/gpfs_data/neutrino/users/vpia/STTTrackReco/edep-reader/install/include)
 
 # set output directory
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
@@ -119,9 +126,22 @@ target_link_libraries(Display Struct Utils)
 add_executable(FastCheck src/fastcheck.cpp)
 target_link_libraries(FastCheck Struct Utils)
 
+# STTKFChecks library
+add_library(STTKFTrack SHARED src/STTKFTrack.cpp)
+target_link_libraries(STTKFTrack PUBLIC SANDTrackerUtils)
+ROOT_GENERATE_DICTIONARY(STTKFTrackDict STTKFTrack.h MODULE STTKFTrack LINKDEF include/STTKFIO_LinkDef.h)
+
+# STTGeoManager library
+add_library(STTGeoManager SHARED src/STTKFGeoManager.cpp)
+target_link_libraries(STTGeoManager PUBLIC SANDTrackerUtils)
+
+# Creates a libStruct shared library with a generated dictionary.
+add_library(STTKFKalmanFilter SHARED src/STTKFKalmanFilter.cpp src/STTKFClusterManager.cpp)
+target_link_libraries(STTKFKalmanFilter PUBLIC SANDTrackerUtils STTKFTrack)
+
 # Creates MeasurementBuilder executable.
 add_executable(Measurements src/SANDMeasurementsBuilder.cpp)
-target_link_libraries(Measurements SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils)
+target_link_libraries(Measurements SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG ${EDEPTree} STTKFKalmanFilter STTGeoManager)
 
 # Creates a libSANDEventDisplay shared library
 add_library(SANDEventDisplay SHARED src/SANDEventDisplay.cpp src/SANDDisplayUtils.cpp SANDEventDisplayDict.cxx)

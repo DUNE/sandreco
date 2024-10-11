@@ -305,7 +305,10 @@ class SANDGeoManager : public TObject
   int get_ecal_cell_id(double x, double y, double z) const;
   SANDTrackerCellID get_stt_tube_id(double x, double y, double z) const;
   long print_stt_tube_id(double x, double y, double z) const;
-
+  
+  // Notice: is the non-const version needed?
+  const TGeoManager* GetTGeoManager() const {return geo_;};
+  TGeoManager* GetTGeoManager() {return geo_;};
   long get_wire_id(long drift_plane_id, double z,
                    double transverse_coord) const;
   std::vector<SANDTrackerCellID> get_segment_ids(const TG4HitSegment& hseg) const;
