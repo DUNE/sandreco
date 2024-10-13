@@ -64,6 +64,7 @@ struct dg_wire{
   bool hor;
   double wire_length;
   std::vector<int> hindex;
+  int which_hindex_produced_tdc;
   /* 
     ADDENDUM
     tdc = drift_time + signal_time + t_hit

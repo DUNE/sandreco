@@ -164,7 +164,26 @@ std::vector<TG4HitSegment> FilterHits(const std::vector<TG4HitSegment>& hits, co
     return filtered_hits;
 }
 
-void UpdateFiredWires(std::vector<dg_wire>& fired_wires, dg_wire new_fired){
+/**
+* @brief Updates the list of fired wires, keeping only the smallest tdc for each wire.
+* 
+* This function checks if a wire (identified by `new_fired.did`) has already been added 
+* to the `fired_wires` list. If the wire is already present, it updates the timing 
+* information only if the new `tdc` value is smaller than the existing one. If the wire 
+* is not in the list, it adds `new_fired` to `fired_wires`.
+* 
+* The function also tracks which hit produced the smallest tdc for each wire by 
+* updating the `which_hindex_produced_tdc` field.
+* 
+* @param fired_wires A reference to the vector of `dg_wire` objects representing the 
+*                    wires that have been triggered by hits.
+* @param new_fired   A `dg_wire` object representing the current wire hit to be added 
+*                    or updated in the list of fired wires.
+* @param hit_index   The index of the hit that produced `new_fired`. This is stored as 
+*                    `which_hindex_produced_tdc` in `dg_wire` if it has the smallest tdc.
+*/
+
+void UpdateFiredWires(std::vector<dg_wire>& fired_wires, dg_wire new_fired, int hindex){
     
     bool found = false;
     //(f.did == new_fired.did) && (f.tdc > new_fired.tdc)
@@ -177,10 +196,14 @@ void UpdateFiredWires(std::vector<dg_wire>& fired_wires, dg_wire new_fired){
                 f.drift_time = new_fired.drift_time;
                 f.signal_time = new_fired.signal_time;
                 f.t_hit = new_fired.t_hit;
+                f.which_hindex_produced_tdc = hindex;
             }
         }
     }
-    if(!found) fired_wires.push_back(new_fired);
+    if(!found) {
+        new_fired.which_hindex_produced_tdc = hindex;
+        fired_wires.push_back(new_fired);
+    };
 }
 
 void SortWiresByTime(std::vector<dg_wire>& wires){
@@ -190,6 +213,30 @@ void SortWiresByTime(std::vector<dg_wire>& wires){
     });
 }
 
+/**
+ * @brief Performs digitization of energy deposition hits by associating them with wires.
+ * 
+ * This function processes a list of energy deposition hits (`hits`) and matches them 
+ * to detector wires (`wire_infos`) to determine which wires are activated (or "fired") 
+ * by each hit. It calculates timing information based on the geometry of the hit and 
+ * wire, and stores each fired wire with its corresponding timing data in `fired_wires`.
+ * 
+ * For each hit, the function:
+ * - Determines the wire plane and calculates the distance between the hit segment and 
+ *   each wire.
+ * - Checks if the hit is within the wire's cell boundaries, and if so, computes the 
+ *   drift time, signal time, and total time (`tdc`) for the hit.
+ * - Updates `fired_wires` using `UpdateFiredWires`, ensuring only the earliest `tdc` 
+ *   (smallest value) is recorded for each wire, along with the index of the hit that 
+ *   produced it.
+ * 
+ * @param hits        A vector of `TG4HitSegment` objects representing the energy 
+ *                    deposition hits from the simulation.
+ * @param wire_infos  A vector of `dg_wire` objects containing the information for all 
+ *                    detector wires.
+ * @param fired_wires A reference to a vector of `dg_wire` objects to be populated with 
+ *                    wires that were fired by the hits, with updated timing information.
+ */
 void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
                           const std::vector<dg_wire>& wire_infos, 
                           std::vector<dg_wire>& fired_wires
@@ -239,10 +286,11 @@ void CreateDigitsFromEDep(const std::vector<TG4HitSegment>& hits,
 
                     fired.tdc = fired.drift_time + fired.signal_time + fired.t_hit;
 
+                    // updates hits that contributed to the wire
                     fired.hindex.push_back(i);
 
                     // if wire already fired check if the tdc saved is the smallest
-                    UpdateFiredWires(fired_wires, fired);
+                    UpdateFiredWires(fired_wires, fired, i);
 
                 }
             }

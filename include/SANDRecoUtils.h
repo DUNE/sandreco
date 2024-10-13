@@ -686,16 +686,17 @@ struct Parameter
 
 struct MinuitFitInfos
 {
-    // std::string                 Auxiliary_name;
-    const char*                 Auxiliary_name;
-    int                         TMinuitFinalStatus; // 0 if converged, 4 if falied
-    int                         NIterations; // number of iterations to reach the minimum
-    double                      MinValue; // value of the func to minimize at its minimum
-    std::vector<Parameter>      fitted_parameters;
+    // const char* Auxiliary_name = "Dummy";
+    int TMinuitFinalStatus; // 0 if converged, 4 if falied
+    int NIterations; // number of iterations to reach the minimum
+    double MinValue; // value of the func to minimize at its minimum
+    std::vector<Parameter> fitted_parameters;
 
     // default constructor
     MinuitFitInfos() 
-        : Auxiliary_name("Dummy"), TMinuitFinalStatus(-999), NIterations(-999), MinValue(-999.), fitted_parameters() {}
+        : TMinuitFinalStatus(-999), NIterations(-999), MinValue(-999.), fitted_parameters() {}
+        // : Auxiliary_name("Dummy"), TMinuitFinalStatus(-999), NIterations(-999), MinValue(-999.), fitted_parameters() {}
+    
 };
 
 struct RecoObject
@@ -709,12 +710,12 @@ struct RecoObject
         all the fired wires related to the reconstructed obj.
         These should be provided by some pattern (track) reco algo.
     */
-    std::vector<dg_wire>        fired_wires;
+    std::vector<dg_wire> fired_wires;
     /*
         impact_par_estimated : distance track (helix, 
         circle or sin) to the wire center.  
     */
-    std::vector<double>         impact_par_estimated;
+    std::vector<double> impact_par_estimated;
 
     /* local fit of 3 circles (segmented track)____________________   
         track_segments : vector of segments tangent to the
@@ -724,26 +725,29 @@ struct RecoObject
     // std::vector<Line2D>         track_segments_ZY;
     // std::vector<Line2D>         track_segments_XZ;
     
-    Helix                       true_helix;
-    Helix                       reco_helix;
+    Helix true_helix;
+    Helix reco_helix;
 
-    double                      pt_true;
-    double                      pt_reco;
+    double pt_true;
+    double pt_reco;
 
-    TVector3                    p_true;
-    TVector3                    p_reco;
+    TVector3 p_true;
+    TVector3 p_reco;
 
     // fitting info TMinuit _______________________________________
-    MinuitFitInfos              fit_infos_xz;
-    MinuitFitInfos              fit_infos_zy;
+    MinuitFitInfos fit_infos_xz;
+    MinuitFitInfos fit_infos_zy;
 
     // defaul constructor
     RecoObject() 
         : trj_points(), fired_wires(), impact_par_estimated(),
           pt_true(-999.), pt_reco(-999.), 
-          p_true(TVector3(-999.,-999.,-999.)), p_reco(TVector3(-999.,-999.,-999.)), 
+          p_true(TVector3(-999.,-999.,-999.)), p_reco(TVector3(-999.,-999.,-999.)),
           fit_infos_xz(), fit_infos_zy() {}
+    
+    // ClassDef(RecoObject, 1);
 };
+
 
 namespace Color {
     enum Code {

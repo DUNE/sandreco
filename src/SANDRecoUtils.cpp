@@ -70,6 +70,7 @@ dg_wire  RecoUtils::Copy(const dg_wire& wire){
     copy.t0 = wire.t0;
     copy.hor = wire.hor;
     copy.hindex = wire.hindex;
+    copy.which_hindex_produced_tdc = wire.which_hindex_produced_tdc;
     copy.drift_time = wire.drift_time;
     copy.signal_time = wire.signal_time;
     copy.t_hit = wire.t_hit;
