@@ -213,14 +213,14 @@ jobs:
       # Install EDEPReader
       #############################################################################################################################
       ## https://baltig.infn.it/dune/edep-reader
-      - name: Install edep-reade r
+      - name: Install edep-reader
         run: |
           mkdir -p ~/edep-reader
           cd ~/edep-reader
           git clone --depth 1 https://baltig.infn.it/dune/edep-reader source
           mkdir build
           cd build
-          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/edepsim" ../source
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/root;~/edepsim" ../source
           make -j8 install
 
       #############################################################################################################################
