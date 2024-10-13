@@ -220,7 +220,7 @@ jobs:
           git clone --depth 1 https://baltig.infn.it/dune/edep-reader source
           mkdir build
           cd build
-          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/root;~/edepsim" ../source
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim" ../source
           make -j8 install
 
       #############################################################################################################################
