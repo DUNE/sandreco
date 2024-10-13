@@ -18,16 +18,11 @@ find_package(ROOT REQUIRED COMPONENTS RIO Net EG)
 # Locate EDep-sim
 find_package(EDepSim REQUIRED)
 
-find_library(EDEPTree NAMES EDEPTree PATHS ENV LD_LIBRARY_PATH)
-if(NOT EDEPTree)
-  message(FATAL_ERROR "Failed to find the EDEPTree library.")
-endif()
+find_package(EDEPTree REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -Wno-unused-parameter")
 
-# To Do: learn how cmake works and remove hardcoded paths
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
-                    /storage/gpfs_data/neutrino/users/vpia/STTTrackReco/edep-reader/install/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # set output directory
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
@@ -141,7 +136,7 @@ target_link_libraries(STTKFKalmanFilter PUBLIC SANDTrackerUtils STTKFTrack)
 
 # Creates MeasurementBuilder executable.
 add_executable(Measurements src/SANDMeasurementsBuilder.cpp)
-target_link_libraries(Measurements SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG ${EDEPTree} STTKFKalmanFilter STTGeoManager)
+target_link_libraries(Measurements PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree STTKFKalmanFilter STTGeoManager)
 
 # Creates a libSANDEventDisplay shared library
 add_library(SANDEventDisplay SHARED src/SANDEventDisplay.cpp src/SANDDisplayUtils.cpp SANDEventDisplayDict.cxx)
