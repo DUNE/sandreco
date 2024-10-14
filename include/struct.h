@@ -55,6 +55,20 @@ struct dg_cell
   std::vector<dg_ps> ps2;
 };
 
+struct reco_cell {
+  int id;
+  double z;
+  double y;
+  double x;
+  double l;
+  int mod;
+  int lay;
+  double e;
+  double t; 
+  dg_ps ps1;
+  dg_ps ps2;
+};
+
 struct dg_wire
 {
   std::string det;
@@ -96,6 +110,9 @@ struct cluster
   double z;
   double t;
   double e;
+  double ax;
+  double ay;
+  double az;
   double sx;
   double sy;
   double sz;
@@ -103,6 +120,7 @@ struct cluster
   double vary;
   double varz;
   std::vector<dg_cell> cells;
+  std::vector<reco_cell> reco_cells; 
 };
 
 struct track

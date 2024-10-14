@@ -80,13 +80,18 @@ target_link_libraries(SANDRecoUtils PUBLIC Struct Utils SANDGeoManager ROOT::EG)
 ROOT_GENERATE_DICTIONARY(SANDRecoUtilsDict SANDRecoUtils.h SANDWireInfo.h struct.h utils.h MODULE SANDRecoUtils LINKDEF include/SANDRecoUtilsLinkDef.h)
 # ROOT_GENERATE_DICTIONARY(SANDRecoUtilsDict SANDRecoUtils.h MODULE SANDRecoUtils LINKDEF include/SANDRecoUtilsLinkDef.h)
 
+# Create libClustering shared library
+add_library(SANDClustering SHARED src/SANDClustering.cpp)
+target_link_libraries(SANDClustering PUBLIC Utils)
+ROOT_GENERATE_DICTIONARY(SANDClusteringDict SANDClustering.h MODULE SANDClustering LINKDEF include/SANDClusteringLinkDef.h)
+
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp src/SANDDigitization.cpp src/SANDDigitizationEDEPSIM.cpp src/SANDDigitizationFLUKA.cpp)
 target_link_libraries(Digitize Struct SANDGeoManager Utils)
 
 # Creates Reconstruct executable.
 add_executable(Reconstruct src/reconstruction.cpp)
-target_link_libraries(Reconstruct Struct Utils SANDGeoManager)
+target_link_libraries(Reconstruct Struct Utils SANDGeoManager SANDClustering)
 
 # Creates DigitizeDrift executable.
 add_executable(DigitizeDrift src/SANDDigitizeDrift.cpp)
@@ -150,6 +155,10 @@ ROOT_GENERATE_DICTIONARY(SANDEventDisplayDict SANDEventDisplay.h LINKDEF include
 add_executable(eventDisplay src/eventDisplay.cpp)
 target_link_libraries(eventDisplay PUBLIC Utils SANDEventDisplay "-lEG -lGui")
 
+# Creates SANDECALClustering executable.
+add_executable(SANDECALClustering src/SANDECALClustering.cpp)
+target_link_libraries(SANDECALClustering PUBLIC Utils SANDClustering)
+
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
 endif()
@@ -157,7 +166,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager SANDRecoUtils Digitize Reconstruct Analyze Display FastCheck eventDisplay Measurements
+install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager SANDRecoUtils Digitize Reconstruct Analyze Display FastCheck eventDisplay Measurements SANDClustering  SANDECALClustering
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"

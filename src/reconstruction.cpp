@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include "SANDClustering.h"
 
 #include "struct.h"
 #include "utils.h"
@@ -1117,7 +1118,7 @@ void TrackFit(std::vector<track>& tracks, std::vector<double>& binning,
   fillPosAndTime(tracks);
 }
 
-bool IsContiguous(const dg_cell& c1, const dg_cell& c2)
+/*bool IsContiguous(const dg_cell& c1, const dg_cell& c2)
 {
   if (c1.mod == c2.mod) {
     if (TMath::Abs(c1.lay - c2.lay) <= 1) {
@@ -1133,9 +1134,9 @@ bool IsContiguous(const dg_cell& c1, const dg_cell& c2)
     }
   }
   return false;
-}
+}*/
 
-bool IsContiguous(cluster cl, const dg_cell& c)
+/*bool IsContiguous(cluster cl, const dg_cell& c)
 {
   for (unsigned int i = 0; i < cl.cells.size(); i++) {
     if (IsContiguous(cl.cells.at(i), c)) {
@@ -1143,17 +1144,17 @@ bool IsContiguous(cluster cl, const dg_cell& c)
     }
   }
   return false;
-}
+}*/
 
-void PreCluster(std::vector<dg_cell>* vec_cell, std::vector<cluster>& vec_precl)
+/*void PreCluster(std::vector<dg_cell>* vec_cell, std::vector<cluster>& vec_precl)
 {
   vec_precl.clear();
-
   std::vector<dg_cell> vec_tmpcell(*vec_cell);
-
+  
   while (vec_tmpcell.size() != 0) {
     dg_cell c = vec_tmpcell.front();
-
+    
+    
     // std::cout << vec_tmpcell.size() << std::endl;
 
     bool found = false;
@@ -1175,21 +1176,21 @@ void PreCluster(std::vector<dg_cell>* vec_cell, std::vector<cluster>& vec_precl)
   }
 
   // std::cout << vec_precl.size() << std::endl;
-}
+}*/
 
 void Filter(std::vector<cluster>& vec_cl)
 {
   for (unsigned int i = 0; i < vec_cl.size(); i++) {
-    for (unsigned int k = 0; k < vec_cl.at(i).cells.size(); k++) {
-      if (vec_cl.at(i).cells.at(k).ps1.at(0).adc == 0. ||
-          vec_cl.at(i).cells.at(k).ps2.at(0).adc == 0.) {
-        vec_cl.at(i).cells.erase(vec_cl.at(i).cells.begin() + k);
+    for (unsigned int k = 0; k < vec_cl.at(i).reco_cells.size(); k++) {
+      if (vec_cl.at(i).reco_cells.at(k).ps1.adc == 0. ||
+          vec_cl.at(i).reco_cells.at(k).ps2.adc == 0.) {
+        vec_cl.at(i).reco_cells.erase(vec_cl.at(i).reco_cells.begin() + k);
       }
     }
   }
 }
 
-void Merge(std::vector<cluster>& vec_cl)
+/*void Merge(std::vector<cluster>& vec_cl)
 {
   for (unsigned int i = 0; i < vec_cl.size(); i++) {
     vec_cl.at(i).e = 0.;
@@ -1310,7 +1311,7 @@ void Merge(std::vector<cluster>& vec_cl)
     vec_cl.at(i).sy = dir * ay / mod;
     vec_cl.at(i).sz = dir * 1. / mod;
   }
-}
+}*/
 
 bool value_comparer(std::map<int, int>::value_type& i1,
                     std::map<int, int>::value_type& i2)
@@ -1318,7 +1319,7 @@ bool value_comparer(std::map<int, int>::value_type& i1,
   return i1.second < i2.second;
 }
 
-void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
+/*void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
                         std::vector<cluster>& vec_cl)
 {
   const double cell_max_dt = 30.;  // ns -> dt > 30. ns is unphysical
@@ -1375,7 +1376,7 @@ void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
     }
     if (cl.cells.size() != 0) vec_cl.push_back(cl);
   }
-}
+}*/
 
 void MeanAndRMS(std::vector<dg_wire>& digits, TH1D& hmeanX, TH1D& hrmsX,
                 TH1I& hnX, TH1D& hmeanY, TH1D& hrmsY, TH1I& hnY)
@@ -1738,12 +1739,16 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
       case ECAL_Mode::fast:
         // PreCluster(vec_cell, vec_cl);
         // Filter(vec_cl);
-        PidBasedClustering(ev, vec_cell, vec_cl);
-        Merge(vec_cl);
+        //PidBasedClustering(ev, vec_cell, vec_cl);
+        //Merge(vec_cl);
+        vec_cl = Clusterize(vec_cell);
         break;
     }
     tout.Fill();
   }
+  
+
+  
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
 
