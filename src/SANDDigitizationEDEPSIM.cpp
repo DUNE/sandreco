@@ -134,6 +134,12 @@ void create_digits_from_hits(const SANDGeoManager& geo,
                                                           wire_info);
 
       if (hit_smallest_time < wire_time) {
+        // Notice: this is temporary. Used to plot something useful.
+        //         Must be removed when plots are not needed anymore
+        d.x = closest_point_hit_l.Vect().X();
+        d.y = closest_point_hit_l.Vect().Y();
+        d.z = closest_point_hit_l.Vect().Z();
+
         wire_time = hit_smallest_time;
         t_hit = closest_point_hit_l.T();
         drift_time = closest_point_wire_l.T() - t_hit;

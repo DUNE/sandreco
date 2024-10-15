@@ -7,8 +7,8 @@ namespace TrackerModuleConfiguration
     std::map<std::string, double> _id_to_angle =
     {
       {"0", 0},
-      {"1", 0},
-      {"2", M_PI_2}
+      {"1", -M_PI / 36.},
+      {"2", M_PI / 36.}
     };
     
     std::map<std::string, double> _id_to_offset =
