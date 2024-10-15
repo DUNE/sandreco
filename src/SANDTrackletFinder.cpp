@@ -153,6 +153,7 @@ void TrackletFinder::ComputeDriftTime()
   }
 }
 
+// To Do: find a minimizier able to escape local minima
 std::vector<TVectorD> TrackletFinder::FindTracklets()
 {
   std::vector<TVectorD> minima;
@@ -188,6 +189,7 @@ std::vector<TVectorD> TrackletFinder::FindTracklets()
   double x_width = _cells_intersections[1].X() - _cells_intersections[0].X();
   double y_width = _cells_intersections[1].Y() - _cells_intersections[0].Y();
   
+  // To Do: should be a config parameter
   int subdivisions = 3;
   double x_sub_width = x_width / subdivisions;
   double y_sub_width = y_width / subdivisions;
