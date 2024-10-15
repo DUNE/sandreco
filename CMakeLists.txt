@@ -55,7 +55,6 @@ target_include_directories(SANDRecoUtils PUBLIC
   "$<INSTALL_INTERFACE:include>")
 target_link_libraries(SANDRecoUtils PUBLIC Struct Utils SANDGeoManager ROOT::EG)
 ROOT_GENERATE_DICTIONARY(SANDRecoUtilsDict SANDRecoUtils.h SANDWireInfo.h struct.h utils.h MODULE SANDRecoUtils LINKDEF include/SANDRecoUtilsLinkDef.h)
-# ROOT_GENERATE_DICTIONARY(SANDRecoUtilsDict SANDRecoUtils.h MODULE SANDRecoUtils LINKDEF include/SANDRecoUtilsLinkDef.h)
 
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp src/SANDDigitization.cpp src/SANDDigitizationEDEPSIM.cpp src/SANDDigitizationFLUKA.cpp)
@@ -72,16 +71,6 @@ target_link_libraries(DigitizeDrift Struct Utils SANDRecoUtils)
 # Creates ReconstructNLLmethod executable.
 add_executable(ReconstructNLLmethod src/reconstructionNLLmethod.cpp)
 target_link_libraries(ReconstructNLLmethod Struct Utils SANDRecoUtils)
-
-# ADDED FOR TESTING ----
-# # Creates DigitizeDrift executable for testing.
-# add_executable(test_DigitizeDrift tests/test_DigitizeDrift.cpp)
-# target_link_libraries(test_DigitizeDrift Struct Utils SANDRecoUtils)
-
-# # Creates ReconstructNLLmethod executable for testing.
-# add_executable(test_reconstructNLL tests/test_reconstructionNLL.cpp)
-# target_link_libraries(test_reconstructNLL Struct Utils SANDRecoUtils)
-# ----
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)
