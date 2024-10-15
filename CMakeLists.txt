@@ -127,21 +127,17 @@ add_executable(FastCheck src/fastcheck.cpp)
 target_link_libraries(FastCheck Struct Utils)
 
 # STTKFChecks library
-add_library(STTKFTrack SHARED src/STTKFTrack.cpp)
-target_link_libraries(STTKFTrack PUBLIC SANDTrackerUtils)
-ROOT_GENERATE_DICTIONARY(STTKFTrackDict STTKFTrack.h MODULE STTKFTrack LINKDEF include/STTKFIO_LinkDef.h)
-
-# STTGeoManager library
-add_library(STTGeoManager SHARED src/STTKFGeoManager.cpp)
-target_link_libraries(STTGeoManager PUBLIC SANDTrackerUtils)
+add_library(SANDKFTrack SHARED src/SANDKFTrack.cpp)
+target_link_libraries(SANDKFTrack PUBLIC SANDTrackerUtils)
+ROOT_GENERATE_DICTIONARY(SANDKFTrackDict SANDKFTrack.h MODULE SANDKFTrack LINKDEF include/SANDKFIO_LinkDef.h)
 
 # Creates a libStruct shared library with a generated dictionary.
-add_library(STTKFKalmanFilter SHARED src/STTKFKalmanFilter.cpp src/STTKFClusterManager.cpp)
-target_link_libraries(STTKFKalmanFilter PUBLIC SANDTrackerUtils STTKFTrack)
+add_library(SANDKalmanFilter SHARED src/SANDKalmanFilter.cpp)
+target_link_libraries(SANDKalmanFilter PUBLIC SANDTrackerUtils SANDKFTrack)
 
 # Creates MeasurementBuilder executable.
 add_executable(Measurements src/SANDMeasurementsBuilder.cpp)
-target_link_libraries(Measurements PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree STTKFKalmanFilter STTGeoManager)
+target_link_libraries(Measurements PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter)
 
 # Creates a libSANDEventDisplay shared library
 add_library(SANDEventDisplay SHARED src/SANDEventDisplay.cpp src/SANDDisplayUtils.cpp SANDEventDisplayDict.cxx)

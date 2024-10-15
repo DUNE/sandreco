@@ -17,13 +17,13 @@
 #include "SANDTrackletFinder.h"
 #include "SANDTrackerClusterCollection.h"
 #include "SANDTrackerDigitCollection.h"
-#include "STTKFKalmanFilter.h"
+#include "SANDKalmanFilter.h"
 #include "utils.h"
 
 #include "EDEPTree.h"
 
 void TryCompleteManager(TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
-  STTKFKalmanFilterManager manager;
+  SANDKalmanFilterManager manager;
   manager.InitFromMC(&z_to_tracklets, particleInfo);
   manager.Run();
 
@@ -31,7 +31,7 @@ void TryCompleteManager(TrackletMap z_to_tracklets, SParticleInfo particleInfo) 
 
   auto step = track.GetSteps().back();
   auto reco_state =
-        step.GetStage(STTKFTrackStep::STTKFTrackStateStage::kSmoothing).GetStateVector();
+        step.GetStage(SANDKFTrackStep::SANDKFTrackStateStage::kSmoothing).GetStateVector();
   auto reco_mom = SANDTrackerUtils::GetMomentumInMeVFromRadiusInMM(
                                 reco_state.Radius(), reco_state.TanLambda());
 
@@ -61,7 +61,6 @@ void ProcessEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   std::map<double, std::vector<TVectorD>> z_to_tracklets;
 
   SANDTrackerUtils::Init(sand_geo->GetTGeoManager());
-  STTKFGeoManager::Init();
 
   int gg = 0;
   for (const auto& container:clusters.GetContainers()) {
@@ -160,7 +159,7 @@ int main(int argc, char* argv[])
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
 
-  for (int i = 0; i < 30; i++) {
+  for (int i = 2; i < 3; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 

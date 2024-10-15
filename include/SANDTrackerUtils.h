@@ -12,13 +12,10 @@
 #include "utils.h"
 
 #include "SANDTrackerDigitCollection.h"
-#include "STTKFTrack.h"
-// #include "STTKFKalmanFilter.h"
-// #include "SANDTrackerStrawTubeTracker.h"
-// #include "SANDTrackerKFKalmanFilter.h"
+#include "SANDKFTrack.h"
 
-using SANDTrackerKFStateCovarianceMatrix = TMatrixD;
-using SANDTrackerKFMeasurement = TMatrixD;
+using SANDTrackANDKFStateCovarianceMatrix = TMatrixD;
+using SANDTrackANDKFMeasurement = TMatrixD;
 
 #define IS_VERBOSE false
 
@@ -41,11 +38,14 @@ class SANDTrackerUtils
   static const double k;
   static const double c;
 
-  
-  // static inline const std::map<int, std::map<int, TVector2>> &GetTubeMap()
-  // {
-    // return sand_reco::stt::stPos;
-  // };
+  static const double kEdepSimDensityToGCM3;
+    // https://github.com/ClarkMcGrew/edep-sim/blob/master/README.md#reading-the-output
+    // Be aware that in the saved TGeoManager object, the masses and densities are 
+    // also in CLHEP units, so that 1 kilogram equals 6.24x10^24^ MeV ns^2^ mm^-2^, 
+    // and densities are in units of 6.24x^24^ MeV ns^2^ mm^-5^.
+
+  static double GetDensityInGCM3() {return fGeo->GetCurrentNode()->GetVolume()->GetMaterial()->GetDensity()/kEdepSimDensityToGCM3; };
+  static double GetPathLengthInCM() {return fGeo->GetStep() * 0.1; };
 
  public:
   SANDTrackerUtils(){};
@@ -115,7 +115,7 @@ class SANDTrackerUtils
 
   // To Do: check all units
   static inline double GetRadiusInMMToMomentumInGeVConstant() {return 0.299792458; /* GeV/(m*T) */ };
-  // static inline double GetPerpMomentumInGeVFromRadiusInMM(double radius) {return GetRadiusInMMToMomentumInGeVConstant() * radius * SANDTrackerKFGeoManager::GetMagneticField(); };
+  // static inline double GetPerpMomentumInGeVFromRadiusInMM(double radius) {return GetRadiusInMMToMomentumInGeVConstant() * radius * SANDTrackANDKFGeoManager::GetMagneticField(); };
   static double GetPerpMomentumInGeVFromRadiusInMM(double radius);
   static double GetRadiusInMMFromPerpMomentumInGeV(double perpMom);
   static inline double GetMomentumInGeVFromRadiusInMM(double radius, double tanl) {return GetPerpMomentumInGeVFromRadiusInMM(radius) * sqrt(1 + tanl*tanl); };
@@ -127,9 +127,26 @@ class SANDTrackerUtils
   static double Getc() { return c; };
 
   static TString PrintMatrix(const TMatrixD& m);
-  // static TString PrintStateVector(const SANDTrackerKFStateVector& v); 
+  // static TString PrintStateVector(const SANDTrackANDKFStateVector& v); 
   // static const SANDTrackerCluster* GetClusterPointer(int clusterID, const std::vector<SANDTrackerCluster>& clusters);
   static TVector3 GetCartesianCoordinateFromCylindrical(double radius, double angle, double x);
+
+
+  static double GetCrossedMaterialInGCM2(double z, 
+                              double px, double py, double pz,
+                              double sx, double sy, double sz);
+    static double GetPathLengthInX0(double z, 
+                            double px, double py, double pz,
+                            double sx, double sy, double sz);
+
+    static double GetPathLengthInCM(double z, 
+                            double px, double py, double pz,
+                            double sx, double sy, double sz);
+
+    static double GetDE(double z, 
+                                double px, double py, double pz,
+                                double sx, double sy, double sz,
+                                double beta, double mass, int charge);
 
   friend class SANDTrackerStrawTubeTracker;
 };
@@ -139,7 +156,7 @@ class SANDTrackerUtils
 
 
 
-namespace STTKFCheck {
+namespace SANDKFUtils {
 
 TVector2 get_Bfield_perp(const TVector3& v);
 
@@ -173,7 +190,7 @@ double get_z(const TVector2& center, double radius, double phi);
 
 TVector3 get_vector_momentum(double radius, double phi, double tan_lambda, int versus);
 
-STTKFStateVector get_state_vector(TVector3 mom, TVector3 pos, int charge);
+SANDKFStateVector get_state_vector(TVector3 mom, TVector3 pos, int charge);
 
 class TrajectoryParameters;
 
@@ -184,9 +201,9 @@ class ParticleState {
     public:
         ParticleState(): _position(), _momentum() {};
         ParticleState(const TVector3& p, const TVector3& m): _position(p), _momentum(m) {};
-        ParticleState(const STTKFStateVector& vector, double z);
+        ParticleState(const SANDKFStateVector& vector, double z);
         TrajectoryParameters get_trajectory_parameter(int charge) const;
-        STTKFStateVector get_state_vector(int charge) const;
+        SANDKFStateVector get_state_vector(int charge) const;
         const TVector3& get_position() const { return _position; };
         const TVector3& get_momentum() const { return _momentum; };
         TVector3& get_position() { return _position; };
@@ -230,7 +247,7 @@ class CovMatrixPropCheckOutput {
         double dz;
         TMatrixD initial_state_propagated;
         TMatrixD initial_covariance_propagated;
-        std::vector<STTKFStateVector> propagated_states;
+        std::vector<SANDKFStateVector> propagated_states;
         TMatrixD mean_of_propagated_states;
         TMatrixD covariance_of_propagated_states;
         TMatrixD variance_of_propagated_states;
@@ -243,15 +260,15 @@ class CovMatrixPropCheckOutput {
             variance_of_propagated_states(5,5) {};
 };
 
-std::vector<STTKFStateVector> generate_state_vectors(const STTKFStateVector& state, const TMatrixD& cov, int n);
+std::vector<SANDKFStateVector> generate_state_vectors(const SANDKFStateVector& state, const TMatrixD& cov, int n);
 
-TMatrixD get_mean(const std::vector<STTKFStateVector>& states);
+TMatrixD get_mean(const std::vector<SANDKFStateVector>& states);
 
-TMatrixD get_cov(const std::vector<STTKFStateVector>& states, const TMatrixD& mean);
+TMatrixD get_cov(const std::vector<SANDKFStateVector>& states, const TMatrixD& mean);
 
-TMatrixD get_var(const std::vector<STTKFStateVector>& states, const TMatrixD& cov);
+TMatrixD get_var(const std::vector<SANDKFStateVector>& states, const TMatrixD& cov);
 
-void get_mean_and_cov(const std::vector<STTKFStateVector>& states, TMatrixD& mean, TMatrixD& cov);
+void get_mean_and_cov(const std::vector<SANDKFStateVector>& states, TMatrixD& mean, TMatrixD& cov);
 
 using propagation = std::vector<ParticleState>;
 }

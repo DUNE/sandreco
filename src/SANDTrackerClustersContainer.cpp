@@ -47,7 +47,7 @@ void SANDTrackerClustersByProximity::findCluster(std::vector<SANDTrackerDigitID>
 
       current_cluster.push_back(next_it->second);
 
-      if (current_cluster.size() == cluster_size) {
+      if ((int)current_cluster.size() == cluster_size) {
         if (!IsPermutation(current_cluster)) {
           AddCluster(SANDTrackerCluster(getSandGeoManager(), current_cluster));
         }

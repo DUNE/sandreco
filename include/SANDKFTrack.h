@@ -1,25 +1,25 @@
-#ifndef STTKFTRACK_H
-#define STTKFTRACK_H
+#ifndef SANDKFTRACK_H
+#define SANDKFTRACK_H
 
 #include "TMatrixD.h"
 
-// #include "STTStrawTubeTracker.h"
+// #include "SANDStrawTubeTracker.h"
 #include "SANDGeoManager.h"
 
-using STTKFStateCovarianceMatrix = TMatrixD;
-using STTKFMeasurement = TMatrixD;
+using SANDKFStateCovarianceMatrix = TMatrixD;
+using SANDKFMeasurement = TMatrixD;
 
-class STTKFStateVector {
+class SANDKFStateVector {
 
  private:
   TMatrixD fVector;
   
  public:
   // default constructors ... probably to be delete in the future
-  STTKFStateVector(): fVector(5,1) {};
+  SANDKFStateVector(): fVector(5,1) {};
 
   // constructors
-  STTKFStateVector(double x, double y, double signed_inv_radius, double tanlambda, double phi): fVector(5,1) {
+  SANDKFStateVector(double x, double y, double signed_inv_radius, double tanlambda, double phi): fVector(5,1) {
     fVector(0,0) = x;
     fVector(1,0) = y;
     fVector(2,0) = signed_inv_radius;
@@ -28,36 +28,36 @@ class STTKFStateVector {
   };
 
   // constructors
-  STTKFStateVector(TMatrixD vector): fVector(vector) {};
-  // STTKFStateVector(const TMatrixD& vec): fVector(vec) {};
+  SANDKFStateVector(TMatrixD vector): fVector(vector) {};
+  // SANDKFStateVector(const TMatrixD& vec): fVector(vec) {};
   
   // copy constructor
-  // STTKFStateVector(const STTKFStateVector& other): fVector(other.fVector) {};
-  // STTKFStateVector(STTKFStateVector other): fVector(other.fVector) {};
+  // SANDKFStateVector(const SANDKFStateVector& other): fVector(other.fVector) {};
+  // SANDKFStateVector(SANDKFStateVector other): fVector(other.fVector) {};
   
   // destructor
-  ~STTKFStateVector() {};
+  ~SANDKFStateVector() {};
 
   // copy assignment
-  STTKFStateVector& operator=(const TMatrixD& vec) {
+  SANDKFStateVector& operator=(const TMatrixD& vec) {
     fVector = vec;
     return *this;
   };
-  STTKFStateVector& operator=(TMatrixD vec) {
+  SANDKFStateVector& operator=(TMatrixD vec) {
     std::swap(fVector, vec);
     return *this;
   };
-  STTKFStateVector operator+ (STTKFStateVector p2) {
+  SANDKFStateVector operator+ (SANDKFStateVector p2) {
     this->fVector += p2();
     return *this;
   };
 
-  STTKFStateVector operator- (STTKFStateVector p2) {
+  SANDKFStateVector operator- (SANDKFStateVector p2) {
     this->fVector -= p2();
     return *this;
   };
 
-  STTKFStateVector operator* (STTKFStateVector p2) {
+  SANDKFStateVector operator* (SANDKFStateVector p2) {
     this->fVector = ElementMult(this->fVector, p2());
     return *this;
   };
@@ -85,30 +85,30 @@ class STTKFStateVector {
   // void Phi(double val) { fVector(4, 0) = val; };
 };
 
-class STTKFState {
-  STTKFStateVector fVector;
-  STTKFStateCovarianceMatrix fCovMatrix;
+class SANDKFState {
+  SANDKFStateVector fVector;
+  SANDKFStateCovarianceMatrix fCovMatrix;
 
   public:
-  STTKFState(): fVector(), fCovMatrix(5,5) {};
-  STTKFState(STTKFStateVector vector, STTKFStateCovarianceMatrix matrix): fVector(vector), fCovMatrix(matrix) {};
-  const STTKFStateVector& GetStateVector() const {return fVector; };
-  const STTKFStateCovarianceMatrix& GetStateCovMatrix() const {return fCovMatrix; };
+  SANDKFState(): fVector(), fCovMatrix(5,5) {};
+  SANDKFState(SANDKFStateVector vector, SANDKFStateCovarianceMatrix matrix): fVector(vector), fCovMatrix(matrix) {};
+  const SANDKFStateVector& GetStateVector() const {return fVector; };
+  const SANDKFStateCovarianceMatrix& GetStateCovMatrix() const {return fCovMatrix; };
 };
 
-class STTKFTrackStep {
+class SANDKFTrackStep {
 
   public:
-    enum class STTKFTrackStateStage {
+    enum class SANDKFTrackStateStage {
       kPrediction,
       kFiltering,
       kSmoothing,
     };
 
   private:
-    STTKFState fPrediction;
-    STTKFState fFiltered;
-    STTKFState fSmoothed;
+    SANDKFState fPrediction;
+    SANDKFState fFiltered;
+    SANDKFState fSmoothed;
 
     // the propagation that bring the vector in this state
     TMatrixD fPropagatorMatrix; 
@@ -118,14 +118,14 @@ class STTKFTrackStep {
     // TMatrixD fKalmanGainMatrix; 
     // TMatrixD fTheAMatrix; 
 
-    // STTKFTrackStateStage fStage; // meglio  enumerato
+    // SANDKFTrackStateStage fStage; // meglio  enumerato
 
     // ID piano di misura;
     SANDTrackerPlaneID fPlaneID;
     int fClusterID;
 
   public:
-    STTKFTrackStep(): fPropagatorMatrix(5,5) {}; 
+    SANDKFTrackStep(): fPropagatorMatrix(5,5) {}; 
     //                   fProjectionMatrix(2,5),
     //                   fProcessNoiseMatrix(5,5),
     //                   fMeasurementNoiseMatrix(2,2),
@@ -135,20 +135,20 @@ class STTKFTrackStep {
     const SANDTrackerPlaneID& GetPlaneID() const {return fPlaneID; };
     void SetClusterIDForThisState(int clusterID) { fClusterID = clusterID; };
     int GetClusterIDForThisState() const { return fClusterID; }
-    void SetStage(STTKFTrackStateStage stage, STTKFState state);
-    const STTKFState& GetStage(STTKFTrackStateStage stage) const;
+    void SetStage(SANDKFTrackStateStage stage, SANDKFState state);
+    const SANDKFState& GetStage(SANDKFTrackStateStage stage) const;
     void SetPropagatorMatrix(TMatrixD pMatrix) { fPropagatorMatrix = pMatrix; };
     const TMatrixD GetPropagatorMatrix() { return fPropagatorMatrix; };
 };
 
-class STTKFTrack {
+class SANDKFTrack {
   private:
-    std::vector<STTKFTrackStep> fSteps;
+    std::vector<SANDKFTrackStep> fSteps;
   public:
-    const std::vector<STTKFTrackStep>& GetSteps() const {return fSteps; };
-    const STTKFTrackStep& GetStep(int index) const {return fSteps.at(index); };
-    void AddStep(STTKFTrackStep state) { fSteps.push_back(state); };
-    void SetStage(int index, STTKFTrackStep::STTKFTrackStateStage stage, STTKFState state) { fSteps.at(index).SetStage(stage, state); };
+    const std::vector<SANDKFTrackStep>& GetSteps() const {return fSteps; };
+    const SANDKFTrackStep& GetStep(int index) const {return fSteps.at(index); };
+    void AddStep(SANDKFTrackStep state) { fSteps.push_back(state); };
+    void SetStage(int index, SANDKFTrackStep::SANDKFTrackStateStage stage, SANDKFState state) { fSteps.at(index).SetStage(stage, state); };
     void SetClusterIDForState(int index, int clusterID) { fSteps.at(index).SetClusterIDForThisState(clusterID); };
     void RemoveLastStep() { fSteps.erase(fSteps.end()-1); };
 };

@@ -1,4 +1,4 @@
-#include "STTKFKalmanFilter.h"
+#include "SANDKalmanFilter.h"
 #include "SANDTrackerClusterCollection.h"
 #include "SANDTrackerUtils.h"
 
@@ -6,8 +6,8 @@
 
 #include "TVectorD.h"
 
-TVector3 STTKFKalmanFilterManager::GetDirectiveCosinesFromStateVector(
-    const STTKFStateVector& stateVector)
+TVector3 SANDKalmanFilterManager::GetDirectiveCosinesFromStateVector(
+    const SANDKFStateVector& stateVector)
 {
   auto theta = GetThetaFromPhi(stateVector);
   if (theta > M_PI_2) theta -= M_PI;
@@ -18,19 +18,19 @@ TVector3 STTKFKalmanFilterManager::GetDirectiveCosinesFromStateVector(
   return dir;
 }
 
-STTKFMeasurement STTKFKalmanFilterManager::GetMeasurementFromCluster(
+SANDKFMeasurement SANDKalmanFilterManager::GetMeasurementFromCluster(
     int clusterID)
 {
-  STTKFMeasurement measurement(2, 1);
-  // auto cluster = STTKFClusterManager::GetCluster(clusterID);
+  SANDKFMeasurement measurement(2, 1);
+  // auto cluster = SANDKFClusterManager::GetCluster(clusterID);
   // auto recoTrkParameter = cluster.GetRecoParameters().front().trk;
   // measurement[0][0] = recoTrkParameter.m * cluster.GetZ() + recoTrkParameter.q;
   // measurement[1][0] = atan(recoTrkParameter.m);
   return measurement;
 }
 
-// TMatrixD STTKFKalmanFilterManager::GetInitialCovMatrix(
-//     const STTKFStateVector& stateVector,
+// TMatrixD SANDKalmanFilterManager::GetInitialCovMatrix(
+//     const SANDKFStateVector& stateVector,
 //     const STTPlane::EOrientation& orientation)
 // {
 
@@ -61,8 +61,8 @@ STTKFMeasurement STTKFKalmanFilterManager::GetMeasurementFromCluster(
 //   return initialCovMatrix;
 // }
 
-TMatrixD STTKFKalmanFilterManager::GetPropagatorMatrix(
-    const STTKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass)
+TMatrixD SANDKalmanFilterManager::GetPropagatorMatrix(
+    const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass)
 {
   // PRIMO INDICE = RIGA
   TMatrixD propagatorMatrix(5, 5);
@@ -94,8 +94,8 @@ TMatrixD STTKFKalmanFilterManager::GetPropagatorMatrix(
   return propagatorMatrix;
 }
 
-TMatrixD STTKFKalmanFilterManager::GetProcessNoiseMatrix(
-    const STTKFStateVector& stateVector, double nextPhi, double dZ, double dE,
+TMatrixD SANDKalmanFilterManager::GetProcessNoiseMatrix(
+    const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE,
     double z, double particle_mass)
 {
   TVectorD processNoiseTanlDerivative(5);
@@ -117,7 +117,7 @@ TMatrixD STTKFKalmanFilterManager::GetProcessNoiseMatrix(
 
   auto dir = -1. * GetDirectiveCosinesFromStateVector(stateVector);
   if (dir.Z() > 0) dir *= -1;
-  auto pathLengthInX0 = STTKFGeoManager::GetPathLengthInX0(
+  auto pathLengthInX0 = SANDTrackerUtils::GetPathLengthInX0(
       (z + dZ)*1000, stateVector.X()*1000, stateVector.Y()*1000, z*1000, dir.X(), dir.Y(), dir.Z());
 
   // MCS angle
@@ -147,7 +147,7 @@ TMatrixD STTKFKalmanFilterManager::GetProcessNoiseMatrix(
   return processNoiseMatrix;
 }
 
-TMatrixD STTKFKalmanFilterManager::GetMeasurementNoiseMatrix()
+TMatrixD SANDKalmanFilterManager::GetMeasurementNoiseMatrix()
 {
   TMatrixD measurementNoiseMatrix(2, 2);
   measurementNoiseMatrix[0][0] = SANDTrackerUtils::GetSigmaPositionMeasurement() *
@@ -157,8 +157,8 @@ TMatrixD STTKFKalmanFilterManager::GetMeasurementNoiseMatrix()
   return measurementNoiseMatrix;
 }
 
-TMatrixD STTKFKalmanFilterManager::GetProjectionMatrix(
-    Orientation orientation, const STTKFStateVector& stateVector)
+TMatrixD SANDKalmanFilterManager::GetProjectionMatrix(
+    Orientation orientation, const SANDKFStateVector& stateVector)
 {
   TMatrixD projectionMatrix(2, 5);
 
@@ -181,7 +181,7 @@ TMatrixD STTKFKalmanFilterManager::GetProjectionMatrix(
   return projectionMatrix;
 }
 
-TMatrixD STTKFKalmanFilterManager::GetKalmanGainMatrix(
+TMatrixD SANDKalmanFilterManager::GetKalmanGainMatrix(
     const TMatrixD& covarianceMatrix, const TMatrixD& projectionMatrix,
     const TMatrixD& measurementNoisMatrix)
 {
@@ -193,7 +193,7 @@ TMatrixD STTKFKalmanFilterManager::GetKalmanGainMatrix(
   return covarianceMatrix * projectionMatrixTransposed * kalmanGainInvertedDenominator;
 }
 
-TMatrixD STTKFKalmanFilterManager::GetAMatrix(
+TMatrixD SANDKalmanFilterManager::GetAMatrix(
     const TMatrixD& covarianceMatrixFiltered,
     const TMatrixD& covarianceMatrixNextPredicted,
     const TMatrixD& propagatorMatrix)
@@ -205,8 +205,8 @@ TMatrixD STTKFKalmanFilterManager::GetAMatrix(
          covarianceMatrixNextPredictedInverted;
 }
 
-double STTKFKalmanFilterManager::DeltaRadius(
-    const STTKFStateVector& stateVector, double nextPhi, double dZ,
+double SANDKalmanFilterManager::DeltaRadius(
+    const SANDKFStateVector& stateVector, double nextPhi, double dZ,
     double dE, double particle_mass) const
 {
   // To Do: check all units
@@ -231,8 +231,8 @@ double STTKFKalmanFilterManager::DeltaRadius(
   return comp_delta_inv_radius_from_de;
 }
 
-STTKFStateVector STTKFKalmanFilterManager::PropagateState(
-    const STTKFStateVector& stateVector, double dZ, double dE, double particle_mass)
+SANDKFStateVector SANDKalmanFilterManager::PropagateState(
+    const SANDKFStateVector& stateVector, double dZ, double dE, double particle_mass)
 {
   auto nextTanLambda = stateVector.TanLambda();
 
@@ -266,11 +266,11 @@ STTKFStateVector STTKFKalmanFilterManager::PropagateState(
 
   auto nextY = stateVector.Y() +
                stateVector.Radius() * (sin(nextPhi) - sin(stateVector.Phi()));
-  return STTKFStateVector(nextX, nextY, nextSignedInverseRadius, nextTanLambda,
+  return SANDKFStateVector(nextX, nextY, nextSignedInverseRadius, nextTanLambda,
                           nextPhi);
 }
 
-STTKFStateCovarianceMatrix STTKFKalmanFilterManager::PropagateCovMatrix(
+SANDKFStateCovarianceMatrix SANDKalmanFilterManager::PropagateCovMatrix(
     const TMatrixD& covarianceMatrix, const TMatrixD& propagatorMatrix,
     const TMatrixD& processNoiseMatrix)
 {
@@ -280,10 +280,10 @@ STTKFStateCovarianceMatrix STTKFKalmanFilterManager::PropagateCovMatrix(
          processNoiseMatrix;
 }
 
-STTKFMeasurement STTKFKalmanFilterManager::GetPrediction(
-    Orientation orientation, const STTKFStateVector& stateVector)
+SANDKFMeasurement SANDKalmanFilterManager::GetPrediction(
+    Orientation orientation, const SANDKFStateVector& stateVector)
 {
-  STTKFMeasurement projector(2, 1);
+  SANDKFMeasurement projector(2, 1);
   if (orientation == Orientation::kHorizontal) {
     projector[0][0] = stateVector.Y();
     projector[1][0] =
@@ -296,15 +296,15 @@ STTKFMeasurement STTKFKalmanFilterManager::GetPrediction(
   return projector;
 }
 
-STTKFStateVector STTKFKalmanFilterManager::FilterState(
-    const STTKFStateVector& stateVector, const TMatrixD& kalmanGainMatrix,
-    const STTKFMeasurement& observed, const STTKFMeasurement& predicted)
+SANDKFStateVector SANDKalmanFilterManager::FilterState(
+    const SANDKFStateVector& stateVector, const TMatrixD& kalmanGainMatrix,
+    const SANDKFMeasurement& observed, const SANDKFMeasurement& predicted)
 {
-  return STTKFStateVector(stateVector() +
+  return SANDKFStateVector(stateVector() +
                           kalmanGainMatrix * (observed - predicted));
 }
 
-STTKFStateCovarianceMatrix STTKFKalmanFilterManager::FilterCovMatrix(
+SANDKFStateCovarianceMatrix SANDKalmanFilterManager::FilterCovMatrix(
     const TMatrixD& covarianceMatrix, const TMatrixD& projectionMatrix,
     const TMatrixD& measurementNoiseMatrix)
 {
@@ -319,18 +319,18 @@ STTKFStateCovarianceMatrix STTKFKalmanFilterManager::FilterCovMatrix(
   return TMatrixD(TMatrixD::kInverted, nextCovarianceMatrixInverted);
 }
 
-STTKFStateVector STTKFKalmanFilterManager::smoothState(
-    const STTKFStateVector& stateVectorFiltered,
-    const STTKFStateVector& stateVectorPreviousSmoothed,
-    const STTKFStateVector& stateVectorPreviousPredicted,
+SANDKFStateVector SANDKalmanFilterManager::smoothState(
+    const SANDKFStateVector& stateVectorFiltered,
+    const SANDKFStateVector& stateVectorPreviousSmoothed,
+    const SANDKFStateVector& stateVectorPreviousPredicted,
     const TMatrixD& theAMatrix)
 {
-  return STTKFStateVector(stateVectorFiltered() +
+  return SANDKFStateVector(stateVectorFiltered() +
                           theAMatrix * (stateVectorPreviousSmoothed() -
                                         stateVectorPreviousPredicted()));
 }
 
-STTKFStateCovarianceMatrix STTKFKalmanFilterManager::smoothCovMatrix(
+SANDKFStateCovarianceMatrix SANDKalmanFilterManager::smoothCovMatrix(
     const TMatrixD& covarianceMatrixFiltered,
     const TMatrixD& covarianceMatrixPreviousSmoothed,
     const TMatrixD& covarianceMatrixPreviousPredicted,
@@ -343,14 +343,14 @@ STTKFStateCovarianceMatrix STTKFKalmanFilterManager::smoothCovMatrix(
                                         theAMatrixTransposed;
 }
 
-void STTKFKalmanFilterManager::Propagate(double& dE,
+void SANDKalmanFilterManager::Propagate(double& dE,
                                          double& dZ,
                                          double& beta)
 {
 
   auto currentState = fThisTrack.GetStep(fCurrentStep);
   auto currentStage =
-      currentState.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering);
+      currentState.GetStage(SANDKFTrackStep::SANDKFTrackStateStage::kFiltering);
 
   auto currentStateVector = currentStage.GetStateVector();
   auto predictedStateVector = PropagateState(currentStateVector, dZ, dE, particleInfo_.mass);
@@ -363,20 +363,20 @@ void STTKFKalmanFilterManager::Propagate(double& dE,
   auto predictedCovMatrix = PropagateCovMatrix(
       currentStage.GetStateCovMatrix(), propagatorMatrix, processNoiseMatrix);
 
-  STTKFTrackStep predictedTrackState;
+  SANDKFTrackStep predictedTrackState;
   predictedTrackState.SetStage(
-      STTKFTrackStep::STTKFTrackStateStage::kPrediction,
-      STTKFState(predictedStateVector, predictedCovMatrix));
+      SANDKFTrackStep::SANDKFTrackStateStage::kPrediction,
+      SANDKFState(predictedStateVector, predictedCovMatrix));
   predictedTrackState.SetPropagatorMatrix(propagatorMatrix);
   
   fThisTrack.AddStep(predictedTrackState);
 
   fCurrentStep++;
-  fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kPrediction;
+  fCurrentStage = SANDKFTrackStep::SANDKFTrackStateStage::kPrediction;
 }
 
-double STTKFKalmanFilterManager::EvalChi2(
-    const STTKFMeasurement& observation, const STTKFMeasurement& prediction,
+double SANDKalmanFilterManager::EvalChi2(
+    const SANDKFMeasurement& observation, const SANDKFMeasurement& prediction,
     const TMatrixD& measurementNoiseMatrix)
 {
   auto residualVector = observation - prediction;
@@ -388,9 +388,9 @@ double STTKFKalmanFilterManager::EvalChi2(
   return chi2Matrix[0][0];
 }
 
-STTKFMeasurement STTKFKalmanFilterManager::GetMeasurementFromTracklet(const TVectorD& tracklet)
+SANDKFMeasurement SANDKalmanFilterManager::GetMeasurementFromTracklet(const TVectorD& tracklet)
 {
-  STTKFMeasurement measurement(2, 1);
+  SANDKFMeasurement measurement(2, 1);
   // To Do: vertical and horizontal are outdated and confusing. Replace with something more meaningful.
   // Notice: vertical planes means horizontal measurements and the opposite
   if (fCurrentOrientation == Orientation::kVertical) {
@@ -405,15 +405,15 @@ STTKFMeasurement STTKFKalmanFilterManager::GetMeasurementFromTracklet(const TVec
   return measurement;
 }
 
-int STTKFKalmanFilterManager::FindBestMatch(double& nextZ, const STTKFMeasurement& prediction,
+int SANDKalmanFilterManager::FindBestMatch(double& nextZ, const SANDKFMeasurement& prediction,
     const TMatrixD& Sk)
 {
   double best_chi = 1E9;
   auto& next_tracklets = z_to_tracklets_->at(nextZ);
   auto best_tracklet_index = -1;
 
-  for (int i = 0; i < next_tracklets.size(); i++) {
-    STTKFMeasurement measurement = GetMeasurementFromTracklet(next_tracklets[i]);
+  for (int i = 0; i < (int)next_tracklets.size(); i++) {
+    SANDKFMeasurement measurement = GetMeasurementFromTracklet(next_tracklets[i]);
 
     auto chi2 = EvalChi2(measurement, prediction, Sk);
     if (chi2 < best_chi) {
@@ -428,7 +428,7 @@ int STTKFKalmanFilterManager::FindBestMatch(double& nextZ, const STTKFMeasuremen
   }
 }
 
-void STTKFKalmanFilterManager::SetNextOrientation()
+void SANDKalmanFilterManager::SetNextOrientation()
 {
   if (fCurrentOrientation == Orientation::kVertical) {
     fCurrentOrientation = Orientation::kHorizontal;
@@ -437,13 +437,13 @@ void STTKFKalmanFilterManager::SetNextOrientation()
   }
 }
 
-void STTKFKalmanFilterManager::Filter(const STTKFMeasurement& measurement,
-                                      const STTKFMeasurement& prediction)
+void SANDKalmanFilterManager::Filter(const SANDKFMeasurement& measurement,
+                                      const SANDKFMeasurement& prediction)
 {
 
   auto currentState = fThisTrack.GetStep(fCurrentStep);
   auto predictedStage =
-      currentState.GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction);
+      currentState.GetStage(SANDKFTrackStep::SANDKFTrackStateStage::kPrediction);
   auto predictedStateVector = predictedStage.GetStateVector();
   auto predictedCovMatrix = predictedStage.GetStateCovMatrix();
 
@@ -457,46 +457,46 @@ void STTKFKalmanFilterManager::Filter(const STTKFMeasurement& measurement,
                                            measurementNoiseMatrix);
 
   fThisTrack.SetStage(fCurrentStep,
-                      STTKFTrackStep::STTKFTrackStateStage::kFiltering,
-                      STTKFState(filteredStateVector, filteredCovMatrix));
-  fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+                      SANDKFTrackStep::SANDKFTrackStateStage::kFiltering,
+                      SANDKFState(filteredStateVector, filteredCovMatrix));
+  fCurrentStage = SANDKFTrackStep::SANDKFTrackStateStage::kFiltering;
 
   SetNextOrientation();
 }
 
-void STTKFKalmanFilterManager::Smooth()
+void SANDKalmanFilterManager::Smooth()
 {
 
   auto currentState = fThisTrack.GetStep(fCurrentStep);
   auto filteredState =
-      currentState.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering);
+      currentState.GetStage(SANDKFTrackStep::SANDKFTrackStateStage::kFiltering);
   auto filteredStateVector = filteredState.GetStateVector();
   auto filteredCovMatrix = filteredState.GetStateCovMatrix();
 
   if (fCurrentStep == int(fThisTrack.GetSteps().size()) - 1) {
     fThisTrack.SetStage(fCurrentStep,
-                        STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
-                        STTKFState(filteredStateVector, filteredCovMatrix));
+                        SANDKFTrackStep::SANDKFTrackStateStage::kSmoothing,
+                        SANDKFState(filteredStateVector, filteredCovMatrix));
   } else {
     // previous state
     auto previousState = fThisTrack.GetStep(fCurrentStep + 1);
 
     // previous smoothed
     auto previousSmoothedState = previousState.GetStage(
-        STTKFTrackStep::STTKFTrackStateStage::kSmoothing);
+        SANDKFTrackStep::SANDKFTrackStateStage::kSmoothing);
     auto previousSmoothedStateVector = previousSmoothedState.GetStateVector();
     auto previousSmoothedCovMatrix = previousSmoothedState.GetStateCovMatrix();
     
     // previous predicted
     auto previousPredictedState = previousState.GetStage(
-        STTKFTrackStep::STTKFTrackStateStage::kPrediction);
+        SANDKFTrackStep::SANDKFTrackStateStage::kPrediction);
     auto previousPredictedStateVector = previousPredictedState.GetStateVector();
     auto previousPredictedCovMatrix =
         previousPredictedState.GetStateCovMatrix();
 
     // current predicted
     auto predictedState = currentState.GetStage(
-        STTKFTrackStep::STTKFTrackStateStage::kPrediction);
+        SANDKFTrackStep::SANDKFTrackStateStage::kPrediction);
     auto predictedStateVector = predictedState.GetStateVector();
     auto predictedCovMatrix = predictedState.GetStateCovMatrix();
 
@@ -514,17 +514,17 @@ void STTKFKalmanFilterManager::Smooth()
                         previousPredictedCovMatrix, theAMatrix);
 
     fThisTrack.SetStage(fCurrentStep,
-                        STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
-                        STTKFState(smoothedStateVector, smoothedCovMatrix));
-    // currentState.SetStage(STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
-    // STTKFState(smoothedStateVector, smoothedCovMatrix));
+                        SANDKFTrackStep::SANDKFTrackStateStage::kSmoothing,
+                        SANDKFState(smoothedStateVector, smoothedCovMatrix));
+    // currentState.SetStage(SANDKFTrackStep::SANDKFTrackStateStage::kSmoothing,
+    // SANDKFState(smoothedStateVector, smoothedCovMatrix));
 
   }
-  fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+  fCurrentStage = SANDKFTrackStep::SANDKFTrackStateStage::kFiltering;
   fCurrentStep--;
 }
 
-void STTKFKalmanFilterManager::InitFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
+void SANDKalmanFilterManager::InitFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
 {
 
   TMatrixD initial_cov_matrix(5, 5);
@@ -534,15 +534,15 @@ void STTKFKalmanFilterManager::InitFromMC(TrackletMap* z_to_tracklets, const SPa
   initial_cov_matrix[3][3] = pow(0.01, 2);
   initial_cov_matrix[4][4] = pow(0.01, 2);
 
-  STTKFStateVector initial_state_vector = STTKFCheck::get_state_vector(particleInfo.mom * 1E-3,  // GeV
+  SANDKFStateVector initial_state_vector = SANDKFUtils::get_state_vector(particleInfo.mom * 1E-3,  // GeV
                                                                        particleInfo.pos * 1E-3,  // m
                                                                        particleInfo.charge);
 
-  STTKFTrackStep trackStep;
-  trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction,
-                      STTKFState(initial_state_vector, initial_cov_matrix));
-  trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering,
-                      STTKFState(initial_state_vector, initial_cov_matrix));
+  SANDKFTrackStep trackStep;
+  trackStep.SetStage(SANDKFTrackStep::SANDKFTrackStateStage::kPrediction,
+                      SANDKFState(initial_state_vector, initial_cov_matrix));
+  trackStep.SetStage(SANDKFTrackStep::SANDKFTrackStateStage::kFiltering,
+                      SANDKFState(initial_state_vector, initial_cov_matrix));
 
 
   trackStep.SetPropagatorMatrix(initial_cov_matrix);
@@ -551,16 +551,16 @@ void STTKFKalmanFilterManager::InitFromMC(TrackletMap* z_to_tracklets, const SPa
 
   particleInfo_       = particleInfo;
   z_to_tracklets_     = z_to_tracklets;
-  fCurrentStage       = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+  fCurrentStage       = SANDKFTrackStep::SANDKFTrackStateStage::kFiltering;
   fCurrentStep        = 0u;
   fCurrentZ           = particleInfo.pos.Z(); //Notice: UNITS!!  mm, why?
   fCurrentOrientation = Orientation::kVertical;
 }
 
 // To Do: implment a seeding algorithm
-// void STTKFKalmanFilterManager::Init(const STTPlaneID& planeID, int clusterID)
+// void SANDKalmanFilterManager::Init(const STTPlaneID& planeID, int clusterID)
   // {
-  //   auto cluster = STTKFClusterManager::GetCluster(clusterID);
+  //   auto cluster = SANDKFClusterManager::GetCluster(clusterID);
   //   auto trkParameter = cluster.GetRecoParameters().at(0).trk;
 
   //   double x, y, invR, tanL, phi;
@@ -585,20 +585,20 @@ void STTKFKalmanFilterManager::InitFromMC(TrackletMap* z_to_tracklets, const SPa
   //     phi = 0.5 * TMath::Pi();
   //   }
 
-  //   STTKFTrackStep trackStep;
+  //   SANDKFTrackStep trackStep;
   //   trackStep.SetPlaneID(planeID);
   //   trackStep.SetClusterIDForThisState(clusterID);
-  //   STTKFStateVector stateVector(x, y, invR, tanL, phi);
+  //   SANDKFStateVector stateVector(x, y, invR, tanL, phi);
 
   //   auto initialCovMatrix = GetInitialCovMatrix(stateVector, planeOrientation);
 
-  //   trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction,
-  //                      STTKFState(stateVector, initialCovMatrix));
-  //   trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering,
-  //                      STTKFState(stateVector, initialCovMatrix));
+  //   trackStep.SetStage(SANDKFTrackStep::SANDKFTrackStateStage::kPrediction,
+  //                      SANDKFState(stateVector, initialCovMatrix));
+  //   trackStep.SetStage(SANDKFTrackStep::SANDKFTrackStateStage::kFiltering,
+  //                      SANDKFState(stateVector, initialCovMatrix));
   //   fThisTrack.AddStep(trackStep);
 
-  //   fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+  //   fCurrentStage = SANDKFTrackStep::SANDKFTrackStateStage::kFiltering;
   //   fCurrentStep = 0u;
 
   //   STTTRACKRECO_LOG(
@@ -611,7 +611,7 @@ void STTKFKalmanFilterManager::InitFromMC(TrackletMap* z_to_tracklets, const SPa
   //                   .Data());
 // }
 
-void STTKFKalmanFilterManager::Run()
+void SANDKalmanFilterManager::Run()
 {
   // criterio per quando fermare la ricerca
   int stepLength = 1;
@@ -623,7 +623,7 @@ void STTKFKalmanFilterManager::Run()
 
     auto currentStep = fThisTrack.GetStep(fCurrentStep);
     auto filteredStateVector =
-        currentStep.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering)
+        currentStep.GetStage(SANDKFTrackStep::SANDKFTrackStateStage::kFiltering)
             .GetStateVector();
 
     auto dir = -1. * GetDirectiveCosinesFromStateVector(filteredStateVector);
@@ -641,7 +641,7 @@ void STTKFKalmanFilterManager::Run()
     double beta = sqrt(1 - pow(1 / gamma, 2));
 
     // To Do: check all units
-    auto dE = STTKFGeoManager::GetDE(
+    auto dE = SANDTrackerUtils::GetDE(
                         nextZ, 
                         1000 * filteredStateVector.X(), 1000 * filteredStateVector.Y(), fCurrentZ, 
                         dir.X(), dir.Y(), dir.Z(),
@@ -653,8 +653,8 @@ void STTKFKalmanFilterManager::Run()
 
     // 2- Search best match
     auto predictionStateVector = fThisTrack.GetStep(fCurrentStep)
-            .GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction).GetStateVector();
-    auto predictionStateCovMatrix = fThisTrack.GetStep(fCurrentStep).GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction)
+            .GetStage(SANDKFTrackStep::SANDKFTrackStateStage::kPrediction).GetStateVector();
+    auto predictionStateCovMatrix = fThisTrack.GetStep(fCurrentStep).GetStage(SANDKFTrackStep::SANDKFTrackStateStage::kPrediction)
             .GetStateCovMatrix();
     auto prediction = GetPrediction(fCurrentOrientation, predictionStateVector);
 
@@ -680,7 +680,7 @@ void STTKFKalmanFilterManager::Run()
       stepLength++;
       fThisTrack.RemoveLastStep();
       fCurrentStep--;
-      fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+      fCurrentStage = SANDKFTrackStep::SANDKFTrackStateStage::kFiltering;
     }
   }
 
