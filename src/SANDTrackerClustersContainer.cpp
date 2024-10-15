@@ -67,6 +67,7 @@ void SANDTrackerClustersByProximity::Clusterize(const std::vector<SANDTrackerDig
       fMap[SANDTrackerCellID(d())] = d;
     });
 
+    // To Do: should be a a config paramenter
     int cluster_size = 3;
     for (auto it = fMap.begin(); it != fMap.end(); it++) {
       std::vector<SANDTrackerDigitID> current_cluster = {it->second};

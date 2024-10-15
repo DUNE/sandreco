@@ -18,7 +18,6 @@ struct SParticleInfo {
   TVector3 mom;
 };
 
-class SANDKFUtils;
 
 using SANDKFStateCovarianceMatrix = TMatrixD;
 using SANDKFMeasurement = TMatrixD;
@@ -213,7 +212,6 @@ class SANDKalmanFilterManager {
     void Run();
     const SANDKFTrack& GetTrack() {return fThisTrack; };
   
-  friend class SANDKFUtils;
 };
 
 #endif
