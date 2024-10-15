@@ -4,16 +4,26 @@
 #include "TGeoManager.h"
 #include "TMatrixD.h"
 
-#include "SANDTrackerCluster.h"
 #include "SANDTrackerClusterCollection.h"
 #include "STTKFTrack.h"
 #include "SANDTrackerUtils.h"
 #include "STTKFGeoManager.h"
 
+struct SParticleInfo {
+  int charge;
+  double mass;
+  int pdg_code;
+  int id;
+
+  TVector3 pos;
+  TVector3 mom;
+};
+
 class STTKFChecks;
 
 using STTKFStateCovarianceMatrix = TMatrixD;
 using STTKFMeasurement = TMatrixD;
+using TrackletMap = std::map<double, std::vector<TVectorD>>;
 
 class STTKFKalmanFilterManager {
 
@@ -22,7 +32,9 @@ class STTKFKalmanFilterManager {
 
     STTKFTrackStep::STTKFTrackStateStage fCurrentStage; // forward or backward
     int fCurrentStep; // index of the STTKFTrackStep in STTKFTrack
-
+    double fCurrentZ; 
+    TrackletMap* z_to_tracklets_;
+    SParticleInfo particleInfo_;
 
 
   public:
@@ -53,6 +65,7 @@ class STTKFKalmanFilterManager {
   public:
     Orientation fCurrentOrientation = Orientation::kVertical;
 
+    STTKFMeasurement GetMeasurementFromTracklet(const TVectorD& tracklet);
     double DeltaRadius(const STTKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const;
     inline double DEDTanl(const STTKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { auto tan = stateVector.TanLambda(); return dE * tan / (1 + tan*tan); };
     inline double DEDPhi(const STTKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { 
@@ -191,14 +204,15 @@ class STTKFKalmanFilterManager {
     
     STTKFMeasurement GetPrediction(Orientation orientation, const STTKFStateVector& stateVector);
 
-    // void Propagate(double dE, const STTPlaneID& nextPlaneID);
-    double EvalChi2(const STTKFMeasurement& observation, const STTKFMeasurement& prediction, const TMatrixD& measurementNoiseMatrix);
-    // int FindBestMatch(const std::vector<int>& clusterIDs, const STTKFMeasurement& prediction, const TMatrixD& measurementNoiseMatrix);
-    // void Filter(const STTKFMeasurement& observation, const STTKFMeasurement& prediction, Orientation orientation);
-    // void Smooth();
-    // void Init(const STTPlaneID& plane, int clusterID);
-    // void Run();
-    // const STTKFTrack& GetTrack() {return fThisTrack; };
+    void Propagate(double& dE, double& dZ, double& beta);
+    double EvalChi2(const STTKFMeasurement& measurement, const STTKFMeasurement& prediction, const TMatrixD& measurementNoiseMatrix);
+    int FindBestMatch(double& nextZ, const STTKFMeasurement& prediction, const TMatrixD& measurementNoiseMatrix);
+    void SetNextOrientation();
+    void Filter(const STTKFMeasurement& measurement, const STTKFMeasurement& prediction);
+    void Smooth();
+    void InitFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
+    void Run();
+    const STTKFTrack& GetTrack() {return fThisTrack; };
   
   friend class STTKFChecks;
 };

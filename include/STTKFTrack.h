@@ -111,7 +111,7 @@ class STTKFTrackStep {
     STTKFState fSmoothed;
 
     // the propagation that bring the vector in this state
-    // TMatrixD fPropagatorMatrix; 
+    TMatrixD fPropagatorMatrix; 
     // TMatrixD fProjectionMatrix; 
     // TMatrixD fProcessNoiseMatrix; 
     // TMatrixD fMeasurementNoiseMatrix; 
@@ -125,7 +125,7 @@ class STTKFTrackStep {
     int fClusterID;
 
   public:
-    // STTKFTrackStep(): fPropagatorMatrix(5,5), 
+    STTKFTrackStep(): fPropagatorMatrix(5,5) {}; 
     //                   fProjectionMatrix(2,5),
     //                   fProcessNoiseMatrix(5,5),
     //                   fMeasurementNoiseMatrix(2,2),
@@ -137,6 +137,8 @@ class STTKFTrackStep {
     int GetClusterIDForThisState() const { return fClusterID; }
     void SetStage(STTKFTrackStateStage stage, STTKFState state);
     const STTKFState& GetStage(STTKFTrackStateStage stage) const;
+    void SetPropagatorMatrix(TMatrixD pMatrix) { fPropagatorMatrix = pMatrix; };
+    const TMatrixD GetPropagatorMatrix() { return fPropagatorMatrix; };
 };
 
 class STTKFTrack {

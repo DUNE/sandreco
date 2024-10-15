@@ -1,6 +1,5 @@
 #include "STTKFKalmanFilter.h"
 #include "SANDTrackerClusterCollection.h"
-#include "STTKFClusterManager.h"
 #include "SANDTrackerUtils.h"
 
 #include <vector>
@@ -99,51 +98,51 @@ TMatrixD STTKFKalmanFilterManager::GetProcessNoiseMatrix(
     const STTKFStateVector& stateVector, double nextPhi, double dZ, double dE,
     double z, double particle_mass)
 {
-  // TVectorD processNoiseTanlDerivative(5);
-  // TVectorD processNoisePhiDerivative(5);
+  TVectorD processNoiseTanlDerivative(5);
+  TVectorD processNoisePhiDerivative(5);
 
-  // processNoiseTanlDerivative[0] = DxDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
-  // processNoiseTanlDerivative[1] = DyDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
-  // processNoiseTanlDerivative[2] = DInvCRDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
-  // processNoiseTanlDerivative[3] = DTanlDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
-  // processNoiseTanlDerivative[4] = DPhiDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoiseTanlDerivative[0] = DxDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoiseTanlDerivative[1] = DyDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoiseTanlDerivative[2] = DInvCRDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoiseTanlDerivative[3] = DTanlDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoiseTanlDerivative[4] = DPhiDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
 
-  // processNoisePhiDerivative[0] = DxDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
-  // processNoisePhiDerivative[1] = DyDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
-  // processNoisePhiDerivative[2] = DInvCRDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
-  // processNoisePhiDerivative[3] = DTanlDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
-  // processNoisePhiDerivative[4] = DPhiDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoisePhiDerivative[0] = DxDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoisePhiDerivative[1] = DyDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoisePhiDerivative[2] = DInvCRDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoisePhiDerivative[3] = DTanlDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
+  processNoisePhiDerivative[4] = DPhiDPhi(stateVector, nextPhi, dZ, dE, particle_mass);
 
-  // auto momentumInMeV = SANDTrackerUtils::GetMomentumInMeVFromRadiusInMM(stateVector.Radius(), stateVector.TanLambda());
+  auto momentumInMeV = SANDTrackerUtils::GetMomentumInMeVFromRadiusInMM(stateVector.Radius(), stateVector.TanLambda());
 
-  // auto dir = -1. * GetDirectiveCosinesFromStateVector(stateVector);
-  // if (dir.Z() > 0) dir *= -1;
-  // auto pathLengthInX0 = STTKFGeoManager::GetPathLengthInX0(
-  //     (z + dZ)*1000, stateVector.X()*1000, stateVector.Y()*1000, z*1000, dir.X(), dir.Y(), dir.Z());
+  auto dir = -1. * GetDirectiveCosinesFromStateVector(stateVector);
+  if (dir.Z() > 0) dir *= -1;
+  auto pathLengthInX0 = STTKFGeoManager::GetPathLengthInX0(
+      (z + dZ)*1000, stateVector.X()*1000, stateVector.Y()*1000, z*1000, dir.X(), dir.Y(), dir.Z());
 
-  // // MCS angle
-  // double radius = stateVector.Radius();
-  // double tan    = stateVector.TanLambda();
-  // double mom    = SANDTrackerUtils::GetMomentumInMeVFromRadiusInMM(radius, tan) / 1000;
+  // MCS angle
+  double radius = stateVector.Radius();
+  double tan    = stateVector.TanLambda();
+  double mom    = SANDTrackerUtils::GetMomentumInMeVFromRadiusInMM(radius, tan) / 1000;
   
-  // double constant = SANDTrackerUtils::GetRadiusInMMToMomentumInGeVConstant() * SANDTrackerUtils::GetMagneticField() / sqrt(1 + pow(tan, 2));
+  double constant = SANDTrackerUtils::GetRadiusInMMToMomentumInGeVConstant() * SANDTrackerUtils::GetMagneticField() / sqrt(1 + pow(tan, 2));
   
-  // double gamma = sqrt(mom*mom + particle_mass*particle_mass) / particle_mass;
-  // double beta = sqrt( 1 - pow(1/gamma, 2));
-  // auto sigmaMCSAngle = SANDTrackerUtils::GetMCSSigmaAngleFromMomentumInMeV(
-  //     momentumInMeV, beta, pathLengthInX0);
-  // auto sigmaMCSAngleSquared = sigmaMCSAngle * sigmaMCSAngle;
+  double gamma = sqrt(mom*mom + particle_mass*particle_mass) / particle_mass;
+  double beta = sqrt( 1 - pow(1/gamma, 2));
+  auto sigmaMCSAngle = SANDTrackerUtils::GetMCSSigmaAngleFromMomentumInMeV(
+      momentumInMeV, beta, pathLengthInX0);
+  auto sigmaMCSAngleSquared = sigmaMCSAngle * sigmaMCSAngle;
 
-  // auto factor = pow(1 + pow(stateVector.TanLambda(), 2), 2);
+  auto factor = pow(1 + pow(stateVector.TanLambda(), 2), 2);
 
   TMatrixD processNoiseMatrix(5, 5);
-  // for (int i = 0; i < 5; i++)
-  //   for (int j = 0; j < 5; j++)
-  //     processNoiseMatrix[i][j] =
-  //         sigmaMCSAngleSquared *
-  //         (processNoisePhiDerivative[i] * processNoisePhiDerivative[j] +
-  //          factor * processNoiseTanlDerivative[i] *
-  //              processNoiseTanlDerivative[j]);
+  for (int i = 0; i < 5; i++)
+    for (int j = 0; j < 5; j++)
+      processNoiseMatrix[i][j] =
+          sigmaMCSAngleSquared *
+          (processNoisePhiDerivative[i] * processNoisePhiDerivative[j] +
+           factor * processNoiseTanlDerivative[i] *
+               processNoiseTanlDerivative[j]);
 
   return processNoiseMatrix;
 }
@@ -151,10 +150,10 @@ TMatrixD STTKFKalmanFilterManager::GetProcessNoiseMatrix(
 TMatrixD STTKFKalmanFilterManager::GetMeasurementNoiseMatrix()
 {
   TMatrixD measurementNoiseMatrix(2, 2);
-  // measurementNoiseMatrix[0][0] = SANDTrackerUtils::GetSigmaPositionMeasurement() *
-  //                                SANDTrackerUtils::GetSigmaPositionMeasurement();
-  // measurementNoiseMatrix[1][1] = SANDTrackerUtils::GetSigmaAngleMeasurement() *
-  //                                SANDTrackerUtils::GetSigmaAngleMeasurement();
+  measurementNoiseMatrix[0][0] = SANDTrackerUtils::GetSigmaPositionMeasurement() *
+                                 SANDTrackerUtils::GetSigmaPositionMeasurement();
+  measurementNoiseMatrix[1][1] = SANDTrackerUtils::GetSigmaAngleMeasurement() *
+                                 SANDTrackerUtils::GetSigmaAngleMeasurement();
   return measurementNoiseMatrix;
 }
 
@@ -320,87 +319,61 @@ STTKFStateCovarianceMatrix STTKFKalmanFilterManager::FilterCovMatrix(
   return TMatrixD(TMatrixD::kInverted, nextCovarianceMatrixInverted);
 }
 
-// STTKFStateVector STTKFKalmanFilterManager::smoothState(
-//     const STTKFStateVector& stateVectorFiltered,
-//     const STTKFStateVector& stateVectorPreviousSmoothed,
-//     const STTKFStateVector& stateVectorPreviousPredicted,
-//     const TMatrixD& theAMatrix)
-// {
-//   return STTKFStateVector(stateVectorFiltered() +
-//                           theAMatrix * (stateVectorPreviousSmoothed() -
-//                                         stateVectorPreviousPredicted()));
-// }
+STTKFStateVector STTKFKalmanFilterManager::smoothState(
+    const STTKFStateVector& stateVectorFiltered,
+    const STTKFStateVector& stateVectorPreviousSmoothed,
+    const STTKFStateVector& stateVectorPreviousPredicted,
+    const TMatrixD& theAMatrix)
+{
+  return STTKFStateVector(stateVectorFiltered() +
+                          theAMatrix * (stateVectorPreviousSmoothed() -
+                                        stateVectorPreviousPredicted()));
+}
 
-// STTKFStateCovarianceMatrix STTKFKalmanFilterManager::smoothCovMatrix(
-//     const TMatrixD& covarianceMatrixFiltered,
-//     const TMatrixD& covarianceMatrixPreviousSmoothed,
-//     const TMatrixD& covarianceMatrixPreviousPredicted,
-//     const TMatrixD& theAMatrix)
-// {
-//   TMatrixD theAMatrixTransposed(TMatrixD::kTransposed, theAMatrix);
-//   return covarianceMatrixFiltered + theAMatrix *
-//                                         (covarianceMatrixPreviousSmoothed -
-//                                          covarianceMatrixPreviousPredicted) *
-//                                         theAMatrixTransposed;
-// }
+STTKFStateCovarianceMatrix STTKFKalmanFilterManager::smoothCovMatrix(
+    const TMatrixD& covarianceMatrixFiltered,
+    const TMatrixD& covarianceMatrixPreviousSmoothed,
+    const TMatrixD& covarianceMatrixPreviousPredicted,
+    const TMatrixD& theAMatrix)
+{
+  TMatrixD theAMatrixTransposed(TMatrixD::kTransposed, theAMatrix);
+  return covarianceMatrixFiltered + theAMatrix *
+                                        (covarianceMatrixPreviousSmoothed -
+                                         covarianceMatrixPreviousPredicted) *
+                                        theAMatrixTransposed;
+}
 
-// void STTKFKalmanFilterManager::Propagate(double dE,
-//                                          const STTPlaneID& nextPlaneID)
-// {
+void STTKFKalmanFilterManager::Propagate(double& dE,
+                                         double& dZ,
+                                         double& beta)
+{
 
+  auto currentState = fThisTrack.GetStep(fCurrentStep);
+  auto currentStage =
+      currentState.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering);
 
-//   // Notice: BETA = 1 INSTEAD OF REAL BETA
+  auto currentStateVector = currentStage.GetStateVector();
+  auto predictedStateVector = PropagateState(currentStateVector, dZ, dE, particleInfo_.mass);
+  auto nextPhi = predictedStateVector.Phi();
+  
+  auto processNoiseMatrix =
+      GetProcessNoiseMatrix(currentStateVector, nextPhi, dZ, dE, fCurrentZ, particleInfo_.mass);
+  auto propagatorMatrix =
+      GetPropagatorMatrix(currentStateVector, nextPhi, dZ, dE, particleInfo_.mass);
+  auto predictedCovMatrix = PropagateCovMatrix(
+      currentStage.GetStateCovMatrix(), propagatorMatrix, processNoiseMatrix);
 
+  STTKFTrackStep predictedTrackState;
+  predictedTrackState.SetStage(
+      STTKFTrackStep::STTKFTrackStateStage::kPrediction,
+      STTKFState(predictedStateVector, predictedCovMatrix));
+  predictedTrackState.SetPropagatorMatrix(propagatorMatrix);
+  
+  fThisTrack.AddStep(predictedTrackState);
 
-
-//   auto currentState = fThisTrack.GetStep(fCurrentStep);
-//   auto currentStage =
-//       currentState.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering);
-
-//   auto currentPlaneID = currentState.GetPlaneID();
-//   auto currentZ = STTStrawTubeTracker::GetZPlane(currentPlaneID);
-//   auto nextZ = STTStrawTubeTracker::GetZPlane(nextPlaneID);
-//   auto dZ = nextZ - currentZ;
-//     std::cout << "dZZZZ " << dZ << std::endl;
-//   auto previousStateVector = currentStage.GetStateVector();
-//   auto predictedStateVector = PropagateState(previousStateVector, dZ, dE, 1);
-//   auto nextPhi = predictedStateVector.Phi();
-//   auto processNoiseMatrix =
-//       GetProcessNoiseMatrix(previousStateVector, nextPhi, dZ, dE, nextZ, 1);
-//   STTTRACKRECO_LOG(
-//       "INFO", TString::Format("Process Noise Matrix: %s",
-//                               SANDTrackerUtils::PrintMatrix(processNoiseMatrix).Data())
-//                   .Data());
-
-//   auto propagatorMatrix =
-//       GetPropagatorMatrix(previousStateVector, nextPhi, dZ, dE, 1);
-//   STTTRACKRECO_LOG(
-//       "INFO", TString::Format("Propagator Matrix: %s",
-//                               SANDTrackerUtils::PrintMatrix(propagatorMatrix).Data())
-//                   .Data());
-//   auto predictedCovMatrix = PropagateCovMatrix(
-//       currentStage.GetStateCovMatrix(), propagatorMatrix, processNoiseMatrix);
-
-//   STTKFTrackStep predictedTrackState;
-//   predictedTrackState.SetPlaneID(nextPlaneID);
-//   predictedTrackState.SetStage(
-//       STTKFTrackStep::STTKFTrackStateStage::kPrediction,
-//       STTKFState(predictedStateVector, predictedCovMatrix));
-//   fThisTrack.AddStep(predictedTrackState);
-
-//   fCurrentStep++;
-//   fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kPrediction;
-
-//   STTTRACKRECO_LOG(
-//       "INFO",
-//       TString::Format("State Vector     : %s",
-//                       SANDTrackerUtils::PrintStateVector(predictedStateVector).Data())
-//           .Data());
-//   STTTRACKRECO_LOG(
-//       "INFO", TString::Format("Covariance Matrix: %s",
-//                               SANDTrackerUtils::PrintMatrix(predictedCovMatrix).Data())
-//                   .Data());
-// }
+  fCurrentStep++;
+  fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kPrediction;
+}
 
 double STTKFKalmanFilterManager::EvalChi2(
     const STTKFMeasurement& observation, const STTKFMeasurement& prediction,
@@ -415,361 +388,301 @@ double STTKFKalmanFilterManager::EvalChi2(
   return chi2Matrix[0][0];
 }
 
-// int STTKFKalmanFilterManager::FindBestMatch(
-//     const std::vector<int>& clusterIDs, const STTKFMeasurement& prediction,
-//     const TMatrixD& measurementNoiseMatrix)
-// {
-//   // criterio per decidere se è buono o no
-//   std::vector<double> chi2Values;
-//   for (auto clusterID : clusterIDs) {
-//     auto measurement = GetMeasurementFromCluster(clusterID);
+STTKFMeasurement STTKFKalmanFilterManager::GetMeasurementFromTracklet(const TVectorD& tracklet)
+{
+  STTKFMeasurement measurement(2, 1);
+  // To Do: vertical and horizontal are outdated and confusing. Replace with something more meaningful.
+  // Notice: vertical planes means horizontal measurements and the opposite
+  if (fCurrentOrientation == Orientation::kVertical) {
+    // To Do: Check units!
+    measurement[0][0] = tracklet[0] / 1000.;
+    measurement[1][0] = M_PI_2 - tracklet[2];
+  } else {
+    measurement[0][0] = tracklet[1] / 1000.;
+    measurement[1][0] = tracklet[3];
+  }
 
-//     chi2Values.push_back(
-//         EvalChi2(measurement, prediction, measurementNoiseMatrix));
-//   }
+  return measurement;
+}
 
-//   if (chi2Values.size() > 0)
-//     return clusterIDs.at(std::distance(
-//         chi2Values.begin(), std::min(chi2Values.begin(), chi2Values.end())));
-//   else
-//     return -1;
-// }
+int STTKFKalmanFilterManager::FindBestMatch(double& nextZ, const STTKFMeasurement& prediction,
+    const TMatrixD& Sk)
+{
+  double best_chi = 1E9;
+  auto& next_tracklets = z_to_tracklets_->at(nextZ);
+  auto best_tracklet_index = -1;
 
-// void STTKFKalmanFilterManager::Filter(const STTKFMeasurement& observation,
-//                                       const STTKFMeasurement& prediction,
-//                                       STTPlane::EOrientation orientation)
-// {
+  for (int i = 0; i < next_tracklets.size(); i++) {
+    STTKFMeasurement measurement = GetMeasurementFromTracklet(next_tracklets[i]);
 
-//   auto currentState = fThisTrack.GetStep(fCurrentStep);
-//   auto predictedStage =
-//       currentState.GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction);
-//   auto predictedStateVector = predictedStage.GetStateVector();
-//   auto predictedCovMatrix = predictedStage.GetStateCovMatrix();
-//   auto measurementNoiseMatrix = GetMeasurementNoiseMatrix();
-//   auto projectionMatrix =
-//       GetProjectionMatrix(orientation, predictedStateVector);
-//   auto kalmanGainMatrix = GetKalmanGainMatrix(
-//       predictedCovMatrix, projectionMatrix, measurementNoiseMatrix);
-//   auto filteredStateVector = FilterState(predictedStateVector, kalmanGainMatrix,
-//                                          observation, prediction);
-//   auto filteredCovMatrix = FilterCovMatrix(predictedCovMatrix, projectionMatrix,
-//                                            measurementNoiseMatrix);
+    auto chi2 = EvalChi2(measurement, prediction, Sk);
+    if (chi2 < best_chi) {
+      best_chi = chi2;
+      best_tracklet_index = i;
+    }
+  }
+  if (best_chi < 1.5) {
+    return best_tracklet_index;
+  } else {
+    return -1;
+  }
+}
 
-//   fThisTrack.SetStage(fCurrentStep,
-//                       STTKFTrackStep::STTKFTrackStateStage::kFiltering,
-//                       STTKFState(filteredStateVector, filteredCovMatrix));
-//   fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+void STTKFKalmanFilterManager::SetNextOrientation()
+{
+  if (fCurrentOrientation == Orientation::kVertical) {
+    fCurrentOrientation = Orientation::kHorizontal;
+  } else {
+    fCurrentOrientation = Orientation::kVertical;
+  }
+}
 
-//   STTTRACKRECO_LOG(
-//       "INFO", TString::Format("Current Step        : %d", fCurrentStep).Data());
-//   STTTRACKRECO_LOG(
-//       "INFO",
-//       TString::Format("State Vector        : %s",
-//                       SANDTrackerUtils::PrintStateVector(filteredStateVector).Data())
-//           .Data());
-//   STTTRACKRECO_LOG(
-//       "INFO",
-//       TString::Format(
-//           "Check state Vector: %s",
-//           SANDTrackerUtils::PrintStateVector(
-//               fThisTrack.GetStep(fCurrentStep)
-//                   .GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering)
-//                   .GetStateVector())
-//               .Data())
-//           .Data());
-//   STTTRACKRECO_LOG(
-//       "INFO", TString::Format("Covariance Matrix   : %s",
-//                               SANDTrackerUtils::PrintMatrix(filteredCovMatrix).Data())
-//                   .Data());
-// }
+void STTKFKalmanFilterManager::Filter(const STTKFMeasurement& measurement,
+                                      const STTKFMeasurement& prediction)
+{
 
-// void STTKFKalmanFilterManager::Smooth()
-// {
+  auto currentState = fThisTrack.GetStep(fCurrentStep);
+  auto predictedStage =
+      currentState.GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction);
+  auto predictedStateVector = predictedStage.GetStateVector();
+  auto predictedCovMatrix = predictedStage.GetStateCovMatrix();
 
-//   // Notice: BETA = 1 INSTEAD OF REAL BETA
+  auto measurementNoiseMatrix = GetMeasurementNoiseMatrix();
+  auto projectionMatrix = GetProjectionMatrix(fCurrentOrientation, predictedStateVector);
+  auto kalmanGainMatrix = GetKalmanGainMatrix(
+      predictedCovMatrix, projectionMatrix, measurementNoiseMatrix);
+  auto filteredStateVector = FilterState(predictedStateVector, kalmanGainMatrix,
+                                         measurement, prediction);
+  auto filteredCovMatrix = FilterCovMatrix(predictedCovMatrix, projectionMatrix,
+                                           measurementNoiseMatrix);
+
+  fThisTrack.SetStage(fCurrentStep,
+                      STTKFTrackStep::STTKFTrackStateStage::kFiltering,
+                      STTKFState(filteredStateVector, filteredCovMatrix));
+  fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+
+  SetNextOrientation();
+}
+
+void STTKFKalmanFilterManager::Smooth()
+{
+
+  auto currentState = fThisTrack.GetStep(fCurrentStep);
+  auto filteredState =
+      currentState.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering);
+  auto filteredStateVector = filteredState.GetStateVector();
+  auto filteredCovMatrix = filteredState.GetStateCovMatrix();
+
+  if (fCurrentStep == int(fThisTrack.GetSteps().size()) - 1) {
+    fThisTrack.SetStage(fCurrentStep,
+                        STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
+                        STTKFState(filteredStateVector, filteredCovMatrix));
+  } else {
+    // previous state
+    auto previousState = fThisTrack.GetStep(fCurrentStep + 1);
+
+    // previous smoothed
+    auto previousSmoothedState = previousState.GetStage(
+        STTKFTrackStep::STTKFTrackStateStage::kSmoothing);
+    auto previousSmoothedStateVector = previousSmoothedState.GetStateVector();
+    auto previousSmoothedCovMatrix = previousSmoothedState.GetStateCovMatrix();
+    
+    // previous predicted
+    auto previousPredictedState = previousState.GetStage(
+        STTKFTrackStep::STTKFTrackStateStage::kPrediction);
+    auto previousPredictedStateVector = previousPredictedState.GetStateVector();
+    auto previousPredictedCovMatrix =
+        previousPredictedState.GetStateCovMatrix();
+
+    // current predicted
+    auto predictedState = currentState.GetStage(
+        STTKFTrackStep::STTKFTrackStateStage::kPrediction);
+    auto predictedStateVector = predictedState.GetStateVector();
+    auto predictedCovMatrix = predictedState.GetStateCovMatrix();
+
+    auto nextPhi = previousPredictedStateVector.Phi();
+    auto propagatorMatrix = currentState.GetPropagatorMatrix();
+
+    auto theAMatrix = GetAMatrix(filteredCovMatrix, previousPredictedCovMatrix,
+                                 propagatorMatrix);
+
+    auto smoothedStateVector =
+        smoothState(filteredStateVector, previousSmoothedStateVector,
+                    previousPredictedStateVector, theAMatrix);
+    auto smoothedCovMatrix =
+        smoothCovMatrix(filteredCovMatrix, previousSmoothedCovMatrix,
+                        previousPredictedCovMatrix, theAMatrix);
+
+    fThisTrack.SetStage(fCurrentStep,
+                        STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
+                        STTKFState(smoothedStateVector, smoothedCovMatrix));
+    // currentState.SetStage(STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
+    // STTKFState(smoothedStateVector, smoothedCovMatrix));
+
+  }
+  fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+  fCurrentStep--;
+}
+
+void STTKFKalmanFilterManager::InitFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
+{
+
+  TMatrixD initial_cov_matrix(5, 5);
+  initial_cov_matrix[0][0] = pow(200E-6, 2);
+  initial_cov_matrix[1][1] = pow(200E-6, 2);
+  initial_cov_matrix[2][2] = pow(0.1, 2);
+  initial_cov_matrix[3][3] = pow(0.01, 2);
+  initial_cov_matrix[4][4] = pow(0.01, 2);
+
+  STTKFStateVector initial_state_vector = STTKFCheck::get_state_vector(particleInfo.mom * 1E-3,  // GeV
+                                                                       particleInfo.pos * 1E-3,  // m
+                                                                       particleInfo.charge);
+
+  STTKFTrackStep trackStep;
+  trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction,
+                      STTKFState(initial_state_vector, initial_cov_matrix));
+  trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering,
+                      STTKFState(initial_state_vector, initial_cov_matrix));
 
 
+  trackStep.SetPropagatorMatrix(initial_cov_matrix);
+  
+  fThisTrack.AddStep(trackStep);
 
+  particleInfo_       = particleInfo;
+  z_to_tracklets_     = z_to_tracklets;
+  fCurrentStage       = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+  fCurrentStep        = 0u;
+  fCurrentZ           = particleInfo.pos.Z(); //Notice: UNITS!!  mm, why?
+  fCurrentOrientation = Orientation::kVertical;
+}
 
-//   auto currentState = fThisTrack.GetStep(fCurrentStep);
-//   auto filteredState =
-//       currentState.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering);
-//   auto filteredStateVector = filteredState.GetStateVector();
-//   auto filteredCovMatrix = filteredState.GetStateCovMatrix();
-
-//   if (fCurrentStep == int(fThisTrack.GetSteps().size()) - 1) {
-//     fThisTrack.SetStage(fCurrentStep,
-//                         STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
-//                         STTKFState(filteredStateVector, filteredCovMatrix));
-//     // currentState.SetStage(STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
-//     // STTKFState(filteredStateVector, filteredCovMatrix));
-
-//     STTTRACKRECO_LOG(
-//         "INFO",
-//         TString::Format("State Vector     : %s",
-//                         SANDTrackerUtils::PrintStateVector(filteredStateVector).Data())
-//             .Data());
-//     STTTRACKRECO_LOG(
-//         "INFO", TString::Format("Covariance Matrix: %s",
-//                                 SANDTrackerUtils::PrintMatrix(filteredCovMatrix).Data())
-//                     .Data());
-//   } else {
-//     // previous state
-//     auto previousState = fThisTrack.GetStep(fCurrentStep + 1);
-//     // previous smoothed
-//     auto previousSmoothedState = previousState.GetStage(
-//         STTKFTrackStep::STTKFTrackStateStage::kSmoothing);
-//     auto previousSmoothedStateVector = previousSmoothedState.GetStateVector();
-//     auto previousSmoothedCovMatrix = previousSmoothedState.GetStateCovMatrix();
-//     // previous predicted
-//     auto previousPredictedState = previousState.GetStage(
-//         STTKFTrackStep::STTKFTrackStateStage::kPrediction);
-//     auto previousPredictedStateVector = previousPredictedState.GetStateVector();
-//     auto previousPredictedCovMatrix =
-//         previousPredictedState.GetStateCovMatrix();
-
-//     auto predictedState = currentState.GetStage(
-//         STTKFTrackStep::STTKFTrackStateStage::kPrediction);
-//     auto predictedStateVector = predictedState.GetStateVector();
-//     auto predictedCovMatrix = predictedState.GetStateCovMatrix();
-
-//     auto nextPhi = previousPredictedStateVector.Phi();
-//     auto nextZ = STTStrawTubeTracker::GetZPlane(previousState.GetPlaneID());
-//     auto currentZ = STTStrawTubeTracker::GetZPlane(currentState.GetPlaneID());
-//     auto dZ = nextZ - currentZ;
-//     auto dir = -1. * GetDirectiveCosinesFromStateVector(predictedStateVector);
-//     auto dE = SANDTrackerUtils::GetDEInMeV(STTKFGeoManager::GetCrossedMaterialInGCM2(
-//         nextZ, predictedStateVector.X(), predictedStateVector.Y(), currentZ,
-//         dir.X(), dir.Y(), dir.Z()));
-
-//     auto propagatorMatrix =
-//         GetPropagatorMatrix(predictedStateVector, nextPhi, dZ, dE, 1);
-//     auto theAMatrix = GetAMatrix(filteredCovMatrix, previousPredictedCovMatrix,
-//                                  propagatorMatrix);
-
-//     auto smoothedStateVector =
-//         smoothState(filteredStateVector, previousSmoothedStateVector,
-//                     previousPredictedStateVector, theAMatrix);
-//     auto smoothedCovMatrix =
-//         smoothCovMatrix(filteredCovMatrix, previousSmoothedCovMatrix,
-//                         previousPredictedCovMatrix, theAMatrix);
-
-//     fThisTrack.SetStage(fCurrentStep,
-//                         STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
-//                         STTKFState(smoothedStateVector, smoothedCovMatrix));
-//     // currentState.SetStage(STTKFTrackStep::STTKFTrackStateStage::kSmoothing,
-//     // STTKFState(smoothedStateVector, smoothedCovMatrix));
-
-//     STTTRACKRECO_LOG(
-//         "INFO",
-//         TString::Format("State Vector     : %s",
-//                         SANDTrackerUtils::PrintStateVector(smoothedStateVector).Data())
-//             .Data());
-//     STTTRACKRECO_LOG(
-//         "INFO", TString::Format("Covariance Matrix: %s",
-//                                 SANDTrackerUtils::PrintMatrix(smoothedCovMatrix).Data())
-//                     .Data());
-//   }
-//   fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
-//   fCurrentStep--;
-// }
-
+// To Do: implment a seeding algorithm
 // void STTKFKalmanFilterManager::Init(const STTPlaneID& planeID, int clusterID)
-// {
+  // {
+  //   auto cluster = STTKFClusterManager::GetCluster(clusterID);
+  //   auto trkParameter = cluster.GetRecoParameters().at(0).trk;
 
-//   auto cluster = STTKFClusterManager::GetCluster(clusterID);
-//   auto trkParameter = cluster.GetRecoParameters().at(0).trk;
+  //   double x, y, invR, tanL, phi;
+  //   auto plane = STTStrawTubeTracker::GetPlane(planeID);
+  //   auto defaultCharge = -1;
+  //   auto planeOrientation = plane.GetOrientation();
 
-//   double x, y, invR, tanL, phi;
-//   auto plane = STTStrawTubeTracker::GetPlane(planeID);
-//   auto defaultCharge = -1;
-//   auto planeOrientation = plane.GetOrientation();
+  //   if (planeOrientation == STTPlane::EOrientation::kHorizontal) {
+  //     x = SANDTrackerUtils::GetSANDInnerVolumeCenterPosition()[0];
+  //     y = trkParameter.m * plane.GetZ() + trkParameter.q;
+  //     invR = defaultCharge /
+  //            SANDTrackerUtils::GetRadiusInMMFromPerpMomentumInGeV(1. /*GeV*/);
+  //     tanL = 0.;
+  //     phi = GetPhiFromTheta(atan(trkParameter.m), defaultCharge);
+  //   } else {
+  //     x = trkParameter.m * plane.GetZ() + trkParameter.q;
+  //     ;
+  //     y = SANDTrackerUtils::GetSANDInnerVolumeCenterPosition()[1];
+  //     invR = defaultCharge /
+  //            SANDTrackerUtils::GetRadiusInMMFromPerpMomentumInGeV(1. /*GeV*/);
+  //     tanL = trkParameter.m;
+  //     phi = 0.5 * TMath::Pi();
+  //   }
 
-//   if (planeOrientation == STTPlane::EOrientation::kHorizontal) {
-//     x = SANDTrackerUtils::GetSANDInnerVolumeCenterPosition()[0];
-//     y = trkParameter.m * plane.GetZ() + trkParameter.q;
-//     invR = defaultCharge /
-//            SANDTrackerUtils::GetRadiusInMMFromPerpMomentumInGeV(1. /*GeV*/);
-//     tanL = 0.;
-//     phi = GetPhiFromTheta(atan(trkParameter.m), defaultCharge);
-//   } else {
-//     x = trkParameter.m * plane.GetZ() + trkParameter.q;
-//     ;
-//     y = SANDTrackerUtils::GetSANDInnerVolumeCenterPosition()[1];
-//     invR = defaultCharge /
-//            SANDTrackerUtils::GetRadiusInMMFromPerpMomentumInGeV(1. /*GeV*/);
-//     tanL = trkParameter.m;
-//     phi = 0.5 * TMath::Pi();
-//   }
+  //   STTKFTrackStep trackStep;
+  //   trackStep.SetPlaneID(planeID);
+  //   trackStep.SetClusterIDForThisState(clusterID);
+  //   STTKFStateVector stateVector(x, y, invR, tanL, phi);
 
-//   STTKFTrackStep trackStep;
-//   trackStep.SetPlaneID(planeID);
-//   trackStep.SetClusterIDForThisState(clusterID);
-//   STTKFStateVector stateVector(x, y, invR, tanL, phi);
+  //   auto initialCovMatrix = GetInitialCovMatrix(stateVector, planeOrientation);
 
-//   auto initialCovMatrix = GetInitialCovMatrix(stateVector, planeOrientation);
+  //   trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction,
+  //                      STTKFState(stateVector, initialCovMatrix));
+  //   trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering,
+  //                      STTKFState(stateVector, initialCovMatrix));
+  //   fThisTrack.AddStep(trackStep);
 
-//   trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction,
-//                      STTKFState(stateVector, initialCovMatrix));
-//   trackStep.SetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering,
-//                      STTKFState(stateVector, initialCovMatrix));
-//   fThisTrack.AddStep(trackStep);
+  //   fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+  //   fCurrentStep = 0u;
 
-//   fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
-//   fCurrentStep = 0u;
-
-//   STTTRACKRECO_LOG(
-//       "INFO", TString::Format("State Vector     : %s",
-//                               SANDTrackerUtils::PrintStateVector(stateVector).Data())
-//                   .Data());
-//   STTTRACKRECO_LOG(
-//       "INFO", TString::Format("Covariance Matrix: %s",
-//                               SANDTrackerUtils::PrintMatrix(initialCovMatrix).Data())
-//                   .Data());
+  //   STTTRACKRECO_LOG(
+  //       "INFO", TString::Format("State Vector     : %s",
+  //                               SANDTrackerUtils::PrintStateVector(stateVector).Data())
+  //                   .Data());
+  //   STTTRACKRECO_LOG(
+  //       "INFO", TString::Format("Covariance Matrix: %s",
+  //                               SANDTrackerUtils::PrintMatrix(initialCovMatrix).Data())
+  //                   .Data());
 // }
 
-// void STTKFKalmanFilterManager::Run()
-// {
-//   // criterio per quando fermare la ricerca
+void STTKFKalmanFilterManager::Run()
+{
+  // criterio per quando fermare la ricerca
+  int stepLength = 1;
 
-//   int stepLength = 1;
+  // Notice: if currentZ is not in the map, the second condition is always true
+  while (stepLength < 100 && std::distance(z_to_tracklets_->begin(), z_to_tracklets_->find(fCurrentZ)) >= stepLength) {
+    // 1- propagate to [currentPlaneID - step]
+    auto nextZ = std::prev(z_to_tracklets_->lower_bound(fCurrentZ), stepLength)->first;
 
-//   auto currentPlaneID = fThisTrack.GetStep(fCurrentStep).GetPlaneID();
-//   auto currentPlaneIndex = STTStrawTubeTracker::GetPlaneIndex(currentPlaneID);
+    auto currentStep = fThisTrack.GetStep(fCurrentStep);
+    auto filteredStateVector =
+        currentStep.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering)
+            .GetStateVector();
 
-//   while (stepLength < 100 && currentPlaneIndex - stepLength >= 0) {
-//     // 1- propagate to [currentPlaneID - step]
-//     auto nextPlane = STTStrawTubeTracker::Prev(currentPlaneID, stepLength);
-//     auto nextPlaneID = nextPlane->GetId();
+    auto dir = -1. * GetDirectiveCosinesFromStateVector(filteredStateVector);
 
-//     auto currentZ = STTStrawTubeTracker::GetZPlane(currentPlaneID);
-//     auto nextZ = nextPlane->GetZ();
+    // To Do: check if this is still valid and add a real fix if needed
+    if (dir.Z() > 0) {
+      dir *= -1;
+    }
 
-//     auto currentStep = fThisTrack.GetStep(fCurrentStep);
-//     auto filteredStateVector =
-//         currentStep.GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering)
-//             .GetStateVector();
+    auto current_mom = SANDTrackerUtils::GetMomentumInMeVFromRadiusInMM(
+                              filteredStateVector.Radius(),
+                              filteredStateVector.TanLambda()) / 1000;
+    double gamma = sqrt(current_mom * current_mom + particleInfo_.mass * particleInfo_.mass) /
+                    particleInfo_.mass;
+    double beta = sqrt(1 - pow(1 / gamma, 2));
 
-//     STTTRACKRECO_LOG("INFO",
-//                      TString::Format("Current Step: %d", fCurrentStep).Data());
-//     STTTRACKRECO_LOG(
-//         "INFO",
-//         TString::Format(
-//             "Filtered State Vector: %s",
-//             SANDTrackerUtils::PrintStateVector(
-//                 fThisTrack.GetStep(fCurrentStep)
-//                     .GetStage(STTKFTrackStep::STTKFTrackStateStage::kFiltering)
-//                     .GetStateVector())
-//                 .Data())
-//             .Data());
+    // To Do: check all units
+    auto dE = STTKFGeoManager::GetDE(
+                        nextZ, 
+                        1000 * filteredStateVector.X(), 1000 * filteredStateVector.Y(), fCurrentZ, 
+                        dir.X(), dir.Y(), dir.Z(),
+                        beta, particleInfo_.mass, particleInfo_.charge) / 1000;
 
-//     auto dir = -1. * GetDirectiveCosinesFromStateVector(filteredStateVector);
-//     auto dL = STTKFGeoManager::GetCrossedMaterialInGCM2(
-//         nextZ, filteredStateVector.X(), filteredStateVector.Y(), currentZ,
-//         dir.X(), dir.Y(), dir.Z());
-//     auto dE = SANDTrackerUtils::GetDEInGeV(dL);
+    double dZ = (nextZ - fCurrentZ) / 1000;
 
-//     STTTRACKRECO_LOG(
-//         "INFO", TString::Format(
-//                     "Expected dE: %f (GeV) for dL: %f (g/cm2) from: (%f, %f, "
-//                     "%f) with direction: (%f, %f, %f) to z: %f",
-//                     dE, dL, filteredStateVector.X(), filteredStateVector.Y(),
-//                     currentZ, dir.X(), dir.Y(), dir.Z(), nextZ)
-//                     .Data());
-//     STTTRACKRECO_LOG(
-//         "INFO",
-//         TString::Format(
-//             "Propagate for %d step(s) from plane %u [Z=%f] to plane %u [z=%f]",
-//             stepLength, currentPlaneID(), currentZ, nextPlaneID(), nextZ)
-//             .Data());
+    Propagate(dE, dZ, beta);
 
-//     Propagate(dE, nextPlaneID);
+    // 2- Search best match
+    auto predictionStateVector = fThisTrack.GetStep(fCurrentStep)
+            .GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction).GetStateVector();
+    auto predictionStateCovMatrix = fThisTrack.GetStep(fCurrentStep).GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction)
+            .GetStateCovMatrix();
+    auto prediction = GetPrediction(fCurrentOrientation, predictionStateVector);
 
-//     // 2- Search best match
-//     auto clusterIDs =
-//         STTKFClusterManager::GetClusterIDsForPlane(nextPlane->GetIndex());
-//     auto predictionStateVector =
-//         fThisTrack.GetStep(fCurrentStep)
-//             .GetStage(STTKFTrackStep::STTKFTrackStateStage::kPrediction)
-//             .GetStateVector();
-//     auto prediction =
-//         GetPrediction(nextPlane->GetOrientation(), predictionStateVector);
+    auto measurementNoiseMatrix = GetMeasurementNoiseMatrix();
+    auto projectionMatrix = GetProjectionMatrix(fCurrentOrientation, 
+                                                predictionStateVector);
+    TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
+                                          projectionMatrix);
+    auto Sk = measurementNoiseMatrix + projectionMatrix *
+                                              predictionStateCovMatrix *
+                                              projectionMatrixTransposed;
 
-//     STTTRACKRECO_LOG("INFO",
-//                      TString::Format("Prediction: %s",
-//                                      SANDTrackerUtils::PrintMatrix(prediction).Data())
-//                          .Data());
+    int tracklet_index = FindBestMatch(nextZ, prediction, Sk);
 
-//     auto measurementNoiseMatrix = GetMeasurementNoiseMatrix();
-//     auto clusterID =
-//         FindBestMatch(clusterIDs, prediction, measurementNoiseMatrix);
+    // // 3- If it is found: step = 1
+    // //    else step++
+    if (tracklet_index != -1) {
+      stepLength = 1;
+      auto measurement = GetMeasurementFromTracklet(z_to_tracklets_->at(nextZ)[tracklet_index]);
+      Filter(measurement, prediction);
+      fCurrentZ = nextZ;
+    } else {
+      stepLength++;
+      fThisTrack.RemoveLastStep();
+      fCurrentStep--;
+      fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
+    }
+  }
 
-//     // 3- If it is found: step = 1
-//     //    else step++
-//     if (clusterID >= 0) {
-//       fThisTrack.SetClusterIDForState(fCurrentStep, clusterID);
-//       auto cluster = STTKFClusterManager::GetCluster(clusterID);
-//       auto trk = cluster.GetRecoParameters().front().trk;
-//       STTTRACKRECO_LOG(
-//           "INFO",
-//           TString::Format(
-//               "Cluster with ID: %d (m: %f, q: %f, x: %f, angle: %f) is the "
-//               "best cluster in plane %u [z=%f] orient: %s",
-//               clusterID, trk.m, trk.q, trk.m * cluster.GetZ() + trk.q,
-//               atan(trk.m), nextPlaneID(), nextZ,
-//               cluster.GetOrientation() == STTPlane::EOrientation::kHorizontal
-//                   ? "hor"
-//                   : "ver")
-//               .Data());
-//       stepLength = 1;
-//       auto observation = GetMeasurementFromCluster(clusterID);
-//       Filter(observation, prediction, nextPlane->GetOrientation());
-//     } else {
-//       STTTRACKRECO_LOG(
-//           "INFO", TString::Format("No compatible cluster in plane %u [z=%f]",
-//                                   nextPlaneID(), nextZ)
-//                       .Data());
-//       stepLength++;
-//       fThisTrack.RemoveLastStep();
-//       fCurrentStep--;
-//       fCurrentStage = STTKFTrackStep::STTKFTrackStateStage::kFiltering;
-//     }
-
-//     currentPlaneID = fThisTrack.GetStep(fCurrentStep).GetPlaneID();
-//     currentPlaneIndex = STTStrawTubeTracker::GetPlaneIndex(currentPlaneID);
-//   }
-
-//   STTTRACKRECO_LOG("INFO", "Doing smoothing");
-//   while (fCurrentStep >= 0) Smooth();
-
-//   auto lastStep = fThisTrack.GetSteps().back();
-//   auto lastZ = STTStrawTubeTracker::GetPlane(lastStep.GetPlaneID()).GetZ();
-//   auto lastStateVector =
-//       lastStep.GetStage(STTKFTrackStep::STTKFTrackStateStage::kSmoothing)
-//           .GetStateVector();
-//   auto pPerp =
-//       SANDTrackerUtils::GetPerpMomentumInGeVFromRadiusInMM(lastStateVector.Radius());
-//   auto pX = pPerp * lastStateVector.TanLambda();
-//   auto pY = pPerp * sin(lastStateVector.Phi());
-//   auto pZ = pPerp * cos(lastStateVector.Phi());
-
-//   STTTRACKRECO_LOG(
-//       "INFO",
-//       TString::Format("Last State Vector: %s",
-//                       SANDTrackerUtils::PrintStateVector(lastStateVector).Data())
-//           .Data());
-//   STTTRACKRECO_LOG(
-//       "INFO", TString::Format("Last Reco Parameter at Z=%f", lastZ).Data());
-//   STTTRACKRECO_LOG("INFO",
-//                    TString::Format("     X: %f", lastStateVector.X()).Data());
-//   STTTRACKRECO_LOG("INFO",
-//                    TString::Format("     Y: %f", lastStateVector.Y()).Data());
-//   STTTRACKRECO_LOG("INFO", TString::Format("     PX: %f", pX).Data());
-//   STTTRACKRECO_LOG("INFO", TString::Format("     PY: %f", pY).Data());
-//   STTTRACKRECO_LOG("INFO", TString::Format("     PZ: %f", pZ).Data());
-//   STTTRACKRECO_LOG(
-//       "INFO",
-//       TString::Format("     Charge: %d", lastStateVector.Charge()).Data());
-
-//   STTTRACKRECO_LOG("INFO", "End of KalmanFilter Run");
-// }
+  while (fCurrentStep >= 0) Smooth();
+}
