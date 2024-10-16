@@ -204,19 +204,23 @@ void RecoFromTrack(particle& p)
 void RecoFromBeta(particle& p, double x0, double y0, double z0, double t0)
 {
   // evaluate neutron velocity using earlier cell
-  std::vector<double> cell_t(p.cl.cells.size());
-  std::vector<double> cell_x(p.cl.cells.size());
-  std::vector<double> cell_y(p.cl.cells.size());
-  std::vector<double> cell_z(p.cl.cells.size());
+  std::vector<double> cell_t(p.cl.reco_cells.size());
+  std::vector<double> cell_x(p.cl.reco_cells.size());
+  std::vector<double> cell_y(p.cl.reco_cells.size());
+  std::vector<double> cell_z(p.cl.reco_cells.size());
 
   double e;
 
-  for (unsigned int i = 0; i < p.cl.cells.size(); i++) {
-    sand_reco::ecal::reco::CellXYZTE(p.cl.cells.at(i), cell_x.at(i),
-                                     cell_y.at(i), cell_z.at(i), cell_t.at(i),
-                                     e);
+  for (unsigned int i = 0; i < p.cl.reco_cells.size(); i++) {
+    // sand_reco::ecal::reco::CellXYZTE(p.cl.reco_cells.at(i), cell_x.at(i),
+    //                                  cell_y.at(i), cell_z.at(i), cell_t.at(i),
+    //                                  e);
+    cell_x.push_back(p.cl.reco_cells.at(i).x); 
+    cell_y.push_back(p.cl.reco_cells.at(i).y); 
+    cell_z.push_back(p.cl.reco_cells.at(i).z);
+    cell_t.push_back(p.cl.reco_cells.at(i).t);  
   }
-
+  
   int idx_min = std::distance(cell_t.begin(),
                               std::min_element(cell_t.begin(), cell_t.end()));
 
@@ -348,7 +352,7 @@ void FindPriPi0Decay(event& ev)
 void ProcessParticle(event& evt, int index)
 {
   particle& p = evt.particles.at(index);
-
+  
   switch (p.pdg) {
     case -2212:  // antiproton
     case 2212:   // proton
@@ -357,6 +361,7 @@ void ProcessParticle(event& evt, int index)
         RecoFromTrack(p);
       else if (p.has_cluster == 1)
         RecoFromBeta(p, evt.x, evt.y, evt.z, evt.t);
+        
       break;
     }
     case -211:  // antipion
@@ -744,7 +749,6 @@ void Analyze(const char* fMc, const char* fIn)
   TTree* tTrueMC = (TTree*)ftrue.Get("EDepSimEvents");
   TTree* gRooTracker = (TTree*)ftrue.Get("DetSimPassThru/gRooTracker");
   TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
-
   tReco->AddFriend(tTrueMC);
   tReco->AddFriend(gRooTracker);
 
@@ -768,19 +772,20 @@ void Analyze(const char* fMc, const char* fIn)
   std::map<int, particle> map_part;
 
   event evt;
-
+  
   TTree tout("tEvent", "tEvent");
   tout.Branch("event", "event", &evt);
-
+  
   const int nev = t->GetEntries();
-
+  
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
 
   for (int i = 0; i < nev; i++) {
+    std::cout << "EVENT: " << i << std::endl; 
     std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i) / nev * 100)
               << "%]" << std::flush;
-
+   
     t->GetEntry(i);
     map_part.clear();
     evt.particles.clear();
@@ -816,26 +821,31 @@ void Analyze(const char* fMc, const char* fIn)
     }
 
     for (unsigned int j = 0; j < vec_cl->size(); j++) {
-      std::map<int, particle>::iterator it = map_part.find(vec_cl->at(j).tid);
-      // FillClusterInfo(ev, vec_cl->at(j), it->second);
-      it->second.has_cluster = true;
-      it->second.cl = vec_cl->at(j);
+      auto it = map_part.find(vec_cl->at(j).tid);
+    if (it != map_part.end()) {
+        // FillClusterInfo(ev, vec_cl->at(j), it->second);
+        it->second.has_cluster = true;
+        it->second.cl = vec_cl->at(j);
+        std::cout << "cluster id = traj_id: " << vec_cl->at(j).tid << ", " << map_part.at(vec_cl->at(j).tid).tid << std::endl; 
+    } else {
+        std::cout << "Error: tid " << vec_cl->at(j).tid << " not found in map_part!" << std::endl;
+    }
     }
 
     for (std::map<int, particle>::iterator it = map_part.begin();
          it != map_part.end(); ++it) {
       evt.particles.push_back(it->second);
     }
-
+    
     std::sort(evt.particles.begin(), evt.particles.end(), sand_reco::isAfter);
-
+    
     // FindPriGammaConversion(evt);
     // FindPriPi0Decay(evt);
 
     ProcessParticles(evt);
-
+    
     EvalNuEnergy(evt);
-
+    
     tout.Fill();
   }
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
