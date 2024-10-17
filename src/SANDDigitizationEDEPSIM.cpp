@@ -268,6 +268,7 @@ void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
                                                             ecal_digi_mode);
   if (debug) {
     std::cout << "CollectSignal" << std::endl;
+    
   }
   // now the issue is here!!!
   digitization::edep_sim::ecal::group_pmts_in_cells(geo, ps, L, vec_cell);
@@ -538,6 +539,7 @@ void digitize(const char* finname, const char* foutname,
   fout.cd();
   tout.Write();
   geo->Write();
+
   fout.Close();
 
   f.Close();

@@ -76,6 +76,7 @@ void eval_adc_and_tdc_from_photo_electrons(
 
   std::vector<pe> photo_el_digit;
 
+  // iteration over cells
   for (std::map<int, std::vector<pe> >::iterator it = photo_el.begin();
        it != photo_el.end(); ++it) {
     // order by arrival time
@@ -90,7 +91,7 @@ void eval_adc_and_tdc_from_photo_electrons(
     pe_count = 0;
     start_index = 0;
     index = 0;
-
+    // iteration over elements in the pe vector (for each cell entry)
     for (std::vector<pe>::iterator this_pe = it->second.begin();
          this_pe != it->second.end(); ++this_pe) {
       // integrate for int_time

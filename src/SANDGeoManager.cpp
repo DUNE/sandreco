@@ -392,8 +392,8 @@ int SANDGeoManager::get_barrel_hit_pos(const double& d1,
   geo_->GetCurrentNavigator()->LocalToMaster(local, master);
 
   reco_x = master[0];
-  reco_y = master[1];
-  reco_z = master[2];
+  reco_y = current_cell.y();
+  reco_z = current_cell.z();
   return 1;
 }
 
@@ -618,7 +618,7 @@ int SANDGeoManager::get_reco_hit_pos(const int& global_cell_id,
     return -999;
   }
   if (d1 < 0) {
-    std::cout << "ERROR: negative d1 distance\n";
+    // std::cout << "ERROR: negative d1 distance\n";
     return -999;
   }
 
