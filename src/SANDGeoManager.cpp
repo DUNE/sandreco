@@ -552,15 +552,15 @@ int SANDGeoManager::get_endcap_hit_pos(const double& d1,
   // section based on the d1 range
   if (d1 <= d_hor0) {
     local[1] = 0.5 * ec_mod.l_vert() + ec_mod.rmax() - depth;
-    local[2] = -0.5 * ec_mod.mod_dz() + ec_mod.rmax() - d1;
+    local[2] = -0.5 * ec_mod.mod_dz() + ec_mod.rmax() + (d_hor0 - d1);
   } else if (d1 > d_hor0 && d1 <= d_curv0) {
     const auto sec_angle = (d1 - d_hor0) / cell_rad;
     local[1] = 0.5 * ec_mod.l_vert() + cell_rad * std::sin(sec_angle);
     local[2] =
         -0.5 * ec_mod.mod_dz() + ec_mod.rmax() - cell_rad * std::cos(sec_angle);
   } else if (d1 > d_curv0 && d1 <= d_vert) {
-    local[1] = 0.5 * ec_mod.l_vert() -
-               (d1 - ec_mod.get_curv_arc_len(depth) - ec_mod.l_hor());
+    local[1] =
+        0.5 * ec_mod.l_vert() - (d1 - ec_mod.get_curv_arc_len(depth) - d_hor0);
   } else if (d1 > d_vert && d1 <= d_curv1) {
     const auto sec_angle = (d_curv1 - d1) / cell_rad;
     local[1] = -0.5 * ec_mod.l_vert() - cell_rad * std::sin(sec_angle);
