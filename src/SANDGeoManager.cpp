@@ -632,7 +632,7 @@ int SANDGeoManager::get_reco_hit_pos(const int& cellID, const double& cell_l,
 
   const double d1 = compute_cell_d1(cell_l, tdc_1, tdc_2);
 
-  if (d1 < 0) {
+  if (d1 < 0 || d1 > cell_l) {
     // std::cout << "ERROR: negative d1 distance\n";
     return -999;
   }
