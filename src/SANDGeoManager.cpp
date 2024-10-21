@@ -1,4 +1,5 @@
 #include "SANDGeoManager.h"
+#include "utils.h"
 
 #include <iostream>
 
@@ -608,15 +609,29 @@ int SANDGeoManager::get_hit_path_len(const double& hx, const double& hy,
   return exit;
 }
 
-int SANDGeoManager::get_reco_hit_pos(const int& global_cell_id,
-                                     const double& d1, double& reco_x,
-                                     double& reco_y, double& reco_z) const
+double SANDGeoManager::compute_cell_d1(const double& cell_l,
+                                       const double& tdc_1,
+                                       const double& tdc_2) const
+{
+  return 0.5 *
+         (cell_l + ((tdc_1 - tdc_2) / (sand_reco::ecal::scintillation::vlfb *
+                                       sand_reco::conversion::mm_to_m)));
+  // either this or 0.5*cell_l+sand_reco::ecal::reco::XfromTDC(double t1, double t2)
+}
+
+int SANDGeoManager::get_reco_hit_pos(const int& cellID, const double& cell_l,
+                                     const double& tdc_1, const double& tdc_2,
+                                     double& reco_x, double& reco_y,
+                                     double& reco_z) const
 {
 
   if (geo_ == 0) {
     std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
     return -999;
   }
+
+  const double d1 = compute_cell_d1(cell_l, tdc_1, tdc_2);
+
   if (d1 < 0) {
     // std::cout << "ERROR: negative d1 distance\n";
     return -999;
@@ -624,14 +639,13 @@ int SANDGeoManager::get_reco_hit_pos(const int& global_cell_id,
 
   // decode the global_cell_id to extract detID and modID
   int detID, modID, layerID, locID;
-  decode_ecal_cell_id(global_cell_id, detID, modID, layerID, locID);
+  decode_ecal_cell_id(cellID, detID, modID, layerID, locID);
 
   int exit = 0;
   if (detID == 2) {  // barrel modules
-    exit = get_barrel_hit_pos(d1, global_cell_id, reco_x, reco_y, reco_z);
+    exit = get_barrel_hit_pos(d1, cellID, reco_x, reco_y, reco_z);
   } else if (detID == 0 || detID == 1) {  // endcap modules
-    exit =
-        get_endcap_hit_pos(d1, global_cell_id, modID, reco_x, reco_y, reco_z);
+    exit = get_endcap_hit_pos(d1, cellID, modID, reco_x, reco_y, reco_z);
   } else {
     std::cout << "> get_hit_path_len exiting with error:\n";
     return -999;

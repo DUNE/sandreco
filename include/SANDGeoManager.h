@@ -185,6 +185,9 @@ class SANDGeoManager : public TObject
   int get_endcap_hit_pos(const double& d1, const int& global_cellID,
                          const int& modID, double& reco_x, double& reco_y,
                          double& reco_z) const;
+  double compute_cell_d1(const double& cell_l, const double& tdc_1,
+                         const double& tdc_2) const;
+
   // mod id for the new endcap modules
   int get_endcap_mod_id(const TString& volume_path) const;
   void set_ecal_info();
@@ -244,7 +247,9 @@ class SANDGeoManager : public TObject
                                   int& cell_local_id);
   int get_hit_path_len(const double& hx, const double& hy, const double& hz,
                        const int& global_cell_id, double& d1, double& d2) const;
-  int get_reco_hit_pos(const int& cellID, const double& d1, double& reco_x,
+                       
+  int get_reco_hit_pos(const int& cellID, const double& cell_l,
+                       const double& tdc_1, const double& tdc_2, double& reco_x,
                        double& reco_y, double& reco_z) const;
 
   // STT
