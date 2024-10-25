@@ -33,7 +33,7 @@ add_library(Struct SHARED include/struct.h)
 target_include_directories(Struct PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>")
-target_link_libraries(Struct PUBLIC ROOT::ROOTDataFrame)
+target_link_libraries(Struct PUBLIC)
 ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/StructLinkDef.h)
 
 # Create SANDGeoManager lib
@@ -68,6 +68,10 @@ target_link_libraries(Display Struct Utils)
 add_executable(FastCheck src/fastcheck.cpp)
 target_link_libraries(FastCheck Struct Utils)
 
+# Compile the reco_cell macro to run on remote
+add_executable(reco_cell ../../data_files/digitized/reco_cell.cpp)
+target_link_libraries(reco_cell Struct SANDGeoManager Utils EDepSim::edepsim_io)
+
 # Creates a libSANDEventDisplay shared library
 add_library(SANDEventDisplay SHARED src/SANDEventDisplay.cpp src/SANDDisplayUtils.cpp SANDEventDisplayDict.cxx)
 target_include_directories(SANDEventDisplay PUBLIC ${EDepSim_INCLUDE_DIR}
@@ -87,7 +91,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay
+install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay reco_cell
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
