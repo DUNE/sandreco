@@ -355,7 +355,7 @@ int main(int argc, char* argv[])
           
           // h_res->Fill(digitId_to_drift_time[d] - digit.drift_time);
         }
-        color++;
+        color++; 
         canvas_cluster->Write();
         canvas_cluster->Print("clu.pdf","pdf");
         canvas_cluster->Clear();
