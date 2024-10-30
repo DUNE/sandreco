@@ -740,7 +740,7 @@ void SANDGeoManager::set_stt_plane_info(const TGeoNode* const node,
   TGeoBBox* plane_shape = (TGeoBBox*)node->GetVolume()->GetShape();
   TVector3 plane_dimension;
   // Notice: this is a workaround to the planes in the geometry being rotated sometimes
-  if(stt_plane_local_id() != 2) {
+  if(stt_plane_local_id() == 2) {
     plane_dimension.SetX(2 * plane_shape->GetDZ());
     plane_dimension.SetY(2 * plane_shape->GetDY());
   } else {
