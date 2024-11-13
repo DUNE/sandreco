@@ -4,6 +4,7 @@
 #include "TG4HitSegment.h"
 
 #include "SANDGeoManager.h"
+#include "SANDTrackerDriftCellMap.h"
 #include "struct.h"
 
 #ifndef SANDDIGITIZATIONEDEPSIM

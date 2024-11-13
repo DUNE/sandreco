@@ -18,7 +18,7 @@ find_package(ROOT REQUIRED COMPONENTS RIO Net EG)
 # Locate EDep-sim
 find_package(EDepSim REQUIRED)
 
-find_package(EDEPTree REQUIRED)
+# find_package(EDEPTree REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -Wno-unused-parameter")
 
@@ -39,9 +39,9 @@ target_link_libraries(Struct PUBLIC)
 ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/StructLinkDef.h)
 
 # Create SANDGeoManager lib
-add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDWireInfo.cpp src/SANDECALCellInfo.cpp src/SANDTrackerModule.cpp src/SANDTrackerPlane.cpp src/SANDTrackerCell.cpp src/CLine3D.cpp)
-target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
-ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDWireInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerLinkDef.h)
+add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDWireInfo.cpp src/SANDECALCellInfo.cpp src/SANDTrackerModule.cpp src/SANDTrackerPlane.cpp src/SANDTrackerCell.cpp src/CLine3D.cpp src/SANDTrackerDriftCellMap.cpp)
+target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io ROOT::ROOTDataFrame)
+ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDWireInfo.h SANDECALCellInfo.h SANDTrackerDriftCellMap.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerLinkDef.h)
 
 # Creates a libUtils shared library
 add_library(Utils SHARED src/utils.cpp src/transf.cpp)
@@ -136,8 +136,8 @@ add_library(SANDKalmanFilter SHARED src/SANDKalmanFilter.cpp)
 target_link_libraries(SANDKalmanFilter PUBLIC SANDTrackerUtils SANDKFTrack)
 
 # Creates MeasurementBuilder executable.
-add_executable(Measurements src/SANDMeasurementsBuilder.cpp)
-target_link_libraries(Measurements PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter)
+# add_executable(Measurements src/SANDMeasurementsBuilder.cpp)
+# target_link_libraries(Measurements PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter)
 
 # Creates a libSANDEventDisplay shared library
 add_library(SANDEventDisplay SHARED src/SANDEventDisplay.cpp src/SANDDisplayUtils.cpp SANDEventDisplayDict.cxx)
@@ -162,7 +162,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager SANDRecoUtils Digitize Reconstruct Analyze Display FastCheck eventDisplay Measurements SANDClustering  SANDECALClustering
+install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager SANDRecoUtils Digitize Reconstruct Analyze Display FastCheck eventDisplay SANDClustering  SANDECALClustering
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
