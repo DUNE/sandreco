@@ -93,7 +93,7 @@ double GetMinWireTime(TLorentzVector point, SANDWireInfo& wire)
 void create_digits_from_hits(
     const SANDGeoManager& geo,
     std::map<SANDTrackerCellID, std::vector<hit> >& hits2cell,
-    /* const SANDTrackerDriftCellMap& cell_wf_map, */
+    const SANDTrackerDriftCellMap& cell_wf_map,
     std::vector<dg_wire>& wire_digits)
 {
   wire_digits.clear();
@@ -172,10 +172,10 @@ void create_digits_from_hits(
             geo.GlobalToRotated(TVector2(running_hit.x2, running_hit.y2),
                                 wire_plane) -
             rotated_wire_2d_position;
-        // auto wf_vec = cell_wf_map.build_induced_waveform(
-        //     TVector2(local_hit_start_2d_position.Y(), running_hit.z1 - d.z),
-        //     TVector2(local_hit_stop_2d_position.Y(), running_hit.z2 - d.z),
-        //     running_hit.de, signal_time);
+        auto wf_vec = cell_wf_map.build_induced_waveform(
+            {local_hit_start_2d_position.Y(), -1 * (running_hit.z1 - d.z)},
+            {local_hit_stop_2d_position.Y(), -1 * (running_hit.z2 - d.z)},
+            running_hit.de, signal_time);
       }
     }
     d.tdc = wire_time + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
@@ -625,8 +625,8 @@ void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
   wire_digits.clear();
 
   group_hits_by_tube(ev, geo, hits2Tube);
-  digitization::edep_sim::tracker::create_digits_from_hits(geo, hits2Tube,
-                                                           wire_digits);
+  digitization::edep_sim::stt::create_digits_from_hits(geo, hits2Tube,
+                                                       wire_digits);
 }
 }  // namespace stt
 
@@ -842,7 +842,7 @@ bool isInHit(hit& h, TVector3& point)
 
 // simulate wire responce for whole event
 void digitize_drift(TG4Event* ev, const SANDGeoManager& geo,
-                    /* const SANDTrackerDriftCellMap& cell_wf_map, */
+                    const SANDTrackerDriftCellMap& cell_wf_map,
                     std::vector<dg_wire>& wire_digits)
 {
   std::map<SANDTrackerCellID, std::vector<hit> > hits2cell;
@@ -850,7 +850,7 @@ void digitize_drift(TG4Event* ev, const SANDGeoManager& geo,
 
   group_hits_by_cell(ev, geo, hits2cell);
   digitization::edep_sim::tracker::create_digits_from_hits(
-      geo, hits2cell,/*  cell_wf_map, */ wire_digits);
+      geo, hits2cell, cell_wf_map, wire_digits);
 }
 
 }  // namespace chamber
@@ -957,7 +957,7 @@ void digitize(const char* finname, const char* foutname,
     if (geo->FindVolumeFast("STTtracker_PV")) {
       digitization::edep_sim::stt::digitize_stt(ev, sand_geo, wire_digits);
     } else {
-      digitization::edep_sim::chamber::digitize_drift(ev, sand_geo,/*  cell_wf_map, */
+      digitization::edep_sim::chamber::digitize_drift(ev, sand_geo, cell_wf_map,
                                                       wire_digits);
     }
 
