@@ -20,9 +20,9 @@ namespace TrackerModuleConfiguration
     
     std::map<std::string, double> _id_to_spacing =
     {
-      {"0", 10},
-      {"1", 10},
-      {"2", 10}
+      {"0", 20},
+      {"1", 20},
+      {"2", 20}
     };
     
     std::map<std::string, double> _id_to_length =
