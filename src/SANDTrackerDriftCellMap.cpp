@@ -81,8 +81,8 @@ const std::vector<double> SANDTrackerDriftCellMap::get_cluster_waveform(
 
 std::vector<std::vector<double>>
     SANDTrackerDriftCellMap::generate_uniform_clusters(
-        const double &hit_de, const std::array<double, 2> &x1,
-        const std::array<double, 2> &x2, const double &t_0) const
+        const double &hit_de, const std::array<double, 3> &x1,
+        const std::array<double, 3> &x2, const double &t_0) const
 {
   // initialize a track object
   std::vector<std::vector<double>> cluster_coords = {};
@@ -106,24 +106,30 @@ std::vector<std::vector<double>>
 }
 
 std::vector<double> SANDTrackerDriftCellMap::build_induced_waveform(
-    const std::array<double, 2> &hit_loc_start,
-    const std::array<double, 2> &hit_loc_stop, const double &hit_de,
+    const std::array<double, 3> &hit_loc_start,
+    const std::array<double, 3> &hit_loc_stop, const double &hit_de,
     const double &hit_t0) const
 {
-  std::vector<double> track_waveform(time_window_);
+  // std::cout << "hit_x1: (" << hit_loc_start[0] << ", " << hit_loc_start[1]
+  //           << ", " << hit_loc_start[2] << ")\n";
+  // std::cout << "hit_x2: (" << hit_loc_stop[0] << ", " << hit_loc_stop[1] << ", "
+  //           << hit_loc_stop[2] << ")\n";
+  std::vector<double> track_waveform(time_window_.at(2));
   // loop over the cluster coordinate vectors (x,y,z,t,ne,ni)
   std::vector<std::vector<double>> avg_vecs;
-
+  // std::cout << "Here 1\n";
   // generate uniformly distributed clusters along the segment from hit_de
   auto c_vec =
       generate_uniform_clusters(hit_de, hit_loc_start, hit_loc_stop, hit_t0);
-
+  // std::cout << "Here 2\n";
   // find the waveforms for the active clusters and scale them by the number of
   // electrons
   for (const auto &cluster : c_vec) {
     if (std::abs(cluster.at(0) - sense_coords_.at(0)) > cell_size_.at(0) ||
-        std::abs(cluster.at(1) - sense_coords_.at(1)) > cell_size_.at(0))
+        std::abs(cluster.at(1) - sense_coords_.at(1)) > cell_size_.at(1))
       continue;
+
+    // std::cout << "cluster: (" << cluster.at(0) << ", " << cluster.at(1)<<")\n";
 
     std::vector<double> cluster_wf =
         get_cluster_waveform(cluster.at(0), cluster.at(1));
@@ -134,22 +140,32 @@ std::vector<double> SANDTrackerDriftCellMap::build_induced_waveform(
     // not yet implemented
     auto cluster_ne = cluster.at(4);
 
+    // NOTICE: the induction signals are directly set to positive!!
     std::transform(cluster_wf.begin(), cluster_wf.end(), cluster_wf.begin(),
-                   [&cluster_ne](double &c) { return c * cluster_ne; });
+                   [&cluster_ne](double &c) { return -1 * c * cluster_ne; });
 
     avg_vecs.push_back(cluster_wf);
   }
-
+  // std::cout << "Here 3\n";
+  // if (!avg_vecs.size())
+  //   std::cout << ">Empty waveform\n";
+  // else
+  //   std::cout << ">Viable clusters: " << avg_vecs.size() << "\n";
+  // std::cout << "\n";
   // add the cluster signals to the overall vector
+
   for (std::size_t idx = 0; idx < avg_vecs.size(); idx++) {
     std::transform(track_waveform.begin(), track_waveform.end(),
                    avg_vecs.at(idx).begin(), track_waveform.begin(),
                    std::plus<double>());
   }
+  // std::cout << "Here 4\n";
   // shift the waveform by the hit t0 (+ propagation time)
   std::move(track_waveform.begin(), track_waveform.end() - hit_t0,
             track_waveform.begin() + hit_t0);
   std::fill(track_waveform.begin(), track_waveform.begin() + hit_t0, 0.);
 
+  // for (int i = 0; i < 500; i++) std::cout << track_waveform[i] << ", ";
+  // std::cout << "\n";
   return track_waveform;
 }

@@ -18,11 +18,11 @@ class SANDTrackerDriftCellMap : public TObject
 {
  private:
   // cell parameters
-  std::array<double, 2> cell_size_;     // cell sense wire coordinates
-  std::array<double, 3> sense_coords_;  // sensor time window
-  std::vector<double> time_window_;
+  std::array<double, 2> cell_size_; // cell dimensions [cm]
+  std::array<double, 3> sense_coords_;  // cell sense wire coordinates
+  std::vector<double> time_window_;  // sensor time window
   std::array<double, 3> cell_volt_;  // cell voltages
-  double cell_W_factor_ = 30;  // gas mix. energy per ion pair factor W [eV]
+  double cell_W_factor_ = 27.39*1e-6;  // gas mix. energy per ion pair factor W [MeV] (assuming Ar 85%/CO2 15%, no B-field)
   double d_sense_;             // cell sense diameter (for now)
   // ROOT::RDataFrame cell_map_;  // Map RDataframe
   std::map<int, std::vector<double>> induced_wf_map_;  // std::map of waveform
@@ -40,8 +40,8 @@ class SANDTrackerDriftCellMap : public TObject
                                                  const double &c_y) const;
   // generation of a cluster vector given the hit-info
   std::vector<std::vector<double>> generate_uniform_clusters(
-      const double &hit_de, const std::array<double, 2> &x1,
-      const std::array<double, 2> &x2, const double &t_0) const;
+      const double &hit_de, const std::array<double, 3> &x1,
+      const std::array<double, 3> &x2, const double &t_0) const;
 
  public:
   SANDTrackerDriftCellMap();                         // Default constructor
@@ -58,8 +58,8 @@ class SANDTrackerDriftCellMap : public TObject
   // ROOT::RDataFrame GetRDF() const { return cell_map_; };
   // build the induced current waveform for a hit-segment
   std::vector<double> build_induced_waveform(
-      const std::array<double, 2> &hit_loc_start,
-      const std::array<double, 2> &hit_loc_stop, const double &hit_de,
+      const std::array<double, 3> &hit_loc_start,
+      const std::array<double, 3> &hit_loc_stop, const double &hit_de,
       const double &hit_t0) const;
 
   ClassDef(SANDTrackerDriftCellMap, 1);

@@ -82,7 +82,7 @@ std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& wire)
   return closestPoints;
 }
 
-double GetMinWireTime(TLorentzVector point, SANDWireInfo& wire)
+double GetMinWireTimeFast(TLorentzVector point, SANDWireInfo& wire)
 {
   TVector3 wire_point = wire.getReadoutPoint();
 
@@ -90,21 +90,156 @@ double GetMinWireTime(TLorentzVector point, SANDWireInfo& wire)
          (point.Vect() - wire_point).Mag() / sand_reco::stt::v_signal_inwire;
 }
 
+double GetMinWireTimeWaveform(TLorentzVector point, const double& t_thr,
+                              SANDWireInfo& wire)
+{
+  TVector3 wire_point = wire.getReadoutPoint();
+
+  return point.T() + t_thr;
+}
+
+void extract_fast_digits(hit& running_hit, SANDWireInfo& wire_info,
+                         double& wire_time, double& drift_time,
+                         double& signal_time, double& t_hit, dg_wire& d)
+{
+  // find hit closest point to wire
+  std::vector<TLorentzVector> ClosestPoints =
+      digitization::edep_sim::tracker::WireHitClosestPoints(running_hit,
+                                                            wire_info);
+  if (ClosestPoints.size() == 0) {
+    return;
+  }
+  TLorentzVector closest_point_hit_l = ClosestPoints[0];
+  // find wire closest point to hit : time of closest_point_wire_l  = drift time
+  // + hit time
+  TLorentzVector closest_point_wire_l = ClosestPoints[1];
+
+  // total time = time 2 signal propagation + drift time + hit time
+  double hit_smallest_time =
+      digitization::edep_sim::tracker::GetMinWireTimeFast(closest_point_wire_l,
+                                                          wire_info);
+
+  if (hit_smallest_time < wire_time) {
+    // Notice: this is temporary. Used to plot something useful.
+    //         Must be removed when plots are not needed anymore
+    d.x = closest_point_hit_l.Vect().X();
+    d.y = closest_point_hit_l.Vect().Y();
+    d.z = closest_point_hit_l.Vect().Z();
+
+    wire_time = hit_smallest_time;
+    t_hit = closest_point_hit_l.T();
+    drift_time = closest_point_wire_l.T() - t_hit;
+    std::cout << "drift_time: " << drift_time << "\n";
+    signal_time = hit_smallest_time - closest_point_wire_l.T();
+  }
+  d.de += running_hit.de;
+  d.hindex.push_back(running_hit.index);
+}
+
+void extract_waveform_digits(hit& running_hit, SANDWireInfo& wire_info,
+                             const SANDTrackerPlane& wire_plane,
+                             const SANDGeoManager& geo,
+                             const SANDTrackerDriftCellMap& cell_wf_map,
+                             double& wire_time, double& drift_time,
+                             double& signal_time, double& t_hit, dg_wire& d)
+{
+  // preliminary threshold on charge [fC/ns *1ns]
+  const double signal_threshold = 0.5;
+
+  // find hit closest point to wire
+  std::vector<TLorentzVector> ClosestPoints =
+      digitization::edep_sim::tracker::WireHitClosestPoints(running_hit,
+                                                            wire_info);
+  if (ClosestPoints.size() == 0) {
+    return;
+  }
+  TLorentzVector closest_point_hit_l = ClosestPoints[0];
+  // find wire closest point to hit : time of closest_point_wire_l  = drift time
+  // + hit time
+  TLorentzVector closest_point_wire_l = ClosestPoints[1];
+
+  // -- Extract the hit waveform --
+  // convert the transversal hit endpoint coords. (X,Y) to local
+  // cell-wire coordinates
+  TVector2 rotated_wire_2d_position =
+      geo.GlobalToRotated(TVector2(closest_point_wire_l.Vect().X(),
+                                   closest_point_wire_l.Vect().Y()),
+                          wire_plane);
+
+  TVector2 rotated_hit_start_2d_position =
+      geo.GlobalToRotated(TVector2(running_hit.x1, running_hit.y1), wire_plane);
+
+  TVector2 rotated_hit_stop_2d_position =
+      geo.GlobalToRotated(TVector2(running_hit.x2, running_hit.y2), wire_plane);
+
+  const std::array<double, 3> hit_loc_start = {
+      0.1 * (rotated_hit_start_2d_position.Y() - rotated_wire_2d_position.Y()) +
+          cell_wf_map.cell_size()[0],
+      -0.1 * (running_hit.z1 - closest_point_wire_l.Vect().Z()),
+      0.1 * (rotated_hit_start_2d_position.X() - rotated_wire_2d_position.X())};
+  const std::array<double, 3> hit_loc_stop = {
+      0.1 * (rotated_hit_stop_2d_position.Y() - rotated_wire_2d_position.Y()) +
+          cell_wf_map.cell_size()[0],
+      -0.1 * (running_hit.z2 - closest_point_wire_l.Vect().Z()),
+      0.1 * (rotated_hit_stop_2d_position.X() - rotated_wire_2d_position.X())};
+  auto wf_vec = cell_wf_map.build_induced_waveform(
+      hit_loc_start, hit_loc_stop, running_hit.de,
+      0. /* t_hit + signal_time */);
+
+  // auto max_iter = std::min_element(wf_vec.begin(), wf_vec.end());
+  // std::cout << ">vec min: " << *max_iter << "\n";
+  // extract a drift time for the waveform threshold(PRELIMINARY)
+  auto threshold_it = std::find_if(
+      wf_vec.begin(), wf_vec.end(),
+      [signal_threshold](double val) { return val > signal_threshold; });
+  if (threshold_it != wf_vec.end()) {
+    // std::cout << "> Found time above threshold\n";
+    // get the drift time of signals from the waveform threshold
+    drift_time = std::distance(wf_vec.begin(), threshold_it);
+  }
+  // std::cout << "*threshold_it: " << *threshold_it << ", idx: " << drift_time
+  //           << "\n";
+  // total time = time 2 signal propagation + drift time + hit time
+
+  double hit_smallest_time =
+      digitization::edep_sim::tracker::GetMinWireTimeWaveform(
+          closest_point_wire_l, drift_time, wire_info);
+
+  // skip update if there is a closer hit
+  if (hit_smallest_time < wire_time) {
+    // Notice: this is temporary. Used to plot something useful.
+    //         Must be removed when plots are not needed anymore
+    d.x = closest_point_hit_l.Vect().X();
+    d.y = closest_point_hit_l.Vect().Y();
+    d.z = closest_point_hit_l.Vect().Z();
+
+    wire_time = hit_smallest_time;
+    t_hit = closest_point_hit_l.T();
+    drift_time = drift_time;
+    signal_time = hit_smallest_time - closest_point_wire_l.T();
+  }
+  d.de += std::accumulate(wf_vec.begin(), wf_vec.end(), 0.);
+  d.hindex.push_back(running_hit.index);
+}
+
+// for each drift-chamber cell simulate an induction waveform
+// and extract tdc and adc (starting with placeholder methods)
 void create_digits_from_hits(
     const SANDGeoManager& geo,
     std::map<SANDTrackerCellID, std::vector<hit> >& hits2cell,
     const SANDTrackerDriftCellMap& cell_wf_map,
     std::vector<dg_wire>& wire_digits)
 {
+
   wire_digits.clear();
 
-  for (std::map<SANDTrackerCellID, std::vector<hit> >::iterator it =
-           hits2cell.begin();
+  for (std::map<SANDTrackerCellID,
+                std::vector<hit> >::iterator it = hits2cell.begin();
        it != hits2cell.end(); ++it)  // run over wires
   {
     long did = it->first();  // wire unique id
     auto wire_info = geo.get_cell_info(it->first())->second.wire();
-    auto& wire_plane = *geo.get_plane_info(SANDTrackerPlaneID(it->first()));
+    auto& wire_plane = *geo.get_plane_info(SANDTrackerCellID(did));
     double wire_time = 999.;
     double drift_time = 999.;
     double signal_time = 999.;
@@ -126,57 +261,13 @@ void create_digits_from_hits(
          i++) {  // run over hits of given wire
       auto running_hit = it->second[i];
 
-      // find hit closest point to wire
-      std::vector<TLorentzVector> ClosestPoints =
-          digitization::edep_sim::tracker::WireHitClosestPoints(running_hit,
-                                                                wire_info);
-      if (ClosestPoints.size() == 0) {
-        continue;
-      }
-      TLorentzVector closest_point_hit_l = ClosestPoints[0];
-      // find wire closest point to hit : time of closest_point_wire_l  =
-      // drift time + hit time
-      TLorentzVector closest_point_wire_l = ClosestPoints[1];
-
-      // total time = time 2 signal propagation + drift time + hit time
-      double hit_smallest_time =
-          digitization::edep_sim::tracker::GetMinWireTime(closest_point_wire_l,
-                                                          wire_info);
-
-      // Notice the condition!!!!
-      if (hit_smallest_time < wire_time) {
-        // Notice: this is temporary. Used to plot something useful.
-        //         Must be removed when plots are not needed anymore
-        d.x = closest_point_hit_l.Vect().X();
-        d.y = closest_point_hit_l.Vect().Y();
-        d.z = closest_point_hit_l.Vect().Z();
-
-        wire_time = hit_smallest_time;
-        t_hit = closest_point_hit_l.T();
-        drift_time = closest_point_wire_l.T() - t_hit;
-        signal_time = hit_smallest_time - closest_point_wire_l.T();
-      }
-      if (fast_sim) {
-        d.de += running_hit.de;
-        d.hindex.push_back(running_hit.index);
-      } else {
-        // convert the transversal hit endpoint coords. (X,Y) to local
-        // cell-wire coordinates
-        TVector2 rotated_wire_2d_position =
-            geo.GlobalToRotated(TVector2(d.x, d.y), wire_plane);
-        TVector2 local_hit_start_2d_position =
-            geo.GlobalToRotated(TVector2(running_hit.x1, running_hit.y1),
-                                wire_plane) -
-            rotated_wire_2d_position;
-        TVector2 local_hit_stop_2d_position =
-            geo.GlobalToRotated(TVector2(running_hit.x2, running_hit.y2),
-                                wire_plane) -
-            rotated_wire_2d_position;
-        auto wf_vec = cell_wf_map.build_induced_waveform(
-            {local_hit_start_2d_position.Y(), -1 * (running_hit.z1 - d.z)},
-            {local_hit_stop_2d_position.Y(), -1 * (running_hit.z2 - d.z)},
-            running_hit.de, signal_time);
-      }
+      if (fast_sim)
+        extract_fast_digits(running_hit, wire_info, wire_time, drift_time,
+                            signal_time, t_hit, d);
+      else
+        extract_waveform_digits(running_hit, wire_info, wire_plane, geo,
+                                cell_wf_map, wire_time, drift_time, signal_time,
+                                t_hit, d);
     }
     d.tdc = wire_time + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
     d.t_hit = t_hit;
@@ -518,7 +609,6 @@ void create_digits_from_hits(
     std::vector<dg_wire>& wire_digits)
 {
   wire_digits.clear();
-
   for (std::map<SANDTrackerCellID, std::vector<hit> >::iterator it =
            hits2Tube.begin();
        it != hits2Tube.end(); ++it) {
@@ -915,7 +1005,7 @@ void digitize(const char* finname, const char* foutname,
   cell_wf_map.init(
       "/storage/gpfs_data/neutrino/users/alrugger/Software/sand_DC_reworked/"
       "sand_drift_chambers/SAND_dc/Simu_data/cell_maps/"
-      "2024-07-30_chw0.7_cht0.6_base_gpp_fork:2/_vs_0.0_vf-1800.0_vSt-1600.0/"
+      "2024-07-17_chw1.0_cht0.5_3_20_moredecent2/_vs_0.0_vf-1700.0_vSt-1600.0/"
       "data");
   // vector of ECAL and STT digits
   std::vector<dg_cell> vec_cell;
