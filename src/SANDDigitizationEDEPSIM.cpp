@@ -127,7 +127,7 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   //   sand_reco::ecal::geometry::EndCapModuleAndLayer(str, str2, detID, modID,
   //                                                   planeID);
 
-  //   sand_reco::ecal::geometry::EndCapCell(x, y, z, g, node, cellID, d1, d2);
+  // sand_reco::ecal::geometry::EndCapCell(x, y, z, g, node, cellID, d1, d2);
 
   //   if (debug) {
   //     std::cout << "hit: " << str.Data() << std::endl;
@@ -268,7 +268,6 @@ void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
                                                             ecal_digi_mode);
   if (debug) {
     std::cout << "CollectSignal" << std::endl;
-    
   }
   // now the issue is here!!!
   digitization::edep_sim::ecal::group_pmts_in_cells(geo, ps, L, vec_cell);
