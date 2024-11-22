@@ -13,7 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
 
 # Locate the ROOT package and define a number of useful targets and variables.
-find_package(ROOT REQUIRED COMPONENTS)
+find_package(ROOT REQUIRED)
 
 # Locate EDep-sim
 find_package(EDepSim REQUIRED)

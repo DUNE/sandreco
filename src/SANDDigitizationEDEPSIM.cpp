@@ -68,20 +68,9 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   if (cell_global_id == 999 || cell_global_id == -999) return false;
 
   g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
-  // std::cout << "[cell_global_id, detID, modID, planeID, cellID]: "
-  //           << cell_global_id << ", " << detID << ", " << modID << ", "
-  //           << planeID << ", " << cellID << "\n";
-  // std::cout << "> Decoded cell id\n";
 
   g.get_hit_path_len(x, y, z, cell_global_id, d1, d2);
-  // std::cout << "> Extracted cell path length\n";
 
-  // extract the optical path length to both cell ends --> BUT one must
-  // distinguish barrel and endcaps
-  // if(detID==0 &&  detID == 1)
-  //  g.endcapmap_.at(modID).get_cell_path_len(x,y,z)
-  // else if(detID==2)
-  //  get_barrel_cell_path_len(x,y,z) // or something
 
   return true;
 
@@ -230,9 +219,6 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
     } else {
       c->ps2 = it->second;
     }
-    // std::cout << "> c->id:" << c->id << ", [detID,modID,layID,celID]: " <<
-    // c->det
-    // << ", " << c->mod << ", " << c->lay << ", " << c->cel << "\n";
     auto cell_info = geo.get_ecal_cell_info(c->id);
     c->x = cell_info.x();
     c->y = cell_info.y();
@@ -269,7 +255,6 @@ void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
   if (debug) {
     std::cout << "CollectSignal" << std::endl;
   }
-  // now the issue is here!!!
   digitization::edep_sim::ecal::group_pmts_in_cells(geo, ps, L, vec_cell);
 }
 
