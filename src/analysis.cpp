@@ -58,6 +58,9 @@ bool IsPrimary(TG4Event* ev, int tid)
 void FillParticleInfo(TG4Event* ev, std::map<int, particle>& map_part)
 {
   for (unsigned int j = 0; j < ev->Trajectories.size(); j++) {
+    //for (unsigned int j = 0; j < 2; j++) {
+    if(j>10) break; 
+
     particle p;
     reset(p);
 
@@ -714,6 +717,18 @@ cl.cells.at(i).tdc2, cl.cells.at(i).y);
   }
 }
 */
+void FillMockupParticle(std::map<int, particle>& map_part){
+    for (unsigned int j = 0; j < 3; j++) {
+      std::cout << "j: " << j << std::endl;  
+        particle p;
+        reset(p);
+        p.pdg = 10*j; 
+        std::cout << "pdg: " << p.pdg << std::endl;  
+        p.tid = j; 
+        p.Etrue = j*100;
+        map_part[p.tid] = p;
+    }
+}
 
 void EvalNuEnergy(event& ev)
 {
@@ -811,40 +826,40 @@ void Analyze(const char* fMc, const char* fIn)
 
     // std::cout << evt.vol << " " << evt.intType << std::endl;
 
-    FillParticleInfo(ev, map_part);
+    //FillParticleInfo(ev, map_part);
+    FillMockupParticle(map_part);
+    // for (unsigned int j = 0; j < vec_tr->size(); j++) {
+    //   std::map<int, particle>::iterator it = map_part.find(vec_tr->at(j).tid);
+    //   // FillTrackInfo(vec_tr->at(j), it->second);
+    //   it->second.has_track = true;
+    //   it->second.tr = vec_tr->at(j);
+    // }
 
-    for (unsigned int j = 0; j < vec_tr->size(); j++) {
-      std::map<int, particle>::iterator it = map_part.find(vec_tr->at(j).tid);
-      // FillTrackInfo(vec_tr->at(j), it->second);
-      it->second.has_track = true;
-      it->second.tr = vec_tr->at(j);
-    }
-
-    for (unsigned int j = 0; j < vec_cl->size(); j++) {
-      auto it = map_part.find(vec_cl->at(j).tid);
-    if (it != map_part.end()) {
-        // FillClusterInfo(ev, vec_cl->at(j), it->second);
-        it->second.has_cluster = true;
-        it->second.cl = vec_cl->at(j);
-        std::cout << "cluster id = traj_id: " << vec_cl->at(j).tid << ", " << map_part.at(vec_cl->at(j).tid).tid << std::endl; 
-    } else {
-        std::cout << "Error: tid " << vec_cl->at(j).tid << " not found in map_part!" << std::endl;
-    }
-    }
+    // for (unsigned int j = 0; j < vec_cl->size(); j++) {
+    //   auto it = map_part.find(vec_cl->at(j).tid);
+    // if (it != map_part.end()) {
+    //     // FillClusterInfo(ev, vec_cl->at(j), it->second);
+    //     it->second.has_cluster = true;
+    //     it->second.cl = vec_cl->at(j);
+    //     std::cout << "cluster id = traj_id: " << vec_cl->at(j).tid << ", " << map_part.at(vec_cl->at(j).tid).tid << std::endl; 
+    // } else {
+    //     std::cout << "Error: tid " << vec_cl->at(j).tid << " not found in map_part!" << std::endl;
+    // }
+    // }
 
     for (std::map<int, particle>::iterator it = map_part.begin();
          it != map_part.end(); ++it) {
       evt.particles.push_back(it->second);
     }
     
-    std::sort(evt.particles.begin(), evt.particles.end(), sand_reco::isAfter);
+    //std::sort(evt.particles.begin(), evt.particles.end(), sand_reco::isAfter);
     
     // FindPriGammaConversion(evt);
     // FindPriPi0Decay(evt);
 
-    ProcessParticles(evt);
+    //ProcessParticles(evt);
     
-    EvalNuEnergy(evt);
+    //EvalNuEnergy(evt);
     
     tout.Fill();
   }
