@@ -24,3 +24,7 @@ build/*
 tests/*
 install
 tests/python_tools/__pycache__/
+template_TIGER/bin
+template_TIGER/data
+template_TIGER/lib
+template_TIGER/.vs
