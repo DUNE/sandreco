@@ -279,7 +279,7 @@ jobs:
         run: | 
           source ~/gegede/ggdvenv/bin/activate
           cd ~/dunendggd
-          make -j2
+          make sandopt -j2
           GEO=$(echo ${{matrix.sand-geometry}} | sed "s:sand:SAND:g")
           mkdir -p ~/geo 
           mv ${GEO}.gdml ~/geo/.
