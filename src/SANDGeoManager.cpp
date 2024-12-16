@@ -18,8 +18,6 @@
 #include <TMatrixD.h>
 #include <TStyle.h>
 
-Counter counter_;
-
 int SANDGeoManager::encode_ecal_barrel_cell_local_id(int layer, int cell) const
 {
   return cell * 100 + layer;
@@ -639,13 +637,6 @@ bool SANDGeoManager::isSwire(const TString& volume_path) const
   return (volume_path.Contains("Swire"));
 }
 
-SANDWireID SANDGeoManager::get_wire_id(const TString& volume_path) const
-{
-  auto matches = wire_regex_.MatchS(volume_path);
-  long id = (reinterpret_cast<TObjString*>(matches->At(5)))->GetString().Atoi();
-  return SANDWireID(id);
-}
-
 SANDTrackerModuleID SANDGeoManager::get_drift_module_id(const TString& volume_path) const
 {
   SANDTrackerModuleID supermodule_id(get_drift_supermodule_id(volume_path));
@@ -884,30 +875,6 @@ bool SANDGeoManager::getLineSegmentIntersection(TVector2 p, TVector2 dir, TVecto
   }
 }
 
-bool SANDGeoManager::getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector3& intersection)
-{
-  double delta_x = A.X() - B.X();
-  double delta_y = A.Y() - B.Y();
-  double det = dir.X() * delta_y  - dir.Y() * delta_x;
-
-  if (fabs(det) < 1E-9) {
-    // std::cout << "Line and segment are parallel." << std::endl;
-    return false;
-  } else {
-    
-    double t = ((A.X() - p.X()) * delta_y - (A.Y() - p.Y()) * delta_x) / det;
-    double s = ((p.X() - A.X()) * dir.Y() - (p.Y() - A.Y()) * dir.X()) / det;
-
-    if (s >= 0 && s <= 1) {
-      intersection.SetX(p.X() + t * dir.X());
-      intersection.SetY(p.Y() + t * dir.Y());
-      return true;
-    }
-
-    return false;
-  }
-}
-
 void SANDGeoManager::set_drift_plane_info(const TGeoNode* const node,
                                           const TGeoHMatrix& matrix)
 {
@@ -1010,7 +977,7 @@ void SANDGeoManager::set_drift_wire_info(SANDTrackerPlane& plane)
 }
 
 
-void SANDGeoManager::set_wire_info(const TGeoHMatrix& matrix)
+void SANDGeoManager::set_plane_info(const TGeoHMatrix& matrix)
 {
   TGeoNode* node = gGeoManager->GetCurrentNode();
   TString node_name = node->GetName();
@@ -1023,7 +990,7 @@ void SANDGeoManager::set_wire_info(const TGeoHMatrix& matrix)
   } else {
     for (int i = 0; i < node->GetNdaughters(); i++) {
       gGeoManager->CdDown(i);
-      set_wire_info(node_hmatrix);
+      set_plane_info(node_hmatrix);
       gGeoManager->CdUp();
     }
   }
@@ -1142,12 +1109,12 @@ void SANDGeoManager::rearrange_planes()
   }
 }
 
-void SANDGeoManager::set_wire_info()
+void SANDGeoManager::set_tracker_info()
 {
   geo_->CdTop();
   TGeoHMatrix matrix = *gGeoIdentity;
   std::string geometry;
-  set_wire_info(matrix);
+  set_plane_info(matrix);
   if (geo_->FindVolumeFast("STTtracker_PV")) {
     std::cout << "using SAND tracker : STT\n";
     geometry = "STT";
@@ -1157,11 +1124,7 @@ void SANDGeoManager::set_wire_info()
   }
   rearrange_planes();
   fill_adjacent_cells(geometry);
-  std::cout << "writing wiremap_ info on separate file\n";
-  std::cout << "wiremap_ size: " << wiremap_.size() << std::endl;
-  WriteMapOnFile(geometry, wiremap_);
   PrintModulesInfo(0);
-  DrawModulesInfo();
 }
 
 void SANDGeoManager::PrintModulesInfo(int verbose)
@@ -1221,45 +1184,13 @@ void SANDGeoManager::DrawModulesInfo()
   cc.SaveAs("plane.png");
 }
 
-void SANDGeoManager::WriteMapOnFile(std::string fName,
-                                    const std::map<SANDWireID, SANDWireInfo>& map)
-{
-  std::fstream file_wireinfo;
-  file_wireinfo.open(fName + "_info.txt", std::ios::out);
-  file_wireinfo << "id,x,y,z,length,orientation,ax,ay,az\n";
-  for (auto& wire : map) {
-    SANDWireInfo w = wire.second;
-    int orientation =
-        (w.orientation() == SANDWireInfo::Orient::kVertical) ? 1 : 0;
-    file_wireinfo << std::setprecision(20) << wire.first() << "," << w.x() << ","
-                  << w.y() << "," << w.z() << "," << w.length() << ","
-                  << orientation << "," << w.ax() << "," << w.ay() << ","
-                  << w.az() << "\n";
-  }
-  file_wireinfo.close();
-}
-
-void Counter::IncrementCounter(std::string k)
-{
-  hit_counter_[k]++;
-}
-
-void SANDGeoManager::PrintCounter()
-{
-  for (auto c : counter_.hit_counter_)
-    std::cout << "\n" << c.first << " : " << c.second << "\n";
-}
 void SANDGeoManager::init(TGeoManager* const geo)
 {
   geo_ = geo;
-  counter_.hit_counter_.clear();
-  cellmap_.clear();
-  wiremap_.clear();
-  wire_tranverse_position_map_.clear();
   _planes.clear();
   _id_to_plane.clear();
   set_ecal_info();
-  set_wire_info();
+  set_tracker_info();
 }
 
 void SANDGeoManager::SetGeoCurrentPoint(double x, double y, double z) const
@@ -1285,14 +1216,6 @@ void SANDGeoManager::InitVolume(volume& v) const
   }
 }
 
-void SANDGeoManager::LOGVolumeInfo(volume& v) const
-{
-  auto p = geo_->GetCurrentPoint();
-  std::cout << "Current Point " << p[0] << ", " << p[1] << ", " << p[2] << "\n";
-  std::cout << "volume path " << v.volume_path << "\n";
-  std::cout << "is active volume ? :" << v.IsActive << "\n";
-}
-
 int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 {
   if (geo_ == 0) {
@@ -1312,48 +1235,17 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
       volume_name.ReplaceAll("Passive", "Active");
       volume_path.ReplaceAll("Passive", "Active");
     } else if (volume_name.Contains("end")) {
-      std::cout << __FILE__ << " " << __LINE__ << "\n";
-      // auto n=geo_->FindNormalFast();
       double n[3] = {1., 0., 0.};
       geo_->SetCurrentDirection(n[0], n[1], n[2]);
-      std::cout << std::setprecision(15) << "calling FindNextActiveLayer for "
-                << volume_name << " x y z " << x << ", " << y << ", " << z
-                << "\n";
-      std::cout << std::setprecision(15) << " GetCurrentPoint  x y z "
-                << geo_->GetCurrentPoint()[0] << ", "
-                << geo_->GetCurrentPoint()[1] << ", "
-                << geo_->GetCurrentPoint()[2] << "\n";
-      std::cout << std::setprecision(15) << " GetCurrentDirection  x y z "
-                << n[0] << ", " << n[1] << ", " << n[2] << "\n";
       volume_name = FindNextActiveLayer(geo_->GetCurrentPoint(),
                                         geo_->GetCurrentDirection());
       auto p = geo_->GetCurrentPoint();
-      std::cout << "after calling FindNextActiveLayer volume_name : "
-                << volume_name << "\n";
-      std::cout << "after calling FindNode current point : "
-                << geo_->FindNode(p[0], p[1], p[2])->GetName() << "\n";
       volume_path.Append("/");
       volume_path.Append(volume_name);
     } else {  // manage cases like "ECAL_lv_18_PV_0" and "Frame_C_PV_0"
-      std::cout << __FILE__ << " " << __LINE__ << "\n";
-      std::cout << std::setprecision(15) << "calling FindNextActiveLayer for "
-                << volume_name << " x y z " << x << ", " << y << ", " << z
-                << "\n";
-      std::cout << std::setprecision(15) << " GetCurrentPoint  x y z "
-                << geo_->GetCurrentPoint()[0] << ", "
-                << geo_->GetCurrentPoint()[1] << ", "
-                << geo_->GetCurrentPoint()[2] << "\n";
-      std::cout << std::setprecision(15) << " GetCurrentDirection  x y z "
-                << geo_->GetCurrentDirection()[0] << ", "
-                << geo_->GetCurrentDirection()[1] << ", "
-                << geo_->GetCurrentDirection()[2] << "\n";
       volume_name = FindNextActiveLayer(geo_->GetCurrentPoint(),
                                         geo_->GetCurrentDirection());
       auto p = geo_->GetCurrentPoint();
-      std::cout << "after calling FindNextActiveLayer volume_name : "
-                << volume_name << "\n";
-      std::cout << "after calling FindNode current point : "
-                << geo_->FindNode(p[0], p[1], p[2])->GetName() << "\n";
       volume_path.Append("/");
       volume_path.Append(volume_name);
     }
@@ -1409,6 +1301,8 @@ double SANDGeoManager::GetHitCellDistance(TVector2 rotated_yz_hit_position,
   return (rotated_yz_hit_position - rotated_yz_wire_position).Mod();
 }
 
+// To Do: check why the STT geometry sometimes gives the wrong result when checking
+// for the closest cell. This piece of code was a fix but without understanding the root of the problem
 SANDTrackerCellID SANDGeoManager::GetClosestCellToHit(TVector3 hit_center, const SANDTrackerPlane& plane, bool checkCloseCells = false) const
 {
   TVector2 global_hit_xy_position(hit_center.X(), hit_center.Y());
@@ -1490,117 +1384,11 @@ long SANDGeoManager::print_stt_tube_id(double x, double y, double z) const
   return -1;
 }
 
-long SANDGeoManager::get_wire_id(long drift_plane_id, double z,
-                                 double transverse_coord) const
-{
-  // return the id of the closest wire to the poin x y z
-  if (geo_ == 0) {
-    std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
-    return -999;
-  }
-  long wire_id = -999;
-
-  std::map<double, long>::const_iterator it =
-      wire_tranverse_position_map_.at(drift_plane_id)
-          .lower_bound(transverse_coord);
-  // return the wire with the smallest coordinate grater than transverse_coord
-
-  if (it == wire_tranverse_position_map_.at(drift_plane_id).begin()) {
-    wire_id = wire_tranverse_position_map_.at(drift_plane_id).begin()->second;
-  } else if (it == wire_tranverse_position_map_.at(drift_plane_id).end()) {
-    wire_id = wire_tranverse_position_map_.at(drift_plane_id).rbegin()->second;
-  } else {
-    SANDWireInfo wire1 = wiremap_.at(it->second);
-    SANDWireInfo wire2 = wiremap_.at(std::prev(it)->second);
-
-    TVector2 v1;
-    TVector2 v2;
-
-    v1.SetX(wire1.z());
-    v2.SetX(wire2.z());
-
-    SANDTrackerPlaneID drift_plane_local_id = get_drift_plane_id(geo_->GetPath(), true);
-
-    if (drift_plane_local_id() == 2) {
-      v1.SetY(wire1.x());
-      v2.SetY(wire2.x());
-    } else {
-      v1.SetY(wire1.y());
-      v2.SetY(wire2.y());
-    }
-
-    TVector2 v(z, transverse_coord);
-
-    if ((v - v1).Mod() > (v - v2).Mod()) {
-      wire_id = std::prev(it)->second;
-    } else {
-      wire_id = it->second;
-    }
-  }
-  return wire_id;
-}
-
-bool SANDGeoManager::IsOnEdge(TVector3 point) const
-{
-  bool OnEdge = 0;
-  counter_.IncrementCounter("total");
-  TString volume = geo_->FindNode(point.X(), point.Y(), point.Z())->GetName();
-
-  if (!is_drift_plane(volume)) {
-    counter_.IncrementCounter("edge");
-    OnEdge = 1;
-  }
-  return OnEdge;
-}
-
-TVector3 SANDGeoManager::SmearPoint(TVector3 point, double epsilon) const
-{
-  TRandom3 ran;
-  double theta = ran.Uniform(0, TMath::Pi());
-  double phi = ran.Uniform(0, 2 * TMath::Pi());
-  double x = point.X() + epsilon * TMath::Sin(theta) * TMath::Cos(phi);
-  double y = point.Y() + epsilon * TMath::Sin(theta) * TMath::Sin(phi);
-  double z = point.Z() + epsilon * TMath::Cos(theta);
-  return {x, y, z};
-}
-
-TVector3 SANDGeoManager::FindClosestDrift(TVector3 point,
-                                          double epsilon = 0.01) const
-// move by 10 micron
-{
-  bool drift_found = 0;
-  TVector3 smeared_point;
-  int trials = 0;
-  while (!drift_found) {
-    trials++;
-    smeared_point = SmearPoint(point, epsilon);
-    TString volume = geo_->FindNode(smeared_point.X(), smeared_point.Y(),
-                                    smeared_point.Z())->GetName();
-    if (is_drift_plane(volume)) drift_found = 1;
-    if (trials > 1000) {
-      std::cout << "not able to find closest drift";
-      break;
-    }
-  }
-  return {smeared_point.X(), smeared_point.Y(), smeared_point.Z()};
-}
-
 std::vector<SANDTrackerCellID> SANDGeoManager::get_segment_ids(const TG4HitSegment& hseg)
     const
 {
 
-  // What are these?
-  IsOnEdge(hseg.Start.Vect());
-  IsOnEdge(hseg.Stop.Vect());
-
   auto middle = (hseg.Start + hseg.Stop) * 0.5;
-
-  if (IsOnEdge(middle.Vect())) {
-    counter_.IncrementCounter("weird");
-    // middle = {FindClosestDrift(middle.Vect()), middle.T()};
-    long particle_id = hseg.GetPrimaryId();
-    return {SANDTrackerCellID(-999), SANDTrackerCellID(particle_id)};
-  }
 
   TGeoNode* node = geo_->FindNode(middle.X(), middle.Y(), middle.Z());
   TString node_path = gGeoManager->GetPath();

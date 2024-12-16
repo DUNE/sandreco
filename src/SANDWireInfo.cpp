@@ -10,33 +10,21 @@ SANDWireInfo::SANDWireInfo()
 
 // Parametric constructor
 SANDWireInfo::SANDWireInfo(SANDWireID arg_id, double arg_x, double arg_y, double arg_z,
-                           double arg_length, Orient arg_orientation,
-                           ReadoutEnd arg_readout_end)
+                           double arg_length, ReadoutEnd arg_readout_end)
     : id_(arg_id),
-      x_(arg_x),
-      y_(arg_y),
-      z_(arg_z),
+      center_(TVector3(arg_x, arg_y, arg_z)),
       length_(arg_length),
-      orientation_(arg_orientation),
       readout_end_(arg_readout_end)
 {
 }
 
 // Parametric constructor
-SANDWireInfo::SANDWireInfo(SANDWireID arg_id, double arg_x, double arg_y, double arg_z,
-                           double arg_length, Orient arg_orientation,
-                           ReadoutEnd arg_readout_end, double arg_ax,
-                           double arg_ay, double arg_az)
+SANDWireInfo::SANDWireInfo(SANDWireID arg_id, TVector3 arg_center,
+                           double arg_length, ReadoutEnd arg_readout_end)
     : id_(arg_id),
-      x_(arg_x),
-      y_(arg_y),
-      z_(arg_z),
+      center_(arg_center),
       length_(arg_length),
-      orientation_(arg_orientation),
-      readout_end_(arg_readout_end),
-      ax_(arg_ax),
-      ay_(arg_ay),
-      az_(arg_az)
+      readout_end_(arg_readout_end)
 {
 }
 
@@ -45,37 +33,9 @@ void SANDWireInfo::id(SANDWireID arg_id)
 {
   id_ = arg_id;
 }
-void SANDWireInfo::x(double arg_x)
-{
-  x_ = arg_x;
-}
-void SANDWireInfo::y(double arg_y)
-{
-  y_ = arg_y;
-}
-void SANDWireInfo::z(double arg_z)
-{
-  z_ = arg_z;
-}
 void SANDWireInfo::length(double arg_length)
 {
   length_ = arg_length;
-}
-void SANDWireInfo::ax(double arg_ax)
-{
-  ax_ = arg_ax;
-}
-void SANDWireInfo::ay(double arg_ay)
-{
-  ay_ = arg_ay;
-}
-void SANDWireInfo::az(double arg_az)
-{
-  az_ = arg_az;
-}
-void SANDWireInfo::orientation(Orient arg_orientation)
-{
-  orientation_ = arg_orientation;
 }
 void SANDWireInfo::readout_end(ReadoutEnd arg_readout_end)
 {
@@ -87,37 +47,9 @@ SANDWireID SANDWireInfo::id() const
 {
   return id_;
 }
-double SANDWireInfo::x() const
-{
-  return x_;
-}
-double SANDWireInfo::y() const
-{
-  return y_;
-}
-double SANDWireInfo::z() const
-{
-  return z_;
-}
 double SANDWireInfo::length() const
 {
   return length_;
-}
-SANDWireInfo::Orient SANDWireInfo::orientation() const
-{
-  return orientation_;
-}
-double SANDWireInfo::ax() const
-{
-  return ax_;
-}
-double SANDWireInfo::ay() const
-{
-  return ay_;
-}
-double SANDWireInfo::az() const
-{
-  return az_;
 }
 SANDWireInfo::ReadoutEnd SANDWireInfo::readout_end() const
 {

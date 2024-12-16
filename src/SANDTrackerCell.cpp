@@ -5,8 +5,6 @@ SANDTrackerCell::SANDTrackerCell(const SANDTrackerCell& cell)
     : _wire(cell._wire)
 {
   _driftVelocity = cell._driftVelocity;
-  _isFired = cell._isFired;
-  _timeResponse = cell._timeResponse;
   _id = cell._id;
   _width = cell._width;
   _height = cell._height;

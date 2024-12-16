@@ -278,10 +278,10 @@ void SANDEventDisplay::FillDigitHits()
     hit.e = tube.de;
     if (tube.hor) {
       hit.x = tube.y / 10;
-      fTubeDigitHitsZY.push_back(hit);
+      fWireDigitHitsZY.push_back(hit);
     } else {
       hit.x = tube.x / 10;
-      fTubeDigitHitsZX.push_back(hit);
+      fWireDigitHitsZX.push_back(hit);
     }
   }
 
@@ -366,7 +366,7 @@ void SANDEventDisplay::DrawTracks()
     }
   } else if (fDrawHits == kDigitHits) {
     auto DigitHitsZY =
-        (fTubeDigitHitsZY.size() != 0) ? fTubeDigitHitsZY : fWireDigitHitsZY;
+        (fWireDigitHitsZY.size() != 0) ? fWireDigitHitsZY : fWireDigitHitsZY;
     for (auto &hit : DigitHitsZY) {
       ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
@@ -388,7 +388,7 @@ void SANDEventDisplay::DrawTracks()
     }
   } else if (fDrawHits == kDigitHits) {
     auto DigitHitsZX =
-        (fTubeDigitHitsZX.size() != 0) ? fTubeDigitHitsZX : fWireDigitHitsZX;
+        (fWireDigitHitsZX.size() != 0) ? fWireDigitHitsZX : fWireDigitHitsZX;
     for (auto &hit : DigitHitsZX) {
       ellipse = new TEllipse(hit.z, hit.x, 0.5, 0.5, 0, 360, 0);
       SANDDisplayUtils::DrawEllipse(ellipse, 1, 1001);
@@ -427,8 +427,8 @@ void SANDEventDisplay::InitObjects()
   fTracksArrayZXTrue->Clear("C");
   fEventHitsZY.clear();
   fEventHitsZX.clear();
-  fTubeDigitHitsZY.clear();
-  fTubeDigitHitsZX.clear();
+  fWireDigitHitsZY.clear();
+  fWireDigitHitsZX.clear();
   fWireDigitHitsZY.clear();
   fWireDigitHitsZX.clear();
   fCellDigitHitsZY.clear();

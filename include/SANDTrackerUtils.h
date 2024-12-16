@@ -52,32 +52,7 @@ class SANDTrackerUtils
   ~SANDTrackerUtils(){};
   static void Clear();
   static bool AreAdjacent(const SANDTrackerCellID &tub1, const SANDTrackerCellID &tub2);
-  static const SANDTrackerCellID GetTubeID(const SANDTrackerDigitID &id);
-  static const SANDTrackerPlaneID GetPlaneID(const SANDTrackerDigitID &id);
-  static const SANDTrackerPlaneLocalID GetPlaneLocalID(const SANDTrackerPlaneID &id);
-  static const SANDTrackerModuleID GetModelID(const SANDTrackerPlaneID &id);
-  static inline std::vector<double> GetSANDInnerVolumeCenterPosition()
-  {
-    return std::vector<double>{sand_reco::stt::stt_center[0],
-                               sand_reco::stt::stt_center[1],
-                               sand_reco::stt::stt_center[2]};
-  };
-  // static inline double GetSANDInnerVolumeRadius() { return sand_reco::ecal::endcap::ec_r; };
-  // static inline double GetSANDInnerVolumeLength() { return 2 * 1690.; };
-  // static inline double GetSANDTrackerElectronDriftVelocity()
-  // {
-    // return sand_reco::stt::v_drift;
-  // };
   static inline double GetTubeRadius() { return 2.5; };
-  // static inline double GetTubeMaxDriftTime()
-  // {
-  //   return GetTubeRadius() / GetSANDTrackerElectronDriftVelocity();
-  // };
-  // static inline SANDTrackerDigitID const EncodeTubeId(const SANDTrackerPlaneID &pid,
-  //                                             const SANDTrackerCellID &tid)
-  // {
-  //   return SANDTrackerDigitID(sand_reco::stt::encodeSTID(pid(), tid()));
-  // };
   static void Init(TGeoManager *geo) {fGeo = geo;};
   static TGeoManager* GetGeoManager() {return fGeo; };
   
@@ -105,11 +80,6 @@ class SANDTrackerUtils
                                        double pathLengthInX0) {
     // The charge of the particle is assumed
     // to be one unit of electron charge
-    // std::cout << p << " "
-    //           << beta << " "
-    //           << pathLengthInX0 << " "
-    //           << sqrt(pathLengthInX0) << " "
-    //           << log(pathLengthInX0) << std::endl;
     return 13.6 /*MeV*/ / (p*beta) * sqrt(pathLengthInX0) * (1 + 0.038 * log(pathLengthInX0/(beta*beta)));
   }
 
@@ -127,8 +97,7 @@ class SANDTrackerUtils
   static double Getc() { return c; };
 
   static TString PrintMatrix(const TMatrixD& m);
-  // static TString PrintStateVector(const SANDTrackANDKFStateVector& v); 
-  // static const SANDTrackerCluster* GetClusterPointer(int clusterID, const std::vector<SANDTrackerCluster>& clusters);
+
   static TVector3 GetCartesianCoordinateFromCylindrical(double radius, double angle, double x);
 
 
@@ -192,6 +161,8 @@ TVector3 get_vector_momentum(double radius, double phi, double tan_lambda, int v
 
 SANDKFStateVector get_state_vector(TVector3 mom, TVector3 pos, int charge);
 
+// Notice: this was used to validate the KF. It is used to generate
+// ideal trajectories and to store their information
 class TrajectoryParameters;
 
 class ParticleState {

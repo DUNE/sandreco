@@ -613,6 +613,8 @@ void digitize(const char* finname, const char* foutname,
 
     // digitize ECAL and STT
     digitization::fluka::ecal::digitize_ecal(ev, geo, vec_cell, ecal_digi_mode);
+    
+    // To Do: update this as in EDEPSIM version
     digitization::fluka::stt::digitize_stt(ev, geo, NHits, DetType, xHits,
                                            yHits, zHits, digit_vec);
 

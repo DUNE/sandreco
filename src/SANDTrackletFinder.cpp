@@ -132,7 +132,7 @@ void TrackletFinder::ComputeDriftTime()
   for (const auto& digit_id:_cluster.GetDigits()) {
     auto cell = _cluster.getSandGeoManager()->get_cell_info(SANDTrackerCellID(digit_id()))->second;
     
-    // To Do: this part is used multiple times. Its point-line distance.
+    // To Do: this part is used multiple times. It's point-line distance.
     //        Write it once in sandgeomangaer or utils.
 
     TVector3 leftend = cell.wire().getReadoutPoint();
@@ -190,7 +190,7 @@ std::vector<TVectorD> TrackletFinder::FindTracklets()
   double y_width = _cells_intersections[1].Y() - _cells_intersections[0].Y();
   
   // To Do: should be a config parameter
-  int subdivisions = 3;
+  int subdivisions = 2;
   double x_sub_width = x_width / subdivisions;
   double y_sub_width = y_width / subdivisions;
   double theta_sub_width = theta_width / subdivisions;
@@ -215,10 +215,10 @@ std::vector<TVectorD> TrackletFinder::FindTracklets()
   // std::cout << "SAMPLING SIZE: " << sampling_points.size() << std::endl;
   for (uint i = 0; i < sampling_points.size(); i++) {
     double starting_point[4] = {sampling_points[i][0], sampling_points[i][1], sampling_points[i][2], sampling_points[i][3]};
-    minimizer->SetLimitedVariable(0, "px", starting_point[0], 0.01, _cells_intersections[0].X() - 200, _cells_intersections[1].X() + 200);
-    minimizer->SetLimitedVariable(1, "py", starting_point[1], 0.01, _cells_intersections[0].Y() - 200, _cells_intersections[1].Y() + 200);
-    minimizer->SetLimitedVariable(2, "dx", starting_point[2], 0.001, theta_xz - theta_width, theta_xz + theta_width);
-    minimizer->SetLimitedVariable(3, "dy", starting_point[3], 0.001, theta_yz - theta_width, theta_yz + theta_width);
+    minimizer->SetLimitedVariable(0, "px", starting_point[0], 1, _cells_intersections[0].X() - 200, _cells_intersections[1].X() + 200);
+    minimizer->SetLimitedVariable(1, "py", starting_point[1], 1, _cells_intersections[0].Y() - 200, _cells_intersections[1].Y() + 200);
+    minimizer->SetLimitedVariable(2, "dx", starting_point[2], 0.1, theta_xz - theta_width, theta_xz + theta_width);
+    minimizer->SetLimitedVariable(3, "dy", starting_point[3], 0.1, theta_yz - theta_width, theta_yz + theta_width);
 
     minimizer->Minimize();
     const double *xs = minimizer->X();
@@ -287,19 +287,19 @@ void TrackletFinder::Draw3D()
     
   auto plane_half_dimension = _cluster.GetPlane()->getDimension() * 0.5;
   auto plane_position  = _cluster.GetPlane()->getPosition();
-  TH3D* h2 = new TH3D("", "", 2 * plane_half_dimension.X(), plane_position.X() - plane_half_dimension.X(), plane_position.X() + plane_half_dimension.X(),
+  TH3D* h3 = new TH3D("", "", 2 * plane_half_dimension.X(), plane_position.X() - plane_half_dimension.X(), plane_position.X() + plane_half_dimension.X(),
                               2 * plane_half_dimension.Y(), plane_position.Y() - plane_half_dimension.Y(), plane_position.Y() + plane_half_dimension.Y(),
                               2 * plane_half_dimension.Z(), plane_position.Z() - plane_half_dimension.Z(), plane_position.Z() + plane_half_dimension.Z());
-    h2->SetTitle(";x;y;z");
-    h2->SetMarkerColor(ccc);
+    h3->SetTitle(";x;y;z");
+    h3->SetMarkerColor(ccc);
     CLine3D line_from_wire(cell.wire().center(), cell.wire().getDirection());
     for (int t = -100; t < 100; t++) {
       for (int theta = 0; theta < 628; theta++) {
         TVector3 p = GetCylinderCoordinates(line_from_wire, (double)t, cell.driftVelocity() * digitId_and_time.second, theta/100.);
-        h2->Fill(p.X(), p.Y(), p.Z());
+        h3->Fill(p.X(), p.Y(), p.Z());
       }
     }
-    h2->Draw("same scat");
+    h3->Draw("same scat");
     ccc++;
   }
 

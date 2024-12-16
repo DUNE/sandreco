@@ -18,6 +18,8 @@ void SANDTrackerUtils::Clear()
 
 // check if tubes are adjacent
 // using tube id
+// To Do: replace this with the adjacency of cells defined during
+// SANDGeoManager construction
 bool SANDTrackerUtils::AreAdjacent(const SANDTrackerCellID &tub1, const SANDTrackerCellID &tub2)
 {
   // To Do: this doesn't work for staggered stt tubes
@@ -66,19 +68,6 @@ TString SANDTrackerUtils::PrintMatrix(const TMatrixD& m) {
   
 //   return 0;
 // }
-
-TVector3 SANDTrackerUtils::GetCartesianCoordinateFromCylindrical(double radius, double angle, double x)
-{
-  auto sandCenter = SANDTrackerUtils::GetSANDInnerVolumeCenterPosition();
-  auto xSandCenter = sandCenter[0];
-  auto ySandCenter = sandCenter[1];
-  auto zSandCenter = sandCenter[2];
-  
-  auto y = ySandCenter + radius * sin(angle);
-  auto z = zSandCenter + radius * cos(angle);
-
-  return {x,y,z};
-}
 
 double SANDTrackerUtils::GetCrossedMaterialInGCM2(double z, 
                                            double px, double py, double pz,

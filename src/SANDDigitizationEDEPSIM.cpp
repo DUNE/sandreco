@@ -167,7 +167,7 @@ double energy_to_photo_electrons(double E)
 {
   if (debug)
     std::cout << "E = " << E
-              << " -> p.e. = " << sand_reco::ecal::photo_sensor::e2pe* E
+              << " -> p.e. = " << sand_reco::ecal::photo_sensor::e2pe * E
               << std::endl;
 
   return sand_reco::ecal::photo_sensor::e2pe * E;
@@ -221,16 +221,6 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
 
   g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
 
-  if (cellID == -99) {
-    std::cout << "\n";
-    std::cout << __FILE__ << " " << __LINE__ << " \n";
-    std::cout << "cell_global_id : " << cell_global_id << "\n";
-    std::cout << "detID   : " << detID << "\n";
-    std::cout << "modID   : " << modID << "\n";
-    std::cout << "planeID : " << planeID << "\n";
-    std::cout << "cellID  : " << cellID << "\n";
-    throw "";
-  }
   return true;
 
   // /////
@@ -361,7 +351,6 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
   for (std::map<int, std::vector<dg_ps> >::iterator it = ps.begin();
        it != ps.end(); ++it) {
     int id = abs(it->first);
-    // if(id==999) continue;
     c = &(map_cell[id]);
 
     c->id = id;
@@ -373,7 +362,6 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
     } else {
       c->ps2 = it->second;
     }
-    if (c->id == 214294) continue;
     auto cell_info = geo.get_ecal_cell_info(c->id);
     c->x = cell_info.x();
     c->y = cell_info.y();
@@ -436,9 +424,6 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
     SANDTrackerCellID stid = geo.get_stt_tube_id(x, y, z);
 
     if (stid == -999) {
-      // std::cout << std::setprecision(12) << x << " " << y << " " << z <<
-      // std::endl;
-      // geo.print_stt_tube_id(x,y,z);
       skipped_hit++;
       continue;
     };
@@ -478,109 +463,6 @@ void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
   }
 }
 
-// for each tube simulate tdc and adc
-// tdc is the time of closest point to wire + drift time
-// adc is the sum of energy deposit within integration time window
-void create_digits_from_hits(const SANDGeoManager& geo,
-                             std::map<SANDTrackerCellID, std::vector<hit> >& hits2Tube,
-                             std::vector<dg_wire>& wire_digits)
-{
-  wire_digits.clear();
-
-  for (std::map<SANDTrackerCellID, std::vector<hit> >::iterator it = hits2Tube.begin();
-       it != hits2Tube.end(); ++it) {
-    double min_time_tub   = 1E9;  // mm
-    double min_drift_time = 1E9;  // mm
-    SANDTrackerCellID cell_global_id = it->first;
-
-    auto cell_info = geo.get_cell_info(cell_global_id)->second;
-
-    SANDTrackerModuleID module_unique_id;
-    SANDTrackerPlaneID plane_global_id, plane_local_id, plane_type;
-    SANDTrackerCellID cell_local_id;
-
-    SANDGeoManager::decode_cell_id(cell_global_id, plane_global_id, cell_local_id);
-    SANDGeoManager::decode_plane_id(plane_global_id, module_unique_id, 
-                                    plane_local_id, plane_type);
-
-    dg_wire d;
-    d.det = it->second[0].det;
-    d.did =  cell_global_id();
-    d.de = 0;
-    d.hor = (plane_type() % 2 == 0);
-    d.t0 = sand_reco::t0[plane_global_id()];
-    TVector2 wire;
-    if (d.hor == true) {
-      d.x = sand_reco::stt::stt_center[0];
-      d.y = cell_info.wire().y();
-      d.z = cell_info.wire().z();
-      wire.SetX(cell_info.wire().z());
-      wire.SetY(cell_info.wire().y());
-    } else {
-      d.x = cell_info.wire().x();
-      d.y = sand_reco::stt::stt_center[1];
-      d.z = cell_info.wire().z();
-      wire.SetX(cell_info.wire().z());
-      wire.SetY(cell_info.wire().x());
-    }
-
-    for (unsigned int i = 0; i < it->second.size(); i++) {
-      double x1 = it->second[i].z1;
-      double x2 = it->second[i].z2;
-      double t1 = it->second[i].t1;
-      double t2 = it->second[i].t2;
-
-      double y1, y2;
-      double z1, z2, z;
-      double l, dwire;
-
-      if (plane_type == 2) {
-        y1 = it->second[i].y1;
-        y2 = it->second[i].y2;
-        z1 = it->second[i].x1;
-        z2 = it->second[i].x2;
-        l = sand_reco::stt::getT(y1, y2, cell_info.wire().y(), x1, x2, cell_info.wire().z());
-        z = z1 + (z2 - z1) * l;
-        dwire = cell_info.wire().x() + cell_info.wire().length() - z;
-      } else {
-        y1 = it->second[i].x1;
-        y2 = it->second[i].x2;
-        z1 = it->second[i].y1;
-        z2 = it->second[i].y2;
-        l = sand_reco::stt::getT(y1, y2, cell_info.wire().x(), x1, x2, cell_info.wire().z());
-        z = z1 + (z2 - z1) * l;
-        dwire = cell_info.wire().y() + cell_info.wire().length() - z;
-      }
-
-      double x = x1 + (x2 - x1) * l;
-      double y = y1 + (y2 - y1) * l;
-      double t = t1 + (t2 - t1) * l;
-
-      TVector2 min_dist_point(x, y);
-      double min_dist_hit = (min_dist_point - wire).Mod();
-      double min_drift_hit = (min_dist_hit - sand_reco::stt::wire_radius) /
-                                    sand_reco::stt::v_drift;
-      double min_time_hit = t + min_drift_hit +
-                            dwire / sand_reco::stt::v_signal_inwire;
-
-      if (min_time_hit < min_time_tub) {
-        min_time_tub = min_time_hit;
-        min_drift_time = min_drift_hit;
-      }
-
-      if (t - d.t0 < sand_reco::stt::stt_int_time) d.de += it->second[i].de;
-
-      d.hindex.push_back(it->second[i].index);
-    }
-
-    d.tdc = min_time_tub + rand.Gaus(0, sand_reco::stt::tm_stt_smearing);
-    d.drift_time = min_drift_time;
-    d.adc = d.de;
-
-    wire_digits.push_back(d);
-  }
-}
-
 // simulate stt responce for whole event
 void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
                   std::vector<dg_wire>& wire_digits)
@@ -596,28 +478,6 @@ void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
 
 namespace chamber
 {
-
-TVector3 IntersectHitPlane(const TG4HitSegment& hseg, double plane_coordinate,
-                           SANDWireInfo::Orient plane_orientation)
-{
-  // find intersect between hit segment and wire plane
-  auto delta = hseg.Stop - hseg.Start;
-  double t = -999.;
-
-  TVector3 crossing_point = {-999., -999., -999.};
-
-  if (plane_orientation == SANDWireInfo::Orient::kHorizontal) {
-    t = (plane_coordinate - hseg.Start.Y()) / delta.Y();
-    crossing_point.SetXYZ(hseg.Start.X() + delta.X() * t, plane_coordinate,
-                          hseg.Start.Z() + delta.Z() * t);
-
-  } else {
-    t = (plane_coordinate - hseg.Start.X()) / delta.X();
-    crossing_point.SetXYZ(plane_coordinate, hseg.Start.Y() + delta.Y() * t,
-                          hseg.Start.Z() + delta.Z() * t);
-  }
-  return crossing_point;
-}
 
 void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
                         std::map<SANDTrackerCellID, std::vector<hit> >& hits2cell)
@@ -779,22 +639,6 @@ void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
   }
 }
 
-bool isInWire(SANDWireInfo& wire, TVector3& point)
-{
-  TVector3 wire3 = {wire.center().x(), wire.center().y(), wire.center().z()};
-  return ((wire3 - point).Mag() <= wire.length() * 0.5);
-}
-
-bool isInHit(hit& h, TVector3& point)
-{
-  TVector3 middle = {(h.x1 + h.x2) / 2., (h.y1 + h.y2) / 2.,
-                     (h.z1 + h.z2) / 2.};
-  TVector3 start = {h.x1, h.y1, h.z1};
-  return ((point - middle).Mag() <= (start - middle).Mag());
-}
-
-
-
 // simulate wire responce for whole event
 void digitize_drift(TG4Event* ev, const SANDGeoManager& geo,
                     std::vector<dg_wire>& wire_digits)
@@ -897,7 +741,6 @@ void digitize(const char* finname, const char* foutname,
     // define the T0 for this event
     // for each straw tubs:
     // std::map<int, double> sand_reco::t0
-    sand_reco::stt::initT0(ev, sand_geo);
     digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
                                                 ecal_digi_mode);
 
@@ -913,8 +756,6 @@ void digitize(const char* finname, const char* foutname,
   std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
   std::cout << std::endl;
 
-  sand_geo.PrintCounter();
-
   // write output
   fout.cd();
   tout.Write();
@@ -924,10 +765,6 @@ void digitize(const char* finname, const char* foutname,
   f.Close();
 
   // cleaning
-  // sand_reco::stt::stL.clear();
-  // sand_reco::stt::stX.clear();
-  // sand_reco::stt::stPos.clear();
-  // sand_reco::stt::tubePos.clear();
   sand_reco::t0.clear();
 }
 

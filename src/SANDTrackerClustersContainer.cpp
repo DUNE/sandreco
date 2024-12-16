@@ -79,7 +79,10 @@ void SANDTrackerClustersByProximity::Clusterize(const std::vector<SANDTrackerDig
 const SANDTrackerCluster &SANDTrackerClustersByProximity::GetNearestCluster(double x, double y) const
 {
   // To Do: yes
-  return SANDTrackerCluster();
+  std::cout << "ERR: Calling SANDTrackerClustersByProximity::GetNearestCluster(double x, double y) "
+            << "but it is not implemented yet and you are getting a default (empty) SANDTrackerCluster" << std::endl;
+  SANDTrackerCluster clu;
+  return clu;
 }
 
 void SANDTrackerClustersInPlane::Clusterize(const std::vector<SANDTrackerDigitID>& digits)

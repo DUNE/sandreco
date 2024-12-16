@@ -129,8 +129,6 @@ class SANDEventDisplay : public TGMainFrame
 
   std::vector<EVHits_t> fEventHitsZY;
   std::vector<EVHits_t> fEventHitsZX;
-  std::vector<EVHits_t> fTubeDigitHitsZY;
-  std::vector<EVHits_t> fTubeDigitHitsZX;
   std::vector<EVHits_t> fWireDigitHitsZY;
   std::vector<EVHits_t> fWireDigitHitsZX;
   std::vector<EVHits_t> fCellDigitHitsZY;

@@ -56,9 +56,6 @@ void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
 
 namespace chamber
 {
-TVector3 IntersectHitPlane(const TG4HitSegment& hseg, double plane_coordinate,
-                           SANDWireInfo::Orient plane_orientation);
-
 void group_hits_by_wire(TG4Event* ev, const SANDGeoManager& geo,
                         std::map<int, std::vector<hit> >& hits2wire);
 
