@@ -2,108 +2,121 @@
 
 #include "SANDWireInfo.h"
 
-class SANDTrackerPlane;
+namespace sand_geometry
+{
 
-class SANDTrackerCellID : public SingleElStruct<unsigned long>
+namespace tracker
+{
+
+class Plane;
+
+class CellID : public SingleElStruct<unsigned long>
 {
  public:
-  SANDTrackerCellID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  SANDTrackerCellID() : SingleElStruct<unsigned long>(){};
+  CellID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  CellID() : SingleElStruct<unsigned long>(){};
 };
 
-class SANDTrackerCell
+class Cell
 {
-  SANDTrackerCellID _id;
-  SANDWireInfo _wire;
-  double _width;
-  double _height;
-  double _driftVelocity;  // drift velocity in um/ns
+  CellID id_;
+  sand_geometry::tracker::WireInfo wire_;
+  double width_;
+  double height_;
+  double driftVelocity_;  // drift velocity in um/ns
 
-  SANDTrackerPlane* _plane;
-  std::vector<SANDTrackerCell*> _adjacent_cells;
+  Plane* plane_;
+  std::vector<Cell*> adjacent_cells_;
 
  public:
-  SANDTrackerCell() {};
-  SANDTrackerCell(const SANDTrackerCellID cID,
-                  const SANDWireInfo &l, 
-                  const double w,
-                  const double h,
-                  const double v,
-                  SANDTrackerPlane* plane)
-      : _id(cID),
-        _wire(l),
-        _width(w),
-        _height(h),
-        _driftVelocity(v),
-        _plane(plane)
+   struct CellSize {
+    double h;
+    double w;
+  };
+
+  Cell() {};
+  Cell(const CellID cell_id,
+                  const sand_geometry::tracker::WireInfo &l, 
+                  double w,
+                  double h,
+                  double v,
+                  Plane* plane)
+      : id_(cell_id),
+        wire_(l),
+        width_(w),
+        height_(h),
+        driftVelocity_(v),
+        plane_(plane)
   {
   }
-  SANDTrackerCell(const SANDTrackerCellID cID,
-                  const SANDWireInfo &l, 
-                  const double w,
-                  const double h,
-                  const double v)
-      : _id(cID),
-        _wire(l),
-        _width(w),
-        _height(h),
-        _driftVelocity(v)
+  Cell(const CellID cell_id,
+                  const sand_geometry::tracker::WireInfo &l, 
+                  double w,
+                  double h,
+                  double v)
+      : id_(cell_id),
+        wire_(l),
+        width_(w),
+        height_(h),
+        driftVelocity_(v)
   {
   }
 
-  SANDTrackerCell(const SANDTrackerCellID cID, const SANDWireInfo &l, SANDTrackerPlane* plane): 
-        _id(cID), _wire(l), _plane(plane)
+  Cell(const CellID cell_id, const sand_geometry::tracker::WireInfo &l, Plane* plane): 
+        id_(cell_id), wire_(l), plane_(plane)
   {
   }
 
-  SANDTrackerCell(const SANDTrackerCell &cell);
+  Cell(const Cell &cell);
 
-  void id(SANDTrackerCellID wID)
+  void id(CellID wID)
   {
-    _id = wID;
+    id_ = wID;
   }
-  void setPlane(SANDTrackerPlane* p) 
+  void setPlane(Plane* p) 
   {
-    _plane = p;
+    plane_ = p;
   }
-  SANDTrackerPlane* getPlane() const 
+  Plane* getPlane() const 
   {
-    return _plane;
+    return plane_;
   }
-  SANDTrackerCellID id() const
+  CellID getId() const
   {
-    return _id;
+    return id_;
   }
-  void size(double &h, double &w) const
+  CellSize getSize() const
   {
-    h = _height;
-    w = _width;
+    return {height_, width_};
   }
-  SANDWireInfo wire()
+  sand_geometry::tracker::WireInfo getWire()
   {
-    return _wire;
+    return wire_;
   }
-  const SANDWireInfo& wire() const
+  const sand_geometry::tracker::WireInfo& getWire() const
   {
-    return _wire;
+    return wire_;
   }
-  double driftVelocity() const
+  double getDriftVelocity() const
   {
-    return _driftVelocity;
+    return driftVelocity_;
   }
 
-  void addAdjacentCell(SANDTrackerCell* adj_cell);
-  const std::vector<SANDTrackerCell*> getAdjacentCell() const {return _adjacent_cells;};
+  void addAdjacentCell(Cell* adj_cell);
+  const std::vector<Cell*> getAdjacentCell() const {return adjacent_cells_;};
 
-  bool isAdjacent(const SANDTrackerCellID& adj_id) const {
-    if (std::find_if(_adjacent_cells.begin(), 
-                    _adjacent_cells.end(), 
-                    [&adj_id](SANDTrackerCell* cell)
-                    { return (cell->id() == adj_id) ? true : false; })
-      != _adjacent_cells.end()) {
+  bool isAdjacent(const CellID& adj_id) const {
+    if (std::find_if(adjacent_cells_.begin(), 
+                    adjacent_cells_.end(), 
+                    [&adj_id](Cell* cell)
+                    { return (cell->getId() == adj_id) ? true : false; })
+      != adjacent_cells_.end()) {
         return true;
     } else {
       return false;
     }
   }
 };
+
+} // namespace tracker
+} // namespace sand_geometry

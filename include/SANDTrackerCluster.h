@@ -5,81 +5,86 @@
 
 #include "SANDTrackerDigitCollection.h"
 #include "SANDGeoManager.h"
-
-class SANDTrackerClusterID : public SingleElStruct<unsigned long>
+namespace sand_reco
+{
+namespace tracker
+{
+class ClusterID : public SingleElStruct<unsigned long>
 {
  public:
-  SANDTrackerClusterID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  SANDTrackerClusterID() : SingleElStruct<unsigned long>(){};
+  ClusterID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  ClusterID() : SingleElStruct<unsigned long>(){};
 };
 
-class SANDTrackerCluster
+class Cluster
 {
  private:
-  SANDTrackerClusterID fId;
-  plane_iterator fPlane;
-  std::vector<SANDTrackerDigitID> fDigits;
-  std::vector<SANDTrackerDigitID> fDigits_extended;
+  ClusterID id_;
+  sand_geometry::tracker::plane_iterator plane_;
+  std::vector<DigitID> digits_;
+  std::vector<DigitID> digits_extended_;
 
-  const SANDGeoManager* _sand_geo;
+  const SANDGeoManager* sand_geo_;
 
-  static SANDTrackerClusterID fCounter;
+  static ClusterID counter_;
 
 
  public:
-  SANDTrackerCluster() = default;
-  SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vector<SANDTrackerDigitID> &digits);
-  SANDTrackerCluster(const SANDGeoManager* sand_geo, std::vector<SANDTrackerDigitID> &digits, plane_iterator plane);
+  Cluster() = default;
+  Cluster(const SANDGeoManager* sand_geo, std::vector<DigitID> &digits);
+  Cluster(const SANDGeoManager* sand_geo, std::vector<DigitID> &digits, sand_geometry::tracker::plane_iterator plane);
   enum class RecoAlgo { ELikelihood, EMinuit };
-  inline SANDTrackerClusterID GetId() const { return fId; };
-  inline plane_iterator GetPlane() const {return fPlane;};
-  inline SANDTrackerPlaneID GetPlaneId() const 
+  inline ClusterID getId() const { return id_; };
+  inline sand_geometry::tracker::plane_iterator getPlane() const {return plane_;};
+  inline sand_geometry::tracker::PlaneID getPlaneId() const 
   { 
-    return fPlane->uid(); 
+    return plane_->uId(); 
   };
-  inline double GetRotation() const
+  inline double getRotation() const
   {
-    return fPlane->getRotation();
+    return plane_->getRotation();
   };
-  inline double GetZ() const 
+  inline double getZ() const 
   { 
-    return fPlane->getPosition().Z(); 
+    return plane_->getPosition().Z(); 
   };
   inline const SANDGeoManager* getSandGeoManager() const
   {
-    return _sand_geo;
+    return sand_geo_;
   }
-  inline const std::vector<SANDTrackerDigitID> &GetDigits() const { return fDigits; };
-  void GetExtendedCluster(int offset);
-  inline const std::vector<SANDTrackerDigitID> &GetExtendedDigits() const { return fDigits_extended; };
-  static void ResetCounter() { fCounter = 0; };
+  inline const std::vector<DigitID> &getDigits() const { return digits_; };
+  void getExtendedCluster(int offset);
+  inline const std::vector<DigitID> &getExtendedDigits() const { return digits_extended_; };
+  static void resetCounter() { counter_ = 0; };
 
-  friend class SANDTrackerClustersInPlane;
+  friend class ClustersInPlane;
 };
+} // namespace tracker
+} // namespace sand_reco
 
 #ifdef __MAKECINT__
-#pragma link C++ class SANDTrackerClusterTools::Point + ;
-#pragma link C++ class SANDTrackerClusterTools::Tube + ;
-#pragma link C++ class SANDTrackerClusterTools::TubeCollection + ;
-#pragma link C++ class SANDTrackerClusterTools::Line + ;
-#pragma link C++ class std::vector < SANDTrackerClusterTools::Line> + ;
-#pragma link C++ class SANDTrackerClusterTools::ClusterParameters + ;
-#pragma link C++ class SANDTrackerClusterTools::Cluster + ;
-#pragma link C++ class SANDTrackerClusterTools::RecoParams + ;
-#pragma link C++ class std::vector < SANDTrackerClusterTools::RecoParams> + ;
-#pragma link C++ class SANDTrackerClusterTools::InputParams + ;
-#pragma link C++ class SANDTrackerPlane + ;
+#pragma link C++ class ClusterTools::Point + ;
+#pragma link C++ class ClusterTools::Tube + ;
+#pragma link C++ class ClusterTools::TubeCollection + ;
+#pragma link C++ class ClusterTools::Line + ;
+#pragma link C++ class std::vector < ClusterTools::Line> + ;
+#pragma link C++ class ClusterTools::ClusterParameters + ;
+#pragma link C++ class ClusterTools::Cluster + ;
+#pragma link C++ class ClusterTools::RecoParams + ;
+#pragma link C++ class std::vector < ClusterTools::RecoParams> + ;
+#pragma link C++ class ClusterTools::InputParams + ;
+#pragma link C++ class Plane + ;
 #pragma link C++ class SingleElStruct<unsigned int> + ;
-#pragma link C++ class SANDTrackerDigitID + ;
-#pragma link C++ class SANDTrackerPlaneIndex + ;
-#pragma link C++ class std::vector < SANDTrackerDigitID> + ;
-#pragma link C++ class SANDTrackerTubeID + ;
-#pragma link C++ class SANDTrackerTube + ;
-#pragma link C++ class std::map<SANDTrackerTubeID,SANDTrackerTube> + ;
-#pragma link C++ class SANDTrackerPlaneID + ;
-#pragma link C++ class SANDTrackerDigit + ;
-#pragma link C++ class SANDTrackerCluster + ;
-#pragma link C++ class std::vector < SANDTrackerCluster> + ;
+#pragma link C++ class DigitID + ;
+#pragma link C++ class PlaneIndex + ;
+#pragma link C++ class std::vector < DigitID> + ;
+#pragma link C++ class TubeID + ;
+#pragma link C++ class Tube + ;
+#pragma link C++ class std::map<TubeID,Tube> + ;
+#pragma link C++ class PlaneID + ;
+#pragma link C++ class Digit + ;
+#pragma link C++ class Cluster + ;
+#pragma link C++ class std::vector < Cluster> + ;
 #endif
 
 #endif

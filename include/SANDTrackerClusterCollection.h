@@ -4,8 +4,11 @@
 #include <vector>
 
 #include "SANDTrackerClustersContainer.h"
-
-class SANDTrackerClusterCollection
+namespace sand_reco
+{
+namespace tracker
+{
+class ClusterCollection
 {
 
   // The idea is to make this class static and const
@@ -14,28 +17,30 @@ class SANDTrackerClusterCollection
     kProximityInPlane,
     kCellAdjacency
   };
-  SANDTrackerClusterCollection(const SANDGeoManager* sand_geo, const std::vector<SANDTrackerDigit> &digits, ClusteringMethod clu_method);
-  ~SANDTrackerClusterCollection(){};
+  ClusterCollection(const SANDGeoManager* sand_geo, const std::vector<Digit> &digits, ClusteringMethod clu_method);
+  ~ClusterCollection(){};
 
-  void ClusterProximityInPlane(const std::vector<SANDTrackerDigit>& digits);
-  void ClusterCellAdjacency(const std::vector<SANDTrackerDigit>& digits);
-  inline const ClustersContainer* GetClustersInContainerByIndex(const int& index) const
+  void ClusterProximityInPlane(const std::vector<Digit>& digits);
+  void ClusterCellAdjacency(const std::vector<Digit>& digits);
+  inline const ClustersContainer* getClustersInContainerByIndex(const int& index) const
   {
-    return containers.at(index);
+    return containers_.at(index);
   };
-  inline const ClustersContainer* GetClustersInContainer(const SANDTrackerPlaneID &id) const
+  inline const ClustersContainer* getClustersInContainer(const sand_geometry::tracker::PlaneID &id) const
   {
-    return containers.at(_sand_geo->GetPlaneIndex(id)());
+    return containers_.at(sand_geo_->getPlaneIndex(id)());
   };
-  inline const std::vector<ClustersContainer*> &GetContainers() const
+  inline const std::vector<ClustersContainer*> &getContainers() const
   {
-    return containers;
+    return containers_;
   };
-  int GetNClusters() const;
-  const SANDTrackerCluster &GetFirstDownstreamCluster();
+  int getNClusters() const;
+  const Cluster &getFirstDownstreamCluster();
   
   private:
-    std::vector<ClustersContainer*> containers;
-    const SANDGeoManager* _sand_geo;
+    std::vector<ClustersContainer*> containers_;
+    const SANDGeoManager* sand_geo_;
 };
+} // namespace tracker
+} // namespace sand_reco
 #endif

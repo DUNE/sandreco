@@ -2,66 +2,74 @@
 #include "SANDTrackerPlane.h"
 #include <string>
 
-class SANDTrackerModuleID : public SingleElStruct<unsigned long>
+namespace sand_geometry
+{
+
+namespace tracker
+{
+ 
+class ModuleID : public SingleElStruct<unsigned long>
 {
  public:
-  SANDTrackerModuleID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  SANDTrackerModuleID() : SingleElStruct<unsigned long>(){};
+  ModuleID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  ModuleID() : SingleElStruct<unsigned long>(){};
 };
 
-class SANDTrackerModule
+class Module
 {
  private:
-  std::string _target;
-  SANDTrackerModuleID _id;
-  std::map<SANDTrackerPlaneID, SANDTrackerPlane> _vPlanes;
+  std::string target_;
+  ModuleID id_;
+  std::map<PlaneID, Plane> planes_;
 
  public:
-  SANDTrackerModule()
+  Module()
   {
   }
-  SANDTrackerModule(SANDTrackerModuleID i)
+  Module(ModuleID i)
   {
-    _id = i;
+    id_ = i;
   }
-  SANDTrackerModule(SANDTrackerModuleID i, std::string trg)
+  Module(ModuleID i, std::string trg)
   {
-    _id = i;
-    _target = trg;
+    id_ = i;
+    target_ = trg;
   }
   
-  void id(const SANDTrackerModuleID idModule)
+  void Id(const ModuleID idModule)
   {
-    _id = idModule;
+    id_ = idModule;
   }
-  SANDTrackerModuleID id() const
+  ModuleID Id() const
   {
-    return _id;
+    return id_;
   }
 
   void target(const std::string tagetName)
   {
-    _target = tagetName;
+    target_ = tagetName;
   }
-  std::string target() const
+  std::string getTarget() const
   {
-    return _target;
+    return target_;
   }
 
-  bool addPlane(SANDTrackerPlaneID plane_unique_id, SANDTrackerPlaneID plane_local_id);
-  std::map<SANDTrackerPlaneID, SANDTrackerPlane>::iterator getPlane(SANDTrackerPlaneID index);
-  std::map<SANDTrackerPlaneID, SANDTrackerPlane>::const_iterator getPlane(SANDTrackerPlaneID index) const;
+  bool addPlane(PlaneID plane_unique_id, PlaneID plane_local_id);
+  std::map<PlaneID, Plane>::iterator getPlane(PlaneID index);
+  std::map<PlaneID, Plane>::const_iterator getPlane(PlaneID index) const;
 
   int nPlanes() const
   {
-    return _vPlanes.size();
+    return planes_.size();
   }
-  std::map<SANDTrackerPlaneID, SANDTrackerPlane>& planes()
+  std::map<PlaneID, Plane>& planes()
   {
-    return _vPlanes;
+    return planes_;
   };
-  const std::map<SANDTrackerPlaneID, SANDTrackerPlane>& planes() const
+  const std::map<PlaneID, Plane>& planes() const
   {
-    return _vPlanes;
+    return planes_;
   };
 };
+} // namespace tracker
+} // namespace sand_geometry

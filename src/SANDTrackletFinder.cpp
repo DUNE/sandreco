@@ -1,32 +1,32 @@
 #include "SANDTrackletFinder.h"
 
-double MinimizingFunction(const double* params, const SANDTrackerCluster& cluster, const std::map<SANDTrackerDigitID, double>& digitId_to_drift_time)
+double MinimizingFunction(const double* params, const sand_reco::tracker::Cluster& cluster, const std::map<sand_reco::tracker::DigitID, double>& digitId_to_drift_time)
 {
   double dx = cos(params[2]);
   double dy = sin(params[3]);
   double dz = sin(params[2]);
-  TVector3 pos(params[0], params[1], cluster.GetZ());
+  TVector3 pos(params[0], params[1], cluster.getZ());
   TVector3 dir(dx, dy, dz);
   dir = dir * (1. / dir.Mag());
 
   double sum = 0.0;
   auto sand_geo = cluster.getSandGeoManager();
   for (const auto& digitId_and_time : digitId_to_drift_time) {
-    auto cell = sand_geo->get_cell_info(SANDTrackerCellID(digitId_and_time.first()))->second;
-    TVector3 n = cell.wire().getDirection().Cross(dir);
-    double d = fabs(n.Dot(cell.wire().center() - pos)) / n.Mag();
-    sum += (d - cell.driftVelocity() * digitId_and_time.second) 
-            * (d - cell.driftVelocity() * digitId_and_time.second); 
+    auto cell = sand_geo->getCellInfo(sand_geometry::tracker::CellID(digitId_and_time.first()))->second;
+    TVector3 n = cell.getWire().getDirection().Cross(dir);
+    double d = fabs(n.Dot(cell.getWire().getCenter() - pos)) / n.Mag();
+    sum += (d - cell.getDriftVelocity() * digitId_and_time.second) 
+            * (d - cell.getDriftVelocity() * digitId_and_time.second); 
   }
   return sum;
 }
 
-bool TrackletFinder::CheckParallel(TVector3 d1, TVector3 d2)
+bool TrackletFinder::checkParallel(TVector3 d1, TVector3 d2)
 {
   return d1.Dot(d2) == 1;
 }
 
-void TrackletFinder::LinesParallelToWire(CLine3D w, double distance, std::vector<CLine3D>& lines)
+void TrackletFinder::linesParallelToWire(Line3D w, double distance, std::vector<Line3D>& lines)
 {
     double perp_x_dir = -w.getDirection().Y();
     double perp_y_dir =  w.getDirection().X();
@@ -36,7 +36,7 @@ void TrackletFinder::LinesParallelToWire(CLine3D w, double distance, std::vector
     TVector3 direction_perp(perp_x_dir, perp_y_dir, 0);
     TVector3 point_perp(x_perp, y_perp, 0);
 
-    lines.push_back(CLine3D(point_perp, w.getDirection()));
+    lines.push_back(Line3D(point_perp, w.getDirection()));
     
     perp_x_dir =  w.getDirection().Y();
     perp_y_dir = -w.getDirection().X();
@@ -48,45 +48,46 @@ void TrackletFinder::LinesParallelToWire(CLine3D w, double distance, std::vector
 
     // point_perp2.Print();
     // w.getDirection().Print();
-    lines.push_back(CLine3D(point_perp2, w.getDirection()));
+    lines.push_back(Line3D(point_perp2, w.getDirection()));
 }
 
-void TrackletFinder::ComputeCellsIntersections()
+void TrackletFinder::computeCellsIntersections()
 {
-  std::vector<CLine3D> lines;
+  std::vector<Line3D> lines;
 
-  for (auto digitID:_cluster.GetDigits()) {
+  for (auto digitID:cluster_.getDigits()) {
     // std::cout << digitID() << std::endl;
-    auto cell = _cluster.getSandGeoManager()->get_cell_info(SANDTrackerCellID(digitID()))->second;
-    double h, w;
-    cell.size(h, w);
-    CLine3D line_from_wire(cell.wire().center(), cell.wire().getDirection());
-    LinesParallelToWire(line_from_wire, h, lines);
+    auto cell = cluster_.getSandGeoManager()->getCellInfo(sand_geometry::tracker::CellID(digitID()))->second;
+    auto cell_size = cell.getSize();
+    double h = cell_size.h;
+    double w = cell_size.w;
+    Line3D line_from_wire(cell.getWire().getCenter(), cell.getWire().getDirection());
+    linesParallelToWire(line_from_wire, h, lines);
   }
   
   for (uint i = 0; i < lines.size() - 1; i++) {
     for (uint j = i + 1; j < lines.size(); j++) {
       // std::cout << i << " " << j << std::endl;
-      bool is_parallel = CheckParallel(lines[i].getDirection(), lines[j].getDirection());
+      bool is_parallel = checkParallel(lines[i].getDirection(), lines[j].getDirection());
       if (!is_parallel) {
         double t = (lines[i].getPoint() - lines[j].getPoint()).Dot(lines[i].getDirection() - lines[j].getDirection() * lines[i].getDirection().Dot(lines[j].getDirection())) /
                      (pow(lines[i].getDirection().Dot(lines[j].getDirection()), 2) - 1);
         
         TVector3 intersection = lines[i].getPoint() + t * lines[i].getDirection();
-        _cells_intersections.push_back(intersection);
+        cells_intersections_.push_back(intersection);
         // intersection.Print();
       }
     }
   }
 }
 
-void TrackletFinder::GetScanningAreaVertices()
+void TrackletFinder::getScanningAreaVertices()
 {
   double x_min = 1E9;
   double y_min = 1E9;
   double x_max = -1E9;
   double y_max = -1E9;
-  for (auto p:_cells_intersections) {
+  for (auto p:cells_intersections_) {
     if (p.X() < x_min) {
       x_min = p.X();
     }
@@ -100,8 +101,8 @@ void TrackletFinder::GetScanningAreaVertices()
       y_max = p.Y();
     }
   }
-  const auto plane_half_dimension = _cluster.GetPlane()->getDimension() * 0.5;
-  const auto plane_position  = _cluster.GetPlane()->getPosition();
+  const auto plane_half_dimension = cluster_.getPlane()->getDimension() * 0.5;
+  const auto plane_position  = cluster_.getPlane()->getPosition();
 
   if (x_min <  plane_position.X() - plane_half_dimension.X()) {
     x_min = plane_position.X() - plane_half_dimension.X();
@@ -116,45 +117,45 @@ void TrackletFinder::GetScanningAreaVertices()
     y_max = plane_position.Y() + plane_half_dimension.Y();
   }
 
-  _cells_intersections.clear();
-  _cells_intersections.push_back(TVector3(x_min, y_min, 0));
-  _cells_intersections.push_back(TVector3(x_max, y_max, 0));
+  cells_intersections_.clear();
+  cells_intersections_.push_back(TVector3(x_min, y_min, 0));
+  cells_intersections_.push_back(TVector3(x_max, y_max, 0));
 }
 
-void TrackletFinder::ComputeDriftTime()
+void TrackletFinder::computeDriftTime()
 {
   TVector2 mean_point_2d(0, 0);
-  for (const auto& point:_cells_intersections) {
+  for (const auto& point:cells_intersections_) {
     mean_point_2d = mean_point_2d + TVector2(point.X(), point.Y()); 
   }
-  mean_point_2d = mean_point_2d * ( 1. / _cells_intersections.size());
+  mean_point_2d = mean_point_2d * ( 1. / cells_intersections_.size());
 
-  for (const auto& digit_id:_cluster.GetDigits()) {
-    auto cell = _cluster.getSandGeoManager()->get_cell_info(SANDTrackerCellID(digit_id()))->second;
+  for (const auto& digit_id:cluster_.getDigits()) {
+    auto cell = cluster_.getSandGeoManager()->getCellInfo(sand_geometry::tracker::CellID(digit_id()))->second;
     
     // To Do: this part is used multiple times. It's point-line distance.
     //        Write it once in sandgeomangaer or utils.
 
-    TVector3 leftend = cell.wire().getReadoutPoint();
-    TVector3 rightend = cell.wire().getOppositePointToReadout();
+    TVector3 leftend = cell.getWire().getReadoutPoint();
+    TVector3 rightend = cell.getWire().getOppositePointToReadout();
 
-    TVector3 r = cell.wire().getDirection();
-    _mean_point_3d = TVector3(mean_point_2d.X(), 
+    TVector3 r = cell.getWire().getDirection();
+    mean_point_3d_ = TVector3(mean_point_2d.X(), 
                               mean_point_2d.Y(),
-                              cell.wire().center().Z());
+                              cell.getWire().getCenter().Z());
 
-    TVector3 AP = _mean_point_3d - leftend;
+    TVector3 AP = mean_point_3d_ - leftend;
     double t = AP.Dot(r) / r.Mag2();
     t = std::max(0.0, std::min(1.0, t));
 
     TVector3 closest_point = leftend + t * r;
     double wire_time = (closest_point - leftend).Mag() / sand_reco::stt::v_signal_inwire;
-    _digitId_to_drift_time[digit_id] = _digit_collection->GetDigit(digit_id).tdc - _digit_collection->GetDigit(digit_id).t_hit - wire_time;
+    digitId_to_drift_time_[digit_id] = digit_collection_->getDigit(digit_id).tdc - digit_collection_->getDigit(digit_id).t_hit - wire_time;
   }
 }
 
 // To Do: find a minimizier able to escape local minima
-std::vector<TVectorD> TrackletFinder::FindTracklets()
+std::vector<TVectorD> TrackletFinder::findTracklets()
 {
   std::vector<TVectorD> minima;
 
@@ -163,31 +164,31 @@ std::vector<TVectorD> TrackletFinder::FindTracklets()
   minimizer->SetMaxIterations(100000);
   minimizer->SetTolerance(1e-9);
 
-  ComputeCellsIntersections();
-  ComputeDriftTime();
+  computeCellsIntersections();
+  computeDriftTime();
 
-  if (_cells_intersections.size() == 0) {
+  if (cells_intersections_.size() == 0) {
     return minima;
   }
 
-  GetScanningAreaVertices();
-  SetTrajectory(_mean_point_3d, TVector3(0,0,1));
+  getScanningAreaVertices();
+  setTrajectory(mean_point_3d_, TVector3(0,0,1));
 
-  auto digitId_to_drift_time = _digitId_to_drift_time;
-  auto cluster = _cluster;
+  auto digitId_to_drift_time = digitId_to_drift_time_;
+  auto cluster = cluster_;
   ROOT::Math::Functor functor_cells([&digitId_to_drift_time, &cluster](const double* params) { return MinimizingFunction(params, cluster, digitId_to_drift_time); }, 4);
   
   minimizer->SetFunction(functor_cells);
     
-  double theta_xz = atan(_trajectory.getDirection().Z() / _trajectory.getDirection().X());
-  double theta_yz = atan(_trajectory.getDirection().Y() / _trajectory.getDirection().Z());
+  double theta_xz = atan(trajectory_.getDirection().Z() / trajectory_.getDirection().X());
+  double theta_yz = atan(trajectory_.getDirection().Y() / trajectory_.getDirection().Z());
   double theta_width = M_PI_4;
 
-  // std::cout << _cells_intersections[1].X() << " " << _cells_intersections[0].X() << std::endl;
-  // std::cout << _cells_intersections[1].Y() << " " << _cells_intersections[0].Y() << std::endl;
+  // std::cout << cells_intersections_[1].X() << " " << cells_intersections_[0].X() << std::endl;
+  // std::cout << cells_intersections_[1].Y() << " " << cells_intersections_[0].Y() << std::endl;
 
-  double x_width = _cells_intersections[1].X() - _cells_intersections[0].X();
-  double y_width = _cells_intersections[1].Y() - _cells_intersections[0].Y();
+  double x_width = cells_intersections_[1].X() - cells_intersections_[0].X();
+  double y_width = cells_intersections_[1].Y() - cells_intersections_[0].Y();
   
   // To Do: should be a config parameter
   int subdivisions = 2;
@@ -202,8 +203,8 @@ std::vector<TVectorD> TrackletFinder::FindTracklets()
         for (int z = 0; z <= subdivisions; z++) {
           TVectorD point(4);
 
-          point[0] = _cells_intersections[0].X() + i * x_sub_width;
-          point[1] = _cells_intersections[0].Y() + j * y_sub_width;
+          point[0] = cells_intersections_[0].X() + i * x_sub_width;
+          point[1] = cells_intersections_[0].Y() + j * y_sub_width;
           point[2] = theta_xz - theta_width + k * theta_sub_width;
           point[3] = theta_yz - theta_width + z * theta_sub_width;
 
@@ -215,8 +216,8 @@ std::vector<TVectorD> TrackletFinder::FindTracklets()
   // std::cout << "SAMPLING SIZE: " << sampling_points.size() << std::endl;
   for (uint i = 0; i < sampling_points.size(); i++) {
     double starting_point[4] = {sampling_points[i][0], sampling_points[i][1], sampling_points[i][2], sampling_points[i][3]};
-    minimizer->SetLimitedVariable(0, "px", starting_point[0], 1, _cells_intersections[0].X() - 200, _cells_intersections[1].X() + 200);
-    minimizer->SetLimitedVariable(1, "py", starting_point[1], 1, _cells_intersections[0].Y() - 200, _cells_intersections[1].Y() + 200);
+    minimizer->SetLimitedVariable(0, "px", starting_point[0], 1, cells_intersections_[0].X() - 200, cells_intersections_[1].X() + 200);
+    minimizer->SetLimitedVariable(1, "py", starting_point[1], 1, cells_intersections_[0].Y() - 200, cells_intersections_[1].Y() + 200);
     minimizer->SetLimitedVariable(2, "dx", starting_point[2], 0.1, theta_xz - theta_width, theta_xz + theta_width);
     minimizer->SetLimitedVariable(3, "dy", starting_point[3], 0.1, theta_yz - theta_width, theta_yz + theta_width);
 
@@ -233,38 +234,38 @@ std::vector<TVectorD> TrackletFinder::FindTracklets()
   return minima;
 }
 
-void TrackletFinder::Clear()
+void TrackletFinder::clear()
 {
-  _digit_collection = nullptr;
-  _cells_intersections.clear();
-  _digitId_to_drift_time.clear();
+  digit_collection_ = nullptr;
+  cells_intersections_.clear();
+  digitId_to_drift_time_.clear();
 }
 
-void TrackletFinder::Draw3DWires() {
+void TrackletFinder::draw3DWires() {
   gStyle->SetOptStat(0);
-  _c3 = new TCanvas("c3D","c3D",1500,1500);
-  auto plane_half_dimension = _cluster.GetPlane()->getDimension() * 0.5;
-  auto plane_position  = _cluster.GetPlane()->getPosition();
+  c3_ = new TCanvas("c3D","c3D",1500,1500);
+  auto plane_half_dimension = cluster_.getPlane()->getDimension() * 0.5;
+  auto plane_position  = cluster_.getPlane()->getPosition();
   TH3D h("", "", 2 * plane_half_dimension.X(), plane_position.X() - plane_half_dimension.X(), plane_position.X() + plane_half_dimension.X(),
                  2 * plane_half_dimension.Y(), plane_position.Y() - plane_half_dimension.Y(), plane_position.Y() + plane_half_dimension.Y(),
                  2 * plane_half_dimension.Z(), plane_position.Z() - plane_half_dimension.Z(), plane_position.Z() + plane_half_dimension.Z());
   h.SetTitle(";x;y;z");
   h.Draw();
 
-  for (auto digitID:_cluster.GetDigits()) {
-    auto cell = _cluster.getSandGeoManager()->get_cell_info(SANDTrackerCellID(digitID()))->second;
+  for (auto digitID:cluster_.getDigits()) {
+    auto cell = cluster_.getSandGeoManager()->getCellInfo(sand_geometry::tracker::CellID(digitID()))->second;
     TPolyLine3D* pl2 = new TPolyLine3D(2);
-    TVector3 l_start = cell.wire().getFirstPoint();
+    TVector3 l_start = cell.getWire().getFirstPoint();
     pl2->SetPoint(0, l_start.X(), l_start.Y(), l_start.Z());
-    TVector3 l_end = cell.wire().getSecondPoint();
+    TVector3 l_end = cell.getWire().getSecondPoint();
     pl2->SetPoint(1, l_end.X(), l_end.Y(), l_end.Z());
     pl2->Draw("same");
   }
 
-  _c3->SaveAs("./c3D.C");
+  c3_->SaveAs("./c3D.C");
 }
 
-TVector3 GetCylinderCoordinates(CLine3D w, double t, double radius, double theta) {
+TVector3 getCylinderCoordinates(Line3D w, double t, double radius, double theta) {
   double x = w.getPoint().X() + t*w.getDirection().X() + radius*(cos(theta)*w.getU().X() + sin(theta)*w.getV().X());
   double y = w.getPoint().Y() + t*w.getDirection().Y() + radius*(cos(theta)*w.getU().Y() + sin(theta)*w.getV().Y());
   double z = w.getPoint().Z() + t*w.getDirection().Z() + radius*(cos(theta)*w.getU().Z() + sin(theta)*w.getV().Z());
@@ -272,30 +273,30 @@ TVector3 GetCylinderCoordinates(CLine3D w, double t, double radius, double theta
   return TVector3(x, y, z);
 }
 
-void TrackletFinder::Draw3D()
+void TrackletFinder::draw3D()
 {
   gStyle->SetOptStat(0);
-  if (!_c3) {
-    _c3 = new TCanvas("c3D","c3D",1500,1500);
+  if (!c3_) {
+    c3_ = new TCanvas("c3D","c3D",1500,1500);
   }
 
-  auto sand_geo = _cluster.getSandGeoManager();
+  auto sand_geo = cluster_.getSandGeoManager();
 
   int ccc = 3;
-  for (const auto& digitId_and_time : _digitId_to_drift_time) {
-    auto cell = sand_geo->get_cell_info(SANDTrackerCellID(digitId_and_time.first()))->second;
+  for (const auto& digitId_and_time : digitId_to_drift_time_) {
+    auto cell = sand_geo->getCellInfo(sand_geometry::tracker::CellID(digitId_and_time.first()))->second;
     
-  auto plane_half_dimension = _cluster.GetPlane()->getDimension() * 0.5;
-  auto plane_position  = _cluster.GetPlane()->getPosition();
+  auto plane_half_dimension = cluster_.getPlane()->getDimension() * 0.5;
+  auto plane_position  = cluster_.getPlane()->getPosition();
   TH3D* h3 = new TH3D("", "", 2 * plane_half_dimension.X(), plane_position.X() - plane_half_dimension.X(), plane_position.X() + plane_half_dimension.X(),
                               2 * plane_half_dimension.Y(), plane_position.Y() - plane_half_dimension.Y(), plane_position.Y() + plane_half_dimension.Y(),
                               2 * plane_half_dimension.Z(), plane_position.Z() - plane_half_dimension.Z(), plane_position.Z() + plane_half_dimension.Z());
     h3->SetTitle(";x;y;z");
     h3->SetMarkerColor(ccc);
-    CLine3D line_from_wire(cell.wire().center(), cell.wire().getDirection());
+    Line3D line_from_wire(cell.getWire().getCenter(), cell.getWire().getDirection());
     for (int t = -100; t < 100; t++) {
       for (int theta = 0; theta < 628; theta++) {
-        TVector3 p = GetCylinderCoordinates(line_from_wire, (double)t, cell.driftVelocity() * digitId_and_time.second, theta/100.);
+        TVector3 p = getCylinderCoordinates(line_from_wire, (double)t, cell.getDriftVelocity() * digitId_and_time.second, theta/100.);
         h3->Fill(p.X(), p.Y(), p.Z());
       }
     }
@@ -303,17 +304,17 @@ void TrackletFinder::Draw3D()
     ccc++;
   }
 
-  _c3->SaveAs("./c3D.png");
+  c3_->SaveAs("./c3D.png");
   
 }
 
-void TrackletFinder::Draw2DWires()
+void TrackletFinder::draw2DWires()
 {
   gStyle->SetOptStat(0);
-  if (!_c2) {
-    _c2 = new TCanvas("c2D","c2D",1500,1500);
-    TH2D* h2 = new TH2D("h","h", _cells_intersections[1].X()  - _cells_intersections[0].X(), _cells_intersections[0].X(), _cells_intersections[1].X(),
-                                 _cells_intersections[1].Y()  - _cells_intersections[0].Y(), _cells_intersections[0].Y(), _cells_intersections[1].Y());
+  if (!c2_) {
+    c2_ = new TCanvas("c2D","c2D",1500,1500);
+    TH2D* h2 = new TH2D("h","h", cells_intersections_[1].X()  - cells_intersections_[0].X(), cells_intersections_[0].X(), cells_intersections_[1].X(),
+                                 cells_intersections_[1].Y()  - cells_intersections_[0].Y(), cells_intersections_[0].Y(), cells_intersections_[1].Y());
 
     h2->Draw();
   }
@@ -326,47 +327,47 @@ void TrackletFinder::Draw2DWires()
   //   tl->Draw("same");
   // }
   
-  for (auto digitID:_cluster.GetDigits()) {
-    auto cell = _cluster.getSandGeoManager()->get_cell_info(SANDTrackerCellID(digitID()))->second;
-    TVector3 l_start = cell.wire().getFirstPoint();
-    TVector3 l_end   = cell.wire().getSecondPoint();
+  for (auto digitID:cluster_.getDigits()) {
+    auto cell = cluster_.getSandGeoManager()->getCellInfo(sand_geometry::tracker::CellID(digitID()))->second;
+    TVector3 l_start = cell.getWire().getFirstPoint();
+    TVector3 l_end   = cell.getWire().getSecondPoint();
 
     TLine* tl = new TLine(l_start.X(), l_start.Y(), l_end.X(), l_end.Y());
     tl->Draw("same");
   }
 
-  _c2->SaveAs("./c2D.png");
+  c2_->SaveAs("./c2D.png");
 
 }
 
-void TrackletFinder::Draw2DDistance()
+void TrackletFinder::draw2DDistance()
 {
   gStyle->SetOptStat(0);
   TCanvas c("c2DMinimization","c2DMinimization",1500,1500);
-  if (!_c2) {
-    _c2 = new TCanvas("c2D","c2D",1500,1500);
+  if (!c2_) {
+    c2_ = new TCanvas("c2D","c2D",1500,1500);
 
   }
   
-  TH2D* h2 = new TH2D("h","h", _cells_intersections[1].X()  - _cells_intersections[0].X(), 
-                               _cells_intersections[0].X(), _cells_intersections[1].X(),
-                               _cells_intersections[1].Y()  - _cells_intersections[0].Y(), 
-                               _cells_intersections[0].Y(), _cells_intersections[1].Y());
+  TH2D* h2 = new TH2D("h","h", cells_intersections_[1].X()  - cells_intersections_[0].X(), 
+                               cells_intersections_[0].X(), cells_intersections_[1].X(),
+                               cells_intersections_[1].Y()  - cells_intersections_[0].Y(), 
+                               cells_intersections_[0].Y(), cells_intersections_[1].Y());
 
   double min;
-  auto digitId_to_drift_time = _digitId_to_drift_time;
-  auto sand_geo = _cluster.getSandGeoManager();
+  auto digitId_to_drift_time = digitId_to_drift_time_;
+  auto sand_geo = cluster_.getSandGeoManager();
   
-  double theta_xz = atan(_trajectory.getDirection().Z() / _trajectory.getDirection().X()) * 1000;
-  double theta_yz = atan(_trajectory.getDirection().Y() / _trajectory.getDirection().Z()) * 1000;
+  double theta_xz = atan(trajectory_.getDirection().Z() / trajectory_.getDirection().X()) * 1000;
+  double theta_yz = atan(trajectory_.getDirection().Y() / trajectory_.getDirection().Z()) * 1000;
   int count = 0;
-  for (int px = _cells_intersections[0].X(); px <= _cells_intersections[1].X(); px++) {
-    for (int py = _cells_intersections[0].Y(); py <= _cells_intersections[1].Y(); py++) {
+  for (int px = cells_intersections_[0].X(); px <= cells_intersections_[1].X(); px++) {
+    for (int py = cells_intersections_[0].Y(); py <= cells_intersections_[1].Y(); py++) {
       min = 1E9;
       for (int angle_xz = theta_xz - 400; angle_xz < theta_xz + 400 ; angle_xz+=10) {
         for (int angle_yz = theta_yz - 400; angle_yz < theta_yz + 400; angle_yz+=10) {
           double p[4] = {px / 1., py / 1., angle_xz / 1000., angle_yz / 1000.};
-          double tmp_min = MinimizingFunction(p, _cluster, digitId_to_drift_time);
+          double tmp_min = MinimizingFunction(p, cluster_, digitId_to_drift_time);
           if (tmp_min < min) {
             min = tmp_min;
           }
@@ -380,6 +381,6 @@ void TrackletFinder::Draw2DDistance()
   h2->GetZaxis()->SetRangeUser(0, 10e-1);
   h2->Draw("colz");
 
-  _c2->SaveAs("./c2D.png");
+  c2_->SaveAs("./c2D.png");
 
 }

@@ -33,31 +33,31 @@ using SANDTrackANDKFMeasurement = TMatrixD;
 class SANDTrackerUtils
 {
  private:
-  static TGeoManager* fGeo;
-  static const double kMagneticFieldInT;
-  static const double k;
-  static const double c;
+  static TGeoManager* geo_;
+  static const double kMagneticFieldInT_;
+  static const double k_;
+  static const double c_;
 
-  static const double kEdepSimDensityToGCM3;
+  static const double kEdepSimDensityToGCM3_;
     // https://github.com/ClarkMcGrew/edep-sim/blob/master/README.md#reading-the-output
     // Be aware that in the saved TGeoManager object, the masses and densities are 
     // also in CLHEP units, so that 1 kilogram equals 6.24x10^24^ MeV ns^2^ mm^-2^, 
     // and densities are in units of 6.24x^24^ MeV ns^2^ mm^-5^.
 
-  static double GetDensityInGCM3() {return fGeo->GetCurrentNode()->GetVolume()->GetMaterial()->GetDensity()/kEdepSimDensityToGCM3; };
-  static double GetPathLengthInCM() {return fGeo->GetStep() * 0.1; };
+  static double getDensityInGCM3() {return geo_->GetCurrentNode()->GetVolume()->GetMaterial()->GetDensity()/kEdepSimDensityToGCM3_; };
+  static double getPathLengthInCM() {return geo_->GetStep() * 0.1; };
 
  public:
   SANDTrackerUtils(){};
   ~SANDTrackerUtils(){};
-  static void Clear();
-  static bool AreAdjacent(const SANDTrackerCellID &tub1, const SANDTrackerCellID &tub2);
-  static inline double GetTubeRadius() { return 2.5; };
-  static void Init(TGeoManager *geo) {fGeo = geo;};
-  static TGeoManager* GetGeoManager() {return fGeo; };
+  static void clear();
+  static bool areAdjacent(const sand_geometry::tracker::CellID &tub1, const sand_geometry::tracker::CellID &tub2);
+  static inline double getTubeRadius() { return 2.5; };
+  static void init(TGeoManager *geo) {geo_ = geo;};
+  static TGeoManager* getGeoManager() {return geo_; };
   
 
-  static inline double GetX0(int Z, int A) {
+  static inline double getX0(int Z, int A) {
     //https://cds.cern.ch/record/1279627/files/PH-EP-Tech-Note-2010-013.pdf
     //https://halldweb.jlab.org/DocDB/0004/000439/001/radlen.pdf
     //  The equation is an approximation while
@@ -67,15 +67,15 @@ class SANDTrackerUtils
     return 716.408 /*g/cm2*/ * A / (Z * (Z+1) * log(287/sqrt(Z)));
   }
 
-  static inline double GetDEInMeV(double crossedMaterialInGCM2) {
+  static inline double getDEInMeV(double crossedMaterialInGCM2) {
     return crossedMaterialInGCM2 * 2. /*MeV/(g/cm2)*/;
   }
 
-  static inline double GetDEInGeV(double crossedMaterialInGCM2) {
-    return GetDEInMeV(crossedMaterialInGCM2) * 1E-3;
+  static inline double getDEInGeV(double crossedMaterialInGCM2) {
+    return getDEInMeV(crossedMaterialInGCM2) * 1E-3;
   }
 
-  static inline double GetMCSSigmaAngleFromMomentumInMeV(double p, 
+  static inline double getMCSSigmaAngleFromMomentumInMeV(double p, 
                                        double beta, 
                                        double pathLengthInX0) {
     // The charge of the particle is assumed
@@ -84,35 +84,35 @@ class SANDTrackerUtils
   }
 
   // To Do: check all units
-  static inline double GetRadiusInMMToMomentumInGeVConstant() {return 0.299792458; /* GeV/(m*T) */ };
-  // static inline double GetPerpMomentumInGeVFromRadiusInMM(double radius) {return GetRadiusInMMToMomentumInGeVConstant() * radius * SANDTrackANDKFGeoManager::GetMagneticField(); };
-  static double GetPerpMomentumInGeVFromRadiusInMM(double radius);
-  static double GetRadiusInMMFromPerpMomentumInGeV(double perpMom);
-  static inline double GetMomentumInGeVFromRadiusInMM(double radius, double tanl) {return GetPerpMomentumInGeVFromRadiusInMM(radius) * sqrt(1 + tanl*tanl); };
-  static inline double GetMomentumInMeVFromRadiusInMM(double radius, double tanl) {return 1.E3 * GetMomentumInGeVFromRadiusInMM(radius, tanl); };
-  static inline double GetSigmaPositionMeasurement() {return 200E-6 /*m*/; };
-  static inline double GetSigmaAngleMeasurement() {return 0.2 /*rad*/; };
-  static double GetMagneticField() { return kMagneticFieldInT; };
-  static double Getk() { return k; };
-  static double Getc() { return c; };
+  static inline double getRadiusInMMToMomentumInGeVConstant() {return 0.299792458; /* GeV/(m*T) */ };
+  // static inline double getPerpMomentumInGeVFromRadiusInMM(double radius) {return getRadiusInMMToMomentumInGeVConstant() * radius * SANDTrackANDKFGeoManager::getMagneticField(); };
+  static double getPerpMomentumInGeVFromRadiusInMM(double radius);
+  static double getRadiusInMMFromPerpMomentumInGeV(double perpMom);
+  static inline double getMomentumInGeVFromRadiusInMM(double radius, double tanl) {return getPerpMomentumInGeVFromRadiusInMM(radius) * sqrt(1 + tanl*tanl); };
+  static inline double getMomentumInMeVFromRadiusInMM(double radius, double tanl) {return 1.E3 * getMomentumInGeVFromRadiusInMM(radius, tanl); };
+  static inline double getSigmaPositionMeasurement() {return 200E-6 /*m*/; };
+  static inline double getSigmaAngleMeasurement() {return 0.2 /*rad*/; };
+  static double getMagneticField() { return kMagneticFieldInT_; };
+  static double getk() { return k_; };
+  static double getc() { return c_; };
 
-  static TString PrintMatrix(const TMatrixD& m);
+  static TString printMatrix(const TMatrixD& m);
 
-  static TVector3 GetCartesianCoordinateFromCylindrical(double radius, double angle, double x);
+  static TVector3 getCartesianCoordinateFromCylindrical(double radius, double angle, double x);
 
 
-  static double GetCrossedMaterialInGCM2(double z, 
+  static double getCrossedMaterialInGCM2(double z, 
                               double px, double py, double pz,
                               double sx, double sy, double sz);
-    static double GetPathLengthInX0(double z, 
+    static double getPathLengthInX0(double z, 
                             double px, double py, double pz,
                             double sx, double sy, double sz);
 
-    static double GetPathLengthInCM(double z, 
+    static double getPathLengthInCM(double z, 
                             double px, double py, double pz,
                             double sx, double sy, double sz);
 
-    static double GetDE(double z, 
+    static double getDE(double z, 
                                 double px, double py, double pz,
                                 double sx, double sy, double sz,
                                 double beta, double mass, int charge);
@@ -125,41 +125,48 @@ class SANDTrackerUtils
 
 
 
-namespace SANDKFUtils {
+namespace sand_reco
+{
 
-TVector2 get_Bfield_perp(const TVector3& v);
+namespace kf
+{
 
-double get_Bfield_long(const TVector3& v);
+namespace utils 
+{
 
-double get_tan_of_dip_angle(const TVector3& mom);
+TVector2 getBFieldPerp(const TVector3& v);
 
-int get_rotation_versus(int charge);
+double getBFieldLong(const TVector3& v);
 
-int get_charge(int versus);
+double getTanOfDipAngle(const TVector3& mom);
 
-double get_direction_angle(const TVector2& dir);
+int getRotationVersus(int charge);
 
-double get_rotation_angle(const TVector2& dir, int charge);
+int getCharge(int versus);
 
-double get_radius(double perp_mom);
+double getDirectionAngle(const TVector2& dir);
 
-TVector2 get_circle_center(const TVector2& momentum, const TVector2& position, int charge);
+double getRotationAngle(const TVector2& dir, int charge);
 
-std::pair<double, double> get_circle_ys(double z, double radius, const TVector2& center);
+double getRadius(double perp_mom);
 
-double get_rotation_angle(double z, double y, const TVector2& center);
+TVector2 getCircleCenter(const TVector2& momentum, const TVector2& position, int charge);
 
-double get_delta_phi(double phi, double previous_phi, int versus);
+std::pair<double, double> getCircleYs(double z, double radius, const TVector2& center);
 
-double get_x(double radius, double x_0, double delta_phi, double tan_lambda, int charge);
+double getRotationAngle(double z, double y, const TVector2& center);
 
-double get_y(const TVector2& center, double radius, double phi);
+double getDeltaPhi(double phi, double previous_phi, int versus);
 
-double get_z(const TVector2& center, double radius, double phi);
+double getX(double radius, double x_0, double delta_phi, double tan_lambda, int charge);
 
-TVector3 get_vector_momentum(double radius, double phi, double tan_lambda, int versus);
+double getY(const TVector2& center, double radius, double phi);
 
-SANDKFStateVector get_state_vector(TVector3 mom, TVector3 pos, int charge);
+double getZ(const TVector2& center, double radius, double phi);
+
+TVector3 getVectorMomentum(double radius, double phi, double tan_lambda, int versus);
+
+sand_reco::kf::StateVector getStateVector(TVector3 mom, TVector3 pos, int charge);
 
 // Notice: this was used to validate the KF. It is used to generate
 // ideal trajectories and to store their information
@@ -167,24 +174,24 @@ class TrajectoryParameters;
 
 class ParticleState {
     private:
-        TVector3 _position;
-        TVector3 _momentum;
+        TVector3 position_;
+        TVector3 momentum_;
     public:
-        ParticleState(): _position(), _momentum() {};
-        ParticleState(const TVector3& p, const TVector3& m): _position(p), _momentum(m) {};
-        ParticleState(const SANDKFStateVector& vector, double z);
-        TrajectoryParameters get_trajectory_parameter(int charge) const;
-        SANDKFStateVector get_state_vector(int charge) const;
-        const TVector3& get_position() const { return _position; };
-        const TVector3& get_momentum() const { return _momentum; };
-        TVector3& get_position() { return _position; };
-        TVector3& get_momentum() { return _momentum; };
-        void set_position(const TVector3 v) { _position = v; };
-        void set_momentum(const TVector3 v) { _momentum = v; };
+        ParticleState(): position_(), momentum_() {};
+        ParticleState(const TVector3& p, const TVector3& m): position_(p), momentum_(m) {};
+        ParticleState(const sand_reco::kf::StateVector& vector, double z);
+        TrajectoryParameters getTrajectoryParameter(int charge) const;
+        sand_reco::kf::StateVector getStateVector(int charge) const;
+        const TVector3& getPosition() const { return position_; };
+        const TVector3& getMomentum() const { return momentum_; };
+        TVector3& getPosition() { return position_; };
+        TVector3& getMomentum() { return momentum_; };
+        void setPosition(const TVector3 v) { position_ = v; };
+        void setMomentum(const TVector3 v) { momentum_ = v; };
 
         ParticleState operator =(const ParticleState& p) {
-            this->set_position(p.get_position());
-            this->set_momentum(p.get_momentum());
+            this->setPosition(p.getPosition());
+            this->setMomentum(p.getMomentum());
             return *this;
         }
 };
@@ -195,53 +202,55 @@ class ParticleState {
 
 class TrajectoryParameters {
     public:
-        double _radius;
-        double _versus_of_rot; // right-hand rule in right-handed coordinate system, z == beam, y == vertical
-        double _tan_lambda;
-        TVector2 _center_of_rot;
-        double _phi_0;
-        double _x_0;
-        std::pair<double, double> get_phi_pair(double z) const;
-        double get_smallest_delta_phi(double z, double last_phi) const;
-        std::vector<double> get_delta_phis(std::vector<double> zs) const;
-        ParticleState get_particle_state(double delta_phi) const;
-        std::vector<ParticleState> get_particle_states_from_delta_phi(std::vector<double> delta_phi) const;
+        double radius_;
+        double versus_of_rot_; // right-hand rule in right-handed coordinate system, z == beam, y == vertical
+        double tan_lambda_;
+        TVector2 center_of_rot_;
+        double phi_0_;
+        double x_0_;
+        std::pair<double, double> getPhiPair(double z) const;
+        double getSmallestDeltaPhi(double z, double last_phi) const;
+        std::vector<double> getDeltaPhis(std::vector<double> zs) const;
+        ParticleState getParticleState(double delta_phi) const;
+        std::vector<ParticleState> getParticleStatesFromDeltaPhi(std::vector<double> delta_phi) const;
     public:
         TrajectoryParameters() {};
-        TrajectoryParameters(double r, double v, double t, const TVector2& c, double p, double x): 
-            _radius(r), _versus_of_rot(v), _tan_lambda(t), _center_of_rot(c), _phi_0(p), _x_0(x) {};
-        std::vector<ParticleState> get_particle_states_from_z(std::vector<double> zs) const;
+        TrajectoryParameters(double r, double v, double t, const TVector2& c_, double p, double x): 
+            radius_(r), versus_of_rot_(v), tan_lambda_(t), center_of_rot_(c_), phi_0_(p), x_0_(x) {};
+        std::vector<ParticleState> getParticleStatesFromZ(std::vector<double> zs) const;
 };
 
 class CovMatrixPropCheckOutput {
     public:
         double dz;
-        TMatrixD initial_state_propagated;
-        TMatrixD initial_covariance_propagated;
-        std::vector<SANDKFStateVector> propagated_states;
-        TMatrixD mean_of_propagated_states;
-        TMatrixD covariance_of_propagated_states;
-        TMatrixD variance_of_propagated_states;
-        double distance;
+        TMatrixD initial_state_propagated_;
+        TMatrixD initial_covariance_propagated_;
+        std::vector<sand_reco::kf::StateVector> propagated_states_;
+        TMatrixD mean_of_propagated_states_;
+        TMatrixD covariance_of_propagated_states_;
+        TMatrixD variance_of_propagated_states_;
+        double distance_;
         CovMatrixPropCheckOutput(): 
-            initial_state_propagated(1,5),
-            initial_covariance_propagated(5,5),
-            mean_of_propagated_states(1,5),
-            covariance_of_propagated_states(5,5),
-            variance_of_propagated_states(5,5) {};
+            initial_state_propagated_(1,5),
+            initial_covariance_propagated_(5,5),
+            mean_of_propagated_states_(1,5),
+            covariance_of_propagated_states_(5,5),
+            variance_of_propagated_states_(5,5) {};
 };
 
-std::vector<SANDKFStateVector> generate_state_vectors(const SANDKFStateVector& state, const TMatrixD& cov, int n);
+std::vector<sand_reco::kf::StateVector> GenerateStateVectors(const sand_reco::kf::StateVector& state, const TMatrixD& cov, int n);
 
-TMatrixD get_mean(const std::vector<SANDKFStateVector>& states);
+TMatrixD getMean(const std::vector<sand_reco::kf::StateVector>& states);
 
-TMatrixD get_cov(const std::vector<SANDKFStateVector>& states, const TMatrixD& mean);
+TMatrixD getCov(const std::vector<sand_reco::kf::StateVector>& states, const TMatrixD& mean);
 
-TMatrixD get_var(const std::vector<SANDKFStateVector>& states, const TMatrixD& cov);
+TMatrixD getVar(const std::vector<sand_reco::kf::StateVector>& states, const TMatrixD& cov);
 
-void get_mean_and_cov(const std::vector<SANDKFStateVector>& states, TMatrixD& mean, TMatrixD& cov);
+void getMeanAndCov(const std::vector<sand_reco::kf::StateVector>& states, TMatrixD& mean, TMatrixD& cov);
 
 using propagation = std::vector<ParticleState>;
-}
+} // namespace utils
+} // namespace kf
+} // namespace sand_reco
 
 #endif

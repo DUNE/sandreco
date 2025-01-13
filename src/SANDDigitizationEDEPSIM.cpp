@@ -21,7 +21,7 @@ namespace edep_sim
 {
 namespace tracker
 {
-  std::vector<TLorentzVector> WireHitClosestPoints(hit& h, SANDWireInfo& wire)
+  std::vector<TLorentzVector> WireHitClosestPoints(hit& h, const sand_geometry::tracker::WireInfo& wire)
 {
   std::vector<TLorentzVector> closestPoints;
 
@@ -80,7 +80,7 @@ namespace tracker
 
 }
 
-double GetMinWireTime(TLorentzVector point, SANDWireInfo& wire)
+double GetMinWireTime(const TLorentzVector& point, const sand_geometry::tracker::WireInfo& wire)
 {
   TVector3 wire_point = wire.getReadoutPoint();
 
@@ -88,17 +88,17 @@ double GetMinWireTime(TLorentzVector point, SANDWireInfo& wire)
          (point.Vect() - wire_point).Mag() / sand_reco::stt::v_signal_inwire;
 }
 
-void create_digits_from_hits(const SANDGeoManager& geo,
-                             std::map<SANDTrackerCellID, std::vector<hit> >& hits2cell,
+void CreateDigitsFromHits(const SANDGeoManager& geo,
+                             const std::map<sand_geometry::tracker::CellID, std::vector<hit>>& hits2cell,
                              std::vector<dg_wire>& wire_digits)
 {
   wire_digits.clear();
 
-  for (std::map<SANDTrackerCellID, std::vector<hit> >::iterator it = hits2cell.begin();
+  for (std::map<sand_geometry::tracker::CellID, std::vector<hit> >::const_iterator it = hits2cell.begin();
        it != hits2cell.end(); ++it)  // run over wires
   {
     long did = it->first();  // wire unique id
-    auto wire_info = geo.get_cell_info(it->first())->second.wire();
+    const sand_geometry::tracker::WireInfo& wire_info = geo.getCellInfo(it->first())->second.getWire();
     double wire_time = 999.;
     double drift_time = 999.;
     double signal_time = 999.;
@@ -110,9 +110,9 @@ void create_digits_from_hits(const SANDGeoManager& geo,
     d.de = 0;
     // To Do: what point do we want to save? 
     // Center or one of the attachment points?
-    d.x = wire_info.center().X();
-    d.y = wire_info.center().Y();
-    d.z = wire_info.center().Z();
+    d.x = wire_info.getCenter().X();
+    d.y = wire_info.getCenter().Y();
+    d.z = wire_info.getCenter().Z();
     for (unsigned int i = 0; i < it->second.size();
          i++) {  // run over hits of given wire
       auto running_hit = it->second[i];
@@ -157,6 +157,256 @@ void create_digits_from_hits(const SANDGeoManager& geo,
     wire_digits.push_back(d);
   }
 }
+
+namespace stt
+{
+// Group hits into tube
+void GroupHitsByTube(const TG4Event& ev, const SANDGeoManager& geo,
+                        std::map<sand_geometry::tracker::CellID, std::vector<hit> >& hits2Tube)
+{
+  hits2Tube.clear();
+
+  int skipped_hit = 0;
+  int all_hit = ev.SegmentDetectors.at("Straw").size();
+
+  for (unsigned int j = 0; j < ev.SegmentDetectors.at("Straw").size(); j++) {
+    const TG4HitSegment& hseg = ev.SegmentDetectors.at("Straw").at(j);
+
+    double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
+    double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
+    double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
+
+    sand_geometry::tracker::CellID stid = geo.getSttTubeId(x, y, z);
+
+    if (stid == -999) {
+      skipped_hit++;
+      continue;
+    };
+
+    // std::string sttname = "NULL";
+    // int stid = -999;  // should be implemented for FLUKA
+
+    // sttname = geo->FindNode(x, y, z)->GetName();
+
+    // stid = sand_reco::stt::getSTUniqID(geo, x, y, z);
+    // if (stid == -999) continue;
+
+    hit h;
+    h.det = "Straw";
+    h.did = stid();
+    h.x1 = hseg.Start.X();
+    h.y1 = hseg.Start.Y();
+    h.z1 = hseg.Start.Z();
+    h.t1 = hseg.Start.T();
+    h.x2 = hseg.Stop.X();
+    h.y2 = hseg.Stop.Y();
+    h.z2 = hseg.Stop.Z();
+    h.t2 = hseg.Stop.T();
+    h.de = hseg.EnergyDeposit;
+    h.pid = hseg.PrimaryId;
+    h.index = j;
+
+    hits2Tube[stid].push_back(h);
+  }
+  if (skipped_hit != 0) {
+    std::cout << "WARNING: " << skipped_hit << " out of " << all_hit
+              << " hits skipped due to unexpected volume path!!" << std::endl;
+  }
+  if (skipped_hit != 0) {
+    std::cout << "WARNING: " << skipped_hit << " out of " << all_hit
+              << " hits skipped due to unexpected volume path!!" << std::endl;
+  }
+}
+
+// simulate stt responce for whole event
+void DigitizeStt(const TG4Event& ev, const SANDGeoManager& geo,
+                  std::vector<dg_wire>& wire_digits)
+{
+  std::map<sand_geometry::tracker::CellID, std::vector<hit> > hits2Tube;
+  wire_digits.clear();
+
+  GroupHitsByTube(ev, geo, hits2Tube);
+  digitization::edep_sim::tracker::CreateDigitsFromHits(geo, hits2Tube,
+                                                       wire_digits);
+}
+}  // namespace stt
+
+namespace chamber
+{
+
+void GroupHitsByCell(const TG4Event& ev, const SANDGeoManager& geo,
+                        std::map<sand_geometry::tracker::CellID, std::vector<hit>>& hits2cell)
+{
+  hits2cell.clear();
+
+  for (unsigned int j = 0; j < ev.SegmentDetectors.at("DriftVolume").size(); j++) {
+    const TG4HitSegment& hseg = ev.SegmentDetectors.at("DriftVolume").at(j);
+
+    int pdg = ev.Trajectories[hseg.GetPrimaryId()].GetPDGCode();
+    std::vector<sand_geometry::tracker::CellID> ids = geo.getSegmentIds(hseg);
+    sand_geometry::tracker::CellID id1 = ids[0];
+    sand_geometry::tracker::CellID id2 = ids[1];
+
+    if (id1 == -999) {
+      // std::cout<<"skipping this hit\n";
+      continue;
+    }
+
+    sand_geometry::tracker::PlaneID plane_global_id1;
+    sand_geometry::tracker::PlaneID plane_global_id2;
+    sand_geometry::tracker::CellID cell_local_id1;
+    sand_geometry::tracker::CellID cell_local_id2;
+    geo.decodeCellId(id1, plane_global_id1, cell_local_id1);
+    geo.decodeCellId(id2, plane_global_id2, cell_local_id2);
+
+    // std::cout << id1() << " "  << id2() << " " << std::endl;
+    // std::cout << plane_global_id1() << " " << plane_global_id2() << std::endl;
+    // std::cout << cell_local_id1() << " " << cell_local_id2() << std::endl;
+
+    if (plane_global_id1 != plane_global_id2) {
+      std::cout << "WIRE ID CORRESPONDING TO 2 DIFFERENT DIRFT PLANES"
+                << std::endl;
+      break;
+    }
+
+    long start_id = 999;
+    long stop_id = 999;
+    if (id2 > id1) {
+      start_id = id1();
+      stop_id = id2();
+    } else if (id2 < id1) {
+      start_id = id2();
+      stop_id = id1();
+    } else  // hit in 1 cell
+    {
+      hit h;
+      h.det = "DriftVolume";
+      h.did = id1();
+      h.x1 = hseg.Start.X();
+      h.y1 = hseg.Start.Y();
+      h.z1 = hseg.Start.Z();
+      h.t1 = hseg.Start.T();
+      h.x2 = hseg.Stop.X();
+      h.y2 = hseg.Stop.Y();
+      h.z2 = hseg.Stop.Z();
+      h.t2 = hseg.Stop.T();
+      h.de = hseg.EnergyDeposit;
+      h.pid = hseg.PrimaryId;
+      h.index = j;
+      hits2cell[id1].push_back(h);
+      continue;
+    }
+
+    TVector3 start = {hseg.Start.X(), hseg.Start.Y(), hseg.Start.Z()};
+    double hseg_length = (hseg.Stop - hseg.Start).Mag();
+    double hseg_dt = (hseg.Stop - hseg.Start).T();
+    double hseg_start_t = hseg.Start.T();
+
+    auto& plane = *geo.getPlaneInfo(sand_geometry::tracker::CellID(start_id));
+
+    TVector2 rotated_hit_start_2d_position = geo.globalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
+    TVector2 rotated_hit_stop_2d_position  = geo.globalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
+
+    auto rotated_delta_x = rotated_hit_stop_2d_position.X() - rotated_hit_start_2d_position.X();
+    auto rotated_delta_y = rotated_hit_stop_2d_position.Y() - rotated_hit_start_2d_position.Y();
+    auto rotated_delta_z = hseg.Stop.Z() - hseg.Start.Z();
+
+    for (auto i = start_id; i <= stop_id; i++) {
+      auto cell1 = geo.getCellInfo(i);
+      auto cell2 = geo.getCellInfo(i + 1);
+
+      
+      TVector2 rotated_start_2d_position = geo.globalToRotated(TVector2(start.X(), start.Y()), plane);
+      double transverse_coord_start = rotated_start_2d_position.Y();
+
+      double step_coordinate;
+
+      if (cell2 != plane.getIdToCellMapEnd()) {
+
+        sand_geometry::tracker::WireInfo wire1 = cell1->second.getWire();
+        sand_geometry::tracker::WireInfo wire2 = cell2->second.getWire();
+        
+        TVector2 rotated_wire_center1_2d_position = geo.globalToRotated(TVector2(wire1.getCenter().X(), wire1.getCenter().Y()), plane);
+        double transverse_coord1 = rotated_wire_center1_2d_position.Y();
+ 
+        TVector2 rotated_wire_center2_2d_position = geo.globalToRotated(TVector2(wire2.getCenter().X(), wire2.getCenter().Y()), plane);
+        double transverse_coord2 = rotated_wire_center2_2d_position.Y();
+
+        double plane_coordinate = (transverse_coord1 + transverse_coord2) * 0.5;
+        
+        if (fabs(plane_coordinate - transverse_coord_start) < 
+            fabs(rotated_hit_stop_2d_position.Y() - transverse_coord_start)) {
+          step_coordinate = plane_coordinate;
+        } else {
+          step_coordinate = rotated_hit_stop_2d_position.Y();
+        }
+      } else {
+        step_coordinate = rotated_hit_stop_2d_position.Y();
+      }
+      double t = fabs((step_coordinate - transverse_coord_start) / rotated_delta_y);
+      
+      TVector2 rotated_crossing_point(rotated_start_2d_position.X() + rotated_delta_x * t, 
+                                      rotated_start_2d_position.Y() + rotated_delta_y * t);
+
+      TVector2 global_crossing_point = geo.rotatedToGlobal(TVector2(rotated_crossing_point.X(), rotated_crossing_point.Y()), plane);
+
+      TVector3 stop(global_crossing_point.X(), 
+                    global_crossing_point.Y(), 
+                    start.Z() + rotated_delta_z * t);
+
+      double portion = (start - stop).Mag() / hseg_length;
+
+      TVector3 center = (start + stop) * 0.5;
+
+      // start.Print();
+      // start_2d_position.Print();
+      // crossing_point.Print();
+      // crossing_point_2d.Print();
+      // stop.Print();
+      // hseg.Stop.Print();
+      sand_geometry::tracker::CellID cell_id = geo.getClosestCellToHit(center, plane, false);
+
+      hit h;
+      h.det = "DriftVolume";
+      h.did = cell_id();
+      h.x1 = start.X();
+      h.y1 = start.Y();
+      h.z1 = start.Z();
+      h.t1 = hseg_start_t;
+      h.x2 = stop.X();
+      h.y2 = stop.Y();
+      h.z2 = stop.Z();
+      h.t2 = hseg_start_t + t * hseg_dt;
+      h.de = hseg.EnergyDeposit * t;
+      h.pid = hseg.PrimaryId;
+      h.index = j;
+
+      hits2cell[cell_id].push_back(h);
+
+      start = stop;
+      hseg_start_t += t * hseg_dt;
+
+      if ((start - hseg.Stop.Vect()).Mag() < 1E-6) {
+        break;
+      }
+
+    }
+  }
+}
+
+// simulate wire responce for whole event
+void DigitizeDrift(const TG4Event& ev, const SANDGeoManager& geo,
+                    std::vector<dg_wire>& wire_digits)
+{
+  std::map<sand_geometry::tracker::CellID, std::vector<hit> > hits2cell;
+  wire_digits.clear();
+
+  GroupHitsByCell(ev, geo, hits2cell);
+  digitization::edep_sim::tracker::CreateDigitsFromHits(geo, hits2cell,
+                                                           wire_digits);
+}
+
+}  // namespace chamber
 }
 
 namespace ecal
@@ -206,12 +456,12 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
 
   auto hit_direction = hit.Stop - hit.Start;
 
-  g.SetGeoCurrentPoint(x, y, z);
-  g.SetGeoCurrentDirection(hit_direction.X(), hit_direction.Y(),
+  g.setGeoCurrentPoint(x, y, z);
+  g.setGeoCurrentDirection(hit_direction.X(), hit_direction.Y(),
                            hit_direction.Z());
 
   volume running_volume;
-  g.InitVolume(running_volume);
+  g.initVolume(running_volume);
 
   if (!running_volume.IsActive) return false;
 
@@ -377,7 +627,7 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
 // simulate calorimeter responce for whole event
 void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
                    std::vector<dg_cell>& vec_cell,
-                   ECAL_digi_mode ecal_digi_mode)
+                   EcalDigiMode ecal_digi_mode)
 {
   std::map<int, std::vector<pe> > photo_el;
   std::map<int, std::vector<dg_ps> > ps;
@@ -403,259 +653,9 @@ void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
 
 }  // namespace ecal
 
-namespace stt
-{
-// Group hits into tube
-void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
-                        std::map<SANDTrackerCellID, std::vector<hit> >& hits2Tube)
-{
-  hits2Tube.clear();
-
-  int skipped_hit = 0;
-  int all_hit = ev->SegmentDetectors["Straw"].size();
-
-  for (unsigned int j = 0; j < ev->SegmentDetectors["Straw"].size(); j++) {
-    const TG4HitSegment& hseg = ev->SegmentDetectors["Straw"].at(j);
-
-    double x = 0.5 * (hseg.Start.X() + hseg.Stop.X());
-    double y = 0.5 * (hseg.Start.Y() + hseg.Stop.Y());
-    double z = 0.5 * (hseg.Start.Z() + hseg.Stop.Z());
-
-    SANDTrackerCellID stid = geo.get_stt_tube_id(x, y, z);
-
-    if (stid == -999) {
-      skipped_hit++;
-      continue;
-    };
-
-    // std::string sttname = "NULL";
-    // int stid = -999;  // should be implemented for FLUKA
-
-    // sttname = geo->FindNode(x, y, z)->GetName();
-
-    // stid = sand_reco::stt::getSTUniqID(geo, x, y, z);
-    // if (stid == -999) continue;
-
-    hit h;
-    h.det = "Straw";
-    h.did = stid();
-    h.x1 = hseg.Start.X();
-    h.y1 = hseg.Start.Y();
-    h.z1 = hseg.Start.Z();
-    h.t1 = hseg.Start.T();
-    h.x2 = hseg.Stop.X();
-    h.y2 = hseg.Stop.Y();
-    h.z2 = hseg.Stop.Z();
-    h.t2 = hseg.Stop.T();
-    h.de = hseg.EnergyDeposit;
-    h.pid = hseg.PrimaryId;
-    h.index = j;
-
-    hits2Tube[stid].push_back(h);
-  }
-  if (skipped_hit != 0) {
-    std::cout << "WARNING: " << skipped_hit << " out of " << all_hit
-              << " hits skipped due to unexpected volume path!!" << std::endl;
-  }
-  if (skipped_hit != 0) {
-    std::cout << "WARNING: " << skipped_hit << " out of " << all_hit
-              << " hits skipped due to unexpected volume path!!" << std::endl;
-  }
-}
-
-// simulate stt responce for whole event
-void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
-                  std::vector<dg_wire>& wire_digits)
-{
-  std::map<SANDTrackerCellID, std::vector<hit> > hits2Tube;
-  wire_digits.clear();
-
-  group_hits_by_tube(ev, geo, hits2Tube);
-  digitization::edep_sim::tracker::create_digits_from_hits(geo, hits2Tube,
-                                                       wire_digits);
-}
-}  // namespace stt
-
-namespace chamber
-{
-
-void group_hits_by_cell(TG4Event* ev, const SANDGeoManager& geo,
-                        std::map<SANDTrackerCellID, std::vector<hit> >& hits2cell)
-{
-  hits2cell.clear();
-
-  for (unsigned int j = 0; j < ev->SegmentDetectors["DriftVolume"].size(); j++) {
-    const TG4HitSegment& hseg = ev->SegmentDetectors["DriftVolume"].at(j);
-
-    int pdg = ev->Trajectories[hseg.GetPrimaryId()].GetPDGCode();
-    std::vector<SANDTrackerCellID> ids = geo.get_segment_ids(hseg);
-    SANDTrackerCellID id1 = ids[0];
-    SANDTrackerCellID id2 = ids[1];
-
-    if (id1 == -999) {
-      // std::cout<<"skipping this hit\n";
-      continue;
-    }
-
-    SANDTrackerPlaneID plane_global_id1;
-    SANDTrackerPlaneID plane_global_id2;
-    SANDTrackerCellID cell_local_id1;
-    SANDTrackerCellID cell_local_id2;
-    geo.decode_cell_id(id1, plane_global_id1, cell_local_id1);
-    geo.decode_cell_id(id2, plane_global_id2, cell_local_id2);
-
-    // std::cout << id1() << " "  << id2() << " " << std::endl;
-    // std::cout << plane_global_id1() << " " << plane_global_id2() << std::endl;
-    // std::cout << cell_local_id1() << " " << cell_local_id2() << std::endl;
-
-    if (plane_global_id1 != plane_global_id2) {
-      std::cout << "WIRE ID CORRESPONDING TO 2 DIFFERENT DIRFT PLANES"
-                << std::endl;
-      break;
-    }
-
-    long start_id = 999;
-    long stop_id = 999;
-    if (id2 > id1) {
-      start_id = id1();
-      stop_id = id2();
-    } else if (id2 < id1) {
-      start_id = id2();
-      stop_id = id1();
-    } else  // hit in 1 cell
-    {
-      hit h;
-      h.det = "DriftVolume";
-      h.did = id1();
-      h.x1 = hseg.Start.X();
-      h.y1 = hseg.Start.Y();
-      h.z1 = hseg.Start.Z();
-      h.t1 = hseg.Start.T();
-      h.x2 = hseg.Stop.X();
-      h.y2 = hseg.Stop.Y();
-      h.z2 = hseg.Stop.Z();
-      h.t2 = hseg.Stop.T();
-      h.de = hseg.EnergyDeposit;
-      h.pid = hseg.PrimaryId;
-      h.index = j;
-      hits2cell[id1].push_back(h);
-      continue;
-    }
-
-    TVector3 start = {hseg.Start.X(), hseg.Start.Y(), hseg.Start.Z()};
-    double hseg_length = (hseg.Stop - hseg.Start).Mag();
-    double hseg_dt = (hseg.Stop - hseg.Start).T();
-    double hseg_start_t = hseg.Start.T();
-
-    auto& plane = *geo.get_plane_info(SANDTrackerCellID(start_id));
-
-    TVector2 rotated_hit_start_2d_position = geo.GlobalToRotated(TVector2(hseg.Start.X(), hseg.Start.Y()), plane);
-    TVector2 rotated_hit_stop_2d_position  = geo.GlobalToRotated(TVector2(hseg.Stop.X(), hseg.Stop.Y())  , plane);
-
-    auto rotated_delta_x = rotated_hit_stop_2d_position.X() - rotated_hit_start_2d_position.X();
-    auto rotated_delta_y = rotated_hit_stop_2d_position.Y() - rotated_hit_start_2d_position.Y();
-    auto rotated_delta_z = hseg.Stop.Z() - hseg.Start.Z();
-
-    for (auto i = start_id; i <= stop_id; i++) {
-      auto cell1 = geo.get_cell_info(i);
-      auto cell2 = geo.get_cell_info(i + 1);
-
-      
-      TVector2 rotated_start_2d_position = geo.GlobalToRotated(TVector2(start.X(), start.Y()), plane);
-      double transverse_coord_start = rotated_start_2d_position.Y();
-
-      double step_coordinate;
-
-      if (cell2 != plane.getIdToCellMapEnd()) {
-
-        SANDWireInfo wire1 = cell1->second.wire();
-        SANDWireInfo wire2 = cell2->second.wire();
-        
-        TVector2 rotated_wire_center1_2d_position = geo.GlobalToRotated(TVector2(wire1.center().X(), wire1.center().Y()), plane);
-        double transverse_coord1 = rotated_wire_center1_2d_position.Y();
- 
-        TVector2 rotated_wire_center2_2d_position = geo.GlobalToRotated(TVector2(wire2.center().X(), wire2.center().Y()), plane);
-        double transverse_coord2 = rotated_wire_center2_2d_position.Y();
-
-        double plane_coordinate = (transverse_coord1 + transverse_coord2) * 0.5;
-        
-        if (fabs(plane_coordinate - transverse_coord_start) < 
-            fabs(rotated_hit_stop_2d_position.Y() - transverse_coord_start)) {
-          step_coordinate = plane_coordinate;
-        } else {
-          step_coordinate = rotated_hit_stop_2d_position.Y();
-        }
-      } else {
-        step_coordinate = rotated_hit_stop_2d_position.Y();
-      }
-      double t = fabs((step_coordinate - transverse_coord_start) / rotated_delta_y);
-      
-      TVector2 rotated_crossing_point(rotated_start_2d_position.X() + rotated_delta_x * t, 
-                                      rotated_start_2d_position.Y() + rotated_delta_y * t);
-
-      TVector2 global_crossing_point = geo.RotatedToGlobal(TVector2(rotated_crossing_point.X(), rotated_crossing_point.Y()), plane);
-
-      TVector3 stop(global_crossing_point.X(), 
-                    global_crossing_point.Y(), 
-                    start.Z() + rotated_delta_z * t);
-
-      double portion = (start - stop).Mag() / hseg_length;
-
-      TVector3 center = (start + stop) * 0.5;
-
-      // start.Print();
-      // start_2d_position.Print();
-      // crossing_point.Print();
-      // crossing_point_2d.Print();
-      // stop.Print();
-      // hseg.Stop.Print();
-      SANDTrackerCellID cell_id = geo.GetClosestCellToHit(center, plane, false);
-
-      hit h;
-      h.det = "DriftVolume";
-      h.did = cell_id();
-      h.x1 = start.X();
-      h.y1 = start.Y();
-      h.z1 = start.Z();
-      h.t1 = hseg_start_t;
-      h.x2 = stop.X();
-      h.y2 = stop.Y();
-      h.z2 = stop.Z();
-      h.t2 = hseg_start_t + t * hseg_dt;
-      h.de = hseg.EnergyDeposit * t;
-      h.pid = hseg.PrimaryId;
-      h.index = j;
-
-      hits2cell[cell_id].push_back(h);
-
-      start = stop;
-      hseg_start_t += t * hseg_dt;
-
-      if ((start - hseg.Stop.Vect()).Mag() < 1E-6) {
-        break;
-      }
-
-    }
-  }
-}
-
-// simulate wire responce for whole event
-void digitize_drift(TG4Event* ev, const SANDGeoManager& geo,
-                    std::vector<dg_wire>& wire_digits)
-{
-  std::map<SANDTrackerCellID, std::vector<hit> > hits2cell;
-  wire_digits.clear();
-
-  group_hits_by_cell(ev, geo, hits2cell);
-  digitization::edep_sim::tracker::create_digits_from_hits(geo, hits2cell,
-                                                           wire_digits);
-}
-
-}  // namespace chamber
-
 // digitize event
 void digitize(const char* finname, const char* foutname,
-              ECAL_digi_mode ecal_digi_mode)
+              EcalDigiMode ecal_digi_mode)
 {
   TFile f(finname, "READ");
 
@@ -745,9 +745,9 @@ void digitize(const char* finname, const char* foutname,
                                                 ecal_digi_mode);
 
     if (geo->FindVolumeFast("STTtracker_PV")) {
-      digitization::edep_sim::stt::digitize_stt(ev, sand_geo, wire_digits);
+      digitization::edep_sim::tracker::stt::DigitizeStt(*ev, sand_geo, wire_digits);
     } else {
-      digitization::edep_sim::chamber::digitize_drift(ev, sand_geo,
+      digitization::edep_sim::tracker::chamber::DigitizeDrift(*ev, sand_geo,
                                                       wire_digits);
     }
 

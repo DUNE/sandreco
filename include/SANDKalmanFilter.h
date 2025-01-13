@@ -18,19 +18,25 @@ struct SParticleInfo {
   TVector3 mom;
 };
 
+namespace sand_reco
+{
 
-using SANDKFStateCovarianceMatrix = TMatrixD;
-using SANDKFMeasurement = TMatrixD;
+namespace kf
+{
+
+
+using StateCovarianceMatrix = TMatrixD;
+using Measurement = TMatrixD;
 using TrackletMap = std::map<double, std::vector<TVectorD>>;
 
-class SANDKalmanFilterManager {
+class Manager {
 
   private:
-    SANDKFTrack fThisTrack;
+    sand_reco::kf::Track this_track_;
 
-    SANDKFTrackStep::SANDKFTrackStateStage fCurrentStage; // forward or backward
-    int fCurrentStep; // index of the SANDKFTrackStep in SANDKFTrack
-    double fCurrentZ; 
+    sand_reco::kf::TrackStep::TrackStateStage current_stage_; // forward or backward
+    int current_step_; // index of the sand_reco::kf::TrackStep in sand_reco::kf::Track
+    double current_z_; 
     TrackletMap* z_to_tracklets_;
     SParticleInfo particleInfo_;
 
@@ -40,178 +46,180 @@ class SANDKalmanFilterManager {
       kVertical,
       kHorizontal
     };
-    Orientation GetOrientation() {return fCurrentOrientation;};
-    TVector3 GetDirectiveCosinesFromStateVector(const SANDKFStateVector& stateVector);
-    double GetPhiFromTheta(double theta, int charge) { return theta - charge * 0.5*TMath::Pi(); };
-    double GetThetaFromPhi(double phi, int charge) { return phi + charge * 0.5*TMath::Pi(); };
-    double GetThetaFromPhi(const SANDKFStateVector& stateVector) { return GetThetaFromPhi(stateVector.Phi(), stateVector.Charge()); };
-    SANDKFMeasurement GetMeasurementFromCluster(int clusterID);
+    Orientation getOrientation() {return current_orientation_;};
+    TVector3 getDirectiveCosinesFromStateVector(const sand_reco::kf::StateVector& state_vector);
+    double getPhiFromTheta(double theta, int charge) { return theta - charge * 0.5*TMath::Pi(); };
+    double getThetaFromPhi(double phi, int charge) { return phi + charge * 0.5*TMath::Pi(); };
+    double getThetaFromPhi(const sand_reco::kf::StateVector& state_vector) { return getThetaFromPhi(state_vector.phi(), state_vector.charge()); };
+    sand_reco::kf::Measurement getMeasurementFromCluster(int cluster_id);
 
-    // TMatrixD GetInitialCovMatrix(const SANDKFStateVector& stateVector, const Orientation& orientation);
-    TMatrixD GetPropagatorMatrix(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass);  // Propagate and Smooth
-    TMatrixD GetProcessNoiseMatrix(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double z, double particle_mass);          // Propagate
-    TMatrixD GetMeasurementNoiseMatrix();               // Filter
-    TMatrixD GetProjectionMatrix(Orientation orientation, const SANDKFStateVector& stateVector);                     // Filter
-    TMatrixD GetKalmanGainMatrix(const TMatrixD& covarianceMatrix,
-                                 const TMatrixD& projectionMatrix,
-                                 const TMatrixD& measurementNoiseMatrix);                     // Filter
-    TMatrixD GetAMatrix(const TMatrixD& covarianceMatrixFiltered,
-                        const TMatrixD& covarianceMatrixNextPredicted,
-                        const TMatrixD& propagatorMatrix);                     // Smooth
+    // TMatrixD getInitialCovMatrix(const sand_reco::kf::StateVector& state_vector, const Orientation& orientation);
+    TMatrixD getPropagatorMatrix(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass);  // Propagate and Smooth
+    TMatrixD getProcessNoiseMatrix(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double z, double particle_mass);          // Propagate
+    TMatrixD getMeasurementNoiseMatrix();               // Filter
+    TMatrixD getProjectionMatrix(Orientation orientation, const sand_reco::kf::StateVector& state_vector);                     // Filter
+    TMatrixD getKalmanGainMatrix(const TMatrixD& covariance_matrix,
+                                 const TMatrixD& projection_matrix,
+                                 const TMatrixD& measurement_noise_matrix);                     // Filter
+    TMatrixD getAMatrix(const TMatrixD& covariance_matrix_filtered,
+                        const TMatrixD& covariance_matrix_next_predicted,
+                        const TMatrixD& propagator_matrix);                     // Smooth
   
   // private:
   public:
-    Orientation fCurrentOrientation = Orientation::kVertical;
+    Orientation current_orientation_ = Orientation::kVertical;
 
-    SANDKFMeasurement GetMeasurementFromTracklet(const TVectorD& tracklet);
-    double DeltaRadius(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const;
-    inline double DEDTanl(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { auto tan = stateVector.TanLambda(); return dE * tan / (1 + tan*tan); };
-    inline double DEDPhi(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { 
-      if (dE == 0) {
+    sand_reco::kf::Measurement getMeasurementFromTracklet(const TVectorD& tracklet);
+    double deltaRadius(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const;
+    inline double dEDTanl(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { auto tan = state_vector.tanLambda(); return de * tan / (1 + tan*tan); };
+    inline double dEDPhi(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { 
+      if (de == 0) {
         return 0.;
       } else {
-        return -dE / tan(stateVector.Phi());
+        return -de / tan(state_vector.phi());
       }
     };
-    inline double DDeltaInvRDx(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; };
-    inline double DDeltaInvRDy(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; };
-    inline double DDeltaInvRDInvCR(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { 
-      double tan = stateVector.TanLambda();
+    inline double dDeltaInvRDx(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; };
+    inline double dDeltaInvRDy(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; };
+    inline double dDeltaInvRDInvCR(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { 
+      double tan = state_vector.tanLambda();
       double constant_tan = 0.299792458 * 0.6 / sqrt(1 + pow(tan, 2));
-      double x = 1./stateVector.Radius();
+      double x = 1./state_vector.radius();
       double squared_root = sqrt(pow(constant_tan, 2) / pow(x, 2) + pow(particle_mass, 2));
-      double new_derivatives_r = stateVector.Charge() * (-dE * (2 * pow(constant_tan, 2) + 3 * pow(particle_mass, 2) * pow(x, 2)) / pow(constant_tan, 2) / squared_root);
+      double new_derivatives_r = state_vector.charge() * (-de * (2 * pow(constant_tan, 2) + 3 * pow(particle_mass, 2) * pow(x, 2)) / pow(constant_tan, 2) / squared_root);
       return new_derivatives_r;
     };
 
-    inline double DDeltaInvRDTanl(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { 
-      auto tan = stateVector.TanLambda(); 
-      if (dE != 0) {
-        double old_derivatives = DeltaRadius(stateVector, nextPhi, dZ, dE, particle_mass) * (1./dE * DEDTanl(stateVector, nextPhi, dZ, dE, particle_mass) + tan / (1 + tan*tan));
-        double c = -(pow(1./stateVector.Radius(), 3)) / pow(0.299792458 * 0.6, 2);
+    inline double dDeltaInvRDTanl(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { 
+      auto tan = state_vector.tanLambda(); 
+      if (de != 0) {
+        double old_derivatives = deltaRadius(state_vector, next_phi, dz, de, particle_mass) * (1./de * dEDTanl(state_vector, next_phi, dz, de, particle_mass) + tan / (1 + tan*tan));
+        double c = -(pow(1./state_vector.radius(), 3)) / pow(0.299792458 * 0.6, 2);
         double f = tan*tan + 1;
         double g = sqrt(pow(0.299792458 * 0.6, 2) /
-                         pow(1./stateVector.Radius(), 2) / (1 + tan*tan) + pow(particle_mass, 2));
-        double h = dE;
-        double constant_r = 0.299792458 * 0.6 / (1. / stateVector.Radius());
+                         pow(1./state_vector.radius(), 2) / (1 + tan*tan) + pow(particle_mass, 2));
+        double h = de;
+        double constant_r = 0.299792458 * 0.6 / (1. / state_vector.radius());
         double f_derivatives = 2 * tan;
         double g_derivatives = -pow(constant_r, 2) * tan / pow(tan*tan + 1, 2) / sqrt(pow(constant_r, 2) / (tan*tan + 1) + pow(particle_mass, 2));
-        double h_derivatives = dE * tan / (1 + tan*tan);
+        double h_derivatives = de * tan / (1 + tan*tan);
         double new_derivatives_tan = c * (f_derivatives*g*h + f*g_derivatives*h + f*g*h_derivatives);
         return new_derivatives_tan;
       } else {
-        return DeltaRadius(stateVector, nextPhi, dZ, dE, particle_mass) * ( tan / (1 + tan*tan)); 
+        return deltaRadius(state_vector, next_phi, dz, de, particle_mass) * ( tan / (1 + tan*tan)); 
       }
     };
     
-    inline double DDeltaInvRDPhi(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { 
-      if (dE == 0) {
+    inline double dDeltaInvRDPhi(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { 
+      if (de == 0) {
         return 0.;
       } else {
-        return DeltaRadius(stateVector, nextPhi, dZ, dE, particle_mass) / dE * DEDPhi(stateVector, nextPhi, dZ, dE, particle_mass); 
+        return deltaRadius(state_vector, next_phi, dz, de, particle_mass) / de * dEDPhi(state_vector, next_phi, dz, de, particle_mass); 
       }
     };
 
-    inline double DPhiDCosPhi(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { 
-      return stateVector.Charge()/sqrt(1 - pow(cos(stateVector.Phi()) + dZ/stateVector.Radius(),2));
+    inline double dPhiDCosPhi(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { 
+      return state_vector.charge()/sqrt(1 - pow(cos(state_vector.phi()) + dz/state_vector.radius(),2));
     };
 
-    inline double DxDx(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 1; }
-    inline double DyDx(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
-    inline double DInvCRDx(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return stateVector.Charge() * DDeltaInvRDx(stateVector, nextPhi, dZ, dE, particle_mass); }
-    inline double DTanlDx(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
-    inline double DPhiDx(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
+    inline double dxDx(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 1; }
+    inline double dyDx(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
+    inline double dInvCRDx(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return state_vector.charge() * dDeltaInvRDx(state_vector, next_phi, dz, de, particle_mass); }
+    inline double dTanlDx(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
+    inline double dPhiDx(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
 
-    inline double DxDy(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
-    inline double DyDy(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 1.; }
-    inline double DInvCRDy(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return stateVector.Charge() * DDeltaInvRDy(stateVector, nextPhi, dZ, dE, particle_mass); }
-    inline double DTanlDy(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
-    inline double DPhiDy(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
+    inline double dxDy(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
+    inline double dyDy(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 1.; }
+    inline double dInvCRDy(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return state_vector.charge() * dDeltaInvRDy(state_vector, next_phi, dz, de, particle_mass); }
+    inline double dTanlDy(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
+    inline double dPhiDy(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
 
-    inline double DPhiDInvCR(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const 
+    inline double dPhiDInvCR(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const 
     {
-      return stateVector.Charge() * dZ * DPhiDCosPhi(stateVector, nextPhi, dZ, dE, particle_mass);
+      return state_vector.charge() * dz * dPhiDCosPhi(state_vector, next_phi, dz, de, particle_mass);
     }
-    inline double DxDInvCR(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const
+    inline double dxDInvCR(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const
     {
-      return -pow(stateVector.ChargedRadius(),2) * stateVector.TanLambda() * (nextPhi - stateVector.Phi()) + stateVector.ChargedRadius() * stateVector.TanLambda() * DPhiDInvCR(stateVector, nextPhi, dZ, dE, particle_mass);
+      return -pow(state_vector.chargedRadius(),2) * state_vector.tanLambda() * (next_phi - state_vector.phi()) + state_vector.chargedRadius() * state_vector.tanLambda() * dPhiDInvCR(state_vector, next_phi, dz, de, particle_mass);
     }
-    inline double DyDInvCR(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const
+    inline double dyDInvCR(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const
     {
-      return -pow(stateVector.Radius(), 2) * stateVector.Charge() * (sin(nextPhi) - sin(stateVector.Phi())) 
-             + stateVector.Radius() * cos(nextPhi) * DPhiDInvCR(stateVector, nextPhi, dZ, dE, particle_mass);
+      return -pow(state_vector.radius(), 2) * state_vector.charge() * (sin(next_phi) - sin(state_vector.phi())) 
+             + state_vector.radius() * cos(next_phi) * dPhiDInvCR(state_vector, next_phi, dz, de, particle_mass);
     }
-    inline double DInvCRDInvCR(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const
+    inline double dInvCRDInvCR(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const
     {
-      return 1. + stateVector.Charge() * DDeltaInvRDInvCR(stateVector, nextPhi, dZ, dE, particle_mass);
+      return 1. + state_vector.charge() * dDeltaInvRDInvCR(state_vector, next_phi, dz, de, particle_mass);
     }
-    inline double DTanlDInvCR(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
+    inline double dTanlDInvCR(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
 
-    inline double DxDTanl(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const
+    inline double dxDTanl(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const
     {
-      return stateVector.ChargedRadius() * (nextPhi - stateVector.Phi());
+      return state_vector.chargedRadius() * (next_phi - state_vector.phi());
     }
-    inline double DyDTanl(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
-    inline double DInvCRDTanl(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const
+    inline double dyDTanl(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
+    inline double dInvCRDTanl(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const
     {
-      return stateVector.Charge() * DDeltaInvRDTanl(stateVector, nextPhi, dZ, dE, particle_mass);
+      return state_vector.charge() * dDeltaInvRDTanl(state_vector, next_phi, dz, de, particle_mass);
     }
-    inline double DTanlDTanl(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 1.; }
-    inline double DPhiDTanl(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
+    inline double dTanlDTanl(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 1.; }
+    inline double dPhiDTanl(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
 
-     inline double DPhiDPhi(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const
+     inline double dPhiDPhi(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const
     {
-      int DPhiDPhi_sign = ((nextPhi - stateVector.Phi()) * stateVector.Charge()) > 0 ? 1 : -1;
-      return -sin(stateVector.Phi()) * DPhiDCosPhi(stateVector, nextPhi, dZ, dE, particle_mass);
+      int dPhiDPhi_sign = ((next_phi - state_vector.phi()) * state_vector.charge()) > 0 ? 1 : -1;
+      return -sin(state_vector.phi()) * dPhiDCosPhi(state_vector, next_phi, dz, de, particle_mass);
     }
-     inline double DxDPhi(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const
+     inline double dxDPhi(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const
     {
-      return stateVector.ChargedRadius() * stateVector.TanLambda() * (DPhiDPhi(stateVector, nextPhi, dZ, dE, particle_mass) - 1.);
+      return state_vector.chargedRadius() * state_vector.tanLambda() * (dPhiDPhi(state_vector, next_phi, dz, de, particle_mass) - 1.);
     }
-     inline double DyDPhi(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const
+     inline double dyDPhi(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const
     {
-      return stateVector.Radius() * (cos(nextPhi) * DPhiDPhi(stateVector, nextPhi, dZ, dE, particle_mass) - cos(stateVector.Phi()));
+      return state_vector.radius() * (cos(next_phi) * dPhiDPhi(state_vector, next_phi, dz, de, particle_mass) - cos(state_vector.phi()));
     }
-    inline double DInvCRDPhi(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return stateVector.Charge() * DDeltaInvRDPhi(stateVector, nextPhi, dZ, dE, particle_mass); }
-    inline double DTanlDPhi(const SANDKFStateVector& stateVector, double nextPhi, double dZ, double dE, double particle_mass) const { return 0.; }
+    inline double dInvCRDPhi(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return state_vector.charge() * dDeltaInvRDPhi(state_vector, next_phi, dz, de, particle_mass); }
+    inline double dTanlDPhi(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { return 0.; }
   
   public:
-    SANDKFStateVector PropagateState(const SANDKFStateVector& stateVector, double dZ, double dE, double particle_mass);
-    SANDKFStateCovarianceMatrix PropagateCovMatrix(const TMatrixD& covarianceMatrix,
+    sand_reco::kf::StateVector propagateState(const sand_reco::kf::StateVector& state_vector, double dz, double de, double particle_mass);
+    sand_reco::kf::StateCovarianceMatrix propagateCovMatrix(const TMatrixD& covariance_matrix,
                                                   const TMatrixD& propagatorMatrix,
                                                   const TMatrixD& processNoiseMatrix);
 
-    SANDKFStateVector FilterState(const SANDKFStateVector& stateVector, 
+    sand_reco::kf::StateVector filterState(const sand_reco::kf::StateVector& state_vector, 
                                  const TMatrixD& kalmanGainMatrix,
-                                 const SANDKFMeasurement& observed, 
-                                 const SANDKFMeasurement& predicted);
+                                 const sand_reco::kf::Measurement& observed, 
+                                 const sand_reco::kf::Measurement& predicted);
 
-    SANDKFStateCovarianceMatrix FilterCovMatrix(const TMatrixD& covarianceMatrix,
-                                               const TMatrixD& projectionMatrix,
-                                               const TMatrixD& measurementNoiseMatrix);
+    sand_reco::kf::StateCovarianceMatrix filterCovMatrix(const TMatrixD& covariance_matrix,
+                                               const TMatrixD& projection_matrix,
+                                               const TMatrixD& measurement_noise_matrix);
 
-    SANDKFStateVector smoothState(const SANDKFStateVector& stateVectorFiltered, 
-                                 const SANDKFStateVector& stateVectorPreviousSmoothed,
-                                 const SANDKFStateVector& stateVectorPreviousPredicted, 
+    sand_reco::kf::StateVector smoothState(const sand_reco::kf::StateVector& stateVectorFiltered, 
+                                 const sand_reco::kf::StateVector& stateVectorPreviousSmoothed,
+                                 const sand_reco::kf::StateVector& stateVectorPreviousPredicted, 
                                  const TMatrixD& theAMatrix);
 
-    SANDKFStateCovarianceMatrix smoothCovMatrix(const TMatrixD& covarianceMatrixFiltered,
+    sand_reco::kf::StateCovarianceMatrix smoothCovMatrix(const TMatrixD& covariance_matrix_filtered,
                                                const TMatrixD& covarianceMatrixPreviousSmoothed,
                                                const TMatrixD& covarianceMatrixPreviousPredicted,
                                                const TMatrixD& theAMatrix);
     
-    SANDKFMeasurement GetPrediction(Orientation orientation, const SANDKFStateVector& stateVector);
+    sand_reco::kf::Measurement getPrediction(Orientation orientation, const sand_reco::kf::StateVector& state_vector);
 
-    void Propagate(double& dE, double& dZ, double& beta);
-    double EvalChi2(const SANDKFMeasurement& measurement, const SANDKFMeasurement& prediction, const TMatrixD& measurementNoiseMatrix);
-    int FindBestMatch(double& nextZ, const SANDKFMeasurement& prediction, const TMatrixD& measurementNoiseMatrix);
-    void SetNextOrientation();
-    void Filter(const SANDKFMeasurement& measurement, const SANDKFMeasurement& prediction);
-    void Smooth();
-    void InitFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
-    void Run();
-    const SANDKFTrack& GetTrack() {return fThisTrack; };
+    void propagate(double& de, double& dz, double& beta);
+    double evalChi2(const sand_reco::kf::Measurement& measurement, const sand_reco::kf::Measurement& prediction, const TMatrixD& measurement_noise_matrix);
+    int findBestMatch(double& nextZ, const sand_reco::kf::Measurement& prediction, const TMatrixD& measurement_noise_matrix);
+    void setNextOrientation();
+    void filter(const sand_reco::kf::Measurement& measurement, const sand_reco::kf::Measurement& prediction);
+    void smooth();
+    void initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
+    void run();
+    const sand_reco::kf::Track& getTrack() {return this_track_; };
   
 };
 
+} // namespace kf
+} // namespace sand_reco
 #endif

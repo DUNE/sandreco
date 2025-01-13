@@ -29,7 +29,7 @@ int clustering(std::string const& input)
   
   for (int i = 0; i < nEvents; i++) {
     t->GetEntry(i);
-    std::vector<cluster> clust = Clusterize(std::move(cell));
+    std::vector<cluster> clust = clusterize(std::move(cell));
     
     f_clust = clust;
     tout.Fill();

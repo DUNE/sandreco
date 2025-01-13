@@ -6,67 +6,72 @@
 
 #include <TTreeReader.h>
 
+namespace sand_reco
+{
+namespace tracker
+{
 // digit id -> dg_wire.did
-class SANDTrackerDigitID : public SingleElStruct<unsigned long>
+class DigitID : public SingleElStruct<unsigned long>
 {
  public:
-  SANDTrackerDigitID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  SANDTrackerDigitID() : SingleElStruct<unsigned long>(){};
+  DigitID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  DigitID() : SingleElStruct<unsigned long>(){};
 };
 
-// digit index -> index inside SANDTrackerDigit vector
-class SANDTrackerDigitIndex : public SingleElStruct<unsigned long>
+// digit index -> index inside Digit vector
+class DigitIndex : public SingleElStruct<unsigned long>
 {
  public:
-  SANDTrackerDigitIndex(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  SANDTrackerDigitIndex() : SingleElStruct<unsigned long>(){};
+  DigitIndex(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  DigitIndex() : SingleElStruct<unsigned long>(){};
 };
 
-// SANDTrackerDigit
-using SANDTrackerDigit = dg_wire;
+// Digit
+using Digit = dg_wire;
 
 // Digit map: key: digit id; value: index in gTreeReaderDigit
-using SANDTrackerDigitMap = std::map<SANDTrackerDigitID, SANDTrackerDigitIndex>;
+using DigitMap = std::map<DigitID, DigitIndex>;
 
 /**********************************************
- * Class to read and access digits (SANDTrackerDigit)
+ * Class to read and access digits (Digit)
  * from the input tree through a TTreeReaderValue
  ***********************************************/
-class SANDTrackerDigitCollection
+class DigitCollection
 {
  private:
-  // vector of SANDTrackerDigits
-  static std::vector<SANDTrackerDigit> SANDfgTrackerDigits;
+  // vector of Digits
+  static std::vector<Digit> sand_fg_tracker_digits_;
 
   // digit map -> key: digit id; value: index in gTreeReaderDigit
-  static SANDTrackerDigitMap fgMapDigit;
+  static DigitMap fg_map_digit_;
 
  public:
-  SANDTrackerDigitCollection(){};
-  ~SANDTrackerDigitCollection(){};
+  DigitCollection(){};
+  ~DigitCollection(){};
 
   // fill digit map
-  static void FillMap(const std::vector<SANDTrackerDigit>* digits)
+  static void fillMap(const std::vector<Digit>* digits)
   {
-    SANDfgTrackerDigits = *digits;
-    for (auto i = 0u; i < SANDfgTrackerDigits.size(); i++) {
-      fgMapDigit[SANDTrackerDigitID(static_cast<unsigned long>(
-          SANDfgTrackerDigits.at(i).did))] = SANDTrackerDigitIndex(i);
+    sand_fg_tracker_digits_ = *digits;
+    for (auto i = 0u; i < sand_fg_tracker_digits_.size(); i++) {
+      fg_map_digit_[DigitID(static_cast<unsigned long>(
+          sand_fg_tracker_digits_.at(i).did))] = DigitIndex(i);
     }
   };
 
   // get digit vector
-  static const std::vector<SANDTrackerDigit> &GetDigits()
+  static const std::vector<Digit> &getDigits()
   {
-    return SANDfgTrackerDigits;
+    return sand_fg_tracker_digits_;
   };
 
   // get i-th digit
-  static const SANDTrackerDigit &GetDigit(const SANDTrackerDigitID &id)
+  static const Digit &getDigit(const DigitID &id)
   {
-    // std::cout << "DIGIT COLLECTION: " << id() << " " << fgMapDigit[id]() << std::endl;
-    return SANDfgTrackerDigits.at(fgMapDigit[id]());
+    // std::cout << "DIGIT COLLECTION: " << id() << " " << fg_map_digit_[id]() << std::endl;
+    return sand_fg_tracker_digits_.at(fg_map_digit_[id]());
   };
 };
-
+} // namespace tracker
+} // namespace sand_reco
 #endif

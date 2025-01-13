@@ -1,19 +1,27 @@
 #include "SANDTrackerCell.h"
 #include "TVector3.h"
 
-SANDTrackerCell::SANDTrackerCell(const SANDTrackerCell& cell)
-    : _wire(cell._wire)
+namespace sand_geometry
 {
-  _driftVelocity = cell._driftVelocity;
-  _id = cell._id;
-  _width = cell._width;
-  _height = cell._height;
+
+namespace tracker
+{
+ 
+Cell::Cell(const Cell& cell)
+    : wire_(cell.wire_)
+{
+  driftVelocity_ = cell.driftVelocity_;
+  id_ = cell.id_;
+  width_ = cell.width_;
+  height_ = cell.height_;
 }
 
-void SANDTrackerCell::addAdjacentCell(SANDTrackerCell* adj_cell)
+void Cell::addAdjacentCell(Cell* adj_cell)
 {
-  if (std::find(_adjacent_cells.begin(), _adjacent_cells.end(), adj_cell) 
-      == _adjacent_cells.end()) {
-    _adjacent_cells.push_back(adj_cell);
+  if (std::find(adjacent_cells_.begin(), adjacent_cells_.end(), adj_cell) 
+      == adjacent_cells_.end()) {
+    adjacent_cells_.push_back(adj_cell);
   }
 }
+} // namespace tracker
+} // namespace sand_geometry

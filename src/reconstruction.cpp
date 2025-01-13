@@ -1575,7 +1575,7 @@ void VertexFind(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
 void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
 {
   TString path_prefix(sand_geometry::path_internal_volume);
-  TGeoVolume* v = g->FindVolumeFast(sand_geometry::name_internal_volume);
+  TGeoVolume* v = g->FindVolumeFast(sand_geometry::name_internal_volume.c_str());
 
   double origin[3];
   double master[3];
@@ -1741,7 +1741,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
         // Filter(vec_cl);
         //PidBasedClustering(ev, vec_cell, vec_cl);
         //Merge(vec_cl);
-        vec_cl = Clusterize(vec_cell);
+        vec_cl = clusterize(vec_cell);
         break;
     }
     tout.Fill();

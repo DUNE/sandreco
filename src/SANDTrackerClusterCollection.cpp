@@ -3,33 +3,37 @@
 
 #include "utils.h"
 
-void SANDTrackerClusterCollection::ClusterProximityInPlane(const std::vector<SANDTrackerDigit>& digits) {
-  std::map<SANDTrackerPlaneIndex, std::vector<SANDTrackerDigitID>> fMapDigits;
+namespace sand_reco
+{
+namespace tracker
+{
+void ClusterCollection::ClusterProximityInPlane(const std::vector<sand_reco::tracker::Digit>& digits) {
+  std::map<sand_geometry::tracker::PlaneIndex, std::vector<sand_reco::tracker::DigitID>> fMapDigits;
   for (auto& dg : digits) {
-    SANDTrackerPlaneID plane_global_id;
-    SANDTrackerCellID cell_local_id;
-    _sand_geo->decode_cell_id(dg.did, plane_global_id, cell_local_id);
-    fMapDigits[_sand_geo->GetPlaneIndex(plane_global_id)].push_back(SANDTrackerDigitID(dg.did));
+    sand_geometry::tracker::PlaneID plane_global_id;
+    sand_geometry::tracker::CellID cell_local_id;
+    sand_geo_->decodeCellId(dg.did, plane_global_id, cell_local_id);
+    fMapDigits[sand_geo_->getPlaneIndex(plane_global_id)].push_back(sand_reco::tracker::DigitID(dg.did));
   }
 
   for (auto& p:fMapDigits) {
-    std::sort(p.second.begin(), p.second.end(), [](SANDTrackerDigitID a, SANDTrackerDigitID b)
+    std::sort(p.second.begin(), p.second.end(), [](sand_reco::tracker::DigitID a, sand_reco::tracker::DigitID b)
                                   { return a() > b(); });
-    containers.push_back(new SANDTrackerClustersInPlane(_sand_geo, SANDTrackerClustersContainerID(p.first()), p.second));
+    containers_.push_back(new sand_reco::tracker::ClustersInPlane(sand_geo_, sand_reco::tracker::ClustersContainerID(p.first()), p.second));
   }
 }
 
-void SANDTrackerClusterCollection::ClusterCellAdjacency(const std::vector<SANDTrackerDigit>& digits) {
-  std::vector<SANDTrackerDigitID> digitIds;
+void ClusterCollection::ClusterCellAdjacency(const std::vector<sand_reco::tracker::Digit>& digits) {
+  std::vector<sand_reco::tracker::DigitID> digitIds;
   for (auto& dg : digits) {
-    digitIds.push_back(SANDTrackerDigitID(dg.did));
+    digitIds.push_back(sand_reco::tracker::DigitID(dg.did));
   }
-  containers.push_back(new SANDTrackerClustersByProximity(_sand_geo, SANDTrackerClustersContainerID(0), digitIds));
+  containers_.push_back(new sand_reco::tracker::ClustersByProximity(sand_geo_, sand_reco::tracker::ClustersContainerID(0), digitIds));
 }
 
-SANDTrackerClusterCollection::SANDTrackerClusterCollection(const SANDGeoManager* sand_geo, const std::vector<SANDTrackerDigit>& digits, ClusteringMethod clu_method)
+ClusterCollection::ClusterCollection(const SANDGeoManager* sand_geo, const std::vector<sand_reco::tracker::Digit>& digits, ClusteringMethod clu_method)
 {
-  _sand_geo = sand_geo;
+  sand_geo_ = sand_geo;
 
   if (clu_method == ClusteringMethod::kProximityInPlane) {
     ClusterProximityInPlane(digits);
@@ -40,19 +44,21 @@ SANDTrackerClusterCollection::SANDTrackerClusterCollection(const SANDGeoManager*
 }
 
 // get number of available dg_tubes
-int SANDTrackerClusterCollection::GetNClusters() const
+int ClusterCollection::getNClusters() const
 {
   auto n = 0;
-  std::for_each(containers.begin(), containers.end(),
+  std::for_each(containers_.begin(), containers_.end(),
                  [&n](const ClustersContainer* p) 
-                     { n += p->GetClusters().size(); });
+                     { n += p->getClusters().size(); });
   return n;
 }
 
 // get downstream digit
-const SANDTrackerCluster &SANDTrackerClusterCollection::GetFirstDownstreamCluster()
+const sand_reco::tracker::Cluster &ClusterCollection::getFirstDownstreamCluster()
 {
-  auto it = --containers.end();
-  while ((*it)->GetClusters().size() == 0) --it;
-  return (*it)->GetClusters().front();
+  auto it = --containers_.end();
+  while ((*it)->getClusters().size() == 0) --it;
+  return (*it)->getClusters().front();
 }
+} // namespace sand_reco
+} // namespace tracker

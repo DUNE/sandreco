@@ -43,7 +43,7 @@ make install
 ```
 
 ## CNAF machine
-On the CNAF machine run, [CMake](https://cmake.org/) is used to build `sandreco` using the following commands:
+On the CNAF machine run, [CMake](https://cmake.org/) is used to build `sandreco`. Before doing that, be sure to have the EDEPReader installed and source as detailed [here](https://baltig.infn.it/dune/edep-reader). You can then install `sandreco` using the following commands:
 
 ```console
 mkdir <installation path>

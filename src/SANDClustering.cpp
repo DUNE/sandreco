@@ -1,7 +1,7 @@
 #include "SANDClustering.h"
 #include "utils.h"
 
-std::vector<cluster> Clusterize(std::vector<dg_cell>* vec_cellraw)
+std::vector<cluster> clusterize(std::vector<dg_cell>* vec_cellraw)
 {
   std::vector<dg_cell> complete_cells, broken_cells, multicomplete_cells;
   std::vector<cluster> vec_clust;

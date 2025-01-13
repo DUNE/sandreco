@@ -1,32 +1,39 @@
 #include "SANDKFTrack.h"
 #include "SANDTrackerUtils.h"
 
-void SANDKFTrackStep::SetStage(SANDKFTrackStateStage stage, SANDKFState state) {
+namespace sand_reco
+{
+
+namespace kf
+{
+void TrackStep::setStage(TrackStateStage stage, State state) {
   switch (stage)
   {
-    case SANDKFTrackStateStage::kPrediction:
-      fPrediction = state;
+    case TrackStateStage::kPrediction:
+      prediction_ = state;
       break;
-    case SANDKFTrackStateStage::kFiltering:
-      fFiltered = state;
+    case TrackStateStage::kFiltering:
+      filtered_ = state;
       break;
-    case SANDKFTrackStateStage::kSmoothing:
-      fSmoothed = state;
+    case TrackStateStage::kSmoothing:
+      smoothed_ = state;
       break;
   }
 }
 
-const SANDKFState& SANDKFTrackStep::GetStage(SANDKFTrackStateStage stage) const {
+const State& TrackStep::getStage(TrackStateStage stage) const {
   switch (stage)
   {
-    case SANDKFTrackStateStage::kPrediction:
-      return fPrediction;
-    case SANDKFTrackStateStage::kFiltering:
-      return fFiltered;
-    case SANDKFTrackStateStage::kSmoothing:
-      return fSmoothed;
+    case TrackStateStage::kPrediction:
+      return prediction_;
+    case TrackStateStage::kFiltering:
+      return filtered_;
+    case TrackStateStage::kSmoothing:
+      return smoothed_;
     default:
       // SANDTRACKRECO_LOG("ERROR", "Unknown track state stage. Code should never reach this part");
-      return fPrediction;
+      return prediction_;
   }
+}
+}
 }

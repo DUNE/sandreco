@@ -6,151 +6,158 @@
 // #include "SANDStrawTubeTracker.h"
 #include "SANDGeoManager.h"
 
-using SANDKFStateCovarianceMatrix = TMatrixD;
+namespace sand_reco
+{
+
+namespace kf
+{
+
+using StateCovarianceMatrix = TMatrixD;
 using SANDKFMeasurement = TMatrixD;
 
-class SANDKFStateVector {
+class StateVector {
 
  private:
-  TMatrixD fVector;
+  TMatrixD vector_;
   
  public:
   // default constructors ... probably to be delete in the future
-  SANDKFStateVector(): fVector(5,1) {};
+  StateVector(): vector_(5,1) {};
 
   // constructors
-  SANDKFStateVector(double x, double y, double signed_inv_radius, double tanlambda, double phi): fVector(5,1) {
-    fVector(0,0) = x;
-    fVector(1,0) = y;
-    fVector(2,0) = signed_inv_radius;
-    fVector(3,0) = tanlambda;
-    fVector(4,0) = phi;
+  StateVector(double arg_x, double arg_y, double arg_signed_inv_radius, double arg_tan_lambda, double arg_phi): vector_(5,1) {
+    vector_(0,0) = arg_x;
+    vector_(1,0) = arg_y;
+    vector_(2,0) = arg_signed_inv_radius;
+    vector_(3,0) = arg_tan_lambda;
+    vector_(4,0) = arg_phi;
   };
 
   // constructors
-  SANDKFStateVector(TMatrixD vector): fVector(vector) {};
-  // SANDKFStateVector(const TMatrixD& vec): fVector(vec) {};
+  StateVector(TMatrixD vector): vector_(vector) {};
+  // StateVector(const TMatrixD& vec): vector_(vec) {};
   
   // copy constructor
-  // SANDKFStateVector(const SANDKFStateVector& other): fVector(other.fVector) {};
-  // SANDKFStateVector(SANDKFStateVector other): fVector(other.fVector) {};
+  // StateVector(const StateVector& other): vector_(other.vector_) {};
+  // StateVector(StateVector other): vector_(other.vector_) {};
   
   // destructor
-  ~SANDKFStateVector() {};
+  ~StateVector() {};
 
   // copy assignment
-  SANDKFStateVector& operator=(const TMatrixD& vec) {
-    fVector = vec;
+  StateVector& operator=(const TMatrixD& vec) {
+    vector_ = vec;
     return *this;
   };
-  SANDKFStateVector& operator=(TMatrixD vec) {
-    std::swap(fVector, vec);
+  StateVector& operator=(TMatrixD vec) {
+    std::swap(vector_, vec);
     return *this;
   };
-  SANDKFStateVector operator+ (SANDKFStateVector p2) {
-    this->fVector += p2();
-    return *this;
-  };
-
-  SANDKFStateVector operator- (SANDKFStateVector p2) {
-    this->fVector -= p2();
+  StateVector operator+ (StateVector p2) {
+    this->vector_ += p2();
     return *this;
   };
 
-  SANDKFStateVector operator* (SANDKFStateVector p2) {
-    this->fVector = ElementMult(this->fVector, p2());
+  StateVector operator- (StateVector p2) {
+    this->vector_ -= p2();
+    return *this;
+  };
+
+  StateVector operator* (StateVector p2) {
+    this->vector_ = ElementMult(this->vector_, p2());
     return *this;
   };
 
   // operator()
-  const TMatrixD& operator()() const { return fVector; };
+  const TMatrixD& operator()() const { return vector_; };
 
-  // Getters
-  inline double X() const { return fVector(0, 0); };
-  inline double Y() const { return fVector(1, 0); };
-  inline double SignedInverseRadius() const { return fVector(2, 0); };
-  inline double TanLambda() const { return fVector(3, 0); };
-  inline double Phi() const { return fVector(4, 0); };
+  // getters
+  inline double x() const { return vector_(0, 0); };
+  inline double y() const { return vector_(1, 0); };
+  inline double signedInverseRadius() const { return vector_(2, 0); };
+  inline double tanLambda() const { return vector_(3, 0); };
+  inline double phi() const { return vector_(4, 0); };
 
   // usefull function
-  inline int Charge() const { return std::signbit(SignedInverseRadius()) == false ? +1 : -1; };
-  inline double ChargedRadius() const { return 1./SignedInverseRadius(); };
-  inline double Radius() const { return ChargedRadius() * Charge(); };
+  inline int charge() const { return std::signbit(signedInverseRadius()) == false ? +1 : -1; };
+  inline double chargedRadius() const { return 1./signedInverseRadius(); };
+  inline double radius() const { return chargedRadius() * charge(); };
 
   // Setters... to be removed
-  // void X(double val) { fVector(0, 0) = val; };
-  // void Y(double val) { fVector(1, 0) = val; };
-  // void SignedInverseRadius(double val) { fVector(2, 0) = val; };
-  // void TanLambda(double val) { fVector(3, 0) = val; };
-  // void Phi(double val) { fVector(4, 0) = val; };
+  // void X(double val) { vector_(0, 0) = val; };
+  // void Y(double val) { vector_(1, 0) = val; };
+  // void signedInverseRadius(double val) { vector_(2, 0) = val; };
+  // void TanLambda(double val) { vector_(3, 0) = val; };
+  // void Phi(double val) { vector_(4, 0) = val; };
 };
 
-class SANDKFState {
-  SANDKFStateVector fVector;
-  SANDKFStateCovarianceMatrix fCovMatrix;
+class State {
+  StateVector vector_;
+  StateCovarianceMatrix cov_matrix_;
 
   public:
-  SANDKFState(): fVector(), fCovMatrix(5,5) {};
-  SANDKFState(SANDKFStateVector vector, SANDKFStateCovarianceMatrix matrix): fVector(vector), fCovMatrix(matrix) {};
-  const SANDKFStateVector& GetStateVector() const {return fVector; };
-  const SANDKFStateCovarianceMatrix& GetStateCovMatrix() const {return fCovMatrix; };
+  State(): vector_(), cov_matrix_(5,5) {};
+  State(StateVector vector, StateCovarianceMatrix matrix): vector_(vector), cov_matrix_(matrix) {};
+  const StateVector& getStateVector() const {return vector_; };
+  const StateCovarianceMatrix& getStateCovMatrix() const {return cov_matrix_; };
 };
 
-class SANDKFTrackStep {
+class TrackStep {
 
   public:
-    enum class SANDKFTrackStateStage {
+    enum class TrackStateStage {
       kPrediction,
       kFiltering,
       kSmoothing,
     };
 
   private:
-    SANDKFState fPrediction;
-    SANDKFState fFiltered;
-    SANDKFState fSmoothed;
+    State prediction_;
+    State filtered_;
+    State smoothed_;
 
     // the propagation that bring the vector in this state
-    TMatrixD fPropagatorMatrix; 
+    TMatrixD propagator_matrix_; 
     // TMatrixD fProjectionMatrix; 
     // TMatrixD fProcessNoiseMatrix; 
     // TMatrixD fMeasurementNoiseMatrix; 
     // TMatrixD fKalmanGainMatrix; 
     // TMatrixD fTheAMatrix; 
 
-    // SANDKFTrackStateStage fStage; // meglio  enumerato
+    // TrackStateStage fStage; // meglio  enumerato
 
     // ID piano di misura;
-    SANDTrackerPlaneID fPlaneID;
-    int fClusterID;
+    sand_geometry::tracker::PlaneID plane_id_;
+    int clusterid_;
 
   public:
-    SANDKFTrackStep(): fPropagatorMatrix(5,5) {}; 
+    TrackStep(): propagator_matrix_(5,5) {}; 
     //                   fProjectionMatrix(2,5),
     //                   fProcessNoiseMatrix(5,5),
     //                   fMeasurementNoiseMatrix(2,2),
     //                   fKalmanGainMatrix(5,2),
     //                   fTheAMatrix(5,5) {};
-    void SetPlaneID(const SANDTrackerPlaneID& planeID) {fPlaneID = planeID; };
-    const SANDTrackerPlaneID& GetPlaneID() const {return fPlaneID; };
-    void SetClusterIDForThisState(int clusterID) { fClusterID = clusterID; };
-    int GetClusterIDForThisState() const { return fClusterID; }
-    void SetStage(SANDKFTrackStateStage stage, SANDKFState state);
-    const SANDKFState& GetStage(SANDKFTrackStateStage stage) const;
-    void SetPropagatorMatrix(TMatrixD pMatrix) { fPropagatorMatrix = pMatrix; };
-    const TMatrixD GetPropagatorMatrix() { return fPropagatorMatrix; };
+    void setPlaneID(const sand_geometry::tracker::PlaneID& plane_id) {plane_id_ = plane_id; };
+    const sand_geometry::tracker::PlaneID& getPlaneID() const {return plane_id_; };
+    void setClusterIDForThisState(int cluster_id) { clusterid_ = cluster_id; };
+    int getClusterIDForThisState() const { return clusterid_; }
+    void setStage(TrackStateStage stage, State state);
+    const State& getStage(TrackStateStage stage) const;
+    void setPropagatorMatrix(TMatrixD propagator_matrix) { propagator_matrix_ = propagator_matrix; };
+    const TMatrixD getPropagatorMatrix() { return propagator_matrix_; };
 };
 
-class SANDKFTrack {
+class Track {
   private:
-    std::vector<SANDKFTrackStep> fSteps;
+    std::vector<TrackStep> steps_;
   public:
-    const std::vector<SANDKFTrackStep>& GetSteps() const {return fSteps; };
-    const SANDKFTrackStep& GetStep(int index) const {return fSteps.at(index); };
-    void AddStep(SANDKFTrackStep state) { fSteps.push_back(state); };
-    void SetStage(int index, SANDKFTrackStep::SANDKFTrackStateStage stage, SANDKFState state) { fSteps.at(index).SetStage(stage, state); };
-    void SetClusterIDForState(int index, int clusterID) { fSteps.at(index).SetClusterIDForThisState(clusterID); };
-    void RemoveLastStep() { fSteps.erase(fSteps.end()-1); };
+    const std::vector<TrackStep>& getSteps() const {return steps_; };
+    const TrackStep& getStep(int index) const {return steps_.at(index); };
+    void addStep(TrackStep state) { steps_.push_back(state); };
+    void setStage(int index, TrackStep::TrackStateStage stage, State state) { steps_.at(index).setStage(stage, state); };
+    void setClusterIDForState(int index, int cluster_id) { steps_.at(index).setClusterIDForThisState(cluster_id); };
+    void removeLastStep() { steps_.erase(steps_.end()-1); };
 };
-
+} // namespace kf
+} // namespace sand_reco
 #endif

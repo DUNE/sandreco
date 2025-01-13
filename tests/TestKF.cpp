@@ -22,63 +22,63 @@
 
 #include "EDEPTree.h"
 
-void TryCompleteManager(TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
-  SANDKalmanFilterManager manager;
-  manager.InitFromMC(&z_to_tracklets, particleInfo);
-  manager.Run();
+void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
+  sand_reco::kf::Manager manager;
+  manager.initFromMC(&z_to_tracklets, particleInfo);
+  manager.run();
 
-  auto track = manager.GetTrack();
+  auto track = manager.getTrack();
 
-  auto step = track.GetSteps().back();
+  auto step = track.getSteps().back();
   auto reco_state =
-        step.GetStage(SANDKFTrackStep::SANDKFTrackStateStage::kSmoothing).GetStateVector();
-  auto reco_mom = SANDTrackerUtils::GetMomentumInMeVFromRadiusInMM(
-                                reco_state.Radius(), reco_state.TanLambda());
+        step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+  auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
+                                reco_state.radius(), reco_state.tanLambda());
 
   std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
 
   return;
 }
 
-void ProcessEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits)
+void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits)
 {
   
   int p[9] = {100, -2000, 2000, 100, -4000, -1000, 100, 23800, 26000};
 
-  SANDTrackerDigitCollection::FillMap(digits);
-  auto digit_map =  SANDTrackerDigitCollection::GetDigits();
-  if (SANDTrackerDigitCollection::GetDigits().empty()) {
+  sand_reco::tracker::DigitCollection::fillMap(digits);
+  auto digit_map =  sand_reco::tracker::DigitCollection::getDigits();
+  if (sand_reco::tracker::DigitCollection::getDigits().empty()) {
     return;
   }
-  std::string tracker_name = SANDTrackerDigitCollection::GetDigits().begin()->det;
-  SANDTrackerClusterCollection clusters(sand_geo, SANDTrackerDigitCollection::GetDigits(), SANDTrackerClusterCollection::ClusteringMethod::kCellAdjacency);
+  std::string tracker_name = sand_reco::tracker::DigitCollection::getDigits().begin()->det;
+  sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
   
   TrackletFinder traklet_finder;
-  traklet_finder.SetVolumeParameters(p);
-  traklet_finder.SetSigmaPosition(0.2);
-  traklet_finder.SetSigmaAngle(0.2);
+  traklet_finder.setVolumeParameters(p);
+  traklet_finder.setSigmaPosition(0.2);
+  traklet_finder.setSigmaAngle(0.2);
 
   std::map<double, std::vector<TVectorD>> z_to_tracklets;
 
-  SANDTrackerUtils::Init(sand_geo->GetTGeoManager());
+  SANDTrackerUtils::init(sand_geo->getTGeoManager());
 
   int gg = 0;
-  for (const auto& container:clusters.GetContainers()) {
-    for (const auto& cluster_in_container:container->GetClusters()) {
-      // std::cout << 100 * gg / container->GetClusters().size() << std::endl;
+  for (const auto& container:clusters.getContainers()) {
+    for (const auto& cluster_in_container:container->getClusters()) {
+      // std::cout << 100 * gg / container->getClusters().size() << std::endl;
       // gg++;
       // if (gg == 100) break;
-      // if(cluster_in_container.GetZ() < 25650) continue;
+      // if(cluster_in_container.getZ() < 25650) continue;
 
-      traklet_finder.SetCells(cluster_in_container);
-      auto minima = traklet_finder.FindTracklets();
-      double z_start = cluster_in_container.GetZ();
+      traklet_finder.setCells(cluster_in_container);
+      auto minima = traklet_finder.findTracklets();
+      double z_start = cluster_in_container.getZ();
       for (uint trk = 0; trk < minima.size(); trk++) {
         if (minima[trk][4] < 1E-2) {
-          z_to_tracklets[cluster_in_container.GetZ()].push_back(minima[trk]);
+          z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
         }
       }
-      traklet_finder.Clear();
+      traklet_finder.clear();
     }
   }
   
@@ -91,7 +91,7 @@ void ProcessEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   }
 
   EDEPTree tree;
-  tree.InizializeFromEdep(*mc_event, sand_geo->GetTGeoManager());
+  tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
   
   std::vector<EDEPTrajectory> primaryTrj;
   tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
@@ -124,7 +124,7 @@ void ProcessEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   }
 
   for (int ip = 0; ip < nParticles; ip++) {
-    TryCompleteManager(z_to_tracklets, particleInfos[ip]);
+    tryCompleteManager(z_to_tracklets, particleInfos[ip]);
   }
 }
 
@@ -163,19 +163,19 @@ int main(int argc, char* argv[])
     t_h->GetEntry(i);
     t->GetEntry(i);
 
-    ProcessEventWithKF(&sand_geo, ev, digits);
+    processEventWithKF(&sand_geo, ev, digits);
 
     continue;
     int p[9] = {100, -2000, 2000, 100, -4000, -1000, 100, 23800, 26000};
 
-    SANDTrackerDigitCollection::FillMap(digits);
-    SANDTrackerClusterCollection clusters(&sand_geo, SANDTrackerDigitCollection::GetDigits(), SANDTrackerClusterCollection::ClusteringMethod::kCellAdjacency);
-    auto digit_map =  SANDTrackerDigitCollection::GetDigits();
+    sand_reco::tracker::DigitCollection::fillMap(digits);
+    sand_reco::tracker::ClusterCollection clusters(&sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
+    auto digit_map =  sand_reco::tracker::DigitCollection::getDigits();
     
     TrackletFinder traklet_finder;
-    traklet_finder.SetVolumeParameters(p);
-    traklet_finder.SetSigmaPosition(0.2);
-    traklet_finder.SetSigmaAngle(0.2);
+    traklet_finder.setVolumeParameters(p);
+    traklet_finder.setSigmaPosition(0.2);
+    traklet_finder.setSigmaAngle(0.2);
     
 
     TCanvas* canvas_cluster = new TCanvas("canvas_cluster","canvas_cluster",2000,1000);
@@ -193,23 +193,23 @@ int main(int argc, char* argv[])
     std::map<double, std::vector<TVectorD>> z_to_tracklets;
 
     int color = 2;
-    for (const auto& container:clusters.GetContainers()) {
+    for (const auto& container:clusters.getContainers()) {
       int gg = 0;
-      for (const auto& cluster_in_container:container->GetClusters()) {
-        std::cout << (double)gg / container->GetClusters().size() * 100 << std::endl;
+      for (const auto& cluster_in_container:container->getClusters()) {
+        std::cout << (double)gg / container->getClusters().size() * 100 << std::endl;
         gg++;
         // if (gg == 500) break;
         if (color > 9) color = 2;
         
 
-        traklet_finder.SetCells(cluster_in_container);
-        auto minima = traklet_finder.FindTracklets();
+        traklet_finder.setCells(cluster_in_container);
+        auto minima = traklet_finder.findTracklets();
         // // Draw tracklets
         // if (minima.size() != 0) {
         //   canvas_cluster->cd();
         //   std::sort(minima.begin(), minima.end(),
         //             [](TVectorD v1, TVectorD v2){ return v1[4] < v2[4];});
-        //   double z_start = cluster_in_container.GetZ();
+        //   double z_start = cluster_in_container.getZ();
         //   for (uint trk = 0; trk < minima.size(); trk++) {
         //     h_minima1000->Fill(minima[trk][4]);
         //     h_minima_100->Fill(minima[trk][4]);
@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
         //     if (minima[trk][4] < 1E-2) {
         //       // std::cout << minima[trk][0] << " " << minima[trk][2] << std::endl;
               
-        //       z_to_tracklets[cluster_in_container.GetZ()].push_back(minima[trk]);
+        //       z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
 
         //       TVector2 start_tracklet_yz(z_start, minima[trk][1]);
         //       TVector2 start_tracklet_xz(z_start, minima[trk][0]);
@@ -252,14 +252,14 @@ int main(int argc, char* argv[])
             }
         }  
         if(!ok) {
-          traklet_finder.Clear();
+          traklet_finder.clear();
           continue;
         }
 
-        auto digitId_to_drift_time = traklet_finder.GetDigitToDriftTimeMap();
+        auto digitId_to_drift_time = traklet_finder.getDigitToDriftTimeMap();
         // // Draw cells of all digits
         // for (auto digit:digit_map) {
-        //   auto cell = sand_geo.get_cell_info(SANDTrackerCellID(digit.did));
+        //   auto cell = sand_geo.getCellInfo(sand_geometry::tracker::CellID(digit.did));
         //   double h,w;
         //   cell->second.size(w,h);
 
@@ -299,12 +299,12 @@ int main(int argc, char* argv[])
         // }
 
 
-        std::vector<SANDTrackerDigitID> digits_cluster = cluster_in_container.GetDigits();
+        std::vector<sand_reco::tracker::DigitID> digits_cluster = cluster_in_container.getDigits();
         for (uint d = 0; d < digits_cluster.size(); d++) {
           // canvas_cluster->cd();
 
-          auto digit = SANDTrackerDigitCollection::GetDigit(digits_cluster[d]);
-          auto cell = sand_geo.get_cell_info(SANDTrackerCellID(digit.did));
+          auto digit = sand_reco::tracker::DigitCollection::getDigit(digits_cluster[d]);
+          // auto cell = sand_geo.getCellInfo(sand_geometry::tracker::CellID(digit.did));
 
           
           // // Draw cells of cluster
@@ -390,7 +390,7 @@ int main(int argc, char* argv[])
         // h_cluster_yz->Draw();
         // canvas_cluster->cd(2);
         // h_cluster_xz->Draw();
-        traklet_finder.Clear();
+        traklet_finder.clear();
 
       }
     }
@@ -419,14 +419,15 @@ int main(int argc, char* argv[])
     canvas_digitization->cd(2);
     h_digitization_xz->Draw();
     for (const auto& digit:digit_map) {
-      auto cell = sand_geo.get_cell_info(SANDTrackerCellID(digit.did));
+      auto cell = sand_geo.getCellInfo(sand_geometry::tracker::CellID(digit.did));
       
 
       // Draw cells of cluster
-      double h,w;
-      cell->second.size(w,h);
-      TVector3 r = cell->second.wire().getDirection();
-      TVector3 leftend = cell->second.wire().getReadoutPoint();
+      auto cell_size = cell->second.getSize();
+      double h = cell_size.h;
+      double w = cell_size.w;
+      TVector3 r = cell->second.getWire().getDirection();
+      TVector3 leftend = cell->second.getWire().getReadoutPoint();
 
       TVector3 AP = TVector3(digit.x, digit.y, digit.z) - leftend; 
       double t_prime = AP.Dot(r) / r.Mag2();
@@ -434,8 +435,8 @@ int main(int argc, char* argv[])
       TVector3 position_along_wire = leftend + t_prime * r;
 
 
-      TEllipse* el_yz = new TEllipse(position_along_wire.Z(), position_along_wire.Y(), sand_reco::stt::wire_radius + cell->second.driftVelocity() * digit.drift_time);
-      TEllipse* el_xz = new TEllipse(position_along_wire.Z(), position_along_wire.X(), sand_reco::stt::wire_radius + cell->second.driftVelocity() * digit.drift_time);
+      TEllipse* el_yz = new TEllipse(position_along_wire.Z(), position_along_wire.Y(), sand_reco::stt::wire_radius + cell->second.getDriftVelocity() * digit.drift_time);
+      TEllipse* el_xz = new TEllipse(position_along_wire.Z(), position_along_wire.X(), sand_reco::stt::wire_radius + cell->second.getDriftVelocity() * digit.drift_time);
       TBox* box_yz = new TBox(position_along_wire.Z() - h/2., position_along_wire.Y() - w/2., position_along_wire.Z() + h/2., position_along_wire.Y() + w/2.);
       TBox* box_xz = new TBox(position_along_wire.Z() - h/2., position_along_wire.X() - w/2., position_along_wire.Z() + h/2., position_along_wire.X() + w/2.);
 

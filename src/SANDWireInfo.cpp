@@ -3,13 +3,18 @@ for storing geometric info of the SAND Tracker*/
 
 #include "SANDWireInfo.h"
 
+namespace sand_geometry
+{
+
+namespace tracker
+{
 // Default constructor
-SANDWireInfo::SANDWireInfo()
+WireInfo::WireInfo()
 {
 }
 
 // Parametric constructor
-SANDWireInfo::SANDWireInfo(SANDWireID arg_id, double arg_x, double arg_y, double arg_z,
+WireInfo::WireInfo(WireID arg_id, double arg_x, double arg_y, double arg_z,
                            double arg_length, ReadoutEnd arg_readout_end)
     : id_(arg_id),
       center_(TVector3(arg_x, arg_y, arg_z)),
@@ -19,7 +24,7 @@ SANDWireInfo::SANDWireInfo(SANDWireID arg_id, double arg_x, double arg_y, double
 }
 
 // Parametric constructor
-SANDWireInfo::SANDWireInfo(SANDWireID arg_id, TVector3 arg_center,
+WireInfo::WireInfo(WireID arg_id, TVector3 arg_center,
                            double arg_length, ReadoutEnd arg_readout_end)
     : id_(arg_id),
       center_(arg_center),
@@ -29,29 +34,31 @@ SANDWireInfo::SANDWireInfo(SANDWireID arg_id, TVector3 arg_center,
 }
 
 // Setter methods for the attributes
-void SANDWireInfo::id(SANDWireID arg_id)
+void WireInfo::setId(WireID arg_id)
 {
   id_ = arg_id;
 }
-void SANDWireInfo::length(double arg_length)
+void WireInfo::setLength(double arg_length)
 {
   length_ = arg_length;
 }
-void SANDWireInfo::readout_end(ReadoutEnd arg_readout_end)
+void WireInfo::setReadoutEnd(ReadoutEnd arg_readout_end)
 {
   readout_end_ = arg_readout_end;
 }
 
 // Getter methods for the attributes
-SANDWireID SANDWireInfo::id() const
+WireID WireInfo::getId() const
 {
   return id_;
 }
-double SANDWireInfo::length() const
+double WireInfo::getLength() const
 {
   return length_;
 }
-SANDWireInfo::ReadoutEnd SANDWireInfo::readout_end() const
+WireInfo::ReadoutEnd WireInfo::getReadoutEnd() const
 {
   return readout_end_;
 }
+} // namespace sand_geometry
+} // namespace tracker

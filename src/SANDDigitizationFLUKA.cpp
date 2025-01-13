@@ -318,7 +318,7 @@ void group_pmts_in_cells(TGeoManager* geo,
 // simulate calorimeter responce for whole event
 void digitize_ecal(TG4Event* ev, TGeoManager* geo,
                    std::vector<dg_cell>& vec_cell,
-                   ECAL_digi_mode ecal_digi_mode)
+                   EcalDigiMode ecal_digi_mode)
 {
   std::map<int, std::vector<pe> > photo_el;
   std::map<int, std::vector<dg_ps> > ps;
@@ -510,7 +510,7 @@ void digitize_stt(TG4Event* ev, TGeoManager* geo, int NHits,
 
 // digitize event
 void digitize(const char* finname, const char* foutname,
-              ECAL_digi_mode ecal_digi_mode)
+              EcalDigiMode ecal_digi_mode)
 {
   TFile f(finname, "READ");
 

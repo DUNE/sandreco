@@ -1,19 +1,27 @@
 #include "SANDTrackerModule.h"
 #include <iostream>
 
-std::map<SANDTrackerPlaneID, SANDTrackerPlane>::iterator SANDTrackerModule::getPlane(SANDTrackerPlaneID index)
+namespace sand_geometry
 {
-  return _vPlanes.find(index);
+
+namespace tracker
+{
+  
+std::map<PlaneID, Plane>::iterator Module::getPlane(PlaneID index)
+{
+  return planes_.find(index);
 }
 
-std::map<SANDTrackerPlaneID, SANDTrackerPlane>::const_iterator SANDTrackerModule::getPlane(SANDTrackerPlaneID index) const
+std::map<PlaneID, Plane>::const_iterator Module::getPlane(PlaneID index) const
 {  
-  return _vPlanes.find(index);
+  return planes_.find(index);
 }
 
-bool SANDTrackerModule::addPlane(SANDTrackerPlaneID plane_unique_id, SANDTrackerPlaneID plane_local_id)
+bool Module::addPlane(PlaneID plane_unique_id, PlaneID plane_local_id)
 {
-  auto it = _vPlanes.insert({plane_unique_id, 
-                             SANDTrackerPlane(plane_unique_id, plane_local_id, this)});
+  auto it = planes_.insert({plane_unique_id, 
+                             Plane(plane_unique_id, plane_local_id, this)});
   return it.second;
 }
+} // namespace tracker
+} // namespace sand_geometry

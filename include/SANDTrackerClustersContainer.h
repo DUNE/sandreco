@@ -4,107 +4,112 @@
 #include <vector>
 
 #include "SANDTrackerCluster.h"
-
-class SANDTrackerClustersContainerID : public SingleElStruct<unsigned long>
+namespace sand_reco
+{
+namespace tracker
+{
+class ClustersContainerID : public SingleElStruct<unsigned long>
 {
  public:
-  SANDTrackerClustersContainerID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  SANDTrackerClustersContainerID() : SingleElStruct<unsigned long>(){};
+  ClustersContainerID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  ClustersContainerID() : SingleElStruct<unsigned long>(){};
 };
 
 class ClustersContainer 
 {
   private:
-    std::vector<SANDTrackerCluster> fClusters;
-    const SANDGeoManager* _sand_geo;
-    SANDTrackerClustersContainerID _id;
+    std::vector<Cluster> clusters_;
+    const SANDGeoManager* sand_geo_;
+    ClustersContainerID id_;
   
   public:
-    virtual void Clusterize(const std::vector<SANDTrackerDigitID> &digits) = 0;
+    virtual void clusterize(const std::vector<DigitID> &digits) = 0;
     virtual ~ClustersContainer(){};
     ClustersContainer() {};
-    ClustersContainer(const SANDGeoManager* sand_geo, SANDTrackerClustersContainerID id) : _sand_geo(sand_geo), _id(id) {};
+    ClustersContainer(const SANDGeoManager* sand_geo, ClustersContainerID id) : sand_geo_(sand_geo), id_(id) {};
 
-    virtual const SANDTrackerCluster &GetNearestCluster(double x, double y) const = 0;
-    void AddCluster(const SANDTrackerCluster &clu) { fClusters.push_back(clu); };
+    virtual const Cluster &getNearestCluster(double x, double y) const = 0;
+    void addCluster(const Cluster &clu) { clusters_.push_back(clu); };
 
 
     const SANDGeoManager* getSandGeoManager() const 
     {
-      return _sand_geo;
+      return sand_geo_;
     }
    
-    inline const SANDTrackerClustersContainerID GetId() {return _id;};
+    inline const ClustersContainerID getId() {return id_;};
     
-    inline std::vector<SANDTrackerCluster> &GetClusters()
+    inline std::vector<Cluster> &getClusters()
     {
-      return fClusters;
+      return clusters_;
     };
-    inline const std::vector<SANDTrackerCluster> &GetClusters() const
+    inline const std::vector<Cluster> &getClusters() const
     {
-      return fClusters;
+      return clusters_;
     };
-    inline TVector2 GetDigitCoord(const SANDTrackerDigit *dg) const;
+    inline TVector2 getDigitCoord(const Digit *dg) const;
 
   protected:
-    void RemoveCluster(SANDTrackerClusterID cid)
+    void removeCluster(ClusterID cid)
     {
       auto it =
-          std::find_if(fClusters.begin(), fClusters.end(),
-                      [cid](const SANDTrackerCluster &c) { return (cid == c.GetId()); });
-      assert(it != fClusters.end());
-      fClusters.erase(it);
+          std::find_if(clusters_.begin(), clusters_.end(),
+                      [cid](const Cluster &c) { return (cid == c.getId()); });
+      assert(it != clusters_.end());
+      clusters_.erase(it);
     };
 };
 
-class SANDTrackerClustersByProximity : public ClustersContainer
+class ClustersByProximity : public ClustersContainer
 {
  private:
-  void Clusterize(const std::vector<SANDTrackerDigitID> &digits) override;
+  void clusterize(const std::vector<DigitID> &digits) override;
 
  public:
-  SANDTrackerClustersByProximity() {};
-  SANDTrackerClustersByProximity(const SANDGeoManager* sand_geo, const SANDTrackerClustersContainerID &id) : ClustersContainer(sand_geo, id) {};
-  SANDTrackerClustersByProximity(const SANDGeoManager* sand_geo, const SANDTrackerClustersContainerID &id, const std::vector<SANDTrackerDigitID> &digits) 
+  ClustersByProximity() {};
+  ClustersByProximity(const SANDGeoManager* sand_geo, const ClustersContainerID &id) : ClustersContainer(sand_geo, id) {};
+  ClustersByProximity(const SANDGeoManager* sand_geo, const ClustersContainerID &id, const std::vector<DigitID> &digits) 
     : ClustersContainer(sand_geo, id)
   {
-    Clusterize(digits);
+    clusterize(digits);
   };
-  ~SANDTrackerClustersByProximity(){};
+  ~ClustersByProximity(){};
   
-  bool IsPermutation(const std::vector<SANDTrackerDigitID>& clu);
-  const SANDTrackerCluster &GetNearestCluster(double x, double y) const override;
-  void findCluster(std::vector<SANDTrackerDigitID>& current_cluster, 
-                                                 std::map<SANDTrackerCellID, SANDTrackerDigitID>::iterator it, 
-                                                 std::map<SANDTrackerCellID, SANDTrackerDigitID>& fMap, 
+  bool isPermutation(const std::vector<DigitID>& clu);
+  const Cluster &getNearestCluster(double x, double y) const override;
+  void findCluster(std::vector<DigitID>& current_cluster, 
+                                                 std::map<sand_geometry::tracker::CellID, DigitID>::iterator it, 
+                                                 std::map<sand_geometry::tracker::CellID, DigitID>& fMap, 
                                                  int cluster_size);
 };
 
-class SANDTrackerClustersInPlane : public ClustersContainer
+class ClustersInPlane : public ClustersContainer
 {
  private:
-    plane_iterator fPlane;
-    void Clusterize(const std::vector<SANDTrackerDigitID> &digits) override;
+    sand_geometry::tracker::plane_iterator plane_;
+    void clusterize(const std::vector<DigitID> &digits) override;
 
  public:
-  SANDTrackerClustersInPlane() {};
-  SANDTrackerClustersInPlane(const SANDGeoManager* sand_geo, const SANDTrackerClustersContainerID &id) : ClustersContainer(sand_geo, id), fPlane(getSandGeoManager()->get_plane_info(SANDTrackerPlaneID(id()))) {};
-  SANDTrackerClustersInPlane(const SANDGeoManager* sand_geo, const SANDTrackerClustersContainerID &id, const std::vector<SANDTrackerDigitID> &digits) 
-    : ClustersContainer(sand_geo, id), fPlane(getSandGeoManager()->get_plane_info(SANDTrackerPlaneID(id())))
+  ClustersInPlane() {};
+  ClustersInPlane(const SANDGeoManager* sand_geo, const ClustersContainerID &id) : ClustersContainer(sand_geo, id), plane_(getSandGeoManager()->getPlaneInfo(sand_geometry::tracker::PlaneID(id()))) {};
+  ClustersInPlane(const SANDGeoManager* sand_geo, const ClustersContainerID &id, const std::vector<DigitID> &digits) 
+    : ClustersContainer(sand_geo, id), plane_(getSandGeoManager()->getPlaneInfo(sand_geometry::tracker::PlaneID(id())))
   {
-    Clusterize(digits);
+    clusterize(digits);
   };
-  ~SANDTrackerClustersInPlane(){};
+  ~ClustersInPlane(){};
 
-  inline double GetRotation() const
+  inline double getRotation() const
   {
-    return fPlane->getRotation();
+    return plane_->getRotation();
   };
-  inline double GetZ() const 
+  inline double getZ() const 
   { 
-    return fPlane->getPosition().Z();
+    return plane_->getPosition().Z();
   };
   
-  const SANDTrackerCluster &GetNearestCluster(double x, double y) const override;  
+  const Cluster &getNearestCluster(double x, double y) const override;  
 };
+} // namespace tracker
+} // namespace sand_reco
 #endif

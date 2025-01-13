@@ -2,104 +2,113 @@
 #include "SANDTrackerCell.h"
 #include <vector>
 #include <map>
-class SANDTrackerModule;
+namespace sand_geometry
+{
 
-class SANDTrackerPlaneID : public SingleElStruct<unsigned long>
+namespace tracker
+{
+  
+class Module;
+
+class PlaneID : public SingleElStruct<unsigned long>
 {
  public:
-  SANDTrackerPlaneID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  SANDTrackerPlaneID() : SingleElStruct<unsigned long>(){};
+  PlaneID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  PlaneID() : SingleElStruct<unsigned long>(){};
 };
 
-class SANDTrackerPlaneIndex : public SingleElStruct<unsigned long>
+class PlaneIndex : public SingleElStruct<unsigned long>
 {
  public:
-  SANDTrackerPlaneIndex(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  SANDTrackerPlaneIndex() : SingleElStruct<unsigned long>(){};
+  PlaneIndex(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  PlaneIndex() : SingleElStruct<unsigned long>(){};
 };
 
-class SANDTrackerPlaneLocalID : public SingleElStruct<unsigned long>
+class PlaneLocalID : public SingleElStruct<unsigned long>
 {
  public:
-  SANDTrackerPlaneLocalID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  SANDTrackerPlaneLocalID() : SingleElStruct<unsigned long>(){};
+  PlaneLocalID(unsigned long id) : SingleElStruct<unsigned long>(id){};
+  PlaneLocalID() : SingleElStruct<unsigned long>(){};
 };
 
 // To Do: Use the local id
 
-class SANDTrackerPlane
+class Plane
 {
  private:
-  SANDTrackerPlaneID _unique_id;
-  SANDTrackerPlaneID _local_id;
-  double _rotation; //rad, mano destra su z
-  TVector3 _position;
-  TVector3 _dimension;
-  std::map<double, SANDTrackerCellID> _coord_to_id_map;
-  std::map<SANDTrackerCellID, SANDTrackerCell> _id_to_cell_map;
+  PlaneID unique_id_;
+  PlaneID local_id_;
+  double rotation_; //rad, mano destra su z
+  TVector3 position_;
+  TVector3 dimension_;
+  std::map<double, CellID> coord_to_id_map_;
+  std::map<CellID, Cell> id_to_cell_map_;
 
-  std::vector<TVector2> _vertices;
+  std::vector<TVector2> vertices_;
 
-  double _max_transverse_position = 0;
+  double max_transverse_position_ = 0;
 
-  SANDTrackerModule* _module = nullptr;
+  Module* module_ = nullptr;
 
  public:
-  SANDTrackerPlane() {};
-  SANDTrackerPlane(SANDTrackerPlaneID u_id, SANDTrackerPlaneID l_id)
+  Plane() {};
+  Plane(PlaneID u_id, PlaneID l_id)
   {
-    _unique_id = u_id;
-    _local_id  = l_id;
+    unique_id_ = u_id;
+    local_id_  = l_id;
   }
-  SANDTrackerPlane(SANDTrackerPlaneID u_id, SANDTrackerPlaneID l_id, SANDTrackerModule* module_ptr)
+  Plane(PlaneID u_id, PlaneID l_id, Module* module_ptr)
   {
-    _unique_id = u_id;
-    _local_id  = l_id;
-    _module = module_ptr;
+    unique_id_ = u_id;
+    local_id_  = l_id;
+    module_ = module_ptr;
   }
-  SANDTrackerPlaneID uid() const
+  PlaneID uId() const
   {
-    return _unique_id;
+    return unique_id_;
   }
-  SANDTrackerPlaneID lid() const
+  PlaneID lId() const
   {
-    return _local_id;
+    return local_id_;
   }
-  void addCell(const double transverse_coordinate, SANDTrackerCell c)
+  void addCell(const double transverse_coordinate, Cell c)
   {
-    if(_coord_to_id_map.find(transverse_coordinate) == _coord_to_id_map.end()) {
+    if(coord_to_id_map_.find(transverse_coordinate) == coord_to_id_map_.end()) {
       c.setPlane(this);
-      _coord_to_id_map.insert({transverse_coordinate, c.id()});
-      _id_to_cell_map.insert({c.id(), c});
+      coord_to_id_map_.insert({transverse_coordinate, c.getId()});
+      id_to_cell_map_.insert({c.getId(), c});
     }
   }
-        std::map<SANDTrackerCellID, SANDTrackerCell>& getIdToCellMap()       {return _id_to_cell_map;};
-  const std::map<SANDTrackerCellID, SANDTrackerCell>& getIdToCellMap() const {return _id_to_cell_map;};
-        std::map<double, SANDTrackerCellID>& getCoordToIDMap()       {return _coord_to_id_map;};
-  const std::map<double, SANDTrackerCellID>& getCoordToIDMap() const {return _coord_to_id_map;};
-  std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator getIdToCellMapEnd() const {return _id_to_cell_map.end();};
+        std::map<CellID, Cell>& getIdToCellMap()       {return id_to_cell_map_;};
+  const std::map<CellID, Cell>& getIdToCellMap() const {return id_to_cell_map_;};
+        std::map<double, CellID>& getCoordToIDMap()       {return coord_to_id_map_;};
+  const std::map<double, CellID>& getCoordToIDMap() const {return coord_to_id_map_;};
+  std::map<CellID, Cell>::const_iterator getIdToCellMapEnd() const {return id_to_cell_map_.end();};
   int nCells() const
   {
-    return _coord_to_id_map.size();
+    return coord_to_id_map_.size();
   }
 
   void computePlaneVertices();
   void computeMaxTransversePosition();
-  std::map<SANDTrackerCellID, SANDTrackerCell>::iterator getCell(SANDTrackerCellID);
-  std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator  getCell(SANDTrackerCellID) const;
-  std::map<SANDTrackerCellID, SANDTrackerCell>::iterator getCell(double);
-  std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator getCell(double) const;
-  std::map<SANDTrackerCellID, SANDTrackerCell>::iterator getLowerBoundCell(double);
-  const std::map<SANDTrackerCellID, SANDTrackerCell>::const_iterator getLowerBoundCell(double) const;
-  TVector3 getPosition()  const {return _position;} ;
-  TVector3 getDimension() const {return _dimension;} ;
-  double getRotation() const {return _rotation;} ;
-  double getMaxTransverseCoord() const {return _max_transverse_position;} ;
-  std::vector<TVector2> getPlaneVertices() const {return _vertices;} ;
-  SANDTrackerModule* getModule() const {return _module;} ;
-  void setPosition(TVector3 p)  { _position  = p;};
-  void setDimension(TVector3 d) { _dimension = d;};
-  void setRotation(double r) {_rotation = r;};
+  std::map<CellID, Cell>::iterator getCell(CellID);
+  std::map<CellID, Cell>::const_iterator  getCell(CellID) const;
+  std::map<CellID, Cell>::iterator getCell(double);
+  std::map<CellID, Cell>::const_iterator getCell(double) const;
+  std::map<CellID, Cell>::iterator getLowerBoundCell(double);
+  const std::map<CellID, Cell>::const_iterator getLowerBoundCell(double) const;
+  TVector3 getPosition()  const {return position_;} ;
+  TVector3 getDimension() const {return dimension_;} ;
+  double getRotation() const {return rotation_;} ;
+  double getMaxTransverseCoord() const {return max_transverse_position_;} ;
+  std::vector<TVector2> getPlaneVertices() const {return vertices_;} ;
+  Module* getModule() const {return module_;} ;
+  void setPosition(TVector3 p)  { position_  = p;};
+  void setDimension(TVector3 d) { dimension_ = d;};
+  void setRotation(double r) {rotation_ = r;};
 };
 
-using plane_iterator = std::vector<SANDTrackerPlane>::const_iterator;
+using plane_iterator = std::vector<Plane>::const_iterator;
+
+} // namespace tracker
+} // namespace sand_geometry

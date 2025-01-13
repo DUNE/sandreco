@@ -23,7 +23,7 @@
 #include "SANDTrackerCluster.h"
 #include "SANDTrackerDigitCollection.h"
 
-#include <CLine3D.h>
+#include <Line3D.h>
 #include "utils.h"
 
 #include <algorithm>
@@ -35,49 +35,49 @@ class TrackletFinder {
     TrackletFinder() {};
     ~TrackletFinder() {};
 
-    void SetVolumeParameters(int* p) {_volume_parameters = p;};
-    void SetSigmaPosition(double sp) {_sigma_pos = sp;};
-    void SetSigmaAngle(double sa)    {_sigma_ang = sa;};
-    void SetCells(const SANDTrackerCluster& cluster) {_cluster = cluster;};
-    void SetTrajectory(TVector3 tp, TVector3 td)     {_trajectory = CLine3D(tp, td);};
-    void SetDigitCollection(SANDTrackerDigitCollection* digit_collection) {_digit_collection = digit_collection;};
+    void setVolumeParameters(int* p) {volume_parameters_ = p;};
+    void setSigmaPosition(double sp) {sigma_pos_ = sp;};
+    void setSigmaAngle(double sa)    {sigma_ang_ = sa;};
+    void setCells(const sand_reco::tracker::Cluster& cluster) {cluster_ = cluster;};
+    void setTrajectory(TVector3 tp, TVector3 td)     {trajectory_ = Line3D(tp, td);};
+    void setDigitCollection(sand_reco::tracker::DigitCollection* digit_collection) {digit_collection_ = digit_collection;};
 
-    bool CheckParallel(TVector3 d1, TVector3 d2);
-    void LinesParallelToWire(CLine3D w, double distance, std::vector<CLine3D>& lines);
-    void ComputeCellsIntersections();
-    void ComputeCellsBands();
-    void GetScanningAreaVertices();
-    void ComputeDriftTime();
+    bool checkParallel(TVector3 d1, TVector3 d2);
+    void linesParallelToWire(Line3D w, double distance, std::vector<Line3D>& lines);
+    void computeCellsIntersections();
+    void computeCellsBands();
+    void getScanningAreaVertices();
+    void computeDriftTime();
 
-    const std::map<SANDTrackerDigitID, double>& GetDigitToDriftTimeMap() const {return _digitId_to_drift_time;};
+    const std::map<sand_reco::tracker::DigitID, double>& getDigitToDriftTimeMap() const {return digitId_to_drift_time_;};
 
-    std::vector<TVectorD> FindTracklets();
+    std::vector<TVectorD> findTracklets();
 
-    void Clear();
+    void clear();
 
-    void Draw3D();
-    void Draw3DWires();
-    void Draw2DWires();
-    void Draw2DDistance();
-    void Draw2DDigits();
+    void draw3D();
+    void draw3DWires();
+    void draw2DWires();
+    void draw2DDistance();
+    void draw2DDigits();
 
   private:
-    SANDTrackerCluster _cluster;
-    SANDTrackerDigitCollection* _digit_collection;
-    std::map<SANDTrackerDigitID, double> _digitId_to_drift_time;
-    CLine3D _trajectory;
+    sand_reco::tracker::Cluster cluster_;
+    sand_reco::tracker::DigitCollection* digit_collection_;
+    std::map<sand_reco::tracker::DigitID, double> digitId_to_drift_time_;
+    Line3D trajectory_;
 
-    std::vector<TVector3> _cells_intersections;
-    std::vector<CLine3D>  _cells_bands;
+    std::vector<TVector3> cells_intersections_;
+    std::vector<Line3D>  cells_bands_;
 
-    double _sigma_pos; // mm
-    double _sigma_ang; // rad
+    double sigma_pos_; // mm
+    double sigma_ang_; // rad
 
-    int* _volume_parameters;
-    TVector3 _mean_point_3d;
+    int* volume_parameters_;
+    TVector3 mean_point_3d_;
 
-    TCanvas* _c2 = nullptr;
-    TCanvas* _c3 = nullptr;
+    TCanvas* c2_ = nullptr;
+    TCanvas* c3_ = nullptr;
 
 };
 
