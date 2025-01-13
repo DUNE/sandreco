@@ -167,6 +167,9 @@ void GroupHitsByTube(const TG4Event& ev, const SANDGeoManager& geo,
   hits2Tube.clear();
 
   int skipped_hit = 0;
+  if (ev.SegmentDetectors.find("Straw") == ev.SegmentDetectors.end()) {
+    return;
+  }
   int all_hit = ev.SegmentDetectors.at("Straw").size();
 
   for (unsigned int j = 0; j < ev.SegmentDetectors.at("Straw").size(); j++) {
@@ -238,6 +241,10 @@ void GroupHitsByCell(const TG4Event& ev, const SANDGeoManager& geo,
                         std::map<sand_geometry::tracker::CellID, std::vector<hit>>& hits2cell)
 {
   hits2cell.clear();
+
+  if (ev.SegmentDetectors.find("DriftVolume") == ev.SegmentDetectors.end()) {
+    return;
+  }
 
   for (unsigned int j = 0; j < ev.SegmentDetectors.at("DriftVolume").size(); j++) {
     const TG4HitSegment& hseg = ev.SegmentDetectors.at("DriftVolume").at(j);
