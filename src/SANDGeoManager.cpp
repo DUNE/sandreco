@@ -245,14 +245,9 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
 
   // cellID = distanza dall'estremo diviso larghezza cella
   cell_local_id = (local[0] + dx) / cell_width;
+  // set the cellID to 11 if the hit end-up at the outer boundary
   if(cell_local_id == sand_geometry::ecal::number_of_cells_per_barrel_layer)
     cell_local_id--;
-  // or, alternatively:
-  // cell_local_id = std::abs(local[0] + dx - 1e-8) / cell_width;
-  if (cell_local_id == 0 || cell_local_id == 11 || cell_local_id == 12) {
-    std::cout<<"> Hit at local: ("<<local[0]<<", "<<local[1]<<", "<<local[2]<<")\n";
-    std::cout<<"Dx at z: "<<dx<<", cell_width at z: "<<cell_width<<", loc_ID: "<<cell_local_id<<"\n";
-  }
 }
 
 void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
