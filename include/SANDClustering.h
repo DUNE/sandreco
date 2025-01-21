@@ -30,7 +30,9 @@ cluster Calc_variables(std::vector<reco_cell>);
 cluster Create_cluster(std::vector<dg_cell>);
 
 bool RepetitionCheck(std::vector<int>, int);
-bool isNeighbour(int, int);
+//bool isNeighbour(int, int);
+bool isNeighbour(const dg_cell&, const dg_cell&);
+bool isNeighbour_dg_reco(const dg_cell&, const reco_cell&);
 
 double EfromADCsingle(double adc, double f);
 double DfromTDC(double, double);
