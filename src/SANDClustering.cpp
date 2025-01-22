@@ -89,8 +89,6 @@ void Clust_info(cluster clus)
               << " Z: " << clus.reco_cells.at(i).z
               << ", Energy: " << clus.reco_cells.at(i).e << std::endl;
   }
-
-  std::cout << std::endl;
 }
 
 std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
@@ -105,7 +103,7 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
     for (int i = 0; i < cell.ps1.size(); i++) {
       int found = 0;
       for (int j = 0; j < cell.ps2.size(); j++) {
-        if (abs(cell.ps1.at(i).tdc - cell.ps2.at(j).tdc) < delta) {
+        if (fabs(cell.ps1.at(i).tdc - cell.ps2.at(j).tdc) < delta) {
           dg_cell good_cell;
           good_cell.id = cell.id;
           good_cell.z = cell.z;
@@ -142,7 +140,7 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
     for (int k = 0; k < cell.ps2.size(); k++) {
       int found = 0;
       for (int l = 0; l < cell.ps1.size(); l++) {
-        if (abs(cell.ps1.at(l).tdc - cell.ps2.at(k).tdc) < delta) {
+        if (fabs(cell.ps1.at(l).tdc - cell.ps2.at(k).tdc) < delta) {
           found++;
         }
       }
@@ -172,6 +170,7 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
 
   int n_inc_cells = 0;
   for (auto const& brok_cells : incomplete_cells) {
+    incomplete_cell this_inco_cell; 
     int isbarrel = 0;
     // if (brok_cells.mod == 30) isbarrel = 1;
     // if (brok_cells.mod == 40) isbarrel = 2;
@@ -180,12 +179,16 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
                 << std::endl;
       std::cout << "brok_cells.mod: " << brok_cells.mod << std::endl;
       isbarrel = 1;
+      this_inco_cell.isbarrel=false;
+      this_inco_cell.endcap=1;
     }
     if (brok_cells.id > 1000000 && brok_cells.id < 20000000) {
       std::cout << "incomplete cell.id: " << brok_cells.id << ", is in endcap 2"
                 << std::endl;
       std::cout << "brok_cells.mod: " << brok_cells.mod << std::endl;
       isbarrel = 2;
+      this_inco_cell.isbarrel=false;
+      this_inco_cell.endcap=2;
     }
     double cell_phi =
         atan((brok_cells.z - 23910.00) / (brok_cells.y + 2384.73)) * 180 /
@@ -300,9 +303,9 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
                       << " CLUSTER respect the conditions (minentry)"
                       << std::endl;
             std::cout << " dist " << dist << " < 200, phi "
-                      << abs(cell_phi - clus_phi) << " < 3" << std::endl;
+                      << fabs(cell_phi - clus_phi) << " < 3" << std::endl;
             found = 1;
-            minphi = abs(cell_phi - clus_phi);
+            minphi = fabs(cell_phi - clus_phi);
             minentry = j;
           }
           continue;
@@ -313,15 +316,15 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
           double dist = sqrt(
               (brok_cells.z - clus.at(j).z) * (brok_cells.z - clus.at(j).z) +
               (brok_cells.x - clus.at(j).x) * (brok_cells.x - clus.at(j).x));
-          if (abs(cell_theta - clus_theta) < 3 && dist < 200) {
+          if (fabs(cell_theta - clus_theta) < 3 && dist < 200) {
             std::cout << "STILL " << j
                       << " CLUSTER respect the conditions (minentry)"
                       << std::endl;
             std::cout << " dist " << dist << " < 200, theta "
-                      << abs(cell_theta - clus_theta) << " < 3" << std::endl;
+                      << fabs(cell_theta - clus_theta) << " < 3" << std::endl;
             
             found = 1;
-            mintheta = abs(cell_theta - clus_theta);
+            mintheta = fabs(cell_theta - clus_theta);
             minentry = j;
             std::cout << "LOOK at the tdc - tcluster:" << std::endl;
             if (brok_cells.ps1.size() != 0) {
@@ -367,6 +370,27 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
             sand_reco::ecal::reco::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
 
+        this_inco_cell.isbarrel=true;
+        this_inco_cell.endcap=0;
+        this_inco_cell.e=rec_en;
+
+        this_inco_cell.id = brok_cells.id;
+        
+        double d = DfromTDC(brok_cells.ps1.at(0).tdc, brok_cells.ps2.at(0).tdc);
+        double d3;
+        
+        d3 = brok_cells.x - d;
+
+        this_inco_cell.x = d3;
+        this_inco_cell.y = brok_cells.y;
+        this_inco_cell.z = brok_cells.z;
+        this_inco_cell.l = brok_cells.l;
+        this_inco_cell.mod = brok_cells.mod;
+        this_inco_cell.lay = brok_cells.lay;
+        this_inco_cell.fired_pmt = 3;
+        this_inco_cell.ps = brok_cells.ps1.at(0);
+        clus.at(minentry).incomplete_cells.push_back(this_inco_cell);
+
       } else if (brok_cells.ps1.size() != 0) {
 
         int laycell = brok_cells.lay;
@@ -383,6 +407,23 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
 
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
 
+        this_inco_cell.isbarrel=true;
+        this_inco_cell.endcap=0;
+        this_inco_cell.e=rec_en;
+
+        this_inco_cell.id = brok_cells.id;
+        
+
+        this_inco_cell.x = -999;
+        this_inco_cell.y = brok_cells.y;
+        this_inco_cell.z = brok_cells.z;
+        this_inco_cell.l = brok_cells.l;
+        this_inco_cell.mod = brok_cells.mod;
+        this_inco_cell.lay = brok_cells.lay;
+        this_inco_cell.fired_pmt = 1;
+        this_inco_cell.ps = brok_cells.ps1.at(0);
+        clus.at(minentry).incomplete_cells.push_back(this_inco_cell);
+
       } else if (brok_cells.ps2.size() != 0) {
 
         int laycell = brok_cells.lay;
@@ -396,6 +437,24 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
         std::cout << "fabs(clus.at(" << minentry << ").t- brok_cells.ps2.at(0).tdc) "
                   << fabs(clus.at(minentry).t - brok_cells.ps2.at(0).tdc) << std::endl;
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
+
+        this_inco_cell.isbarrel=true;
+        this_inco_cell.endcap=0;
+        this_inco_cell.e=rec_en;
+
+        this_inco_cell.id = brok_cells.id;
+        
+
+        this_inco_cell.x = -999;
+        this_inco_cell.y = brok_cells.y;
+        this_inco_cell.z = brok_cells.z;
+        this_inco_cell.l = brok_cells.l;
+        this_inco_cell.mod = brok_cells.mod;
+        this_inco_cell.lay = brok_cells.lay;
+        this_inco_cell.fired_pmt = 2;
+        this_inco_cell.ps = brok_cells.ps2.at(0);
+        clus.at(minentry).incomplete_cells.push_back(this_inco_cell);
+        
       }
     }
     if (found == 1 && isbarrel != 0) {
@@ -427,6 +486,27 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
             sand_reco::ecal::reco::EfromADC(Ea, Eb, DpmA, DpmB, brok_cells.lay);
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
         std::cout << "recEn " << rec_en << std::endl;
+
+        this_inco_cell.isbarrel=false;
+        this_inco_cell.e=rec_en;
+
+        this_inco_cell.id = brok_cells.id;
+        
+        double d = DfromTDC(brok_cells.ps1.at(0).tdc, brok_cells.ps2.at(0).tdc);
+        double d3;
+        
+        d3 = brok_cells.y - d;
+
+        this_inco_cell.y = d3;
+        this_inco_cell.x = brok_cells.x;
+        this_inco_cell.z = brok_cells.z;
+        
+        this_inco_cell.l = brok_cells.l;
+        this_inco_cell.mod = brok_cells.mod;
+        this_inco_cell.lay = brok_cells.lay;
+        this_inco_cell.fired_pmt = 3;
+        this_inco_cell.ps = brok_cells.ps1.at(0);
+        clus.at(minentry).incomplete_cells.push_back(this_inco_cell);
       } else if (brok_cells.ps1.size() != 0) {
 
         int laycell = brok_cells.lay;
@@ -437,7 +517,21 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
         std::cout << "recEn (ps1)" << rec_en << "(" << brok_cells.ps1.at(0).side
                   << ")" << std::endl;
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
+   this_inco_cell.isbarrel=false;
+        this_inco_cell.e=rec_en;
 
+        this_inco_cell.id = brok_cells.id;
+        
+        this_inco_cell.y = -999; //to change!
+        this_inco_cell.x = brok_cells.x;
+        this_inco_cell.z = brok_cells.z;
+        
+        this_inco_cell.l = brok_cells.l;
+        this_inco_cell.mod = brok_cells.mod;
+        this_inco_cell.lay = brok_cells.lay;
+        this_inco_cell.fired_pmt = 1;
+        this_inco_cell.ps = brok_cells.ps1.at(0);
+        clus.at(minentry).incomplete_cells.push_back(this_inco_cell);
       } else if (brok_cells.ps2.size() != 0) {
 
         int laycell = brok_cells.lay;
@@ -448,6 +542,22 @@ std::vector<cluster> RecoverIncomplete(std::vector<cluster> clus,
         std::cout << "recEn (ps2)" << rec_en << "(" << brok_cells.ps2.at(0).side
                   << ")" << std::endl;
         clus.at(minentry).e = clus.at(minentry).e + rec_en;
+
+        this_inco_cell.isbarrel=false;
+        this_inco_cell.e=rec_en;
+
+        this_inco_cell.id = brok_cells.id;
+        
+        this_inco_cell.y = -999; //to change
+        this_inco_cell.x = brok_cells.x;
+        this_inco_cell.z = brok_cells.z;
+        
+        this_inco_cell.l = brok_cells.l;
+        this_inco_cell.mod = brok_cells.mod;
+        this_inco_cell.lay = brok_cells.lay;
+        this_inco_cell.fired_pmt = 2;
+        this_inco_cell.ps = brok_cells.ps2.at(0);
+        clus.at(minentry).incomplete_cells.push_back(this_inco_cell);
       }
     }
     n_inc_cells++;
@@ -521,9 +631,9 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec,
     tB = tB / EBtot;
 
     tB2 = tB2 / EBtot;
-    tRMS_A = sqrt(abs((tA2 - tA * tA) * (EA2tot - EAtot * EAtot) / EA2tot));
+    tRMS_A = sqrt(fabs((tA2 - tA * tA) * (EA2tot - EAtot * EAtot) / EA2tot));
 
-    tRMS_B = sqrt(abs((tB2 - tB * tB) * (EB2tot - EBtot * EBtot) / EB2tot));
+    tRMS_B = sqrt(fabs((tB2 - tB * tB) * (EB2tot - EBtot * EBtot) / EB2tot));
 
     dist = std::sqrt(tRMS_A * tRMS_A + tRMS_B * tRMS_B);
 
@@ -659,7 +769,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
 
       double D = sqrt((xi - xj) * (xi - xj) + (yi - yj) * (yi - yj) +
                       (zi - zj) * (zi - zj));
-      double DT = abs(ti - tj);
+      double DT = fabs(ti - tj);
       double dx = sqrt(std::pow(xi - xj, 2));
       double dy = sqrt(std::pow(yi - yj, 2));
       double dz = sqrt(std::pow(zi - zj, 2));
@@ -671,7 +781,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
           endcap = true;
         }
         if (endcap == true) {
-          double Dz_ec = abs(yi - yj);
+          double Dz_ec = fabs(yi - yj);
           D = sqrt((xi - xj) * (xi - xj) + (zi - zj) * (zi - zj));
           if (Dz_ec < 250 && D < 250) {
             std::vector<reco_cell> vec_cells_j = Og_cluster.at(j).reco_cells;
@@ -682,7 +792,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
             checked.push_back(j);
           }
         } else if (endcap == false) {
-          double Dz_bar = abs(xi - xj);
+          double Dz_bar = fabs(xi - xj);
           D = sqrt((zi - zj) * (zi - zj) + (yi - yj) * (yi - yj));
           if (Dz_bar < 250 && D < 250) {
             std::vector<reco_cell> vec_cells_j = Og_cluster.at(j).reco_cells;
@@ -1156,45 +1266,10 @@ bool RepetitionCheck(std::vector<int> v, int check)
   }
 }
 
-// bool isNeighbour(int id, int c_id)
-// {
-//   // Middle of the module
-//   if (c_id == id + 101 || c_id == id + 100 || c_id == id + 99 ||
-//       c_id == id + 1 || c_id == id - 1 || c_id == id - 99 || c_id == id - 100
-//       || c_id == id - 101) {
-//     return true;
-//   }
-//   // Right edge of the module
-//   else if (c_id == id - 889 || c_id == id - 989 || c_id == id - 1089) {
-//     return true;
-//   }
-//   // Right edge of 0 module
-//   else if ((c_id == id + 23111 || c_id == id + 23011 || c_id == id + 22911)
-//   &&
-//            id < 25000) {
-//     return true;
-//   }
-//   // Left edge of the module
-//   else if (c_id == id + 1089 || c_id == id + 989 || c_id == id + 889) {
-//     return true;
-//   }
-//   // Left edge of the 23 module
-//   else if ((c_id == id - 23011 || c_id == id - 22911 || c_id == id - 23111)
-//   &&
-//            id < 25000) {
-//     return true;
-//   }
-//   // Multiple hit on same cell
-//   else if (c_id == id) {
-//     return true;
-//   } else
-//     return false;
-// }
 
 bool isNeighbour(const dg_cell& cell, const dg_cell& check_cell)
 {
-  // std::cout << "cell : " << cell.id << ", and cell" << check_cell.id <<
-  // std::endl;
+
   bool arebothendcap = false;
   bool arebothbarrel = false;
 
@@ -1319,10 +1394,8 @@ std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
   for (int i = 0; i < cells.size(); i++) {
 
     if (RepetitionCheck(checked, i) == true) continue;
-    // bool check = isNeighbour(cells.at(start).id, cells.at(i).id);
-    bool check = isNeighbour(cells.at(start), cells.at(i));
 
-    if (check == true)  //<---
+    bool check = isNeighbour(cells.at(start), cells.at(i));
 
       if (check == true) {
         neigh_chain.push_back(cells.at(i));
