@@ -172,6 +172,7 @@ void eval_adc_and_tdc_from_photo_electrons(
         // get ready for next digiit
         pe_count = 1;
         photo_el_digit.clear();
+        photo_el_digit.push_back(*this_pe);
         int_start = this_pe->time;
         start_index = this_pe - it->second.begin();
       }
