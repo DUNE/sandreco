@@ -10,6 +10,50 @@ struct pe {
   double time;
   int h_index;
 };
+struct cluster_generator{
+  int pdg_code; 
+  int parent_pdg_code;
+  int track_id;
+  int parent_track_id; 
+  double dep_energy;
+  double initial_energy;
+  double initial_momentum; 
+  double initial_x; 
+  double initial_y;
+  double initial_z;  
+};
+
+struct truecluster{
+    int tid;
+    double x;
+    double y;
+    double z;
+    double t; 
+    double e;
+    double sx;
+    double sy;
+    double sz;
+    int ntot_cell;
+    int cell_l0;
+    int cell_l1; 
+    int cell_l2;
+    int cell_l3;
+    int cell_l4;
+    double energy_l0;
+    double energy_l1;
+    double energy_l2;
+    double energy_l3;
+    double energy_l4;
+    double lay0_maxE;
+    double lay1_maxE;
+    double lay2_maxE;
+    double lay3_maxE;
+    double lay4_maxE;
+    double asymmetry; 
+    double Eoverp;
+    bool moregens= false;
+    std::vector<cluster_generator> vec_generator;
+};
 
 struct hit {
   std::string det;
@@ -63,6 +107,21 @@ struct reco_cell {
   dg_ps ps2;
 };
 
+struct incomplete_cell {
+  int id;
+  bool isbarrel;
+  int endcap; 
+  double z; // better to use a custom Vector2D
+  double y;
+  double x;
+  double l;
+  int mod;
+  int lay;
+  double e;
+  int fired_pmt; 
+  dg_ps ps;
+};
+
 struct dg_tube {
   std::string det;
   int did;
@@ -93,8 +152,8 @@ struct cluster {
   double varx;
   double vary;
   double varz;
-  //std::vector<dg_cell> cells;
   std::vector<reco_cell> reco_cells; 
+  std::vector<incomplete_cell> incomplete_cells; 
 };
 
 struct track {
