@@ -126,6 +126,7 @@ void SANDGeoManager::decode_ecal_cell_id(int cell_global_id, int& detector_id,
 bool SANDGeoManager::is_ecal_barrel(const TString& volume_name) const
 {
   // something like: volECALActiveSlab_21_PV_0
+   // To Do: add a more refined check for passive and active volumes
   return volume_name.Contains("volECAL") == true &&
          volume_name.Contains("Active") == true &&
          volume_name.Contains("end") == false;
