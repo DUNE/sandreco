@@ -173,8 +173,6 @@ bool SANDGeoManager::is_endcap_mod(const TString& volume_name) const
 
 bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path) const
 {
-  // this bit seems strange: what if other paths end up having more than 8
-  // tokens?
 
   // BARREL ==> something like:
   // "/volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_18/volECALActiveSlab_21_PV_0"
@@ -201,8 +199,7 @@ bool SANDGeoManager::check_and_process_ecal_path(TString& volume_path) const
 
   return true;
 }
-// Note: I think plane_id should be renamed to layer_id for consistency with
-// function calls also plane_id is used in the STT functions
+
 void SANDGeoManager::get_ecal_barrel_module_and_layer(
     const TString& volume_name, const TString& volume_path, int& detector_id,
     int& module_id, int& layer_id) const
@@ -230,40 +227,8 @@ void SANDGeoManager::get_ecal_barrel_module_and_layer(
   if (layer_id > 4) layer_id = 4;
 }
 
-// Note: I think plane_id should be renamed to layer_id for consistency with
-// function calls
-/* void SANDGeoManager::get_ecal_endcap_module_and_layer(
-    const TString& volume_name, const TString& volume_path, int& detector_id,
-    int& module_id, int& layer_id) const
-{
-  TObjArray* obja1 =
-      volume_name.Tokenize("_");  // ENDCAP => endvolECALActiveSlab_0_PV_0
-  TObjArray* obja2 = volume_path.Tokenize("_");  // ENDCAP => ECAL_end_lv_PV_0
 
-  module_id = ((TObjString*)obja2->At(4))->GetString().Atoi();
-  int slab_id = ((TObjString*)obja1->At(1))->GetString().Atoi();
-
-  // mod == 40 -> left  -> detID = 1
-  // mod == 30 -> right -> detID = 3
-  // (see issue: https://baltig.infn.it/dune/sand-reco/-/issues/18)
-  if (module_id == 0) {
-    detector_id = 1;
-    module_id = 40;
-  } else if (module_id == 1) {
-    detector_id = 3;
-    module_id = 30;
-  }
-  delete obja1;
-  delete obja2;
-
-  // layer_id==0 -> internal (slab_id==0 ?)
-  // layer_id==208 -> external (slab_id==208 ?)
-  layer_id = slab_id / 40;
-
-  if (layer_id > 4) layer_id = 4;
-} */
-
-// NEW VERSION!!!
+// Updated version
 void SANDGeoManager::get_ecal_endcap_module_and_layer(
     const TString& volume_name, const TString& volume_path, int& detector_id,
     int& module_id, int& layer_id) const
@@ -548,9 +513,8 @@ int SANDGeoManager::get_endcap_hit_pos(const double& d1,
                d_vert = d_curv0 + ec_mod.l_vert(),
                d_curv1 = d_vert + ec_mod.get_curv_arc_len(depth),
                d_hor1 = d_curv1 + ec_mod.l_hor();
-  // the local coordinates will always refer to the
-  // vertical section!!!!!!!!! find the right module
-  // section based on the d1 range
+  // the local coordinates will always refer to the vertical section 
+  // find the right module section based on the d1 range
   if (d1 <= d_hor0) {
     local[1] = 0.5 * ec_mod.l_vert() + ec_mod.rmax() - depth;
     local[2] = -0.5 * ec_mod.mod_dz() + ec_mod.rmax() + (d_hor0 - d1);
@@ -594,9 +558,6 @@ int SANDGeoManager::get_hit_path_len(const double& hx, const double& hy,
   int detID, modID, layerID, locID;
   decode_ecal_cell_id(global_cell_id, detID, modID, layerID, locID);
 
-  // std::cout << "[detID,modID,planeID,cellID]: [" << detID << ", " << modID
-  //           << ", " << layerID << ", " << locID << "]\n";
-
   int exit = 0;
   if (detID == 2) {  // barrel modules
     exit = get_barrel_path_len(hx, hy, hz, d1, d2);
@@ -633,7 +594,6 @@ int SANDGeoManager::get_reco_hit_pos(const int& cellID, const double& cell_l,
   const double d1 = compute_cell_d1(cell_l, tdc_1, tdc_2);
 
   if (d1 < 0 || d1 > cell_l) {
-    // std::cout << "ERROR: negative d1 distance\n";
     return -999;
   }
 
@@ -764,7 +724,6 @@ void SANDGeoManager::set_ecal_info()
       auto layer_id = cell_and_layer_id.first;
       auto cell_local_id = cell_and_layer_id.second;
 
-      // the problem is HERE!!!!!!
       int detector_id = 0;
       int replica_id = 0;
       int m_ID = 0;
@@ -777,11 +736,6 @@ void SANDGeoManager::set_ecal_info()
       // here we create new cellInfo
       int cell_unique_id = encode_ecal_cell_id(detector_id, module.first,
                                                layer_id, cell_local_id);
-      // std::cout << "cellID: " << cell_unique_id << ", modID: " << m_ID
-      //           << ", repID: " << replica_id << ", detID: " << detector_id
-      //           << ", (" << master[0] << ", " << master[1] << ", " <<
-      //           master[2]
-      //           << ")\n";
 
       cellmap_[cell_unique_id] =
           SANDECALCellInfo(cell_unique_id, master[0], master[1], master[2],
@@ -789,8 +743,6 @@ void SANDGeoManager::set_ecal_info()
     }
   }
   std::cout << "> Endcap cells info. set\n";
-  // for (auto module : cellmap_) std::cout << "cellID: " << module.first <<
-  // "\n";
   std::cout << "> cellmap_ size: " << cellmap_.size() << "\n";
 }
 
@@ -846,9 +798,6 @@ void SANDGeoManager::set_ecal_endcap_info(const TGeoHMatrix& matrix)
     // set the module info
     endcapmap_[mod_id] = SANDENDCAPModInfo(mod_id, node, node_hmatrix);
 
-    // std::cout << mod_id << ": (" << endcapmap_[mod_id].x() << ", "
-    //           << endcapmap_[mod_id].y() << ", " << endcapmap_[mod_id].z()
-    //           << ")\n";
 
   } else {
     for (int i = 0; i < node->GetNdaughters(); i++) {
