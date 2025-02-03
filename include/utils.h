@@ -165,6 +165,8 @@ namespace scintillation
 const double tscin = 3.08;
 const double tscex = 0.588;
 const double vlfb = 5.85;
+const double rise_time = 0.7; // ns
+const double decay_time = 3.0; // ns
 }  // namespace scintillation
 
 namespace photo_sensor
