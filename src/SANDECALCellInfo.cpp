@@ -32,9 +32,9 @@ void SANDECALCellInfo::orientation(Orient arg_orientation)
 
 // Getter methods for the attributes
 int SANDECALCellInfo::id() { return id_; }
-double SANDECALCellInfo::x() { return x_; }
-double SANDECALCellInfo::y() { return y_; }
-double SANDECALCellInfo::z() { return z_; }
+double SANDECALCellInfo::x() const { return x_; }
+double SANDECALCellInfo::y() const { return y_; }
+double SANDECALCellInfo::z() const { return z_; }
 double SANDECALCellInfo::length() { return length_; }
 SANDECALCellInfo::Orient SANDECALCellInfo::orientation()
 {

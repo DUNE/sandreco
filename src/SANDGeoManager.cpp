@@ -708,7 +708,7 @@ void SANDGeoManager::set_ecal_info()
   z_levels = get_levels_z(endcapmap_.begin()->second.mod_dz(),
                           sand_geometry::ecal::ec_layer_thickness);
 
-  for (const auto module : endcapmap_) {
+  for (const auto& module : endcapmap_) {
     auto endcap_cell_center_local_positions =
         get_ec_cell_center_local_position(z_levels, module.second);
 

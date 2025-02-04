@@ -1,12 +1,11 @@
 #include "SANDClustering.h"
 
-int clustering(std::string const& input)
+int clustering(std::string const& input, std::string const& edep_input)
 {
   
   const char* finname = input.c_str();
   TFile f(finname, "READ");
   TTree* t = (TTree*)f.Get("tDigit");
-  
   if (f.IsZombie()){
     std::cout << "Error in opening file\n";
     exit(1);
@@ -16,6 +15,12 @@ int clustering(std::string const& input)
     std::cout << "Error in retrieving objects from root file: tDigit" << std::endl; 
     exit(-1);
   }
+
+  const char* edep_name = edep_input.c_str();
+  TFile f_edep(edep_name, "READ");
+  TGeoManager* geo = (TGeoManager*)f_edep.Get("EDepSimGeometry");
+  SANDGeoManager sand_geo;
+  sand_geo.init(geo);
 
   int nEvents = t->GetEntries();
   std::vector<dg_cell>* cell = new std::vector<dg_cell>;
@@ -29,7 +34,7 @@ int clustering(std::string const& input)
   
   for (int i = 0; i < nEvents; i++) {
     t->GetEntry(i);
-    std::vector<cluster> clust = Clusterize(std::move(cell));
+    std::vector<cluster> clust = Clusterize(&sand_geo, std::move(cell));
     
     f_clust = clust;
     tout.Fill();
@@ -84,10 +89,11 @@ int main(int argc, char* argv[])
     return 1;
   }
   std::string digitFileName;
+  std::string ecalFileName;
   if (!initializeFiles(argc, argv, digitFileName)) {
     return 1;
   }
 
-  clustering(digitFileName);
+  clustering(digitFileName, ecalFileName);
   return 0;
 }

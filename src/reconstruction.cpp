@@ -1631,6 +1631,9 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   TGeoManager* geo = (TGeoManager*)f_hits.Get("EDepSimGeometry");
   TTree* tDigit = (TTree*)f_digits.Get("tDigit");
 
+  SANDGeoManager sand_geo;
+  sand_geo.init(geo);
+
   if (tTrueMC == nullptr || geo == nullptr || tDigit == nullptr) {
     std::cout << "Error in retrieving objects from root file: "
               << (tTrueMC == nullptr ? "EDepSimEvents " : "")
@@ -1714,7 +1717,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
         // Filter(vec_cl);
         //PidBasedClustering(ev, vec_cell, vec_cl);
         //Merge(vec_cl);
-        vec_cl = Clusterize(vec_cell);
+        vec_cl = Clusterize(&sand_geo, vec_cell);
         break;
     }
     tout.Fill();

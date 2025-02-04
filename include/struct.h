@@ -105,21 +105,7 @@ struct reco_cell {
   double t; 
   dg_ps ps1;
   dg_ps ps2;
-};
-
-struct incomplete_cell {
-  int id;
-  bool isbarrel;
-  int endcap; 
-  double z; // better to use a custom Vector2D
-  double y;
-  double x;
-  double l;
-  int mod;
-  int lay;
-  double e;
-  int fired_pmt; 
-  dg_ps ps;
+  int fired_pmt;
 };
 
 struct dg_tube {
@@ -153,7 +139,6 @@ struct cluster {
   double vary;
   double varz;
   std::vector<reco_cell> reco_cells; 
-  std::vector<incomplete_cell> incomplete_cells; 
 };
 
 struct track {

@@ -10,6 +10,8 @@
 
 #include "struct.h"
 
+#include "SANDGeoManager.h"
+
 std::tuple<double, double, double, double> fit_ls(int, double[], double[],
                                                   double[]);
 
@@ -19,12 +21,13 @@ std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
     std::vector<dg_cell>, int, std::vector<int>, std::vector<dg_cell>);
 
 
-std::vector<cluster> Clusterize(std::vector<dg_cell>*);
+std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, std::vector<dg_cell>*);
 void Clust_info(cluster);
 std::vector<cluster> TrackFit(std::vector<cluster>);
 std::vector<cluster> Merge(std::vector<cluster>);
 std::vector<cluster> Split(std::vector<cluster>, bool&);
-std::vector<cluster> RecoverIncomplete(std::vector<cluster>,
+std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo,
+                                       std::vector<cluster>,
                                        std::vector<dg_cell>);
 cluster Calc_variables(std::vector<reco_cell>);
 cluster Create_cluster(std::vector<dg_cell>);
