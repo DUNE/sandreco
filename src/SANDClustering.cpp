@@ -1,35 +1,16 @@
 #include "SANDClustering.h"
 #include "utils.h"
 
-std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, std::vector<dg_cell>* vec_cellraw)
+std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vector<dg_cell>& cells)
 {
-  std::vector<dg_cell> complete_cells, broken_cells, multicomplete_cells;
-  std::vector<cluster> vec_clust;
+  
+  std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells = ProcessMultiHits(cells);
+  std::vector<dg_cell> complete_cells   = processed_cells.first;
+  std::vector<dg_cell> incomplete_cells = processed_cells.second;
 
-  for (auto const& cell : *vec_cellraw) {
-    if (cell.ps1.size() == 0 && cell.ps2.size() == 0) {
-
-      continue;
-    } else if (cell.ps1.size() == 0 || cell.ps2.size() == 0) {
-
-      broken_cells.push_back(cell);
-    } else if ((cell.ps1.size() != 0 && cell.ps2.size() != 0)) {
-      // Complete cell
-
-      complete_cells.push_back(cell);
-    }
-  }
-
-  std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells =
-      ProcessMultiHits(complete_cells, broken_cells);
-  multicomplete_cells = processed_cells.first;
-  broken_cells = processed_cells.second;
-
-  std::vector<int> checked_array;
-  std::vector<int> vec_cell;
   std::vector<int> chck;
-
-  for (uint i = 0; i < multicomplete_cells.size(); i++) {
+  std::vector<cluster> vec_clust;
+  for (uint i = 0; i < complete_cells.size(); i++) {
 
     std::vector<dg_cell> v_cell;
 
@@ -39,10 +20,10 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, std::vector<dg_c
       chck.push_back(i);
     }
 
-    v_cell.push_back(multicomplete_cells.at(i));
+    v_cell.push_back(complete_cells.at(i));
 
     std::pair<std::vector<dg_cell>, std::vector<int>> Neighbours =
-        GetNeighbours(multicomplete_cells, i, chck, v_cell);
+        GetNeighbours(complete_cells, i, chck, v_cell);
     v_cell = Neighbours.first;
     chck = Neighbours.second;
     struct cluster Clust;
@@ -51,6 +32,7 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, std::vector<dg_c
 
     vec_clust.push_back(Clust);
   }
+
   // SPLIT
   int n_clu = 0;
 
@@ -61,14 +43,14 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, std::vector<dg_c
     vec_clust = Split(vec_clust, HasSplit);
     iteration++;
   } while (HasSplit);
+  
   // MERGE
-
   vec_clust = Merge(vec_clust);
 
   // Track Fit
   vec_clust = TrackFit(vec_clust);
 
-  vec_clust = RecoverIncomplete(sand_geo, vec_clust, broken_cells);
+  vec_clust = RecoverIncomplete(sand_geo, vec_clust, incomplete_cells);
 
   return vec_clust;
 }
@@ -92,11 +74,12 @@ void Clust_info(cluster clus)
 }
 
 std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
-    std::vector<dg_cell> og_cell, std::vector<dg_cell> incomplete_cells)
+    std::vector<dg_cell> cells)
 {
 
   std::vector<dg_cell> complete_cells;
-  for (auto const& cell : og_cell) {
+  std::vector<dg_cell> incomplete_cells;
+  for (auto const& cell : cells) {
     double delta = cell.l * sand_reco::ecal::scintillation::vlfb /
                    sand_reco::conversion::m_to_mm;
 
@@ -185,6 +168,8 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
       std::cout << "incomplete_cell.mod: " << incomplete_cell.mod << std::endl;
       isbarrel = 2;
     }
+
+    // TODO: This should be in the geo_cell or in the geoManager
     double cell_phi =
         atan((incomplete_cell.z - 23910.00) / (incomplete_cell.y + 2384.73)) * 180 /
         TMath::Pi();

@@ -34,7 +34,7 @@ int clustering(std::string const& input, std::string const& edep_input)
   
   for (int i = 0; i < nEvents; i++) {
     t->GetEntry(i);
-    std::vector<cluster> clust = Clusterize(&sand_geo, std::move(cell));
+    std::vector<cluster> clust = Clusterize(&sand_geo, *cell);
     
     f_clust = clust;
     tout.Fill();
@@ -49,7 +49,7 @@ int clustering(std::string const& input, std::string const& edep_input)
   return 0;
 }
 
-bool initializeFiles(int argc, char* argv[], std::string& digitFileName)
+bool initializeFiles(int argc, char* argv[], std::string& digitFileName, std::string& edepFileName)
 {
 
   for (int i = 1; i < argc; i += 2) {
@@ -58,6 +58,8 @@ bool initializeFiles(int argc, char* argv[], std::string& digitFileName)
 
     if (flag == "-d") {
       digitFileName = fileName;
+    } else if (flag == "-e") {
+      edepFileName = fileName;
     } else {
       std::cerr << "Error: Unknown flag: " << flag << std::endl;
       return false;
@@ -70,10 +72,22 @@ bool initializeFiles(int argc, char* argv[], std::string& digitFileName)
               << std::endl;
     return false;
   }
+  if (edepFileName.empty()) {
+    std::cerr << "Error: Missing required flags. Please use '-e' with "
+                 "corresponding file name."
+              << std::endl;
+    return false;
+  }
 
   if (!endsWith(digitFileName, ".digit.root")) {
     std::cerr << "Error: Invalid arguments. Please use '-d' before the "
                  ".digit.root file"
+              << std::endl;
+    return false;
+  }
+  if (!endsWith(edepFileName, ".edep.root")) {
+    std::cerr << "Error: Invalid arguments. Please use '-e' before the "
+                 ".edep.root file"
               << std::endl;
     return false;
   }
@@ -85,12 +99,12 @@ int main(int argc, char* argv[])
 {
 
   if (argc < 2) {
-    std::cerr << "Usage: SANDECALClustering" << " -d <file.digit.root>" << std::endl;
+    std::cerr << "Usage: SANDECALClustering -d <file.digit.root> -e <file.edep.root>" << std::endl;
     return 1;
   }
   std::string digitFileName;
   std::string ecalFileName;
-  if (!initializeFiles(argc, argv, digitFileName)) {
+  if (!initializeFiles(argc, argv, digitFileName, ecalFileName)) {
     return 1;
   }
 

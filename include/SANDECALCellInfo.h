@@ -29,7 +29,7 @@ class SANDECALCellInfo : public TObject
   void length(double arg_length);
   void orientation(Orient arg_orientation);
   // Getter methods for the attributes
-  int id();
+  int id() const;
   double x() const;
   double y() const;
   double z() const;

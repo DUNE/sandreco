@@ -87,7 +87,7 @@ target_link_libraries(eventDisplay PUBLIC Utils SANDEventDisplay "-lEG -lGui")
 
 # Creates SANDECALClustering executable.
 add_executable(SANDECALClustering src/SANDECALClustering.cpp)
-target_link_libraries(SANDECALClustering PUBLIC Utils SANDClustering)
+target_link_libraries(SANDECALClustering PUBLIC Struct Utils SANDClustering)
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
