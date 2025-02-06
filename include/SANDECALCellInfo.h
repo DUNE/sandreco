@@ -33,7 +33,7 @@ class SANDECALCellInfo : public TObject
   double x() const;
   double y() const;
   double z() const;
-  double length();
+  double length() const;
   Orient orientation();
 
   ClassDef(SANDECALCellInfo, 1);

@@ -438,6 +438,7 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
 
   } else if (volume_path.Contains("hor") &&
              volume_path.Contains("lv_PV_0/endvol")) {
+    // TODO: check the plus
     auto depth = local[2] + ec_mod.mod_dz();
     d1 = 0.5 * ec_mod.l_hor() +
          local[1];
@@ -446,6 +447,7 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
   } else if (volume_path.Contains("hor") &&
              volume_path.Contains("lv_PV_1/endvol")) {
     auto depth = local[2] + ec_mod.mod_dz();
+    // TODO: check the minus
     d2 = 0.5 * ec_mod.l_hor() - local[1]; // - takes into accout a coordinate rotation
     d1 = ec_mod.get_cell_tot_len(depth) - d2;
 
@@ -512,6 +514,11 @@ int SANDGeoManager::get_endcap_hit_pos(const double& d1,
                d_hor1 = d_curv1 + ec_mod.l_hor();
               //  std::cout << "d_hor: " << d_hor0 << std::endl;
               //  std::cout << "ec_mod.mod_dz(): " << ec_mod.mod_dz() << std::endl;
+    // if (ec_mod.n_sections() == 5) {
+    //   std::cout << d_hor1 << " " << current_cell.length() << " " << d1 << std::endl;
+    // } else {
+    //   std::cout << d_curv1 << " " << current_cell.length() << " " << d1 << std::endl;
+    // }
   // the local coordinates will always refer to the vertical section 
   // find the right module section based on the d1 range
   if (d1 <= d_hor0) {
@@ -704,7 +711,7 @@ void SANDGeoManager::set_ecal_info()
       int cell_unique_id =
           encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
       cellmap_[cell_unique_id] = SANDECALCellInfo(
-          cell_unique_id, master[0], master[1], master[2], ecal_barrel_dy,
+          cell_unique_id, master[0], master[1], master[2], 2 * ecal_barrel_dy,
           SANDECALCellInfo::Orient::kHorizontal);
     }
   }

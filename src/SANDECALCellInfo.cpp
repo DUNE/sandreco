@@ -35,7 +35,7 @@ int SANDECALCellInfo::id() const { return id_; }
 double SANDECALCellInfo::x() const { return x_; }
 double SANDECALCellInfo::y() const { return y_; }
 double SANDECALCellInfo::z() const { return z_; }
-double SANDECALCellInfo::length() { return length_; }
+double SANDECALCellInfo::length() const { return length_; }
 SANDECALCellInfo::Orient SANDECALCellInfo::orientation()
 {
   return orientation_;
