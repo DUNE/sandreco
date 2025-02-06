@@ -28,7 +28,7 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
     chck = Neighbours.second;
     struct cluster Clust;
 
-    Clust = Create_cluster(v_cell);
+    Clust = Create_cluster(sand_geo, v_cell);
 
     vec_clust.push_back(Clust);
   }
@@ -40,7 +40,7 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
   int iteration = 0;
   do {
 
-    vec_clust = Split(vec_clust, HasSplit);
+    vec_clust = Split(sand_geo, vec_clust, HasSplit);
     iteration++;
   } while (HasSplit);
   
@@ -361,11 +361,11 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
       //   this_cell.id = incomplete_cell.id;
         
       //   double d = DfromTDC(incomplete_cell.ps1.at(0).tdc, incomplete_cell.ps2.at(0).tdc);
-      //   double d3;
+      //   
         
-      //   d3 = incomplete_cell.x - d;
+      // 
 
-      //   this_cell.x = d3;
+      //  
       //   this_cell.y = incomplete_cell.y;
       //   this_cell.z = incomplete_cell.z;
       //   this_cell.l = incomplete_cell.l;
@@ -397,7 +397,7 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
         this_cell.id = incomplete_cell.id;
         
 
-        this_cell.x = -999;
+        this_cell.x = -9999;
         this_cell.y = incomplete_cell.y;
         this_cell.z = incomplete_cell.z;
         this_cell.l = incomplete_cell.l;
@@ -424,7 +424,7 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
         this_cell.id = incomplete_cell.id;
         
 
-        this_cell.x = -999;
+        this_cell.x = -9999;
         this_cell.y = incomplete_cell.y;
         this_cell.z = incomplete_cell.z;
         this_cell.l = incomplete_cell.l;
@@ -470,11 +470,9 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
       //   this_cell.id = incomplete_cell.id;
         
       //   double d = DfromTDC(incomplete_cell.ps1.at(0).tdc, incomplete_cell.ps2.at(0).tdc);
-      //   double d3;
-        
-      //   d3 = incomplete_cell.y - d;
+      
 
-      //   this_cell.y = d3;
+   
       //   this_cell.x = incomplete_cell.x;
       //   this_cell.z = incomplete_cell.z;
         
@@ -500,7 +498,7 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
 
         this_cell.id = incomplete_cell.id;
         
-        this_cell.y = -999; //to change!
+        this_cell.y = -9999; //to change!
         this_cell.x = incomplete_cell.x;
         this_cell.z = incomplete_cell.z;
         
@@ -523,7 +521,7 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
 
         this_cell.id = incomplete_cell.id;
         
-        this_cell.y = -999; //to change
+        this_cell.y = -9999; //to change
         this_cell.x = incomplete_cell.x;
         this_cell.z = incomplete_cell.z;
         
@@ -541,7 +539,7 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
   return clus;
 }
 
-std::vector<cluster> Split(std::vector<cluster> original_clu_vec,
+std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> original_clu_vec,
                            bool& HasSplit)
 {
   std::vector<cluster> clu_vec;
@@ -568,10 +566,10 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec,
       EBtot += EB;
       EB2tot += EB * EB;
 
-      double d = DfromTDC(all_cells[j].ps1.tdc, all_cells[j].ps2.tdc);
-      double d1, d2, d3;
-      d1 = 0.5 * all_cells[j].l + d;
-      d2 = 0.5 * all_cells[j].l - d;
+      //double d = DfromTDC(all_cells[j].ps1.tdc, all_cells[j].ps2.tdc);
+      double d1, d2;
+      d1 = sand_geo->compute_cell_d1(all_cells.at(j).l, all_cells.at(j).ps1.tdc, all_cells.at(j).ps2.tdc);
+      d2 = sand_geo->compute_cell_d2(all_cells.at(j).l, all_cells.at(j).ps1.tdc, all_cells.at(j).ps2.tdc);
 
       double cell_E = sand_reco::ecal::reco::EfromADC(
           all_cells[j].ps1.adc, all_cells[j].ps2.adc, d1, d2, all_cells[j].lay);
@@ -617,10 +615,8 @@ std::vector<cluster> Split(std::vector<cluster> original_clu_vec,
       int n_cella = 0;
       for (auto const& a_cells : all_cells) {
 
-        double d = DfromTDC(a_cells.ps1.tdc, a_cells.ps2.tdc);
-        double d1, d2, d3;
-        d1 = 0.5 * a_cells.l + d;
-        d2 = 0.5 * a_cells.l - d;
+        double d1 = sand_geo->compute_cell_d1(a_cells.l, a_cells.ps1.tdc, a_cells.ps2.tdc);
+        double d2 = sand_geo->compute_cell_d2(a_cells.l, a_cells.ps1.tdc, a_cells.ps2.tdc);
 
         double t_difA = a_cells.ps1.tdc -
                         (sand_reco::ecal::scintillation::vlfb * d1 /
@@ -1039,7 +1035,7 @@ std::tuple<double, double, double, double> fit_ls(int lay, double* X, double* Y,
   return std::make_tuple(A, B, dA, dB);
 }
 
-cluster Create_cluster(std::vector<dg_cell> cells)
+cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cells)
 {
 
   double x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0,
@@ -1051,11 +1047,24 @@ cluster Create_cluster(std::vector<dg_cell> cells)
   for (auto& cell : cells) {
 
     reco_cell rec_cell;
-    double d = DfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
-    double d1, d2, d3;
-    d1 = 0.5 * cell.l + d;
 
-    d2 = 0.5 * cell.l - d;
+    double d1, d2;
+    d1 = sand_geo->compute_cell_d1(cell.l, cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
+    d2 = sand_geo->compute_cell_d2(cell.l, cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
+    
+    double d = DfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
+    double d1_old, d2_old, d3_old;
+    d1_old = 0.5 * cell.l + d;
+    d2_old = 0.5 * cell.l - d;
+    
+    if (fabs(d1 - d1_old) > 0.1) {
+      if (cell.id < 2e7) {
+        std::cout << "ëndcap: " << d1 << " " << d1_old << " " << d2 << " " << d2_old << std::endl;
+      } else {
+        std::cout << "barrel: " << d1 << " " << d1_old << " " << d2 << " " << d2_old << std::endl;
+      }
+    }
+    
     double cell_E = sand_reco::ecal::reco::EfromADC(
         cell.ps1.at(0).adc, cell.ps2.at(0).adc, d1, d2, cell.lay);
 
@@ -1070,34 +1079,23 @@ cluster Create_cluster(std::vector<dg_cell> cells)
     rec_cell.t = cell_T;
     rec_cell.ps1 = cell.ps1.at(0);
     rec_cell.ps2 = cell.ps2.at(0);
+    rec_cell.fired_pmt = 3;
 
-    if (cell.mod > 25) {
-      d3 = cell.y - d;
+      double cell_x = 22222, cell_y = 22222, cell_z = 22222;
+      sand_geo->get_reco_hit_pos(cell.id, cell.l, cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell_x, cell_y, cell_z);
+      rec_cell.x = cell_x;
+      rec_cell.y = cell_y;
+      rec_cell.z = cell_z;
 
-      rec_cell.y = d3;
-      rec_cell.x = cell.x;
-      rec_cell.z = cell.z;
-
-      y_weighted = y_weighted + (d3 * cell_E);
-      y2_weighted = y2_weighted + (d3 * d3 * cell_E);
-      x_weighted = x_weighted + (cell.x * cell_E);
-      x2_weighted = x2_weighted + (cell.x * cell.x * cell_E);
-    } else {
-      d3 = cell.x - d;
-
-      rec_cell.x = d3;
-      rec_cell.y = cell.y;
-      rec_cell.z = cell.z;
-
-      x_weighted = x_weighted + (d3 * cell_E);
-      x2_weighted = x2_weighted + (d3 * d3 * cell_E);
-      y_weighted = y_weighted + (cell.y * cell_E);
-      y2_weighted = y2_weighted + (cell.y * cell.y * cell_E);
-    }
+      x_weighted = x_weighted + (rec_cell.x * cell_E);
+      x2_weighted = x2_weighted + (rec_cell.x * rec_cell.x * cell_E);
+      y_weighted = y_weighted + (rec_cell.y * cell_E);
+      y2_weighted = y2_weighted + (rec_cell.y * rec_cell.y * cell_E);
+  
     t_weighted = t_weighted + cell_T * cell_E;
 
-    z_weighted = z_weighted + (cell.z * cell_E);
-    z2_weighted = z2_weighted + (cell.z * cell.z * cell_E);
+    z_weighted = z_weighted + (rec_cell.z * cell_E);
+    z2_weighted = z2_weighted + (rec_cell.z * rec_cell.z * cell_E);
     Etot = Etot + cell_E;
     E2tot = E2tot + cell_E * cell_E;
 

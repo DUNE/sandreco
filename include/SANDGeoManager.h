@@ -185,9 +185,10 @@ class SANDGeoManager : public TObject
   int get_endcap_hit_pos(const double& d1, const int& global_cellID,
                          const int& modID, double& reco_x, double& reco_y,
                          double& reco_z) const;
-  double compute_cell_d1(const double& cell_l, const double& tdc_1,
-                         const double& tdc_2) const;
-
+//   double compute_cell_d1(const double& cell_l, const double& tdc_1,
+//                          const double& tdc_2) const;
+//   double compute_cell_d2(const double& cell_l, const double& tdc_1,
+//                          const double& tdc_2) const;
   // mod id for the new endcap modules
   int get_endcap_mod_id(const TString& volume_path) const;
   void set_ecal_info();
@@ -238,6 +239,11 @@ class SANDGeoManager : public TObject
   }
   int get_ecal_cell_id(double x, double y, double z) const;
   int get_stt_tube_id(double x, double y, double z) const;
+
+  double compute_cell_d1(const double& cell_l, const double& tdc_1,
+                         const double& tdc_2) const;
+  double compute_cell_d2(const double& cell_l, const double& tdc_1,
+                         const double& tdc_2) const;
 
   // ECAL
   static int encode_ecal_cell_id(int detector_id, int module_id, int layer_id,

@@ -514,27 +514,42 @@ int SANDGeoManager::get_endcap_hit_pos(const double& d1,
                d_vert = d_curv0 + ec_mod.l_vert(),
                d_curv1 = d_vert + ec_mod.get_curv_arc_len(depth),
                d_hor1 = d_curv1 + ec_mod.l_hor();
+              //  std::cout << "d_hor: " << d_hor0 << std::endl;
+              //  std::cout << "ec_mod.mod_dz(): " << ec_mod.mod_dz() << std::endl;
   // the local coordinates will always refer to the vertical section 
   // find the right module section based on the d1 range
   if (d1 <= d_hor0) {
     local[1] = 0.5 * ec_mod.l_vert() + ec_mod.rmax() - depth;
-    local[2] = -0.5 * ec_mod.mod_dz() + ec_mod.rmax() + (d_hor0 - d1);
+    local[2] = -ec_mod.mod_dz() + ec_mod.rmax() + (d_hor0 - d1);
   } else if (d1 > d_hor0 && d1 <= d_curv0) {
-    const auto sec_angle = (d1 - d_hor0) / cell_rad;
-    local[1] = 0.5 * ec_mod.l_vert() + cell_rad * std::sin(sec_angle);
-    local[2] =
-        -0.5 * ec_mod.mod_dz() + ec_mod.rmax() - cell_rad * std::cos(sec_angle);
+    // const auto sec_angle = (d1 - d_hor0) / cell_rad;
+    // local[1] = 0.5 * ec_mod.l_vert() + cell_rad * std::sin(sec_angle);
+    // local[2] = -ec_mod.mod_dz() + ec_mod.rmax() - cell_rad * std::cos(sec_angle);
+    reco_x = -99999;
+    reco_y = -99999;
+    reco_z = -99999;
+    return -999;
   } else if (d1 > d_curv0 && d1 <= d_vert) {
-    local[1] =
-        0.5 * ec_mod.l_vert() - (d1 - ec_mod.get_curv_arc_len(depth) - d_hor0);
+    // local[1] = 0.5 * ec_mod.l_vert() - (d1 - ec_mod.get_curv_arc_len(depth) - d_hor0);
+    reco_x = -99999;
+    reco_y = -99999;
+    reco_z = -99999;
+    return -999;
   } else if (d1 > d_vert && d1 <= d_curv1) {
-    const auto sec_angle = (d_curv1 - d1) / cell_rad;
-    local[1] = -0.5 * ec_mod.l_vert() - cell_rad * std::sin(sec_angle);
-    local[2] =
-        -0.5 * ec_mod.mod_dz() + ec_mod.rmax() - cell_rad * std::cos(sec_angle);
+    // const auto sec_angle = (d_curv1 - d1) / cell_rad;
+    // local[1] = -0.5 * ec_mod.l_vert() - cell_rad * std::sin(sec_angle);
+    // local[2] = -ec_mod.mod_dz() + ec_mod.rmax() - cell_rad * std::cos(sec_angle);
+    reco_x = -99999;
+    reco_y = -99999;
+    reco_z = -99999;
+    return -999;
   } else if (d1 > d_curv1 && ec_mod.n_sections() == 5) {
-    local[1] = -0.5 * ec_mod.l_vert() - ec_mod.rmax() + depth;
-    local[2] = -0.5 * ec_mod.mod_dz() + ec_mod.rmax() + (d1 - d_curv1);
+    // local[1] = -0.5 * ec_mod.l_vert() - ec_mod.rmax() + depth;
+    // local[2] = -ec_mod.mod_dz() + ec_mod.rmax() + (d1 - d_curv1);
+    reco_x = -99999;
+    reco_y = -99999;
+    reco_z = -99999;
+    return -999;
   } else
     return -999;
 
@@ -581,6 +596,16 @@ double SANDGeoManager::compute_cell_d1(const double& cell_l,
   // either this or 0.5*cell_l+sand_reco::ecal::reco::XfromTDC(double t1, double t2)
 }
 
+double SANDGeoManager::compute_cell_d2(const double& cell_l,
+                                       const double& tdc_1,
+                                       const double& tdc_2) const
+{
+  return 0.5 *
+         (cell_l - ((tdc_1 - tdc_2) / (sand_reco::ecal::scintillation::vlfb *
+                                       sand_reco::conversion::mm_to_m)));
+  // either this or 0.5*cell_l-sand_reco::ecal::reco::XfromTDC(double t1, double t2)
+}
+
 int SANDGeoManager::get_reco_hit_pos(const int& cellID, const double& cell_l,
                                      const double& tdc_1, const double& tdc_2,
                                      double& reco_x, double& reco_y,
@@ -595,6 +620,7 @@ int SANDGeoManager::get_reco_hit_pos(const int& cellID, const double& cell_l,
   const double d1 = compute_cell_d1(cell_l, tdc_1, tdc_2);
 
   if (d1 < 0 || d1 > cell_l) {
+    std::cout << "HERE" << std::endl;
     return -999;
   }
 
@@ -603,14 +629,16 @@ int SANDGeoManager::get_reco_hit_pos(const int& cellID, const double& cell_l,
   decode_ecal_cell_id(cellID, detID, modID, layerID, locID);
 
   int exit = 0;
-  if (detID == 2) {  // barrel modules
-    exit = get_barrel_hit_pos(d1, cellID, reco_x, reco_y, reco_z);
-  } else if (detID == 0 || detID == 1) {  // endcap modules
-    exit = get_endcap_hit_pos(d1, cellID, modID, reco_x, reco_y, reco_z);
-  } else {
-    std::cout << "> get_hit_path_len exiting with error:\n";
-    return -999;
-  }
+  // if (detID == 2) {  // barrel modules
+  //   exit = get_barrel_hit_pos(d1, cellID, reco_x, reco_y, reco_z);
+  // } else 
+  if (detID == 0 || detID == 1) {  // endcap modules
+     exit = get_endcap_hit_pos(d1, cellID, modID, reco_x, reco_y, reco_z);
+   } 
+  //  else {
+  //   std::cout << "> get_hit_path_len exiting with error:\n";
+  //   return -999;
+  // }
   return exit;
 }
 
