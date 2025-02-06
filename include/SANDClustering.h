@@ -25,12 +25,12 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
 void Clust_info(cluster);
 std::vector<cluster> TrackFit(std::vector<cluster>);
 std::vector<cluster> Merge(std::vector<cluster>);
-std::vector<cluster> Split(std::vector<cluster>, bool&);
+std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster>, bool&);
 std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo,
                                        std::vector<cluster>,
                                        std::vector<dg_cell>);
 cluster Calc_variables(std::vector<reco_cell>);
-cluster Create_cluster(std::vector<dg_cell>);
+cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell>);
 
 bool RepetitionCheck(std::vector<int>, int);
 //bool isNeighbour(int, int);
