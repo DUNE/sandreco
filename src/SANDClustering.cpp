@@ -750,7 +750,6 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cell
     d1 = sand_geo->compute_cell_d1(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
     d2 = sand_geo->compute_cell_d2(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
     
-    std::cout << d1 << " " << d2 << " " << cell_info.length() << std::endl;
     double cell_E = sand_reco::ecal::reco::EfromADC(
         cell.ps1.at(0).adc, cell.ps2.at(0).adc, d1, d2, cell.lay);
 
