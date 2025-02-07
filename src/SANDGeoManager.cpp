@@ -438,19 +438,14 @@ int SANDGeoManager::get_endcap_path_len(const double& hx, const double& hy,
 
   } else if (volume_path.Contains("hor") &&
              volume_path.Contains("lv_PV_0/endvol")) {
-    // TODO: check the plus
-    auto depth = local[2] + ec_mod.mod_dz();
-    d1 = 0.5 * ec_mod.l_hor() +
-         local[1];
+    auto depth = ec_mod.mod_dz() - local[2];
+    d1 = 0.5 * ec_mod.l_hor() + local[1];
     d2 = ec_mod.get_cell_tot_len(depth) - d1;
-
   } else if (volume_path.Contains("hor") &&
              volume_path.Contains("lv_PV_1/endvol")) {
-    auto depth = local[2] + ec_mod.mod_dz();
-    // TODO: check the minus
-    d2 = 0.5 * ec_mod.l_hor() - local[1]; // - takes into accout a coordinate rotation
+    auto depth = ec_mod.mod_dz() - local[2];
+    d2 = 0.5 * ec_mod.l_hor() - local[1];
     d1 = ec_mod.get_cell_tot_len(depth) - d2;
-
   } else if (volume_path.Contains("curv") &&
              volume_path.Contains("lv_PV_0/endvol")) {
     auto depth = ec_mod.rmax() -
@@ -604,7 +599,6 @@ int SANDGeoManager::get_reco_hit_pos(const int& cellID, const double& cell_l,
   const double d1 = compute_cell_d1(cell_l, tdc_1, tdc_2);
 
   if (d1 < 0 || d1 > cell_l) {
-    std::cout << "HERE" << std::endl;
     return -999;
   }
 
