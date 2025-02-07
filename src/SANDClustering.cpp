@@ -742,33 +742,22 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cell
 
   for (auto& cell : cells) {
 
+    const auto& cell_info = sand_geo->get_ecal_cell_info(cell.id);
+
     reco_cell rec_cell;
 
     double d1, d2;
-    d1 = sand_geo->compute_cell_d1(cell.l, cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
-    d2 = sand_geo->compute_cell_d2(cell.l, cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
-    
-    double d = DfromTDC(cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
-    double d1_old, d2_old, d3_old;
-    d1_old = 0.5 * cell.l + d;
-    d2_old = 0.5 * cell.l - d;
-    
-    if (fabs(d1 - d1_old) > 0.1) {
-      if (cell.id < 2e7) {
-        std::cout << "ëndcap: " << d1 << " " << d1_old << " " << d2 << " " << d2_old << std::endl;
-      } else {
-        std::cout << "barrel: " << d1 << " " << d1_old << " " << d2 << " " << d2_old << std::endl;
-      }
-    }
+    d1 = sand_geo->compute_cell_d1(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
+    d2 = sand_geo->compute_cell_d2(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
     
     double cell_E = sand_reco::ecal::reco::EfromADC(
         cell.ps1.at(0).adc, cell.ps2.at(0).adc, d1, d2, cell.lay);
 
     double cell_T = sand_reco::ecal::reco::TfromTDC(cell.ps1.at(0).tdc,
-                                                    cell.ps2.at(0).tdc, cell.l);
+                                                    cell.ps2.at(0).tdc, cell_info.length());
 
     rec_cell.id = cell.id;
-    rec_cell.l = cell.l;
+    rec_cell.l = cell_info.length();
     rec_cell.mod = cell.mod;
     rec_cell.lay = cell.lay;
     rec_cell.e = cell_E;
@@ -777,8 +766,8 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cell
     rec_cell.ps2 = cell.ps2.at(0);
     rec_cell.fired_pmt = 3;
 
-      double cell_x = 22222, cell_y = 22222, cell_z = 22222;
-      sand_geo->get_reco_hit_pos(cell.id, cell.l, cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell_x, cell_y, cell_z);
+      double cell_x = -99999, cell_y = -99999, cell_z = -99999;
+      sand_geo->get_reco_hit_pos(cell.id, cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell_x, cell_y, cell_z);
       rec_cell.x = cell_x;
       rec_cell.y = cell_y;
       rec_cell.z = cell_z;

@@ -512,13 +512,6 @@ int SANDGeoManager::get_endcap_hit_pos(const double& d1,
                d_vert = d_curv0 + ec_mod.l_vert(),
                d_curv1 = d_vert + ec_mod.get_curv_arc_len(depth),
                d_hor1 = d_curv1 + ec_mod.l_hor();
-              //  std::cout << "d_hor: " << d_hor0 << std::endl;
-              //  std::cout << "ec_mod.mod_dz(): " << ec_mod.mod_dz() << std::endl;
-    // if (ec_mod.n_sections() == 5) {
-    //   std::cout << d_hor1 << " " << current_cell.length() << " " << d1 << std::endl;
-    // } else {
-    //   std::cout << d_curv1 << " " << current_cell.length() << " " << d1 << std::endl;
-    // }
   // the local coordinates will always refer to the vertical section 
   // find the right module section based on the d1 range
   if (d1 <= d_hor0) {
