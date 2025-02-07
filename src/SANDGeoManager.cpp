@@ -522,14 +522,13 @@ int SANDGeoManager::get_endcap_hit_pos(const double& d1,
     const auto sec_angle = (d_curv1 - d1) / cell_rad;
     local[1] = -0.5 * ec_mod.l_vert() - cell_rad * std::cos(sec_angle);
     local[2] = -ec_mod.mod_dz() + ec_mod.rmax() - cell_rad * std::sin(sec_angle);
-  } else if (d1 > d_curv1 && d1 <= d_hor1 && ec_mod.n_sections() == 5) {
-    local[1] = -0.5 * ec_mod.l_vert() - ec_mod.rmax() + depth;
-    local[2] = -ec_mod.mod_dz() + ec_mod.rmax() + ec_mod.l_hor() - (d_hor1 - d1);
-  } else {
-    reco_x = -999999;
-    reco_y = -999999;
-    reco_z = -999999;
-    return -999;
+  } else if (d1 > d_curv1) {
+    if (ec_mod.n_sections() == 5 && d1 <= d_hor1) {
+      local[1] = -0.5 * ec_mod.l_vert() - ec_mod.rmax() + depth;
+      local[2] = -ec_mod.mod_dz() + ec_mod.rmax() + ec_mod.l_hor() - (d_hor1 - d1);
+    } else {
+      return -999;
+    }
   }
 
   geo_->LocalToMaster(local, master);

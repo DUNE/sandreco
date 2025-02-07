@@ -166,11 +166,11 @@ void updateCluster(const dg_cell& incomplete_cell, double distance,
   double x;
   double y;
   if (isbarrel == 0) {
-    x = -999;
+    x = -99999;
     y = incomplete_cell.y;
   } else {
     x = incomplete_cell.x;
-    y = -999;
+    y = -99999;
   }
 
   reco_cell reco_cell_from_incomplete = {incomplete_cell.id, incomplete_cell.z, 
@@ -750,6 +750,7 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cell
     d1 = sand_geo->compute_cell_d1(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
     d2 = sand_geo->compute_cell_d2(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
     
+    std::cout << d1 << " " << d2 << " " << cell_info.length() << std::endl;
     double cell_E = sand_reco::ecal::reco::EfromADC(
         cell.ps1.at(0).adc, cell.ps2.at(0).adc, d1, d2, cell.lay);
 
