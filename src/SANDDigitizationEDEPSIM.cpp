@@ -62,7 +62,7 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   t = 0.5 * (hit.Start.T() + hit.Stop.T());
   de = hit.EnergyDeposit;
 
-  auto cell_global_id = g.get_ecal_cell_id(x, y, z);
+  auto cell_global_id = g.get_ecal_cell_id(x, y, z, false);
   // std::cout << "> Ectracted cell id\n";
 
   if (cell_global_id == 999 || cell_global_id == -999) return false;

@@ -154,8 +154,8 @@ class SANDGeoManager : public TObject
       const std::vector<double>& zlevels,
       const SANDENDCAPModInfo& module) const;
 
-  bool is_ecal_barrel(const TString& volume_name) const;
-  bool is_ecal_endcap(const TString& volume_name) const;
+  bool is_ecal_barrel(const TString& volume_name, bool include_passive) const;
+  bool is_ecal_endcap(const TString& volume_name, bool include_passive) const;
   bool is_endcap_mod(const TString& volume_name) const;
   bool check_and_process_ecal_path(TString& volume_path) const;
   void get_ecal_barrel_module_and_layer(const TString& volume_name,
@@ -237,7 +237,7 @@ class SANDGeoManager : public TObject
   {
     return sttmap_;
   }
-  int get_ecal_cell_id(double x, double y, double z) const;
+  int get_ecal_cell_id(double x, double y, double z, bool include_passive) const;
   int get_stt_tube_id(double x, double y, double z) const;
 
   double compute_cell_d1(const double& cell_l, const double& tdc_1,

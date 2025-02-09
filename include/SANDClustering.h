@@ -15,7 +15,7 @@
 std::tuple<double, double, double, double> fit_ls(int, double[], double[],
                                                   double[]);
 
-std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
+std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(const SANDGeoManager* sand_geo,
     std::vector<dg_cell>);
 std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
     std::vector<dg_cell>, int, std::vector<int>, std::vector<dg_cell>);

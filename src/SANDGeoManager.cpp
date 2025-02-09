@@ -151,20 +151,31 @@ void SANDGeoManager::decode_ecal_cell_id(int cell_global_id, int& detector_id,
   cell_local_id = cell_global_id;
 }
 
-bool SANDGeoManager::is_ecal_barrel(const TString& volume_name) const
+bool SANDGeoManager::is_ecal_barrel(const TString& volume_name, bool include_passive) const
 {
   // something like: volECALActiveSlab_21_PV_0
-   // To Do: add a more refined check for passive and active volumes
-  return volume_name.Contains("volECAL") == true &&
-         volume_name.Contains("Active") == true &&
-         volume_name.Contains("end") == false;
+  // To Do: add a more refined check for passive and active volumes
+  if (include_passive) {
+    return volume_name.Contains("volECAL") == true &&
+           (volume_name.Contains("Active") == true || volume_name.Contains("Passive") == true) &&
+           volume_name.Contains("end") == false;
+  } else {
+    return volume_name.Contains("volECAL") == true &&
+           volume_name.Contains("Active") == true &&
+           volume_name.Contains("end") == false;
+  }
 }
 
-bool SANDGeoManager::is_ecal_endcap(const TString& volume_name) const
+bool SANDGeoManager::is_ecal_endcap(const TString& volume_name, bool include_passive) const
 {
   // something like: endvolECALActiveSlab_0_PV_0
-  return volume_name.Contains("endvolECAL") == true &&
-         volume_name.Contains("Active") == true;
+  if (include_passive) {
+    return volume_name.Contains("endvolECAL") == true &&
+           (volume_name.Contains("Active") == true || volume_name.Contains("Passive") == true);
+  } else {
+    return volume_name.Contains("endvolECAL") == true &&
+           volume_name.Contains("Active") == true;
+  }
 }
 
 bool SANDGeoManager::is_endcap_mod(const TString& volume_name) const
@@ -1020,7 +1031,7 @@ void SANDGeoManager::init(TGeoManager* const geo)
   set_ecal_info();
 }
 
-int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
+int SANDGeoManager::get_ecal_cell_id(double x, double y, double z, bool include_passive) const
 {
   if (geo_ == 0) {
     std::cout << "ERROR: TGeoManager pointer not initialized" << std::endl;
@@ -1048,7 +1059,7 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
   int cell_local_id;
 
   // barrel modules
-  if (is_ecal_barrel(volume_name)) {
+  if (is_ecal_barrel(volume_name, include_passive)) {
     get_ecal_barrel_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
     get_ecal_barrel_cell_local_id(x, y, z, node, cell_local_id);
@@ -1061,7 +1072,7 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z) const
 
   // end cap modules --> NEED TO UPDATE THESE TWO FUNCTIONS!! (Do the new endcap
   // IDs conflict with the barrel IDs?)
-  else if (is_ecal_endcap(volume_name)) {
+  else if (is_ecal_endcap(volume_name, include_passive)) {
     get_ecal_endcap_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
     get_ecal_endcap_cell_local_id(x, y, z, module_id, cell_local_id);

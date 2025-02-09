@@ -24,7 +24,7 @@ int evaluateClusterType(const cluster& clust) {
 std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vector<dg_cell>& cells)
 {
   
-  std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells = ProcessMultiHits(cells);
+  std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells = ProcessMultiHits(sand_geo, cells);
   std::vector<dg_cell> complete_cells   = processed_cells.first;
   std::vector<dg_cell> incomplete_cells = processed_cells.second;
 
@@ -103,14 +103,15 @@ void Clust_info(cluster clus)
   }
 }
 
-std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
+std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(const SANDGeoManager* sand_geo,
     std::vector<dg_cell> cells)
 {
 
   std::vector<dg_cell> complete_cells;
   std::vector<dg_cell> incomplete_cells;
   for (auto const& cell : cells) {
-    double delta = cell.l * sand_reco::ecal::scintillation::vlfb /
+    const auto& cell_info = sand_geo->get_ecal_cell_info(cell.id);
+    double delta = cell_info.length() * sand_reco::ecal::scintillation::vlfb /
                    sand_reco::conversion::m_to_mm;
 
     for (uint i = 0; i < cell.ps1.size(); i++) {
@@ -378,7 +379,9 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
     if (found) {
       double DpmA;
       double DpmB;
-      double inco_cell_lenght = incomplete_cell.l;
+
+      const auto& cell_info = sand_geo->get_ecal_cell_info(incomplete_cell.id);
+      double inco_cell_lenght = cell_info.length();
 
       if (isbarrel == 0) {
         DpmA =  clus.at(closest_cluster_index).x + inco_cell_lenght * 0.5;
@@ -388,6 +391,7 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
         DpmA =  shifted_y + inco_cell_lenght * 0.5;
         DpmB = -shifted_y + inco_cell_lenght * 0.5;
       }
+      // std::cout << DpmA << " " << DpmB << std::endl;
       if (incomplete_cell.ps1.size() != 0) {
         updateCluster(incomplete_cell, DpmA, 1, isbarrel, clus.at(closest_cluster_index));
       } else {
@@ -427,9 +431,12 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> 
       EB2tot += EB * EB;
 
       //double d = DfromTDC(all_cells[j].ps1.tdc, all_cells[j].ps2.tdc);
+      const auto& cell_info = sand_geo->get_ecal_cell_info(all_cells.at(j).id);
+      double cell_lenght = cell_info.length();
+
       double d1, d2;
-      d1 = sand_geo->compute_cell_d1(all_cells.at(j).l, all_cells.at(j).ps1.tdc, all_cells.at(j).ps2.tdc);
-      d2 = sand_geo->compute_cell_d2(all_cells.at(j).l, all_cells.at(j).ps1.tdc, all_cells.at(j).ps2.tdc);
+      d1 = sand_geo->compute_cell_d1(cell_lenght, all_cells.at(j).ps1.tdc, all_cells.at(j).ps2.tdc);
+      d2 = sand_geo->compute_cell_d2(cell_lenght, all_cells.at(j).ps1.tdc, all_cells.at(j).ps2.tdc);
 
       double cell_E = sand_reco::ecal::reco::EfromADC(
           all_cells[j].ps1.adc, all_cells[j].ps2.adc, d1, d2, all_cells[j].lay);
@@ -475,8 +482,10 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> 
       int n_cella = 0;
       for (auto const& a_cells : all_cells) {
 
-        double d1 = sand_geo->compute_cell_d1(a_cells.l, a_cells.ps1.tdc, a_cells.ps2.tdc);
-        double d2 = sand_geo->compute_cell_d2(a_cells.l, a_cells.ps1.tdc, a_cells.ps2.tdc);
+        const auto& cell_info = sand_geo->get_ecal_cell_info(a_cells.id);
+        double cell_lenght = cell_info.length();
+        double d1 = sand_geo->compute_cell_d1(cell_lenght, a_cells.ps1.tdc, a_cells.ps2.tdc);
+        double d2 = sand_geo->compute_cell_d2(cell_lenght, a_cells.ps1.tdc, a_cells.ps2.tdc);
 
         double t_difA = a_cells.ps1.tdc -
                         (sand_reco::ecal::scintillation::vlfb * d1 /
