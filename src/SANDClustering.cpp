@@ -1,12 +1,34 @@
 #include "SANDClustering.h"
 #include "utils.h"
 
+int evaluateClusterType(const cluster& clust) {
+  // type 1 barrel
+  // type 2 endcap
+  // type 3 mixed
+  int type = 0;
+  bool barrel = false;
+  bool endcap = false;
+  for (const auto& c:clust.reco_cells) {
+    if (c.id < 20000000 && !endcap) {
+        type += 2;
+        endcap = true;
+    }
+    if (c.id > 20000000 && !barrel) {
+        type += 1;
+        barrel = true;
+    }
+  }
+  return type;
+}
+
 std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vector<dg_cell>& cells)
 {
   
   std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells = ProcessMultiHits(cells);
   std::vector<dg_cell> complete_cells   = processed_cells.first;
   std::vector<dg_cell> incomplete_cells = processed_cells.second;
+
+  // std::cout << complete_cells.size() << " " << incomplete_cells.size() << std::endl;
 
   std::vector<int> chck;
   std::vector<cluster> vec_clust;
@@ -26,11 +48,15 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
         GetNeighbours(complete_cells, i, chck, v_cell);
     v_cell = Neighbours.first;
     chck = Neighbours.second;
+
+    // std::cout << v_cell.size() << std::endl;
     struct cluster Clust;
 
     Clust = Create_cluster(sand_geo, v_cell);
 
-    vec_clust.push_back(Clust);
+    if (!Clust.reco_cells.empty()) {
+      vec_clust.push_back(Clust);
+    }
   }
 
   // SPLIT
@@ -43,7 +69,7 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
     vec_clust = Split(sand_geo, vec_clust, HasSplit);
     iteration++;
   } while (HasSplit);
-  
+    
   // MERGE
   vec_clust = Merge(vec_clust);
 
@@ -51,6 +77,10 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
   vec_clust = TrackFit(vec_clust);
 
   vec_clust = RecoverIncomplete(sand_geo, vec_clust, incomplete_cells);
+
+  for (auto& c:vec_clust) {
+    c.type = evaluateClusterType(c);
+  }
 
   return vec_clust;
 }
@@ -176,7 +206,7 @@ void updateCluster(const dg_cell& incomplete_cell, double distance,
   reco_cell reco_cell_from_incomplete = {incomplete_cell.id, incomplete_cell.z, 
                                          y, x,
                                          incomplete_cell.l, incomplete_cell.mod, 
-                                         laycell, rec_en, -999, ps1, ps2, fired_pmt};
+                                         laycell, rec_en, -99999, ps1, ps2, fired_pmt};
 
   clus.e = clus.e + rec_en;
   clus.reco_cells.push_back(reco_cell_from_incomplete);
@@ -186,7 +216,7 @@ void updateCluster(const dg_cell& incomplete_cell, double distance,
 std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster> clus,
                                        std::vector<dg_cell> incomplete_cells)
 {
-  int n_inc_cells = 0;
+  
   for (auto const& incomplete_cell : incomplete_cells) {
     int isbarrel = 0;
 
@@ -197,98 +227,151 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
       isbarrel = 2;
     }
 
-    // TODO: This should be in the geo_cell or in the geoManager
-    double cell_phi =
-        atan((incomplete_cell.z - 23910.00) / (incomplete_cell.y + 2384.73)) * 180 /
-        TMath::Pi();
-    double cell_theta =
-        atan((incomplete_cell.z - 23910.00) / (incomplete_cell.x)) * 180 / TMath::Pi();
-    int minentry = -1;
-    bool found = false;
+    // // TODO: This should be in the geo_cell or in the geoManager
+    // double cell_phi =
+    //     atan((incomplete_cell.z - 23910.00) / (incomplete_cell.y + 2384.73)) * 180 /
+    //     TMath::Pi();
+    // double cell_theta =
+    //     atan((incomplete_cell.z - 23910.00) / (incomplete_cell.x)) * 180 / TMath::Pi();
+    // int minentry = -1;
+    // bool found = false;
 
-    std::map<int, double> clust_incocell_time_diff;
+    // std::map<int, double> clust_incocell_time_diff;
+
+
+    int closest_cluster_index;
+    bool found = false;
+    double spatial_range = 15;
+    double time_range = 3;
+    double min_distance = 10e5;
+    double min_time = 10e5;
     for (int j = 0; j < clus.size(); j++) {
       double rec_en = 0;
       bool isNeigh = false;
-      int nclusterC = 0;
-      for (int i = 0; i < clus.at(j).reco_cells.size(); i++) {
+      
+      double cell_time;
+      if (incomplete_cell.ps1.size() != 0) {
+        cell_time = incomplete_cell.ps1.at(0).tdc;
+      } else {
+        cell_time = incomplete_cell.ps2.at(0).tdc;
+      }
 
-        // TODO: this is a temporary solution as there isn't a 
-        //       geo_cell data structure in the SANDGeoManager 
-        //       to get this information from
-        int cell_id = clus.at(j).reco_cells.at(i).id;
-        const auto& cell = sand_geo->get_ecal_cell_info(cell_id);
+      double time_distance = fabs(clus.at(j).t - cell_time);
+      
+      double spatial_distance;
+      if (isbarrel == 0) {
+        spatial_distance = sqrt(pow(clus[j].y - incomplete_cell.y, 2)+
+                                pow(clus[j].z - incomplete_cell.z, 2));
+      } else {
+        spatial_distance = sqrt(pow(clus[j].x - incomplete_cell.x, 2)+
+                                pow(clus[j].z - incomplete_cell.z, 2));
+      }
 
-        dg_cell fake_dg_cell;
-        fake_dg_cell.x = cell.x();
-        fake_dg_cell.y = cell.y();
-        fake_dg_cell.z = cell.z();
+      if (spatial_distance < spatial_range && time_distance < time_range) {
+        // TODO: optimize the condition for the clostest cluster
+        if (spatial_distance < min_distance && time_distance < min_time) {
+          found = true;
+          closest_cluster_index = j;
+          min_distance = spatial_distance;
+          min_time = time_distance;
+        }
+      }
 
-        if (isNeighbour(incomplete_cell, fake_dg_cell)) {
-          isNeigh = true;
-          nclusterC++;  // capendos
+
+    //   for (int i = 0; i < clus.at(j).reco_cells.size(); i++) {
+
+    //     // TODO: this is a temporary solution as there isn't a 
+    //     //       geo_cell data structure in the SANDGeoManager 
+    //     //       to get this information from
+    //     int cell_id = clus.at(j).reco_cells.at(i).id;
+    //     const auto& cell = sand_geo->get_ecal_cell_info(cell_id);
+
+    //     dg_cell fake_dg_cell;
+    //     fake_dg_cell.x = cell.x();
+    //     fake_dg_cell.y = cell.y();
+    //     fake_dg_cell.z = cell.z();
+
+    //     if (isNeighbour(incomplete_cell, fake_dg_cell)) {
+    //       isNeigh = true;
           
-          if (clust_incocell_time_diff.find(j) ==
-              clust_incocell_time_diff.end()) {
-            if (incomplete_cell.ps1.size() != 0) {
-              clust_incocell_time_diff[j] =
-                  fabs(clus.at(j).t - incomplete_cell.ps1.at(0).tdc);
-            }
-            if (incomplete_cell.ps2.size() != 0) {
-              clust_incocell_time_diff[j] =
-                  fabs(clus.at(j).t - incomplete_cell.ps2.at(0).tdc);
-            }
-          }
-        }
-      }
+    //       double time_diff;
+    //       if (incomplete_cell.ps1.size() != 0) {
+    //         time_diff = fabs(clus.at(j).reco_cells.at(i).t - incomplete_cell.ps1.at(0).tdc);
+    //       }
 
-      if (isNeigh) {
-        auto min_iter = std::min_element(clust_incocell_time_diff.begin(),
-                                         clust_incocell_time_diff.end(),
-                                         [](const std::pair<int, double>& a,
-                                            const std::pair<int, double>& b) {
-                                           return a.second < b.second;
-                                         });
+    //       if (incomplete_cell.ps2.size() != 0) {
+    //         time_diff = fabs(clus.at(j).reco_cells.at(i).t - incomplete_cell.ps2.at(0).tdc);
+    //       }
+          
+    //       if (clust_incocell_time_diff.find(j) ==
+    //         clust_incocell_time_diff.end()) {
+    //           clust_incocell_time_diff[j] = time_diff;
+    //       } else {
+    //           if (clust_incocell_time_diff[j] > time_diff) {
+    //             clust_incocell_time_diff[j] = time_diff;
+    //           }
+    //       }
+    //     }
+    //   }
 
-        if (min_iter != clust_incocell_time_diff.end()) {
-          minentry = min_iter->first;
-        }
-        found = true;
-        break;
+    //   if (isNeigh) {
+    //     auto min_iter = std::min_element(clust_incocell_time_diff.begin(),
+    //                                      clust_incocell_time_diff.end(),
+    //                                      [](const std::pair<int, double>& a,
+    //                                         const std::pair<int, double>& b) {
+    //                                        return a.second < b.second;
+    //                                      });
 
-      } else if (!found) {
-        // TODO: This should be in the geo_cell or in the geoManager
-        double clus_phi =
-            atan((clus.at(j).z - 23910.00) / (clus.at(j).y + 2384.73)) * 180 /
-            TMath::Pi();
-        double clus_theta = atan((clus.at(j).z - 23910.00) / (clus.at(j).x)) *
-                            180 / TMath::Pi();
+    //     if (min_iter != clust_incocell_time_diff.end()) {
+    //       minentry = min_iter->first;
+    //     }
+    //     found = true;
 
-        double minphi = 999, mintheta = 999, mindist = 0;
-        int isbarrelc = 0;
-        if (isbarrel == 0) {
-          double dist = sqrt(
-              (incomplete_cell.z - clus.at(j).z) * (incomplete_cell.z - clus.at(j).z) +
-              (incomplete_cell.y - clus.at(j).y) * (incomplete_cell.y - clus.at(j).y));
+    //   } else {
+    //     // TODO: This should be in the geo_cell or in the geoManager
+    //     double clus_phi =
+    //         atan((clus.at(j).z - 23910.00) / (clus.at(j).y + 2384.73)) * 180 /
+    //         TMath::Pi();
+    //     double clus_theta = atan((clus.at(j).z - 23910.00) / (clus.at(j).x)) *
+    //                         180 / TMath::Pi();
 
-          if (fabs(cell_phi - clus_phi) < 3 &&
-              dist < 200) {
-            found = true;
-            minphi = fabs(cell_phi - clus_phi);
-            minentry = j;
-          }
-        } else {
+    //     double minphi = 999, mintheta = 999, mindist = 0;
+    //     int isbarrelc = 0;
+    //     if (isbarrel == 0) {
+    //       double dist = sqrt(
+    //           (incomplete_cell.z - clus.at(j).z) * (incomplete_cell.z - clus.at(j).z) +
+    //           (incomplete_cell.y - clus.at(j).y) * (incomplete_cell.y - clus.at(j).y));
 
-          double dist = sqrt(
-              (incomplete_cell.z - clus.at(j).z) * (incomplete_cell.z - clus.at(j).z) +
-              (incomplete_cell.x - clus.at(j).x) * (incomplete_cell.x - clus.at(j).x));
-          if (fabs(cell_theta - clus_theta) < 3 && dist < 200) {
-            found = true;
-            mintheta = fabs(cell_theta - clus_theta);
-            minentry = j;
-          }
-        }
-      }
+    //       if (fabs(cell_phi - clus_phi) < 3 &&
+    //           dist < 72.36*2) { 
+            
+    //         if (clust_incocell_time_diff.find(j) ==
+    //           clust_incocell_time_diff.end()) {
+    //         if (incomplete_cell.ps1.size() != 0) {
+    //           clust_incocell_time_diff[j] =
+    //               fabs(clus.at(j).t - incomplete_cell.ps1.at(0).tdc);
+    //         }
+    //         if (incomplete_cell.ps2.size() != 0) {
+    //           clust_incocell_time_diff[j] =
+    //               fabs(clus.at(j).t - incomplete_cell.ps2.at(0).tdc);
+    //         }
+    //       }
+    //         // found = true;
+    //         // minphi = fabs(cell_phi - clus_phi);
+    //         // minentry = j;
+    //       }
+    //     } else {
+
+    //       double dist = sqrt(
+    //           (incomplete_cell.z - clus.at(j).z) * (incomplete_cell.z - clus.at(j).z) +
+    //           (incomplete_cell.x - clus.at(j).x) * (incomplete_cell.x - clus.at(j).x));
+    //       if (fabs(cell_theta - clus_theta) < 3 && dist < 65.70*2) {
+    //         found = true;
+    //         mintheta = fabs(cell_theta - clus_theta);
+    //         minentry = j;
+    //       }
+    //     }
+    //   }
     }
 
     reco_cell reco_cell_from_incomplete;
@@ -298,20 +381,22 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
       double inco_cell_lenght = incomplete_cell.l;
 
       if (isbarrel == 0) {
-        DpmA =  clus.at(minentry).x + inco_cell_lenght * 0.5;
-        DpmB = -clus.at(minentry).x + inco_cell_lenght * 0.5;
+        DpmA =  clus.at(closest_cluster_index).x + inco_cell_lenght * 0.5;
+        DpmB = -clus.at(closest_cluster_index).x + inco_cell_lenght * 0.5;
       } else {
-        double shifted_y = clus.at(minentry).y - (-2384.73);  // Shift relative to center
+        double shifted_y = clus.at(closest_cluster_index).y - (-2384.73);  // Shift relative to center
         DpmA =  shifted_y + inco_cell_lenght * 0.5;
         DpmB = -shifted_y + inco_cell_lenght * 0.5;
       }
       if (incomplete_cell.ps1.size() != 0) {
-        updateCluster(incomplete_cell, DpmA, 1, isbarrel, clus.at(minentry));
+        updateCluster(incomplete_cell, DpmA, 1, isbarrel, clus.at(closest_cluster_index));
       } else {
-        updateCluster(incomplete_cell, DpmB, 2, isbarrel, clus.at(minentry));
+        updateCluster(incomplete_cell, DpmB, 2, isbarrel, clus.at(closest_cluster_index));
       }
+    } else {
+        // TODO: think about it 
     }
-    n_inc_cells++;
+    
   }
   return clus;
 }
@@ -321,8 +406,6 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> 
 {
   std::vector<cluster> clu_vec;
   std::vector<reco_cell> all_cells;
-
-  int num_c = 0;
 
   HasSplit = false;
   for (auto const& clus : original_clu_vec) {
@@ -461,7 +544,6 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> 
       clu_vec.push_back(clus);
     }
     all_cells.clear();
-    num_c++;
   }
 
   original_clu_vec.clear();
@@ -766,16 +848,20 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cell
     rec_cell.ps2 = cell.ps2.at(0);
     rec_cell.fired_pmt = 3;
 
-      double cell_x = -99999, cell_y = -99999, cell_z = -99999;
-      sand_geo->get_reco_hit_pos(cell.id, cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell_x, cell_y, cell_z);
-      rec_cell.x = cell_x;
-      rec_cell.y = cell_y;
-      rec_cell.z = cell_z;
+    double cell_x = -99999, cell_y = -99999, cell_z = -99999;
+    sand_geo->get_reco_hit_pos(cell.id, cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell_x, cell_y, cell_z);
+    
+    if (cell_x == -99999 || cell_y == -99999 || cell_z == -99999) {
+      continue;
+    }
+    rec_cell.x = cell_x;
+    rec_cell.y = cell_y;
+    rec_cell.z = cell_z;
 
-      x_weighted = x_weighted + (rec_cell.x * cell_E);
-      x2_weighted = x2_weighted + (rec_cell.x * rec_cell.x * cell_E);
-      y_weighted = y_weighted + (rec_cell.y * cell_E);
-      y2_weighted = y2_weighted + (rec_cell.y * rec_cell.y * cell_E);
+    x_weighted = x_weighted + (rec_cell.x * cell_E);
+    x2_weighted = x2_weighted + (rec_cell.x * rec_cell.x * cell_E);
+    y_weighted = y_weighted + (rec_cell.y * cell_E);
+    y2_weighted = y2_weighted + (rec_cell.y * rec_cell.y * cell_E);
   
     t_weighted = t_weighted + cell_T * cell_E;
 
@@ -785,6 +871,10 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cell
     E2tot = E2tot + cell_E * cell_E;
 
     reconstructed_cells.push_back(rec_cell);
+  }
+
+  if (reconstructed_cells.size() == 0) {
+    return cluster();
   }
 
   x_weighted = x_weighted / Etot;
@@ -928,7 +1018,7 @@ bool isNeighbour(const dg_cell& cell, const dg_cell& check_cell)
 
   bool arebothendcap = false;
   bool arebothbarrel = false;
-
+  
   if (fabs(cell.x) > 1500 && fabs(check_cell.x) > 1500) {
     arebothendcap = true;
     // std::cout << "are both endcap" << std::endl;
@@ -951,7 +1041,7 @@ bool isNeighbour(const dg_cell& cell, const dg_cell& check_cell)
                            (cell.z - check_cell.z) * (cell.z - check_cell.z));
     // std::cout << "************distance: " << distance << std::endl;
 
-    if (distance < 62.80) {
+    if (distance < 65.70) { //max distance between two cells in the endcap (layer 5-4, diagonal)
       // std::cout << "ARE NEIGHBOUR!" << std::endl;
       return true;
     }
@@ -970,7 +1060,7 @@ bool isNeighbour(const dg_cell& cell, const dg_cell& check_cell)
     double distance = sqrt((cell.y - check_cell.y) * (cell.y - check_cell.y) +
                            (cell.z - check_cell.z) * (cell.z - check_cell.z));
     // std::cout << "************distance: " << distance << std::endl;
-    if (distance < 72.36) {
+    if (distance < 72.36) { //max distance between two cells in the barrel (layer5-4 digonal)
       // std::cout << "ARE NEIGHBOUR!" << std::endl;
       return true;
 
