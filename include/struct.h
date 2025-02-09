@@ -138,6 +138,7 @@ struct cluster {
   double varx;
   double vary;
   double varz;
+  int type;
   std::vector<reco_cell> reco_cells; 
 };
 
