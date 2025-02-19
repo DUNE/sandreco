@@ -30,6 +30,7 @@ struct truecluster{
     double z;
     double t; 
     double e;
+    double vis_e;
     double sx;
     double sy;
     double sz;
