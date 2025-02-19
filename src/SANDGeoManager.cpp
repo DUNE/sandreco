@@ -289,6 +289,9 @@ void SANDGeoManager::get_ecal_endcap_module_and_layer(
   layer_id = slab_id / 40;
 
   if (layer_id > 4) layer_id = 4;
+
+  delete obja1;
+  delete obja2;
 }
 
 void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
