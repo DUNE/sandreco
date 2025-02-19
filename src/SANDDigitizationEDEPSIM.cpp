@@ -62,11 +62,20 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   t = 0.5 * (hit.Start.T() + hit.Stop.T());
   de = hit.EnergyDeposit;
 
-  auto cell_global_id = g.get_ecal_cell_id(x, y, z, false);
-  // std::cout << "> Ectracted cell id\n";
+  auto cell_global_id_middle = g.get_ecal_cell_id(x, y, z, true);
+  auto cell_global_id_start  = g.get_ecal_cell_id(hit.Start.X(), hit.Start.Y(), hit.Start.Z(), true);
+  auto cell_global_id_stop   = g.get_ecal_cell_id(hit.Stop.X(), hit.Stop.Y(), hit.Stop.Z(), true);
 
-  if (cell_global_id == 999 || cell_global_id == -999) return false;
-
+  int cell_global_id;
+  if (cell_global_id_middle != -999 && cell_global_id_middle != 999) {
+    cell_global_id = cell_global_id_middle;
+  } else if (cell_global_id_start  != -999 && cell_global_id_start  != 999) {
+    cell_global_id = cell_global_id_start;
+  } else if (cell_global_id_stop   != -999 && cell_global_id_stop   != 999) {
+    cell_global_id = cell_global_id_stop;
+  } else {
+    return false;
+  }
   g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
 
   g.get_hit_path_len(x, y, z, cell_global_id, d1, d2);
