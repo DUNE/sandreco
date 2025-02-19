@@ -115,7 +115,9 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(const SAN
 
   std::vector<dg_cell> complete_cells;
   std::vector<dg_cell> incomplete_cells;
-  for (auto const& cell : cells) {
+  for (auto& cell : cells) {
+    std::vector<int> found1;
+    std::vector<int> found2;
     const auto& cell_info = sand_geo->get_ecal_cell_info(cell.id);
     double delta = cell_info.length() * sand_reco::ecal::scintillation::vlfb /
                    sand_reco::conversion::m_to_mm;
@@ -124,36 +126,42 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(const SAN
       int found = 0;
       for (uint j = 0; j < cell.ps2.size(); j++) {
         if (fabs(cell.ps1.at(i).tdc - cell.ps2.at(j).tdc) < delta) {
-          dg_cell good_cell;
-          good_cell.id = cell.id;
-          good_cell.z = cell.z;
-          good_cell.x = cell.x;
-          good_cell.y = cell.y;
-          good_cell.l = cell.l;
-          good_cell.mod = cell.mod;
-          good_cell.lay = cell.lay;
-          good_cell.cel = cell.cel;
-          good_cell.ps1.push_back(cell.ps1.at(i));
-          good_cell.ps2.push_back(cell.ps2.at(j));
-          complete_cells.push_back(good_cell);
-
-          found++;
-          break;
+          if (std::find(found1.begin(), found1.end(), i) == found1.end() &&
+              std::find(found2.begin(), found2.end(), j) == found2.end()) {
+            dg_cell good_cell;
+            good_cell.id = cell.id;
+            good_cell.z = cell.z;
+            good_cell.x = cell.x;
+            good_cell.y = cell.y;
+            good_cell.l = cell.l;
+            good_cell.mod = cell.mod;
+            good_cell.lay = cell.lay;
+            good_cell.cel = cell.cel;
+            good_cell.ps1.push_back(cell.ps1.at(i));
+            good_cell.ps2.push_back(cell.ps2.at(j));
+            complete_cells.push_back(good_cell);
+            found1.push_back(i);
+            found2.push_back(j);
+            found++;
+            break;
+          }
         }
       }
       if (found == 0) {
-
-        dg_cell ps1bad_cell;
-        ps1bad_cell.id = cell.id;
-        ps1bad_cell.z = cell.z;
-        ps1bad_cell.x = cell.x;
-        ps1bad_cell.y = cell.y;
-        ps1bad_cell.l = cell.l;
-        ps1bad_cell.mod = cell.mod;
-        ps1bad_cell.lay = cell.lay;
-        ps1bad_cell.cel = cell.cel;
-        ps1bad_cell.ps1.push_back(cell.ps1.at(i));
-        incomplete_cells.push_back(ps1bad_cell);
+        if (std::find(found1.begin(), found1.end(), i) == found1.end()) {
+          dg_cell ps1bad_cell;
+          ps1bad_cell.id = cell.id;
+          ps1bad_cell.z = cell.z;
+          ps1bad_cell.x = cell.x;
+          ps1bad_cell.y = cell.y;
+          ps1bad_cell.l = cell.l;
+          ps1bad_cell.mod = cell.mod;
+          ps1bad_cell.lay = cell.lay;
+          ps1bad_cell.cel = cell.cel;
+          ps1bad_cell.ps1.push_back(cell.ps1.at(i));
+          incomplete_cells.push_back(ps1bad_cell);
+          found1.push_back(i);
+        }
       }
     }
 
@@ -161,22 +169,26 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(const SAN
       int found = 0;
       for (uint l = 0; l < cell.ps1.size(); l++) {
         if (fabs(cell.ps1.at(l).tdc - cell.ps2.at(k).tdc) < delta) {
-          found++;
+          if (std::find(found1.begin(), found1.end(), l) == found1.end() &&
+              std::find(found2.begin(), found2.end(), k) == found2.end()) {
+              found++;
+          }
         }
       }
       if (found == 0) {
-
-        dg_cell ps2bad_cell;
-        ps2bad_cell.id = cell.id;
-        ps2bad_cell.z = cell.z;
-        ps2bad_cell.x = cell.x;
-        ps2bad_cell.y = cell.y;
-        ps2bad_cell.l = cell.l;
-        ps2bad_cell.mod = cell.mod;
-        ps2bad_cell.lay = cell.lay;
-        ps2bad_cell.cel = cell.cel;
-        ps2bad_cell.ps2.push_back(cell.ps2.at(k));
-        incomplete_cells.push_back(ps2bad_cell);
+        if (std::find(found2.begin(), found2.end(), k) == found2.end()) {
+          dg_cell ps2bad_cell;
+          ps2bad_cell.id = cell.id;
+          ps2bad_cell.z = cell.z;
+          ps2bad_cell.x = cell.x;
+          ps2bad_cell.y = cell.y;
+          ps2bad_cell.l = cell.l;
+          ps2bad_cell.mod = cell.mod;
+          ps2bad_cell.lay = cell.lay;
+          ps2bad_cell.cel = cell.cel;
+          ps2bad_cell.ps2.push_back(cell.ps2.at(k));
+          incomplete_cells.push_back(ps2bad_cell);
+        }
       }
     }
   }
