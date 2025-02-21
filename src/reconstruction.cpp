@@ -268,7 +268,7 @@ int evalYSign(const track& tr)
 {
   std::vector<double> ys;
 
-  for (const auto d : tr.clY) ys.push_back(d.y);
+  for (const auto& d : tr.clY) ys.push_back(d.y);
 
   return evalYSign(ys, tr.yc);
 }
@@ -774,12 +774,12 @@ void mergeXYTracks(std::vector<std::vector<dg_tube> >& clustersX,
               std::abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z);
           track tr;
           tr.tid = index++;
-          tr.clX = std::move(clustersX.at(kk));
-          tr.clY = std::move(clustersY.at(jj));
+          tr.clX = clustersX.at(kk);
+          tr.clY = clustersY.at(jj);
           clustersY.erase(clustersY.begin() + jj--);
           clustersX.erase(clustersX.begin() + kk--);
 
-          tr3D.push_back(std::move(tr));
+          tr3D.push_back(tr);
           break;
         }
       }

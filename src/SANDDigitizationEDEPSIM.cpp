@@ -82,62 +82,6 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
 
 
   return true;
-
-  // /////
-  // TGeoNode* node = g->FindNode(x, y, z);
-
-  // if (node == 0) return false;
-
-  // TString str = node->GetName();
-  // TString str2 = g->GetPath();
-
-  // if (debug) {
-  //   std::cout << "node name: " << str.Data() << std::endl;
-  // }
-
-  // if (sand_reco::ecal::geometry::CheckAndProcessPath(str2) == false)
-  //   return false;
-  // //////
-
-  // // barrel modules
-  // if (sand_reco::ecal::geometry::isBarrel(str)) {
-
-  //   sand_reco::ecal::geometry::BarrelModuleAndLayer(str, str2, detID, modID,
-  //                                                   planeID);
-
-  //   sand_reco::ecal::geometry::BarrelCell(x, y, z, g, node, cellID, d1, d2);
-
-  //   if (debug) {
-  //     std::cout << "hit: " << str.Data() << std::endl;
-  //     std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
-  //               << std::endl;
-  //     std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
-  //               << " " << planeID << " " << cellID << std::endl;
-  //     std::cout << "\t[d1,d2,t,de]           " << d1 << " " << d2 << " " << t
-  //               << " " << de << std::endl;
-  //   }
-
-  //   return true;
-  // }
-  // // end cap modules
-  // else if (sand_reco::ecal::geometry::isEndCap(str)) {
-
-  //   sand_reco::ecal::geometry::EndCapModuleAndLayer(str, str2, detID, modID,
-  //                                                   planeID);
-
-  // sand_reco::ecal::geometry::EndCapCell(x, y, z, g, node, cellID, d1, d2);
-
-  //   if (debug) {
-  //     std::cout << "hit: " << str.Data() << std::endl;
-  //     std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
-  //               << std::endl;
-  //     std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
-  //               << " " << planeID << " " << cellID << std::endl;
-  //   }
-  //   return true;
-  // } else {
-  //   return false;
-  // }
 }
 
 void simulate_photo_electrons(TG4Event* ev, const SANDGeoManager& g,
@@ -169,12 +113,12 @@ void simulate_photo_electrons(TG4Event* ev, const SANDGeoManager& g,
           int pe2 = digitization::rand.Poisson(ave_pe2);
           uniqID =
               sand_reco::ecal::decoder::EncodeID(detID, modID, planeID, cellID);
-          if (debug) {
-            std::cout << "cell ID: " << uniqID << std::endl;
-            std::cout << "\t" << de << " " << en1 << " " << en2 << std::endl;
-            std::cout << "\t" << ave_pe1 << " " << ave_pe2 << std::endl;
-            std::cout << "\t" << pe1 << " " << pe2 << std::endl;
-          }
+          // if (debug) {
+          //   std::cout << "cell ID: " << uniqID << std::endl;
+          //   std::cout << "\t" << de << " " << en1 << " " << en2 << std::endl;
+          //   std::cout << "\t" << ave_pe1 << " " << ave_pe2 << std::endl;
+          //   std::cout << "\t" << pe1 << " " << pe2 << std::endl;
+          // }
 
           // cellend 1 -> x < 0 -> ID > 0 -> left
           // cellend 2 -> x > 0 -> ID < 0 -> right

@@ -74,9 +74,9 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
   vec_clust = Merge(vec_clust);
 
   // Track Fit
-  vec_clust = TrackFit(vec_clust);
+  TrackFit(vec_clust);
 
-  // vec_clust = RecoverIncomplete(sand_geo, vec_clust, incomplete_cells);
+  // RecoverIncomplete(sand_geo, vec_clust, incomplete_cells);
 
   for (auto& c:vec_clust) {
     // std::cout << c.e << std::endl;
@@ -110,7 +110,7 @@ void Clust_info(cluster clus)
 }
 
 std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(const SANDGeoManager* sand_geo,
-    std::vector<dg_cell> cells)
+    const std::vector<dg_cell>& cells)
 {
 
   std::vector<dg_cell> complete_cells;
@@ -234,8 +234,8 @@ void updateCluster(const dg_cell& incomplete_cell, double distance,
 }
 
 
-std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster> clus,
-                                       std::vector<dg_cell> incomplete_cells)
+void RecoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clus,
+                       const std::vector<dg_cell>& incomplete_cells)
 {
   
   for (auto const& incomplete_cell : incomplete_cells) {
@@ -254,7 +254,7 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
     double time_range = 3;
     double min_distance = 10e5;
     double min_time = 10e5;
-    for (int j = 0; j < clus.size(); j++) {
+    for (uint j = 0; j < clus.size(); j++) {
       double rec_en = 0;
       bool isNeigh = false;
       
@@ -314,10 +314,9 @@ std::vector<cluster> RecoverIncomplete(const SANDGeoManager* sand_geo, std::vect
     }
     
   }
-  return clus;
 }
 
-std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> original_clu_vec,
+std::vector<cluster> Split(const SANDGeoManager* sand_geo, const std::vector<cluster>& original_clu_vec,
                            bool& HasSplit)
 {
   std::vector<cluster> clu_vec;
@@ -332,7 +331,7 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> 
     double tRMS_A, tRMS_B, dist;
 
     all_cells = clus.reco_cells;
-    for (int j = 0; j < all_cells.size(); j++) {
+    for (uint j = 0; j < all_cells.size(); j++) {
 
       EA = all_cells.at(j).ps1.adc;
 
@@ -432,27 +431,27 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> 
       }
       std::vector<cluster> quadrant_cluster;
       if (q1_cells.size() != 0) {
-        cluster clus = Calc_variables(q1_cells);
+        cluster new_cluster = Calc_variables(q1_cells);
 
-        clu_vec.push_back(clus);
+        clu_vec.push_back(new_cluster);
         splitted++;
       }
       if (q2_cells.size() != 0) {
-        cluster clus = Calc_variables(q2_cells);
+        cluster new_cluster = Calc_variables(q2_cells);
 
-        clu_vec.push_back(clus);
+        clu_vec.push_back(new_cluster);
         splitted++;
       }
       if (q3_cells.size() != 0) {
-        cluster clus = Calc_variables(q3_cells);
+        cluster new_cluster = Calc_variables(q3_cells);
 
-        clu_vec.push_back(clus);
+        clu_vec.push_back(new_cluster);
         splitted++;
       }
       if (q4_cells.size() != 0) {
-        cluster clus = Calc_variables(q4_cells);
+        cluster new_cluster = Calc_variables(q4_cells);
 
-        clu_vec.push_back(clus);
+        clu_vec.push_back(new_cluster);
         splitted++;
       }
       q1_cells.clear();
@@ -466,17 +465,16 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> 
     all_cells.clear();
   }
 
-  original_clu_vec.clear();
   return clu_vec;
 }
 
-std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
+std::vector<cluster> Merge(const std::vector<cluster>& Og_cluster)
 {
 
   std::vector<cluster> mgd_cluster;
   std::vector<int> checked;
 
-  for (int i = 0; i < Og_cluster.size(); i++) {
+  for (uint i = 0; i < Og_cluster.size(); i++) {
     double xi = Og_cluster.at(i).x;
     double yi = Og_cluster.at(i).y;
     double zi = Og_cluster.at(i).z;
@@ -501,7 +499,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
     clust.varz = Og_cluster.at(i).varz;
     clust.reco_cells = Og_cluster.at(i).reco_cells;
 
-    for (int j = i; j < Og_cluster.size(); j++) {
+    for (uint j = i; j < Og_cluster.size(); j++) {
       RepCheck = RepetitionCheck(checked, j);
       if (RepCheck == true) {
         continue;
@@ -533,7 +531,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
           D = sqrt((xi - xj) * (xi - xj) + (zi - zj) * (zi - zj));
           if (Dz_ec < 250 && D < 250) {
             std::vector<reco_cell> vec_cells_j = Og_cluster.at(j).reco_cells;
-            for (int k = 0; k < vec_cells_j.size(); k++) {
+            for (uint k = 0; k < vec_cells_j.size(); k++) {
               clust.reco_cells.push_back(vec_cells_j.at(k));
             }
             clust = Calc_variables(clust.reco_cells);
@@ -544,7 +542,7 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
           D = sqrt((zi - zj) * (zi - zj) + (yi - yj) * (yi - yj));
           if (Dz_bar < 250 && D < 250) {
             std::vector<reco_cell> vec_cells_j = Og_cluster.at(j).reco_cells;
-            for (int k = 0; k < vec_cells_j.size(); k++) {
+            for (uint k = 0; k < vec_cells_j.size(); k++) {
               clust.reco_cells.push_back(vec_cells_j.at(k));
             }
             clust = Calc_variables(clust.reco_cells);
@@ -561,7 +559,8 @@ std::vector<cluster> Merge(std::vector<cluster> Og_cluster)
 
 void updateArrays(double* yx, double* yy, double* yz,
                   double* wx, double* wy, double* wz,
-                  const cluster& lay, int lay_cross, bool isBarrel) {
+                  const cluster& lay, int lay_cross, bool isBarrel) 
+{
   yx[lay_cross - 1] = lay.x;
   yy[lay_cross - 1] = lay.y;
   yz[lay_cross - 1] = lay.z;
@@ -574,17 +573,17 @@ void updateArrays(double* yx, double* yy, double* yz,
   }
 }
 
-std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
+void TrackFit(std::vector<cluster>& clu_vec)
 {
   const double xl[5] = {4.44, 4.44, 4.44, 4.44, 5.24};
-  for (int i = 0; i < clu_vec.size(); i++) {
+  for (uint i = 0; i < clu_vec.size(); i++) {
     double apx[3]   = {0, 0, 0};
-    double eapx[3]  = {0, 0, 0};
+    // double eapx[3]  = {0, 0, 0};
     double ctrk[3]  = {0, 0, 0};
-    double ectrk[3] = {0, 0, 0};
+    // double ectrk[3] = {0, 0, 0};
     std::vector<reco_cell> cell_vec[5];
         
-    for (int j = 0; j < clu_vec.at(i).reco_cells.size(); j++) {
+    for (uint j = 0; j < clu_vec.at(i).reco_cells.size(); j++) {
       int layer_number = clu_vec.at(i).reco_cells.at(j).lay;
       cell_vec[layer_number].push_back(clu_vec.at(i).reco_cells.at(j));
     }
@@ -680,15 +679,15 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
       ctrk[0] = std::get<1>(fit_varx) / trktot;
       ctrk[1] = std::get<1>(fit_vary) / trktot;
       ctrk[2] = std::get<1>(fit_varz) / trktot;
-      ectrk[0] = std::get<3>(fit_varx) / trktot;
-      ectrk[1] = std::get<3>(fit_vary) / trktot;
-      ectrk[2] = std::get<3>(fit_varz) / trktot;
+      // ectrk[0] = std::get<3>(fit_varx) / trktot;
+      // ectrk[1] = std::get<3>(fit_vary) / trktot;
+      // ectrk[2] = std::get<3>(fit_varz) / trktot;
       apx[0] = std::get<0>(fit_varx);
       apx[1] = std::get<0>(fit_vary);
       apx[2] = std::get<0>(fit_varz);
-      eapx[0] = std::get<2>(fit_varx);
-      eapx[1] = std::get<2>(fit_vary);
-      eapx[2] = std::get<2>(fit_varz);
+      // eapx[0] = std::get<2>(fit_varx);
+      // eapx[1] = std::get<2>(fit_vary);
+      // eapx[2] = std::get<2>(fit_varz);
     }
     if (lay_cross == 1) {
       apx[0] = yx[0];
@@ -704,7 +703,6 @@ std::vector<cluster> TrackFit(std::vector<cluster> clu_vec)
     clu_vec.at(i).sy = ctrk[1];
     clu_vec.at(i).sz = ctrk[2];
   }
-  return clu_vec;
 }
 
 std::tuple<double, double, double, double> fit_ls(int lay, double* X, double* Y,
@@ -733,11 +731,11 @@ std::tuple<double, double, double, double> fit_ls(int lay, double* X, double* Y,
   return std::make_tuple(A, B, dA, dB);
 }
 
-cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cells)
+cluster Create_cluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell>& cells)
 {
 
   double x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0,
-         x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, Etot = 0, E2tot,
+         x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, Etot = 0, E2tot = 0,
          EvEtot = 0, EA, EAtot = 0, EB, EBtot = 0, TA = 0, TB = 0;
 
   std::vector<reco_cell> reconstructed_cells;
@@ -751,7 +749,7 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cell
     double d1, d2;
     d1 = sand_geo->compute_cell_d1(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
     d2 = sand_geo->compute_cell_d2(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
-    
+
     double cell_E = sand_reco::ecal::reco::EfromADC(
         cell.ps1.at(0).adc, cell.ps2.at(0).adc, d1, d2, cell.lay);
 
@@ -845,11 +843,11 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell> cell
   return clust;
 }
 
-cluster Calc_variables(std::vector<reco_cell> cells)
+cluster Calc_variables(const std::vector<reco_cell>& cells)
 {
 
   double x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0,
-         x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, Etot = 0, E2tot,
+         x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, Etot = 0, E2tot = 0,
          EvEtot = 0, EA, EAtot = 0, EB, EBtot = 0, TA = 0, TB = 0;
 
   std::vector<reco_cell> reconstructed_cells;
@@ -932,7 +930,6 @@ bool RepetitionCheck(std::vector<int> v, int check)
   }
 }
 
-
 bool isNeighbour(const dg_cell& cell, const dg_cell& check_cell)
 {
 
@@ -941,10 +938,8 @@ bool isNeighbour(const dg_cell& cell, const dg_cell& check_cell)
   
   if (fabs(cell.x) > 1500 && fabs(check_cell.x) > 1500) {
     arebothendcap = true;
-    // std::cout << "are both endcap" << std::endl;
   } else if (fabs(cell.x) < 1500 && fabs(check_cell.x) < 1500) {
     arebothbarrel = true;
-    // std::cout << "are both barrel" << std::endl;
   } else if ((fabs(cell.x) < 1500 && fabs(check_cell.x) > 1500) ||
              (fabs(cell.x) > 1500 && fabs(check_cell.x) < 1500)) {
     return false;
@@ -952,50 +947,33 @@ bool isNeighbour(const dg_cell& cell, const dg_cell& check_cell)
   }
 
   if (arebothendcap) {
-    // std::cout << "cell.id: " << cell.id << ", check_cell.id: " <<
-    // check_cell.id << std::endl; std::cout << "cell.x: " << cell.x <<
-    // std::endl; std::cout << "check_cell.x: " << check_cell.x << std::endl;
-    //   std::cout << "cell.z: " << cell.z << std::endl;
-    //   std::cout << "check_cell.z: " << check_cell.z << std::endl;
     double distance = sqrt((cell.x - check_cell.x) * (cell.x - check_cell.x) +
                            (cell.z - check_cell.z) * (cell.z - check_cell.z));
-    // std::cout << "************distance: " << distance << std::endl;
 
     if (distance < 65.70) { //max distance between two cells in the endcap (layer 5-4, diagonal)
-      // std::cout << "ARE NEIGHBOUR!" << std::endl;
       return true;
     }
 
     else {
-      // std::cout << "NOT NEAR!" << std::endl;
       return false;
     }
   } else if (arebothbarrel) {
-    // std::cout << "cell.id: " << cell.id << ", check_cell.id: " <<
-    // check_cell.id << std::endl; std::cout << "cell.y: " << cell.y <<
-    // std::endl; std::cout << "check_cell.y: " << check_cell.y << std::endl;
-    // std::cout << "cell.z: " << cell.z << std::endl;
-    // std::cout << "check_cell.z: " << check_cell.z << std::endl;
-
     double distance = sqrt((cell.y - check_cell.y) * (cell.y - check_cell.y) +
                            (cell.z - check_cell.z) * (cell.z - check_cell.z));
-    // std::cout << "************distance: " << distance << std::endl;
     if (distance < 72.36) { //max distance between two cells in the barrel (layer5-4 digonal)
-      // std::cout << "ARE NEIGHBOUR!" << std::endl;
       return true;
-
     } else {
-      // std::cout << "NOT NEAR!" << std::endl;
       return false;
     }
   }
+  return false;
 }
 
 std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
-    std::vector<dg_cell> cells, int start, std::vector<int> checked,
+    const std::vector<dg_cell>& cells, int start, std::vector<int> checked,
     std::vector<dg_cell> neigh_chain)
 {
-  for (int i = 0; i < cells.size(); i++) {
+  for (uint i = 0; i < cells.size(); i++) {
 
     if (RepetitionCheck(checked, i) == true) continue;
 
@@ -1012,12 +990,6 @@ std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
       }
   }
   return std::make_pair(neigh_chain, checked);
-}
-
-double DfromTDC(double ta, double tb)
-{
-  return 0.5 * (ta - tb) / sand_reco::ecal::scintillation::vlfb *
-         sand_reco::conversion::m_to_mm;
 }
 
 bool endsWith(const std::string& fullString, const std::string& ending)
