@@ -24,11 +24,27 @@ void ClusterCollection::ClusterProximityInPlane(const std::vector<sand_reco::tra
 }
 
 void ClusterCollection::ClusterCellAdjacency(const std::vector<sand_reco::tracker::Digit>& digits) {
-  std::vector<sand_reco::tracker::DigitID> digitIds;
+  std::map<sand_geometry::tracker::ModuleID, std::vector<sand_reco::tracker::DigitID>> fMapDigits;
   for (auto& dg : digits) {
-    digitIds.push_back(sand_reco::tracker::DigitID(dg.did));
+    sand_geometry::tracker::ModuleID unique_module_id;
+    sand_geometry::tracker::ModuleID supermodule_id;
+    sand_geometry::tracker::ModuleID module_id;
+    sand_geometry::tracker::ModuleID module_replica_id;
+    sand_geometry::tracker::PlaneID plane_global_id;
+    sand_geometry::tracker::PlaneID plane_replica_id;
+    sand_geometry::tracker::PlaneID plane_type;
+    sand_geometry::tracker::CellID cell_local_id;
+    sand_geo_->decodeCellId(dg.did, plane_global_id, cell_local_id);
+
+    sand_geo_->decodePlaneId(plane_global_id, unique_module_id, plane_replica_id, plane_type);
+    sand_geo_->decodeModuleId(unique_module_id, supermodule_id, module_id, module_replica_id);
+    fMapDigits[unique_module_id].push_back(sand_reco::tracker::DigitID(dg.did));
+    // std::cout << unique_module_id() << " " << sand_geo_->get_planes().at(sand_geo_->GetPlaneIndex(plane_global_id)()).getPosition().Z() << std::endl;
   }
-  containers_.push_back(new sand_reco::tracker::ClustersByProximity(sand_geo_, sand_reco::tracker::ClustersContainerID(0), digitIds));
+
+  for (auto& p:fMapDigits) {
+    containers_.push_back(new sand_reco::tracker::ClustersByProximity(sand_geo_, sand_reco::tracker::ClustersContainerID(p.first()), p.second));
+  }
 }
 
 ClusterCollection::ClusterCollection(const SANDGeoManager* sand_geo, const std::vector<sand_reco::tracker::Digit>& digits, ClusteringMethod clu_method)

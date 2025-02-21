@@ -216,19 +216,24 @@ std::vector<TVectorD> TrackletFinder::findTracklets()
   // std::cout << "SAMPLING SIZE: " << sampling_points.size() << std::endl;
   for (uint i = 0; i < sampling_points.size(); i++) {
     double starting_point[4] = {sampling_points[i][0], sampling_points[i][1], sampling_points[i][2], sampling_points[i][3]};
-    minimizer->SetLimitedVariable(0, "px", starting_point[0], 1, cells_intersections_[0].X() - 200, cells_intersections_[1].X() + 200);
-    minimizer->SetLimitedVariable(1, "py", starting_point[1], 1, cells_intersections_[0].Y() - 200, cells_intersections_[1].Y() + 200);
-    minimizer->SetLimitedVariable(2, "dx", starting_point[2], 0.1, theta_xz - theta_width, theta_xz + theta_width);
-    minimizer->SetLimitedVariable(3, "dy", starting_point[3], 0.1, theta_yz - theta_width, theta_yz + theta_width);
+    minimizer->SetLimitedVariable(0, "px", starting_point[0], 0.1, cells_intersections_[0].X() - 200, cells_intersections_[1].X() + 200);
+    minimizer->SetLimitedVariable(1, "py", starting_point[1], 0.1, cells_intersections_[0].Y() - 200, cells_intersections_[1].Y() + 200);
+    minimizer->SetLimitedVariable(2, "dx", starting_point[2], 0.01, theta_xz - theta_width, theta_xz + theta_width);
+    minimizer->SetLimitedVariable(3, "dy", starting_point[3], 0.01, theta_yz - theta_width, theta_yz + theta_width);
 
     minimizer->Minimize();
     const double *xs = minimizer->X();
-    TVectorD min(5);
+    TVectorD min(9);
     min[0] = xs[0];
     min[1] = xs[1];
     min[2] = xs[2];
     min[3] = xs[3];
     min[4] = minimizer->MinValue();
+    const double *err_xs = minimizer->Errors();
+    min[5] = err_xs[0];
+    min[6] = err_xs[1];
+    min[7] = err_xs[2];
+    min[8] = err_xs[3];
     minima.push_back(min);
   }
   return minima;
