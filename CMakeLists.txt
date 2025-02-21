@@ -82,7 +82,7 @@ target_link_libraries(Digitize Struct SANDGeoManager Utils)
 
 # Creates Reconstruct executable.
 add_executable(Reconstruct src/reconstruction.cpp)
-target_link_libraries(Reconstruct Struct Utils SANDGeoManager SANDClustering)
+target_link_libraries(Reconstruct Struct Utils SANDGeoManager SANDClustering EDEPTree TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils SANDKalmanFilter ROOT::EG)
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)
@@ -91,6 +91,10 @@ target_link_libraries(Analyze Struct Utils ROOT::EG)
 # Creates Display executable.
 add_executable(Display src/display.cpp)
 target_link_libraries(Display Struct Utils)
+
+# Creates test_DisplayReco executable for testing.
+add_executable(test_DisplayReco tests/test_DisplayReco.cpp)
+target_link_libraries(test_DisplayReco Struct Utils)
 
 # Creates FastCheck executable.
 add_executable(FastCheck src/fastcheck.cpp)
