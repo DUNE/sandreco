@@ -184,7 +184,7 @@ const double pe2ADC = 1 / .25;
 // ADC integration time = 30 ns
 const double int_time = 30.;
 // dead time
-const double dead_time = 50.;
+const double dead_time = 0.;
 
 // https://www.sciencedirect.com/science/article/pii/S0168900201015029
 // threshold 3-4 p.e. at 2 m distance
@@ -215,6 +215,7 @@ namespace reco
 double TfromTDC(double t1, double t2, double L);
 double XfromTDC(double t1, double t2);
 double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
+double EfromADCsingle(double adc, double f);
 void CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
                double& e);
 }  // namespace reco

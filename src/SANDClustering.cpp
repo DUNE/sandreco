@@ -212,7 +212,7 @@ void updateCluster(const dg_cell& incomplete_cell, double distance,
   
   int laycell = incomplete_cell.lay;
   double f = sand_reco::ecal::attenuation::AttenuationFactor(distance, laycell);
-  double rec_en = EfromADCsingle(adc, f);
+  double rec_en = sand_reco::ecal::reco::EfromADCsingle(adc, f);
 
   double x;
   double y;
@@ -342,7 +342,6 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, std::vector<cluster> 
       EBtot += EB;
       EB2tot += EB * EB;
 
-      //double d = DfromTDC(all_cells[j].ps1.tdc, all_cells[j].ps2.tdc);
       const auto& cell_info = sand_geo->get_ecal_cell_info(all_cells.at(j).id);
       double cell_lenght = cell_info.length();
 
@@ -1013,13 +1012,6 @@ std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
       }
   }
   return std::make_pair(neigh_chain, checked);
-}
-
-double EfromADCsingle(double adc, double f)
-{
-  double const attpassratio = 0.187;
-  return adc / (f * attpassratio * sand_reco::ecal::acquisition::pe2ADC *
-                sand_reco::ecal::photo_sensor::e2pe);
 }
 
 double DfromTDC(double ta, double tb)

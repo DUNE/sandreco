@@ -34,7 +34,6 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, std::vector<dg_cell>);
 
 bool RepetitionCheck(std::vector<int>, int);
 bool isNeighbour(const dg_cell&, const dg_cell&);
-double EfromADCsingle(double adc, double f);
 double DfromTDC(double, double);
 
 bool endsWith(const std::string& fullString, const std::string& ending);

@@ -932,6 +932,15 @@ double sand_reco::ecal::reco::EfromADC(double adc1, double adc2, double d1,
   return 0.5 * (adc1 / f1 + adc2 / f2) / (attpassratio * acquisition::pe2ADC * photo_sensor::e2pe);
 }
 
+// energy deposit of the hit from a single adc and 
+// reconstructed longidutinal coordinate of a cluster
+double sand_reco::ecal::reco::EfromADCsingle(double adc, double f)
+{
+  double const attpassratio = 1; // 0.187;
+  return adc / (f * attpassratio * sand_reco::ecal::acquisition::pe2ADC *
+                sand_reco::ecal::photo_sensor::e2pe);
+}
+
 // reconstruct hit position, time and energy of the cell
 void sand_reco::ecal::reco::CellXYZTE(dg_cell c, double& x, double& y,
                                       double& z, double& t, double& e)
