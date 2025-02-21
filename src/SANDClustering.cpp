@@ -1,5 +1,6 @@
 #include "SANDClustering.h"
 #include "utils.h"
+#include <numeric>
 
 int evaluateClusterType(const cluster& clust) {
   // type 1 barrel
@@ -850,28 +851,15 @@ cluster Calc_variables(const std::vector<reco_cell>& cells)
          x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, Etot = 0, E2tot = 0,
          EvEtot = 0, EA, EAtot = 0, EB, EBtot = 0, TA = 0, TB = 0;
 
-  std::vector<reco_cell> reconstructed_cells;
-
-  for (auto& cell : cells) {
-
-    reco_cell rec_cell = cell;
-
-    x_weighted = x_weighted + (cell.x * cell.e);
-    x2_weighted = x2_weighted + (cell.x * cell.x * cell.e);
-
-    y_weighted = y_weighted + (cell.y * cell.e);
-    y2_weighted = y2_weighted + (cell.y * cell.y * cell.e);
-
-    z_weighted = z_weighted + (cell.z * cell.e);
-    z2_weighted = z2_weighted + (cell.z * cell.z * cell.e);
-
-    t_weighted = t_weighted + cell.t * cell.e;
-
-    Etot = Etot + cell.e;
-    E2tot = E2tot + cell.e * cell.e;
-
-    reconstructed_cells.push_back(rec_cell);
-  }
+  double ll_x_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.x * c.e; });
+  double ll_x2_weighted = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.x * c.x * c.e; });
+  double ll_y_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.y * c.e; });
+  double ll_y2_weighted = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.y * c.y * c.e; });
+  double ll_z_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.z * c.e; });
+  double ll_z2_weighted = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.z * c.z * c.e; });
+  double ll_t_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.t * c.e; });
+  double ll_Etot        = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.e; });
+  double ll_E2tot       = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.e * c.e; });
 
   x_weighted = x_weighted / Etot;
   x2_weighted = x2_weighted / Etot;
@@ -916,7 +904,7 @@ cluster Calc_variables(const std::vector<reco_cell>& cells)
   clust.varx = dx;
   clust.vary = dy;
   clust.varz = dz;
-  clust.reco_cells = reconstructed_cells;
+  clust.reco_cells = cells;
 
   return clust;
 }
@@ -943,7 +931,6 @@ bool isNeighbour(const dg_cell& cell, const dg_cell& check_cell)
   } else if ((fabs(cell.x) < 1500 && fabs(check_cell.x) > 1500) ||
              (fabs(cell.x) > 1500 && fabs(check_cell.x) < 1500)) {
     return false;
-    // std::cout << "are one endcap and one barrel, RETURN " << std::endl;
   }
 
   if (arebothendcap) {

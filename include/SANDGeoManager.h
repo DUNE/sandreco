@@ -177,7 +177,7 @@ class SANDGeoManager : public TObject
                                      int& cell_local_id) const;
   int get_barrel_path_len(const double& hx, const double& hy, const double& hz,
                           double& d1, double& d2) const;
-  int get_barrel_hit_pos(const double& d1, const int& global_cellID,
+  int get_barrel_hit_pos(double d1, int global_cellID,
                          double& reco_x, double& reco_y, double& reco_z) const;
   int get_endcap_path_len(const double& hx, const double& hy, const double& hz,
                           const int& endcap_mod_id, double& d1,

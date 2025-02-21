@@ -94,19 +94,32 @@ struct dg_cell {
   std::vector<dg_ps> ps2;
 };
 
+/**
+ * @struct reco_cell
+ * @brief Represents a reconstructed detector cell with spatial, energy, and timing information.
+ * 
+ * This structure holds information about a detector cell, including its position, 
+ * energy deposit, time, and associated photodetector signals.
+ */
 struct reco_cell {
-  int id;
-  double z;
-  double y;
-  double x;
-  double l;
-  int mod;
-  int lay;
-  double e;
-  double t; 
-  dg_ps ps1;
-  dg_ps ps2;
-  int fired_pmt;
+  int id;      /**< Unique identifier of the cell */
+  double z;    /**< Z-coordinate of the cell position */
+  double y;    /**< Y-coordinate of the cell position */
+  double x;    /**< X-coordinate of the cell position */
+  double l;    /**< Reconstructed cell length */
+  int mod;     /**< Module number where the cell is located */
+  int lay;     /**< Layer number of the cell */
+  double e;    /**< Energy deposited in the cell */
+  double t;    /**< Time of the recorded signal */
+
+  dg_ps ps1;   /**< Photodetector signal from the first side */
+  dg_ps ps2;   /**< Photodetector signal from the second side */
+
+  int fired_pmt; /**< Indicates which photodetectors were triggered:
+                  *   - 1 if only ps1 is set
+                  *   - 2 if only ps2 is set
+                  *   - 3 if both ps1 and ps2 are set
+                  */
 };
 
 struct dg_tube {

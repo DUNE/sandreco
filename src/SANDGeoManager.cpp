@@ -351,8 +351,8 @@ int SANDGeoManager::get_barrel_path_len(const double& hx, const double& hy,
   return 1;
 }
 
-int SANDGeoManager::get_barrel_hit_pos(const double& d1,
-                                       const int& global_cellID, double& reco_x,
+int SANDGeoManager::get_barrel_hit_pos(double d1,
+                                       int global_cellID, double& reco_x,
                                        double& reco_y, double& reco_z) const
 {
   auto current_cell = cellmap_.at(global_cellID);
