@@ -202,6 +202,8 @@ namespace energy_calibration
 {
 // ADC to MeV
 const double adc2MeV = 1. / 10.;
+// active to active + passive
+const double attpassratio = 1.;
 }  // namespace energy_calibration
 
 namespace decoder
