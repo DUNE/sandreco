@@ -173,9 +173,9 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
       c->ps2 = it->second;
     }
     auto cell_info = geo.get_ecal_cell_info(c->id);
-    c->x = cell_info.x();
-    c->y = cell_info.y();
-    c->z = cell_info.z();
+    c->x = cell_info.getX();
+    c->y = cell_info.getY();
+    c->z = cell_info.getZ();
   }
 
   for (std::map<int, dg_cell>::iterator it = map_cell.begin();
