@@ -1,10 +1,16 @@
 #include <TObject.h>
 
-#ifndef SANDECALCELLINFO_H
-#define SANDECALCELLINFO_H
+#ifndef ECALCELLINFO_H
+#define ECALCELLINFO_H
+
+namespace sand_geometry
+{
+
+namespace ecal
+{
 
 // class for storing geometric info of the SAND ECAL cells
-class SANDECALCellInfo : public TObject
+class ECALCellInfo : public TObject
 {
  public:
   enum class Orient { kHorizontal, kVertical };
@@ -17,30 +23,32 @@ class SANDECALCellInfo : public TObject
   double length_;       // length of the cell
   Orient orientation_;  // orientation of the cell
  public:
-  SANDECALCellInfo();  // Default constructor
-  SANDECALCellInfo(int id, double x, double y, double z, double length,
+  ECALCellInfo();  // Default constructor
+  ECALCellInfo(int id, double x, double y, double z, double length,
                    Orient orientation);  // parametric constructor
 
   // Setter methods for the attributes
-  void id(int arg_id);
-  void x(double arg_x);
-  void y(double arg_y);
-  void z(double arg_z);
-  void length(double arg_length);
-  void orientation(Orient arg_orientation);
+  void setId(int arg_id);
+  void setX(double arg_x);
+  void setY(double arg_y);
+  void setZ(double arg_z);
+  void setLength(double arg_length);
+  void setOrientation(Orient arg_orientation);
   // Getter methods for the attributes
-  int id() const;
-  double x() const;
-  double y() const;
-  double z() const;
-  double length() const;
-  Orient orientation();
+  int getId() const;
+  double getX() const;
+  double getY() const;
+  double getZ() const;
+  double getLength() const;
+  Orient getOrientation();
 
-  ClassDef(SANDECALCellInfo, 1);
+  ClassDef(ECALCellInfo, 1);
 };
+} // namespace ecal
+} // namesoace sand_geometry
 
 #ifdef __MAKECINT__
-#pragma link C++ class SANDECALCellInfo + ;
+#pragma link C++ class sand_geometry::ecal::ECALCellInfo + ;
 #endif
 
 #endif

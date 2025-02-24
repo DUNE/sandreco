@@ -3,11 +3,17 @@ for storing geometric info of the composite endcap modules*/
 
 #include "SANDENDCAPModInfo.h"
 
+namespace sand_geometry
+{
+
+namespace ecal
+{
+
 // Default constructor
-SANDENDCAPModInfo::SANDENDCAPModInfo() {}
+ENDCAPModInfo::ENDCAPModInfo() {}
 
 // Parametric constructor
-SANDENDCAPModInfo::SANDENDCAPModInfo(int arg_id, TGeoNode* arg_mod_node, const TGeoHMatrix &arg_hmatrix 
+ENDCAPModInfo::ENDCAPModInfo(int arg_id, TGeoNode* arg_mod_node, const TGeoHMatrix &arg_hmatrix 
                                     /*double arg_x, double arg_y,
                                     double arg_z, double arg_width ,
                                     Orient arg_orientation */)
@@ -25,46 +31,33 @@ SANDENDCAPModInfo::SANDENDCAPModInfo(int arg_id, TGeoNode* arg_mod_node, const T
   // set the module width
   width_ = 2 * ((TGeoBBox*)mod_node_->GetVolume()->GetShape())->GetDX();
   // set the Al_dz
-  get_Al_dz();
+  computeAlDz();
   // compute the min and max path lengths (and intialize other parameters)
-  compute_min_max_l();
+  computeMinMaxL();
   // set the node path
   path_ = gGeoManager->GetPath();
-
-  // if (mod_node_->GetNdaughters() > 4) {
-  //   std::cout << "hor: ("
-  //             << (mod_hmatrix_ * (*mod_node_->GetDaughter(4)->GetMatrix()))
-  //                    .GetTranslation()[0]
-  //             << ", "
-  //             << (mod_hmatrix_ * (*mod_node_->GetDaughter(4)->GetMatrix()))
-  //                    .GetTranslation()[1]
-  //             << ", "
-  //             << (mod_hmatrix_ * (*mod_node_->GetDaughter(4)->GetMatrix()))
-  //                    .GetTranslation()[2]
-  //             << ")\n";
-  // }
 }
 
 // Setter methods for the attributes
-void SANDENDCAPModInfo::id(int arg_id) { id_ = arg_id; }
-void SANDENDCAPModInfo::x(double arg_x) { x_ = arg_x; }
-void SANDENDCAPModInfo::y(double arg_y) { y_ = arg_y; }
-void SANDENDCAPModInfo::z(double arg_z) { z_ = arg_z; }
-void SANDENDCAPModInfo::width(double arg_width) { width_ = arg_width; }
+void ENDCAPModInfo::setId(int arg_id) { id_ = arg_id; }
+void ENDCAPModInfo::setX(double arg_x) { x_ = arg_x; }
+void ENDCAPModInfo::setY(double arg_y) { y_ = arg_y; }
+void ENDCAPModInfo::setZ(double arg_z) { z_ = arg_z; }
+void ENDCAPModInfo::setWidth(double arg_width) { width_ = arg_width; }
 // private setter that computes the Al layer dzness from a module section
-void SANDENDCAPModInfo::Al_dz(double arg_Al_dz) { Al_dz_ = arg_Al_dz; }
-void SANDENDCAPModInfo::get_Al_dz()
+void ENDCAPModInfo::setAlDz(double arg_al_dz) { al_dz_ = arg_al_dz; }
+void ENDCAPModInfo::computeAlDz()
 {
-  Al_dz_ = 0;
+  al_dz_ = 0;
   auto temp_d_node = mod_node_->GetDaughter(0);
   for (int i = 0; i < temp_d_node->GetNdaughters(); i++) {
     if (((TString)temp_d_node->GetDaughter(i)->GetName()).Contains("Alplate"))
-      Al_dz_ = ((TGeoBBox*)temp_d_node->GetDaughter(i)->GetVolume()->GetShape())
+      al_dz_ = ((TGeoBBox*)temp_d_node->GetDaughter(i)->GetVolume()->GetShape())
                    ->GetDZ();
   }
 }
 
-void SANDENDCAPModInfo::compute_min_max_l()
+void ENDCAPModInfo::computeMinMaxL()
 {
   for (int i = 0; i < n_sec_; i++) {
     if (((TString)mod_node_->GetDaughter(i)->GetName()).Contains("vert")) {
@@ -93,7 +86,7 @@ void SANDENDCAPModInfo::compute_min_max_l()
       r_min_ =
           ((TGeoTubeSeg*)mod_node_->GetDaughter(i)->GetVolume()->GetShape())
               ->GetRmin() +
-          2 * Al_dz_;
+          2 * al_dz_;
       break;
     }
   }
@@ -105,35 +98,32 @@ void SANDENDCAPModInfo::compute_min_max_l()
       l_vert_ + 2 * (0.5 * M_PI * r_min_) + ((n_sec_ == 5) ? 2 : 1) * l_hor_;
 }
 
-// void SANDENDCAPModInfo::orientation(Orient arg_orientation)
-// {
-//   orientation_ = arg_orientation;
-// }
-
 // Getter methods for the attributes
-int SANDENDCAPModInfo::id() const { return id_; }
-int SANDENDCAPModInfo::n_sections() const { return n_sec_; }
-double SANDENDCAPModInfo::x() const { return x_; }
-double SANDENDCAPModInfo::y() const { return y_; }
-double SANDENDCAPModInfo::z() const { return z_; }
-double SANDENDCAPModInfo::width() const { return width_; }
-double SANDENDCAPModInfo::mod_dz() const { return mod_dz_; }
-double SANDENDCAPModInfo::l_hor() const { return l_hor_; }
-double SANDENDCAPModInfo::l_vert() const { return l_vert_; }
-double SANDENDCAPModInfo::rmin() const { return r_min_; }
-double SANDENDCAPModInfo::rmax() const { return r_max_; }
-double SANDENDCAPModInfo::Al_dz() const { return Al_dz_; }
-TString SANDENDCAPModInfo::path() const { return path_; }
-TGeoNode* SANDENDCAPModInfo::mod_node() const { return mod_node_; }
-TGeoHMatrix SANDENDCAPModInfo::mod_hmatrix() const { return mod_hmatrix_; }
+int ENDCAPModInfo::getId() const { return id_; }
+int ENDCAPModInfo::getNSections() const { return n_sec_; }
+double ENDCAPModInfo::getX() const { return x_; }
+double ENDCAPModInfo::getY() const { return y_; }
+double ENDCAPModInfo::getZ() const { return z_; }
+double ENDCAPModInfo::getWidth() const { return width_; }
+double ENDCAPModInfo::getModDz() const { return mod_dz_; }
+double ENDCAPModInfo::getLHor() const { return l_hor_; }
+double ENDCAPModInfo::getLVert() const { return l_vert_; }
+double ENDCAPModInfo::getRMin() const { return r_min_; }
+double ENDCAPModInfo::getRMax() const { return r_max_; }
+double ENDCAPModInfo::getAlDz() const { return al_dz_; }
+TString ENDCAPModInfo::getPath() const { return path_; }
+TGeoNode* ENDCAPModInfo::getModNode() const { return mod_node_; }
+TGeoHMatrix ENDCAPModInfo::getModHMatrix() const { return mod_hmatrix_; }
 
-double SANDENDCAPModInfo::get_curv_arc_len(double depth) const
+double ENDCAPModInfo::getCurvatureArcLength(double depth) const
 {
   return 0.5 * M_PI * (r_max_ - depth);
 }
 // compute the total cell path length given the depth along the module (w.r.t.
 // the inner layer)
-double SANDENDCAPModInfo::get_cell_tot_len(double depth) const
+double ENDCAPModInfo::getCellTotalLength(double depth) const
 {
   return lmax_ - M_PI * depth;
 }
+} // namespace ecal
+} // namesoace sand_geometry

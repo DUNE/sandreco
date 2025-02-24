@@ -22,10 +22,10 @@ int evaluateClusterType(const cluster& clust) {
   return type;
 }
 
-std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vector<dg_cell>& cells)
+std::vector<cluster> clusterize(const SANDGeoManager* sand_geo, const std::vector<dg_cell>& cells)
 {
   
-  std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells = ProcessMultiHits(sand_geo, cells);
+  std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processed_cells = processMultiHits(sand_geo, cells);
   std::vector<dg_cell> complete_cells   = processed_cells.first;
   std::vector<dg_cell> incomplete_cells = processed_cells.second;
 
@@ -37,7 +37,7 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
 
     std::vector<dg_cell> v_cell;
 
-    if (RepetitionCheck(chck, i) == true) {
+    if (repetitionCheck(chck, i) == true) {
       continue;
     } else {
       chck.push_back(i);
@@ -46,14 +46,14 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
     v_cell.push_back(complete_cells.at(i));
 
     std::pair<std::vector<dg_cell>, std::vector<int>> Neighbours =
-        GetNeighbours(complete_cells, i, chck, v_cell);
+        getNeighbours(complete_cells, i, chck, v_cell);
     v_cell = Neighbours.first;
     chck = Neighbours.second;
 
     // std::cout << v_cell.size() << std::endl;
     struct cluster Clust;
 
-    Clust = Create_cluster(sand_geo, v_cell);
+    Clust = createCluster(sand_geo, v_cell);
 
     if (!Clust.reco_cells.empty()) {
       vec_clust.push_back(Clust);
@@ -67,32 +67,32 @@ std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vecto
   int iteration = 0;
   do {
 
-    vec_clust = Split(sand_geo, vec_clust, HasSplit);
+    vec_clust = split(sand_geo, vec_clust, HasSplit);
     iteration++;
   } while (HasSplit);
     
   // MERGE
-  vec_clust = Merge(vec_clust);
+  vec_clust = merge(vec_clust);
 
   // Track Fit
-  TrackFit(vec_clust);
+  trackFit(vec_clust);
 
   // RecoverIncomplete(sand_geo, vec_clust, incomplete_cells);
 
   for (auto& c:vec_clust) {
-    // std::cout << c.e << std::endl;
-    // double total_pe = 0;
-    // for (auto cell:c.reco_cells) {
-    //   total_pe += cell.ps1.adc + cell.ps2.adc;
-    // }
-    // std::cout << total_pe / 4 << std::endl;
+    std::cout << c.e << std::endl;
+    double total_pe = 0;
+    for (auto cell:c.reco_cells) {
+      total_pe += cell.ps1.adc + cell.ps2.adc;
+    }
+    std::cout << total_pe / 4 << std::endl;
     c.type = evaluateClusterType(c);
   }
 
   return vec_clust;
 }
 
-void Clust_info(cluster clus)
+void clustInfo(cluster clus)
 {
   std::cout << "Cluster Energy " << clus.e << " MeV" << std::endl;
   std::cout << "Centroid coordinates: " << clus.x << " [X] " << clus.y
@@ -110,7 +110,7 @@ void Clust_info(cluster clus)
   }
 }
 
-std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(const SANDGeoManager* sand_geo,
+std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processMultiHits(const SANDGeoManager* sand_geo,
     const std::vector<dg_cell>& cells)
 {
 
@@ -120,7 +120,7 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(const SAN
     std::vector<int> found1;
     std::vector<int> found2;
     const auto& cell_info = sand_geo->get_ecal_cell_info(cell.id);
-    double delta = cell_info.length() * sand_reco::ecal::scintillation::vlfb /
+    double delta = cell_info.getLength() * sand_reco::ecal::scintillation::vlfb /
                    sand_reco::conversion::m_to_mm;
 
     for (uint i = 0; i < cell.ps1.size(); i++) {
@@ -235,7 +235,7 @@ void updateCluster(const dg_cell& incomplete_cell, double distance,
 }
 
 
-void RecoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clus,
+void recoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clus,
                        const std::vector<dg_cell>& incomplete_cells)
 {
   
@@ -294,7 +294,7 @@ void RecoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clu
       double DpmB;
 
       const auto& cell_info = sand_geo->get_ecal_cell_info(incomplete_cell.id);
-      double inco_cell_lenght = cell_info.length();
+      double inco_cell_lenght = cell_info.getLength();
 
       if (isbarrel == 0) {
         DpmA =  clus.at(closest_cluster_index).x + inco_cell_lenght * 0.5;
@@ -317,7 +317,7 @@ void RecoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clu
   }
 }
 
-std::vector<cluster> Split(const SANDGeoManager* sand_geo, const std::vector<cluster>& original_clu_vec,
+std::vector<cluster> split(const SANDGeoManager* sand_geo, const std::vector<cluster>& original_clu_vec,
                            bool& HasSplit)
 {
   std::vector<cluster> clu_vec;
@@ -343,7 +343,7 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, const std::vector<clu
       EB2tot += EB * EB;
 
       const auto& cell_info = sand_geo->get_ecal_cell_info(all_cells.at(j).id);
-      double cell_lenght = cell_info.length();
+      double cell_lenght = cell_info.getLength();
 
       double d1, d2;
       d1 = sand_geo->compute_cell_d1(cell_lenght, all_cells.at(j).ps1.tdc, all_cells.at(j).ps2.tdc);
@@ -394,7 +394,7 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, const std::vector<clu
       for (auto const& a_cells : all_cells) {
 
         const auto& cell_info = sand_geo->get_ecal_cell_info(a_cells.id);
-        double cell_lenght = cell_info.length();
+        double cell_lenght = cell_info.getLength();
         double d1 = sand_geo->compute_cell_d1(cell_lenght, a_cells.ps1.tdc, a_cells.ps2.tdc);
         double d2 = sand_geo->compute_cell_d2(cell_lenght, a_cells.ps1.tdc, a_cells.ps2.tdc);
 
@@ -432,25 +432,25 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, const std::vector<clu
       }
       std::vector<cluster> quadrant_cluster;
       if (q1_cells.size() != 0) {
-        cluster new_cluster = Calc_variables(q1_cells);
+        cluster new_cluster = calcVariables(q1_cells);
 
         clu_vec.push_back(new_cluster);
         splitted++;
       }
       if (q2_cells.size() != 0) {
-        cluster new_cluster = Calc_variables(q2_cells);
+        cluster new_cluster = calcVariables(q2_cells);
 
         clu_vec.push_back(new_cluster);
         splitted++;
       }
       if (q3_cells.size() != 0) {
-        cluster new_cluster = Calc_variables(q3_cells);
+        cluster new_cluster = calcVariables(q3_cells);
 
         clu_vec.push_back(new_cluster);
         splitted++;
       }
       if (q4_cells.size() != 0) {
-        cluster new_cluster = Calc_variables(q4_cells);
+        cluster new_cluster = calcVariables(q4_cells);
 
         clu_vec.push_back(new_cluster);
         splitted++;
@@ -469,7 +469,7 @@ std::vector<cluster> Split(const SANDGeoManager* sand_geo, const std::vector<clu
   return clu_vec;
 }
 
-std::vector<cluster> Merge(const std::vector<cluster>& Og_cluster)
+std::vector<cluster> merge(const std::vector<cluster>& Og_cluster)
 {
 
   std::vector<cluster> mgd_cluster;
@@ -484,7 +484,7 @@ std::vector<cluster> Merge(const std::vector<cluster>& Og_cluster)
     double varzi = Og_cluster.at(i).varz;
     double ti = Og_cluster.at(i).t;
     double ei = Og_cluster.at(i).e;
-    bool RepCheck = RepetitionCheck(checked, i);
+    bool RepCheck = repetitionCheck(checked, i);
     if (RepCheck == true) {
       continue;
     }
@@ -501,7 +501,7 @@ std::vector<cluster> Merge(const std::vector<cluster>& Og_cluster)
     clust.reco_cells = Og_cluster.at(i).reco_cells;
 
     for (uint j = i; j < Og_cluster.size(); j++) {
-      RepCheck = RepetitionCheck(checked, j);
+      RepCheck = repetitionCheck(checked, j);
       if (RepCheck == true) {
         continue;
       }
@@ -535,7 +535,7 @@ std::vector<cluster> Merge(const std::vector<cluster>& Og_cluster)
             for (uint k = 0; k < vec_cells_j.size(); k++) {
               clust.reco_cells.push_back(vec_cells_j.at(k));
             }
-            clust = Calc_variables(clust.reco_cells);
+            clust = calcVariables(clust.reco_cells);
             checked.push_back(j);
           }
         } else if (endcap == false) {
@@ -546,7 +546,7 @@ std::vector<cluster> Merge(const std::vector<cluster>& Og_cluster)
             for (uint k = 0; k < vec_cells_j.size(); k++) {
               clust.reco_cells.push_back(vec_cells_j.at(k));
             }
-            clust = Calc_variables(clust.reco_cells);
+            clust = calcVariables(clust.reco_cells);
             checked.push_back(j);
           }
         }
@@ -574,7 +574,7 @@ void updateArrays(double* yx, double* yy, double* yz,
   }
 }
 
-void TrackFit(std::vector<cluster>& clu_vec)
+void trackFit(std::vector<cluster>& clu_vec)
 {
   const double xl[5] = {4.44, 4.44, 4.44, 4.44, 5.24};
   for (uint i = 0; i < clu_vec.size(); i++) {
@@ -591,7 +591,7 @@ void TrackFit(std::vector<cluster>& clu_vec)
 
     cluster Lay[5];
     for (int j = 0; j < 5; j++) {
-      Lay[j] = Calc_variables(cell_vec[j]);
+      Lay[j] = calcVariables(cell_vec[j]);
     }
 
     bool isBarrel = true;
@@ -667,13 +667,13 @@ void TrackFit(std::vector<cluster>& clu_vec)
       }
 
       std::tuple<double, double, double, double> fit_varx =
-          fit_ls(lay_cross, X, yx, wx);
+          fitLs(lay_cross, X, yx, wx);
 
       std::tuple<double, double, double, double> fit_vary =
-          fit_ls(lay_cross, X, yy, wy);
+          fitLs(lay_cross, X, yy, wy);
 
       std::tuple<double, double, double, double> fit_varz =
-          fit_ls(lay_cross, X, yz, wz);
+          fitLs(lay_cross, X, yz, wz);
       double trktot = sqrt(std::get<1>(fit_varx) * std::get<1>(fit_varx) +
                            std::get<1>(fit_vary) * std::get<1>(fit_vary) +
                            std::get<1>(fit_varz) * std::get<1>(fit_varz));
@@ -706,7 +706,7 @@ void TrackFit(std::vector<cluster>& clu_vec)
   }
 }
 
-std::tuple<double, double, double, double> fit_ls(int lay, double* X, double* Y,
+std::tuple<double, double, double, double> fitLs(int lay, double* X, double* Y,
                                                   double* W)
 {
   double norm = 0, xa = 0, ya = 0, xya = 0, x2a = 0;
@@ -732,7 +732,7 @@ std::tuple<double, double, double, double> fit_ls(int lay, double* X, double* Y,
   return std::make_tuple(A, B, dA, dB);
 }
 
-cluster Create_cluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell>& cells)
+cluster createCluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell>& cells)
 {
 
   double x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0,
@@ -748,17 +748,17 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell
     reco_cell rec_cell;
 
     double d1, d2;
-    d1 = sand_geo->compute_cell_d1(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
-    d2 = sand_geo->compute_cell_d2(cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
+    d1 = sand_geo->compute_cell_d1(cell_info.getLength(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
+    d2 = sand_geo->compute_cell_d2(cell_info.getLength(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
 
     double cell_E = sand_reco::ecal::reco::EfromADC(
         cell.ps1.at(0).adc, cell.ps2.at(0).adc, d1, d2, cell.lay);
 
     double cell_T = sand_reco::ecal::reco::TfromTDC(cell.ps1.at(0).tdc,
-                                                    cell.ps2.at(0).tdc, cell_info.length());
+                                                    cell.ps2.at(0).tdc, cell_info.getLength());
 
     rec_cell.id = cell.id;
-    rec_cell.l = cell_info.length();
+    rec_cell.l = cell_info.getLength();
     rec_cell.mod = cell.mod;
     rec_cell.lay = cell.lay;
     rec_cell.e = cell_E;
@@ -768,7 +768,7 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell
     rec_cell.fired_pmt = 3;
 
     double cell_x = -99999, cell_y = -99999, cell_z = -99999;
-    sand_geo->get_reco_hit_pos(cell.id, cell_info.length(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell_x, cell_y, cell_z);
+    sand_geo->get_reco_hit_pos(cell.id, cell_info.getLength(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell_x, cell_y, cell_z);
     
     if (cell_x == -99999 || cell_y == -99999 || cell_z == -99999) {
       continue;
@@ -844,7 +844,7 @@ cluster Create_cluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell
   return clust;
 }
 
-cluster Calc_variables(const std::vector<reco_cell>& cells)
+cluster calcVariables(const std::vector<reco_cell>& cells)
 {
 
   double x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0,
@@ -909,7 +909,7 @@ cluster Calc_variables(const std::vector<reco_cell>& cells)
   return clust;
 }
 
-bool RepetitionCheck(std::vector<int> v, int check)
+bool repetitionCheck(std::vector<int> v, int check)
 {
   if (std::find(v.begin(), v.end(), check) != v.end()) {
     return true;
@@ -956,13 +956,13 @@ bool isNeighbour(const dg_cell& cell, const dg_cell& check_cell)
   return false;
 }
 
-std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
+std::pair<std::vector<dg_cell>, std::vector<int>> getNeighbours(
     const std::vector<dg_cell>& cells, int start, std::vector<int> checked,
     std::vector<dg_cell> neigh_chain)
 {
   for (uint i = 0; i < cells.size(); i++) {
 
-    if (RepetitionCheck(checked, i) == true) continue;
+    if (repetitionCheck(checked, i) == true) continue;
 
     bool check = isNeighbour(cells.at(start), cells.at(i));
 
@@ -971,7 +971,7 @@ std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
         checked.push_back(i);
 
         std::pair<std::vector<dg_cell>, std::vector<int>> find_chain =
-            GetNeighbours(cells, i, checked, neigh_chain);
+            getNeighbours(cells, i, checked, neigh_chain);
         neigh_chain = find_chain.first;
         checked = find_chain.second;
       }

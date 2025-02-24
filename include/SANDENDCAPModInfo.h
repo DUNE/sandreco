@@ -8,11 +8,17 @@
 #include <iostream>
 #include <map>
 
-#ifndef SANDENDCAPModInfo_H
-#define SANDENDCAPModInfo_H
+#ifndef ENDCAPModInfo_H
+#define ENDCAPModInfo_H
+
+namespace sand_geometry
+{
+
+namespace ecal
+{
 
 // class for storing geometric info of the SAND ECAL cells
-class SANDENDCAPModInfo : public TObject
+class ENDCAPModInfo : public TObject
 {
  public:
   enum class Orient { kHorizontal, kVertical };
@@ -31,7 +37,7 @@ class SANDENDCAPModInfo : public TObject
   double lmax_;   // max (inner) cell path length
   double width_;  // width of the module (locally along the x direction)
   double mod_dz_; // total depth of the module (including Al thickness)
-  double Al_dz_;  // half_thickness of the Al plate
+  double al_dz_;  // half_thickness of the Al plate
   TString path_;
   TGeoNode* mod_node_;       // corresponding node of the module
   TGeoHMatrix mod_hmatrix_;  // h_matrix of the module
@@ -43,54 +49,55 @@ class SANDENDCAPModInfo : public TObject
   // double length_;       // length of the cell?
   // Orient orientation_;  // orientation of the cell?
   // private Al_thick setter from mod_node_
-  void get_Al_dz();
-  void compute_min_max_l();
+  void computeAlDz();
+  void computeMinMaxL();
 
  public:
-  SANDENDCAPModInfo();  // Default constructor
-  // SANDENDCAPModInfo(int id, double x, double y, double z, double length,
+  ENDCAPModInfo();  // Default constructor
+  // ENDCAPModInfo(int id, double x, double y, double z, double length,
   //                   Orient orientation);  // parametric constructor
-  SANDENDCAPModInfo(int arg_id, TGeoNode* arg_mod_node,
+  ENDCAPModInfo(int arg_id, TGeoNode* arg_mod_node,
                     const TGeoHMatrix& arg_hmatrix);
   // Setter methods for the attributes
-  void id(int arg_id);
-  void x(double arg_x);
-  void y(double arg_y);
-  void z(double arg_z);
-  void width(double arg_width);
-  void Al_dz(double arg_Al_thick);
+  void setId(int arg_id);
+  void setX(double arg_x);
+  void setY(double arg_y);
+  void setZ(double arg_z);
+  void setWidth(double arg_width);
+  void setAlDz(double arg_al_thick);
   // void orientation(Orient arg_orientation);
   // Getter methods for the attributes
-  int id() const;
-  int n_sections() const;
-  double x() const;
-  double y() const;
-  double z() const;
-  double width() const;
-  double mod_dz() const;
-  double l_hor() const;
-  double l_vert() const;
-  double rmin() const;
-  double rmax() const;
-  double Al_dz() const;
-  TString path() const;
-  TGeoNode* mod_node() const;
-  TGeoHMatrix mod_hmatrix() const;
+  int getId() const;
+  int getNSections() const;
+  double getX() const;
+  double getY() const;
+  double getZ() const;
+  double getWidth() const;
+  double getModDz() const;
+  double getLHor() const;
+  double getLVert() const;
+  double getRMin() const;
+  double getRMax() const;
+  double getAlDz() const;
+  TString getPath() const;
+  TGeoNode* getModNode() const;
+  TGeoHMatrix getModHMatrix() const;
   // PMT pos. and path length computation
   // void get_ecal_endcap_cell_local_id(double x, double y, double z,
   //                                    int& cell_id) const;+
   
   // compute the arc length along the curved sections at a given depth
-  double get_curv_arc_len(double depth) const;
+  double getCurvatureArcLength(double depth) const;
   // compute the total cell path length given the depth along the module (w.r.t. the outer layer)
-  double get_cell_tot_len(double depth) const;
+  double getCellTotalLength(double depth) const;
 
-  ClassDef(SANDENDCAPModInfo, 1);
+  ClassDef(ENDCAPModInfo, 1);
 };
+} // namespace ecal
+} // namesoace sand_geometry
 
 #ifdef __MAKECINT__
-#pragma link C++ class SANDENDCAPModInfo + ;
+#pragma link C++ class sand_geometry::ecal::ENDCAPModInfo + ;
 #endif
 
 #endif
-  

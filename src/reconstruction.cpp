@@ -1717,7 +1717,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
         // Filter(vec_cl);
         //PidBasedClustering(ev, vec_cell, vec_cl);
         //Merge(vec_cl);
-        vec_cl = Clusterize(&sand_geo, *vec_cell);
+        vec_cl = clusterize(&sand_geo, *vec_cell);
         break;
     }
     tout.Fill();

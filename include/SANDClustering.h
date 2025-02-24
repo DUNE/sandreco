@@ -12,27 +12,26 @@
 
 #include "SANDGeoManager.h"
 
-std::tuple<double, double, double, double> fit_ls(int, double[], double[],
+std::tuple<double, double, double, double> fitLs(int, double[], double[],
                                                   double[]);
 
-std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(const SANDGeoManager* sand_geo,
+std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processMultiHits(const SANDGeoManager* sand_geo,
     const std::vector<dg_cell>&);
-std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
+std::pair<std::vector<dg_cell>, std::vector<int>> getNeighbours(
     const std::vector<dg_cell>&, int, std::vector<int>, std::vector<dg_cell>);
 
+std::vector<cluster> clusterize(const SANDGeoManager* sand_geo, const std::vector<dg_cell>&);
+std::vector<cluster> merge(const std::vector<cluster>&);
+std::vector<cluster> split(const SANDGeoManager* sand_geo, const std::vector<cluster>&, bool&);
 
-std::vector<cluster> Clusterize(const SANDGeoManager* sand_geo, const std::vector<dg_cell>&);
-void Clust_info(cluster);
-void TrackFit(std::vector<cluster>&);
-std::vector<cluster> Merge(const std::vector<cluster>&);
-std::vector<cluster> Split(const SANDGeoManager* sand_geo, const std::vector<cluster>&, bool&);
-void RecoverIncomplete(const SANDGeoManager* sand_geo,
-                                       std::vector<cluster>&,
-                                       const std::vector<dg_cell>&);
-cluster Calc_variables(const std::vector<reco_cell>&);
-cluster Create_cluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell>&);
+void recoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>&, const std::vector<dg_cell>&);
+void clustInfo(cluster);
+void trackFit(std::vector<cluster>&);
 
-bool RepetitionCheck(std::vector<int>, int);
+cluster calcVariables(const std::vector<reco_cell>&);
+cluster createCluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell>&);
+
+bool repetitionCheck(std::vector<int>, int);
 bool isNeighbour(const dg_cell&, const dg_cell&);
 
 bool endsWith(const std::string& fullString, const std::string& ending);

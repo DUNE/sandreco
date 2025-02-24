@@ -90,12 +90,12 @@ class SANDGeoManager : public TObject
 {
  private:
   TGeoManager* geo_;  // TGeoManager pointer to ND site geometry
-  std::map<int, SANDECALCellInfo> cellmap_;  // map of ecal cell (key: id,
+  std::map<int,  sand_geometry::ecal::ECALCellInfo> cellmap_;  // map of ecal cell (key: id,
                                              // value: info on cell)
   std::map<int, SANDSTTTubeInfo> sttmap_;    // map of stt tube (key: id, value:
                                              // info on tube)
 
-  std::map<int, SANDENDCAPModInfo> endcapmap_;  // map of the endcap modules
+  std::map<int,  sand_geometry::ecal::ENDCAPModInfo> endcapmap_;  // map of the endcap modules
                                                 // (key: mod id, value: mod
                                                 // info)
 
@@ -152,7 +152,7 @@ class SANDGeoManager : public TObject
   // new (alternative version)
   std::map<int, TVector3> get_ec_cell_center_local_position(
       const std::vector<double>& zlevels,
-      const SANDENDCAPModInfo& module) const;
+      const  sand_geometry::ecal::ENDCAPModInfo& module) const;
 
   bool is_ecal_barrel(const TString& volume_name, bool include_passive) const;
   bool is_ecal_endcap(const TString& volume_name, bool include_passive) const;
@@ -221,7 +221,7 @@ class SANDGeoManager : public TObject
     geo_ = 0;
     return Write(name, option, bufsize);
   }
-  const SANDECALCellInfo& get_ecal_cell_info(int ecal_cell_id) const
+  const  sand_geometry::ecal::ECALCellInfo& get_ecal_cell_info(int ecal_cell_id) const
   {
     return cellmap_.at(ecal_cell_id);
   }
@@ -229,7 +229,7 @@ class SANDGeoManager : public TObject
   {
     return sttmap_.at(stt_tube_id);
   }
-  const std::map<int, SANDECALCellInfo>& get_ecal_cell_info() const
+  const std::map<int,  sand_geometry::ecal::ECALCellInfo>& get_ecal_cell_info() const
   {
     return cellmap_;
   }
