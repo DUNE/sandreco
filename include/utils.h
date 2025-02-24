@@ -109,7 +109,7 @@ namespace endcap
 
 namespace geometry
 {
-
+    const double XFix[5] = {2.22, 6.66, 11.1, 15.54, 20.38};
 ////////////////////////////////////////////////////////////////////////
 // geometry v1
 // const char* const path_barrel_template =

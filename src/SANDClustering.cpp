@@ -655,9 +655,9 @@ void trackFit(std::vector<cluster>& clu_vec)
       for (int j = 0; j < Q; j++) {
         Zapx = Zapx + xl[j];
       }
-      double XFix[5] = {2.22, 6.66, 11.1, 15.54, 20.38};
+      
       for (int j = 0; j < lay_cross; j++) {
-        X[j] = XFix[first_lay + j - 1] - Zapx;
+        X[j] = sand_reco::ecal::geometry::XFix[first_lay + j - 1] - Zapx;
       }
 
       std::tuple<double, double, double, double> fit_varx =
@@ -674,12 +674,13 @@ void trackFit(std::vector<cluster>& clu_vec)
       ctrk[0] = std::get<1>(fit_varx) / trktot;
       ctrk[1] = std::get<1>(fit_vary) / trktot;
       ctrk[2] = std::get<1>(fit_varz) / trktot;
-      // ectrk[0] = std::get<3>(fit_varx) / trktot;
-      // ectrk[1] = std::get<3>(fit_vary) / trktot;
-      // ectrk[2] = std::get<3>(fit_varz) / trktot;
       apx[0] = std::get<0>(fit_varx);
       apx[1] = std::get<0>(fit_vary);
       apx[2] = std::get<0>(fit_varz);
+      // Notice: these are computed but not used. Why?
+      // ectrk[0] = std::get<3>(fit_varx) / trktot;
+      // ectrk[1] = std::get<3>(fit_vary) / trktot;
+      // ectrk[2] = std::get<3>(fit_varz) / trktot;
       // eapx[0] = std::get<2>(fit_varx);
       // eapx[1] = std::get<2>(fit_vary);
       // eapx[2] = std::get<2>(fit_varz);
