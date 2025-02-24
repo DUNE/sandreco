@@ -42,8 +42,7 @@ double ECALCellInfo::getX() const { return x_; }
 double ECALCellInfo::getY() const { return y_; }
 double ECALCellInfo::getZ() const { return z_; }
 double ECALCellInfo::getLength() const { return length_; }
-ECALCellInfo::ModuleType ECALCellInfo::getModuleType()
-{
+ECALCellInfo::ModuleType ECALCellInfo::getModuleType() const {
   return module_type_;
 }
 } // namespace ecal

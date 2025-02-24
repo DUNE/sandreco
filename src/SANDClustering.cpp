@@ -197,7 +197,7 @@ std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processMultiHits(const SAN
 }
 
 void updateCluster(const dg_cell& incomplete_cell, double distance, 
-                   int fired_pmt, int isbarrel, cluster& clus) {
+                   int fired_pmt, sand_geometry::ecal::ECALCellInfo::ModuleType module_type, cluster& clus) {
   dg_ps ps1;
   dg_ps ps2;
   double adc;
@@ -217,7 +217,7 @@ void updateCluster(const dg_cell& incomplete_cell, double distance,
 
   double x;
   double y;
-  if (isbarrel == 0) {
+  if (module_type == sand_geometry::ecal::ECALCellInfo::ModuleType::kBarrel) {
     x = -99999;
     y = incomplete_cell.y;
   } else {
@@ -240,14 +240,7 @@ void recoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clu
 {
   
   for (auto const& incomplete_cell : incomplete_cells) {
-    int isbarrel = 0;
-
-    if (incomplete_cell.id < 1000000) {
-      isbarrel = 1;
-    }
-    if (incomplete_cell.id > 1000000 && incomplete_cell.id < 20000000) {
-      isbarrel = 2;
-    }
+    auto module_type = sand_geo->get_ecal_cell_info(incomplete_cell.id).getModuleType();
 
     int closest_cluster_index;
     bool found = false;
@@ -266,10 +259,12 @@ void recoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clu
         cell_time = incomplete_cell.ps2.at(0).tdc;
       }
 
+      // Notice: one could compare the time of the closest 
+      //         reco cell with the one of the incompete one
       double time_distance = fabs(clus.at(j).t - cell_time);
       
       double spatial_distance;
-      if (isbarrel == 0) {
+      if (module_type == sand_geometry::ecal::ECALCellInfo::ModuleType::kBarrel) {
         spatial_distance = sqrt(pow(clus[j].y - incomplete_cell.y, 2)+
                                 pow(clus[j].z - incomplete_cell.z, 2));
       } else {
@@ -293,10 +288,9 @@ void recoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clu
       double DpmA;
       double DpmB;
 
-      const auto& cell_info = sand_geo->get_ecal_cell_info(incomplete_cell.id);
-      double inco_cell_lenght = cell_info.getLength();
+      double inco_cell_lenght = sand_geo->get_ecal_cell_info(incomplete_cell.id).getLength();
 
-      if (isbarrel == 0) {
+      if (module_type == sand_geometry::ecal::ECALCellInfo::ModuleType::kBarrel) {
         DpmA =  clus.at(closest_cluster_index).x + inco_cell_lenght * 0.5;
         DpmB = -clus.at(closest_cluster_index).x + inco_cell_lenght * 0.5;
       } else {
@@ -306,9 +300,9 @@ void recoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clu
       }
       // std::cout << DpmA << " " << DpmB << std::endl;
       if (incomplete_cell.ps1.size() != 0) {
-        updateCluster(incomplete_cell, DpmA, 1, isbarrel, clus.at(closest_cluster_index));
+        updateCluster(incomplete_cell, DpmA, 1, module_type, clus.at(closest_cluster_index));
       } else {
-        updateCluster(incomplete_cell, DpmB, 2, isbarrel, clus.at(closest_cluster_index));
+        updateCluster(incomplete_cell, DpmB, 2, module_type, clus.at(closest_cluster_index));
       }
     } else {
         // TODO: think about it 

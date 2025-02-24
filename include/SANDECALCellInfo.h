@@ -41,7 +41,7 @@ class ECALCellInfo : public TObject
   double getY() const;
   double getZ() const;
   double getLength() const;
-  ModuleType getModuleType();
+  ModuleType getModuleType() const;
 
   ClassDef(ECALCellInfo, 1);
 };
