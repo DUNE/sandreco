@@ -34,7 +34,7 @@ int clustering(std::string const& input, std::string const& edep_input)
   
   for (int i = 0; i < nEvents; i++) {
     t->GetEntry(i);
-    std::vector<cluster> clust = Clusterize(&sand_geo, *cell);
+    std::vector<cluster> clust = clusterize(&sand_geo, *cell);
     
     f_clust = clust;
     tout.Fill();
