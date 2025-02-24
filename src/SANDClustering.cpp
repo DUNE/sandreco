@@ -738,22 +738,26 @@ cluster createCluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell>
 
   for (auto& cell : cells) {
 
-    const auto& cell_info = sand_geo->get_ecal_cell_info(cell.id);
+    const auto& cell_length = sand_geo->get_ecal_cell_info(cell.id).getLength();
 
     reco_cell rec_cell;
 
     double d1, d2;
-    d1 = sand_geo->compute_cell_d1(cell_info.getLength(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
-    d2 = sand_geo->compute_cell_d2(cell_info.getLength(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
-
+    d1 = sand_geo->compute_cell_d1(cell_length, cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
+    d2 = sand_geo->compute_cell_d2(cell_length, cell.ps1.at(0).tdc, cell.ps2.at(0).tdc);
+    // Notice: what do we want to do in these cases?
+    if (d1 > cell_length || d1 < 0 || 
+        d2 > cell_length || d2 < 0) {
+      continue;
+    }
     double cell_E = sand_reco::ecal::reco::EfromADC(
         cell.ps1.at(0).adc, cell.ps2.at(0).adc, d1, d2, cell.lay);
 
     double cell_T = sand_reco::ecal::reco::TfromTDC(cell.ps1.at(0).tdc,
-                                                    cell.ps2.at(0).tdc, cell_info.getLength());
+                                                    cell.ps2.at(0).tdc, cell_length);
 
     rec_cell.id = cell.id;
-    rec_cell.l = cell_info.getLength();
+    rec_cell.l = cell_length;
     rec_cell.mod = cell.mod;
     rec_cell.lay = cell.lay;
     rec_cell.e = cell_E;
@@ -763,7 +767,7 @@ cluster createCluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell>
     rec_cell.fired_pmt = 3;
 
     double cell_x = -99999, cell_y = -99999, cell_z = -99999;
-    sand_geo->get_reco_hit_pos(cell.id, cell_info.getLength(), cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell_x, cell_y, cell_z);
+    sand_geo->get_reco_hit_pos(cell.id, cell_length, cell.ps1.at(0).tdc, cell.ps2.at(0).tdc, cell_x, cell_y, cell_z);
     
     if (cell_x == -99999 || cell_y == -99999 || cell_z == -99999) {
       continue;
