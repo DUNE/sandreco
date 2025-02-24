@@ -147,9 +147,6 @@ class SANDGeoManager : public TObject
   std::pair<int, int> decode_ecal_endcap_cell_local_id(int id) const;
   std::map<int, TVector3> get_ecal_barrel_cell_center_local_position(
       const std::vector<double>& zlevels, double m, double q) const;
-  std::map<int, TVector3> get_ecal_endcap_cell_center_local_position(
-      const std::vector<double>& zlevels, double rmin, double rmax) const;
-  // new (alternative version)
   std::map<int, TVector3> get_ec_cell_center_local_position(
       const std::vector<double>& zlevels,
       const  sand_geometry::ecal::ENDCAPModInfo& module) const;

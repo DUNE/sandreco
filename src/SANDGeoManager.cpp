@@ -79,33 +79,6 @@ std::map<int, TVector3>
   return ecal_barrel_cell_center_local_positions;
 }
 
-std::map<int, TVector3>
-    SANDGeoManager::get_ecal_endcap_cell_center_local_position(
-        const std::vector<double>& zlevels, double rmin, double rmax) const
-{
-  // z position of the center of the cells
-  std::map<int, TVector3> ecal_endcap_cell_center_local_positions;
-  for (auto i = 0u; i < zlevels.size() - 1u; i++) {
-    auto z_this_layer = 0.5 * (zlevels.at(i) + zlevels.at(i + 1));
-
-    // cell width at the z position of the center of the cell
-    double x_cell_width =
-        2 * rmax / sand_geometry::ecal::number_of_cells_per_endcap_layer;
-
-    //- the x position of the cells now varies over the endcap
-    // position of the center of the cells
-    for (int j = 0; j < sand_geometry::ecal::number_of_cells_per_endcap_layer;
-         j++) {
-      auto x = x_cell_width * (j + 0.5) - rmax;
-      auto y = 0.;
-      auto z = z_this_layer;
-      auto id = encode_ecal_endcap_cell_local_id(i, j);
-      ecal_endcap_cell_center_local_positions[id] = TVector3(x, y, z);
-    }
-  }
-  return ecal_endcap_cell_center_local_positions;
-}
-
 std::map<int, TVector3> SANDGeoManager::get_ec_cell_center_local_position(
     const std::vector<double>& zlevels, const sand_geometry::ecal::ENDCAPModInfo& module) const
 {
@@ -128,7 +101,6 @@ std::map<int, TVector3> SANDGeoManager::get_ec_cell_center_local_position(
   return ecal_endcap_cell_center_local_positions;
 }
 
-// this should still work
 int SANDGeoManager::encode_ecal_cell_id(int detector_id, int module_id,
                                         int layer_id, int cell_local_id)
 {
@@ -1073,8 +1045,6 @@ int SANDGeoManager::get_ecal_cell_id(double x, double y, double z, bool include_
   geo_ to get the outer module node. Inside that: a function that computes all
   the stuff */
 
-  // end cap modules --> NEED TO UPDATE THESE TWO FUNCTIONS!! (Do the new endcap
-  // IDs conflict with the barrel IDs?)
   else if (is_ecal_endcap(volume_name, include_passive)) {
     get_ecal_endcap_module_and_layer(volume_name, volume_path, detector_id,
                                      module_id, layer_id);
