@@ -13,7 +13,7 @@ namespace ecal
 class ECALCellInfo : public TObject
 {
  public:
-  enum class Orient { kHorizontal, kVertical };
+  enum class ModuleType { kBarrel, kEndcap };
 
  private:
   int id_;              // id of the cell
@@ -21,11 +21,12 @@ class ECALCellInfo : public TObject
   double y_;            // y position of the center of the cell
   double z_;            // z position of the center of the cell
   double length_;       // length of the cell
-  Orient orientation_;  // orientation of the cell
+  ModuleType module_type_;  // ModuleType of the cell
+  
  public:
   ECALCellInfo();  // Default constructor
   ECALCellInfo(int id, double x, double y, double z, double length,
-                   Orient orientation);  // parametric constructor
+                   ModuleType module_type);  // parametric constructor
 
   // Setter methods for the attributes
   void setId(int arg_id);
@@ -33,14 +34,14 @@ class ECALCellInfo : public TObject
   void setY(double arg_y);
   void setZ(double arg_z);
   void setLength(double arg_length);
-  void setOrientation(Orient arg_orientation);
+  void setModuleType(ModuleType arg_module_type);
   // Getter methods for the attributes
   int getId() const;
   double getX() const;
   double getY() const;
   double getZ() const;
   double getLength() const;
-  Orient getOrientation();
+  ModuleType getModuleType();
 
   ClassDef(ECALCellInfo, 1);
 };

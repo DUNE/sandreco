@@ -712,7 +712,7 @@ void SANDGeoManager::set_ecal_info()
           encode_ecal_cell_id(detector_id, module_id, layer_id, cell_local_id);
       cellmap_[cell_unique_id] = sand_geometry::ecal::ECALCellInfo(
           cell_unique_id, master[0], master[1], master[2], 2 * ecal_barrel_dy,
-          sand_geometry::ecal::ECALCellInfo::Orient::kHorizontal);
+          sand_geometry::ecal::ECALCellInfo::ModuleType::kBarrel);
     }
   }
   std::cout << "> Barrel cells info. set\n";
@@ -757,7 +757,7 @@ void SANDGeoManager::set_ecal_info()
 
       cellmap_[cell_unique_id] =
           sand_geometry::ecal::ECALCellInfo(cell_unique_id, master[0], master[1], master[2],
-                           cell_length, sand_geometry::ecal::ECALCellInfo::Orient::kVertical);
+                           cell_length, sand_geometry::ecal::ECALCellInfo::ModuleType::kEndcap);
     }
   }
   std::cout << "> Endcap cells info. set\n";
