@@ -846,19 +846,15 @@ cluster createCluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell>
 cluster calcVariables(const std::vector<reco_cell>& cells)
 {
 
-  double x_weighted = 0, y_weighted = 0, z_weighted = 0, t_weighted = 0,
-         x2_weighted = 0, y2_weighted = 0, z2_weighted = 0, Etot = 0, E2tot = 0,
-         EvEtot = 0, EA, EAtot = 0, EB, EBtot = 0, TA = 0, TB = 0;
-
-  double ll_x_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.x * c.e; });
-  double ll_x2_weighted = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.x * c.x * c.e; });
-  double ll_y_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.y * c.e; });
-  double ll_y2_weighted = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.y * c.y * c.e; });
-  double ll_z_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.z * c.e; });
-  double ll_z2_weighted = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.z * c.z * c.e; });
-  double ll_t_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.t * c.e; });
-  double ll_Etot        = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.e; });
-  double ll_E2tot       = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.e * c.e; });
+  double x_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.x * c.e; });
+  double x2_weighted = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.x * c.x * c.e; });
+  double y_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.y * c.e; });
+  double y2_weighted = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.y * c.y * c.e; });
+  double z_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.z * c.e; });
+  double z2_weighted = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.z * c.z * c.e; });
+  double t_weighted  = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.t * c.e; });
+  double Etot        = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.e; });
+  double E2tot       = std::accumulate(cells.begin(), cells.end(), 0., [](double sum, const reco_cell& c) { return sum += c.e * c.e; });
 
   x_weighted = x_weighted / Etot;
   x2_weighted = x2_weighted / Etot;
