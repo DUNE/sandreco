@@ -1708,16 +1708,21 @@ void ProcessEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     if (!particle) continue;
     pi.mass = particle->Mass();
     pi.charge = particle->Charge() / 3;
-
-    pi.pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).back().GetPosition().Vect();
-    pi.mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).back().GetMomentum();
+    try{
+      pi.pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).back().GetPosition().Vect();
+      pi.mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).back().GetMomentum();
+    }
+    catch (const std::out_of_range& e) {
+      std::cerr << "Out of Range error." << std::endl;
+      continue;
+    }
     particleInfos.push_back(pi);
 
     std::cout << "Initial Momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
   }
   
   int nParticles = particleInfos.size();
-  
+
   if (nParticles == 0) {
     std::cerr << "no particles to be reconstructed...process aborted"
               << std::endl;
