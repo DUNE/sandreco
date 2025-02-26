@@ -311,15 +311,9 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
 
   // cellID = distanza dall'estremo diviso larghezza cella
   cell_local_id = (local[0] + dx) / cell_width;
-
-  if (cell_local_id > 11) {
-    std::cout << __FILE__ << " " << __LINE__ << "\n";
-    std::cout << "current node : "
-              << geo_->GetCurrentNavigator()->GetCurrentNode()->GetName()
-              << "\n";
-    std::cout << "invalid cell_local_id : " << cell_local_id << "\n";
-    throw "";
-  }
+  // set the cellID to 11 if the hit end-up at the outer boundary
+  if(cell_local_id == sand_geometry::ecal::number_of_cells_per_barrel_layer)
+    cell_local_id--;
 }
 
 void SANDGeoManager::get_ecal_endcap_cell_local_id(double x, double y, double z,
