@@ -296,6 +296,9 @@ void SANDGeoManager::get_ecal_barrel_cell_local_id(double x, double y, double z,
 
   // cellID = distanza dall'estremo diviso larghezza cella
   cell_local_id = (local[0] + dx) / cell_width;
+  // set the cellID to 11 if the hit end-up at the outer boundary
+  if(cell_local_id == sand_geometry::ecal::number_of_cells_per_barrel_layer)
+    cell_local_id--;
 }
 
 int SANDGeoManager::get_barrel_path_len(const double& hx, const double& hy,
