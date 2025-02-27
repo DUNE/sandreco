@@ -1212,7 +1212,7 @@ void SANDEventDisplay::SetSimData(TString fileName)
     return;
   }
 
-  if (!geo) {
+  if (geo) {
     cout << "<INFO> Geometry name: " << geo->GetName() << endl;
   }
 
@@ -1254,7 +1254,7 @@ void SANDEventDisplay::SetDigitData(TString fileName)
     return;
   }
 
-  if (!geo) {
+  if (geo) {
     cout << "<INFO> Geometry name: " << geo->GetName() << endl;
   }
 

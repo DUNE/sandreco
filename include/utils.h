@@ -51,6 +51,35 @@ namespace endcap
 
 namespace geometry
 {
+    const double XFix[5] = {2.22, 6.66, 11.1, 15.54, 20.38};
+////////////////////////////////////////////////////////////////////////
+// geometry v1
+// const char* const path_barrel_template =
+//     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+//     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
+// const char* const path_endcapL_template =
+//     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+//     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
+// const char* const path_endcapR_template =
+//     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+//     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
+//////////////////////////////////////////////////////////////////////////
+
+// bool isBarrel(TString& str);
+// bool isEndCap(TString& str);
+// void BarrelModuleAndLayer(TString& str, TString& str2, int& detID, int&
+// modID,
+//                           int& planeID);
+// void EndCapModuleAndLayer(TString& str, TString& str2, int& detID, int&
+// modID,
+//                           int& planeID);
+// void BarrelCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
+//                 int& cellID, double& d1, double& d2);
+// void EndCapCell(double x, double y, double z, TGeoManager* g, TGeoNode* node,
+//                 int& cellID, double& d1, double& d2);
+// bool CheckAndProcessPath(TString& str2);
+// void CellPosition(TGeoManager* geo, int det, int mod, int lay, int cel,
+//                   double& x, double& y, double& z);
 }  // namespace geometry
 
 namespace attenuation
@@ -85,7 +114,8 @@ namespace acquisition
 {
 const double pe2ADC = 1 / .25;
 const double int_time = 30.;
-const double dead_time = 50.;
+// dead time
+const double dead_time = 0.;
 
 // https://www.sciencedirect.com/science/article/pii/S0168900201015029
 // threshold 3-4 p.e. at 2 m distance
@@ -103,6 +133,8 @@ namespace energy_calibration
 {
 // ADC to MeV
 const double adc2MeV = 1. / 10.;
+// active to active + passive
+const double attpassratio = 1.;
 }  // namespace energy_calibration
 
 namespace decoder
@@ -116,6 +148,7 @@ namespace reco
 double TfromTDC(double t1, double t2, double L);
 double XfromTDC(double t1, double t2);
 double EfromADC(double adc1, double adc2, double d1, double d2, int planeID);
+double EfromADCsingle(double adc, double f);
 void CellXYZTE(dg_cell c, double& x, double& y, double& z, double& t,
                double& e);
 }  // namespace reco

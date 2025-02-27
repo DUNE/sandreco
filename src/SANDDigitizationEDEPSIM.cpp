@@ -461,80 +461,26 @@ bool process_hit(const SANDGeoManager& g, const TG4HitSegment& hit, int& detID,
   t = 0.5 * (hit.Start.T() + hit.Stop.T());
   de = hit.EnergyDeposit;
 
-  auto hit_direction = hit.Stop - hit.Start;
+  auto cell_global_id_middle = g.get_ecal_cell_id(x, y, z, true);
+  auto cell_global_id_start  = g.get_ecal_cell_id(hit.Start.X(), hit.Start.Y(), hit.Start.Z(), true);
+  auto cell_global_id_stop   = g.get_ecal_cell_id(hit.Stop.X(), hit.Stop.Y(), hit.Stop.Z(), true);
 
-  g.setGeoCurrentPoint(x, y, z);
-  g.setGeoCurrentDirection(hit_direction.X(), hit_direction.Y(),
-                           hit_direction.Z());
-
-  volume running_volume;
-  g.initVolume(running_volume);
-
-  if (!running_volume.IsActive) return false;
-
-  auto cell_global_id = g.get_ecal_cell_id(x, y, z);
-
-  if (cell_global_id == 999 || cell_global_id == -999) return false;
-
+  int cell_global_id;
+  if (cell_global_id_middle != -999 && cell_global_id_middle != 999) {
+    cell_global_id = cell_global_id_middle;
+  } else if (cell_global_id_start  != -999 && cell_global_id_start  != 999) {
+    cell_global_id = cell_global_id_start;
+  } else if (cell_global_id_stop   != -999 && cell_global_id_stop   != 999) {
+    cell_global_id = cell_global_id_stop;
+  } else {
+    return false;
+  }
   g.decode_ecal_cell_id(cell_global_id, detID, modID, planeID, cellID);
 
+  g.get_hit_path_len(x, y, z, cell_global_id, d1, d2);
+
+
   return true;
-
-  // /////
-  // TGeoNode* node = g->FindNode(x, y, z);
-
-  // if (node == 0) return false;
-
-  // TString str = node->GetName();
-  // TString str2 = g->GetPath();
-
-  // if (debug) {
-  //   std::cout << "node name: " << str.Data() << std::endl;
-  // }
-
-  // if (sand_reco::ecal::geometry::CheckAndProcessPath(str2) == false)
-  //   return false;
-  // //////
-
-  // // barrel modules
-  // if (sand_reco::ecal::geometry::isBarrel(str)) {
-
-  //   sand_reco::ecal::geometry::BarrelModuleAndLayer(str, str2, detID, modID,
-  //                                                   planeID);
-
-  //   sand_reco::ecal::geometry::BarrelCell(x, y, z, g, node, cellID, d1, d2);
-
-  //   if (debug) {
-  //     std::cout << "hit: " << str.Data() << std::endl;
-  //     std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
-  //               << std::endl;
-  //     std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
-  //               << " " << planeID << " " << cellID << std::endl;
-  //     std::cout << "\t[d1,d2,t,de]           " << d1 << " " << d2 << " " << t
-  //               << " " << de << std::endl;
-  //   }
-
-  //   return true;
-  // }
-  // // end cap modules
-  // else if (sand_reco::ecal::geometry::isEndCap(str)) {
-
-  //   sand_reco::ecal::geometry::EndCapModuleAndLayer(str, str2, detID, modID,
-  //                                                   planeID);
-
-  //   sand_reco::ecal::geometry::EndCapCell(x, y, z, g, node, cellID, d1, d2);
-
-  //   if (debug) {
-  //     std::cout << "hit: " << str.Data() << std::endl;
-  //     std::cout << "\t[x,y,z]                " << x << " " << y << " " << z
-  //               << std::endl;
-  //     std::cout << "\t[detID,modID,planeID,cellID] " << detID << " " << modID
-  //               << " " << planeID << " " << cellID << std::endl;
-  //   }
-  //   return true;
-  // } else {
-  //   return false;
-  // }
 }
 
 void simulate_photo_electrons(TG4Event* ev, const SANDGeoManager& g,
@@ -549,7 +495,6 @@ void simulate_photo_electrons(TG4Event* ev, const SANDGeoManager& g,
        it != ev->SegmentDetectors.end(); ++it) {
     if (it->first == "EMCalSci") {
       for (unsigned int j = 0; j < it->second.size(); j++) {
-
         if (digitization::edep_sim::ecal::process_hit(g, it->second[j], detID,
                                                       modID, planeID, cellID,
                                                       d1, d2, t0, de) == true) {
@@ -565,9 +510,14 @@ void simulate_photo_electrons(TG4Event* ev, const SANDGeoManager& g,
 
           int pe1 = digitization::rand.Poisson(ave_pe1);
           int pe2 = digitization::rand.Poisson(ave_pe2);
-
           uniqID =
               sand_reco::ecal::decoder::EncodeID(detID, modID, planeID, cellID);
+          // if (debug) {
+          //   std::cout << "cell ID: " << uniqID << std::endl;
+          //   std::cout << "\t" << de << " " << en1 << " " << en2 << std::endl;
+          //   std::cout << "\t" << ave_pe1 << " " << ave_pe2 << std::endl;
+          //   std::cout << "\t" << pe1 << " " << pe2 << std::endl;
+          // }
 
           // cellend 1 -> x < 0 -> ID > 0 -> left
           // cellend 2 -> x > 0 -> ID < 0 -> right
@@ -620,9 +570,9 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
       c->ps2 = it->second;
     }
     auto cell_info = geo.get_ecal_cell_info(c->id);
-    c->x = cell_info.x();
-    c->y = cell_info.y();
-    c->z = cell_info.z();
+    c->x = cell_info.getX();
+    c->y = cell_info.getY();
+    c->z = cell_info.getZ();
   }
 
   for (std::map<int, dg_cell>::iterator it = map_cell.begin();
@@ -631,10 +581,10 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
   }
 }
 
-// simulate calorimeter responce for whole event
+// simulate calorimeter response for whole event
 void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
                    std::vector<dg_cell>& vec_cell,
-                   EcalDigiMode ecal_digi_mode)
+                   ECAL_digi_mode  ecal_digi_mode)
 {
   std::map<int, std::vector<pe> > photo_el;
   std::map<int, std::vector<dg_ps> > ps;
@@ -662,7 +612,7 @@ void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
 
 // digitize event
 void digitize(const char* finname, const char* foutname,
-              EcalDigiMode ecal_digi_mode)
+              ECAL_digi_mode  ecal_digi_mode)
 {
   TFile f(finname, "READ");
 
@@ -681,7 +631,7 @@ void digitize(const char* finname, const char* foutname,
   // Get TGeoManager or additional Tree depending on the simulation chain
   geo = (TGeoManager*)f.Get("EDepSimGeometry");
 
-  if (debug) std::cout << "Inizializzo la geometria" << std::endl;
+  if (debug) std::cout << "Initializing the geometry" << std::endl;
 
   // Initialization of detector-geometry-related
   // usefull variables defined in utils.h
@@ -748,8 +698,8 @@ void digitize(const char* finname, const char* foutname,
     // define the T0 for this event
     // for each straw tubs:
     // std::map<int, double> sand_reco::t0
-    digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
-                                                ecal_digi_mode);
+    // digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
+    //                                             ecal_digi_mode);
 
     if (geo->FindVolumeFast("STTtracker_PV")) {
       digitization::edep_sim::tracker::stt::DigitizeStt(*ev, sand_geo, wire_digits);
@@ -765,8 +715,9 @@ void digitize(const char* finname, const char* foutname,
 
   // write output
   fout.cd();
-  tout.Write();
   geo->Write();
+  tout.Write("", TObject::kOverwrite);
+
   fout.Close();
 
   f.Close();

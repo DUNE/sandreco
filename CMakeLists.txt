@@ -39,9 +39,9 @@ target_link_libraries(Struct PUBLIC)
 ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/StructLinkDef.h)
 
 # Create SANDGeoManager lib
-add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDWireInfo.cpp src/SANDECALCellInfo.cpp src/SANDTrackerModule.cpp src/SANDTrackerPlane.cpp src/SANDTrackerCell.cpp src/Line3D.cpp)
+add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDWireInfo.cpp src/SANDECALCellInfo.cpp src/SANDTrackerModule.cpp src/SANDTrackerPlane.cpp src/SANDTrackerCell.cpp src/Line3D.cpp src/SANDENDCAPModInfo.cpp)
 target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
-ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDWireInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerLinkDef.h)
+ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDWireInfo.h SANDECALCellInfo.h SANDENDCAPModInfo.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerLinkDef.h)
 
 # Creates a libUtils shared library
 add_library(Utils SHARED src/utils.cpp src/transf.cpp)
@@ -84,9 +84,9 @@ target_link_libraries(Digitize Struct SANDGeoManager Utils)
 add_executable(Reconstruct src/reconstruction.cpp)
 target_link_libraries(Reconstruct Struct Utils SANDGeoManager SANDClustering)
 
-# Creates Analyze executable.
-add_executable(Analyze src/analysis.cpp)
-target_link_libraries(Analyze Struct Utils ROOT::EG)
+# # Creates Analyze executable.
+# add_executable(Analyze src/analysis.cpp)
+# target_link_libraries(Analyze Struct Utils ROOT::EG)
 
 # Creates Display executable.
 add_executable(Display src/display.cpp)
@@ -123,7 +123,7 @@ target_link_libraries(eventDisplay PUBLIC Utils SANDEventDisplay "-lEG -lGui")
 
 # Creates SANDECALClustering executable.
 add_executable(SANDECALClustering src/SANDECALClustering.cpp)
-target_link_libraries(SANDECALClustering PUBLIC Utils SANDClustering)
+target_link_libraries(SANDECALClustering PUBLIC Struct Utils SANDClustering)
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
@@ -132,7 +132,8 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay TestKF SANDClustering  SANDECALClustering
+#install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay Analyze TestKF SANDClustering  SANDECALClustering
+ install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF SANDClustering  SANDECALClustering
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"

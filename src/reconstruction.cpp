@@ -270,7 +270,7 @@ int evalYSign(const track& tr)
 {
   std::vector<double> ys;
 
-  for (const auto d : tr.clY) ys.push_back(d.y);
+  for (const auto& d : tr.clY) ys.push_back(d.y);
 
   return evalYSign(ys, tr.yc);
 }
@@ -780,12 +780,12 @@ void mergeXYTracks(std::vector<std::vector<dg_wire> >& clustersX,
               std::abs(clustersY.at(jj).front().z - clustersX.at(kk).front().z);
           track tr;
           tr.tid = index++;
-          tr.clX = std::move(clustersX.at(kk));
-          tr.clY = std::move(clustersY.at(jj));
+          tr.clX = clustersX.at(kk);
+          tr.clY = clustersY.at(jj);
           clustersY.erase(clustersY.begin() + jj--);
           clustersX.erase(clustersX.begin() + kk--);
 
-          tr3D.push_back(std::move(tr));
+          tr3D.push_back(tr);
           break;
         }
       }
@@ -1643,6 +1643,9 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   TGeoManager* geo = (TGeoManager*)f_hits.Get("EDepSimGeometry");
   TTree* tDigit = (TTree*)f_digits.Get("tDigit");
 
+  SANDGeoManager sand_geo;
+  sand_geo.init(geo);
+
   if (tTrueMC == nullptr || geo == nullptr || tDigit == nullptr) {
     std::cout << "Error in retrieving objects from root file: "
               << (tTrueMC == nullptr ? "EDepSimEvents " : "")
@@ -1741,7 +1744,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
         // Filter(vec_cl);
         //PidBasedClustering(ev, vec_cell, vec_cl);
         //Merge(vec_cl);
-        vec_cl = clusterize(vec_cell);
+        vec_cl = clusterize(&sand_geo, *vec_cell);
         break;
     }
     tout.Fill();

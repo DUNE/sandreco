@@ -61,6 +61,11 @@ install/include/SANDTrackerPlane.h
 install/include/SANDTrackerUtils.h
 install/include/SANDTrackletFinder.h
 install/include/SANDWireInfo.h
+install/include/SANDENDCAPModInfo.h
+install/include/SANDEventDisplay.h
+install/include/SANDGeoManager.h
+install/include/SANDGeoManagerLinkDef.h
+install/include/SANDSTTTubeInfo.h
 install/include/struct.h
 install/include/StructLinkDef.h
 install/include/transf.h
