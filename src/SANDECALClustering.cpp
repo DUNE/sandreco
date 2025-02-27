@@ -32,8 +32,15 @@ int clustering(std::string const& input, std::string const& edep_input)
   tout.Branch("cluster", "std::vector<cluster>", &f_clust);
   t->SetBranchAddress("dg_cell", &cell);
   
+  std::cout << "Events: " << nEvents << " [";
+  std::cout << std::setw(3) << int(0) << "%]" << std::flush;
+
   for (int i = 0; i < nEvents; i++) {
     t->GetEntry(i);
+
+    std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i) / nEvents * 100)
+              << "%]" << std::flush;
+
     std::vector<cluster> clust = clusterize(&sand_geo, *cell);
     
     f_clust = clust;
@@ -42,6 +49,9 @@ int clustering(std::string const& input, std::string const& edep_input)
     f_clust.clear();
     og_clust.clear();
   }
+  std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
+  std::cout << std::endl;
+
   fout.cd();
   tout.Write();
   fout.Close();

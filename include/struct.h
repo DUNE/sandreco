@@ -153,7 +153,9 @@ struct cluster {
   double varx;
   double vary;
   double varz;
-  int type;
+  int type;   // type 1 barrel
+              // type 2 endcap
+              // type 3 mixed
   std::vector<reco_cell> reco_cells; 
 };
 

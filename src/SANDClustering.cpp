@@ -29,8 +29,6 @@ std::vector<cluster> clusterize(const SANDGeoManager* sand_geo, const std::vecto
   std::vector<dg_cell> complete_cells   = processed_cells.first;
   std::vector<dg_cell> incomplete_cells = processed_cells.second;
 
-  // std::cout << complete_cells.size() << " " << incomplete_cells.size() << std::endl;
-
   std::vector<int> chck;
   std::vector<cluster> vec_clust;
   for (uint i = 0; i < complete_cells.size(); i++) {
@@ -50,7 +48,6 @@ std::vector<cluster> clusterize(const SANDGeoManager* sand_geo, const std::vecto
     v_cell = Neighbours.first;
     chck = Neighbours.second;
 
-    // std::cout << v_cell.size() << std::endl;
     struct cluster Clust;
 
     Clust = createCluster(sand_geo, v_cell);
@@ -80,12 +77,6 @@ std::vector<cluster> clusterize(const SANDGeoManager* sand_geo, const std::vecto
   // RecoverIncomplete(sand_geo, vec_clust, incomplete_cells);
 
   for (auto& c:vec_clust) {
-    std::cout << c.e << std::endl;
-    double total_pe = 0;
-    for (auto cell:c.reco_cells) {
-      total_pe += cell.ps1.adc + cell.ps2.adc;
-    }
-    std::cout << total_pe / 4 << std::endl;
     c.type = evaluateClusterType(c);
   }
 
@@ -273,7 +264,7 @@ void recoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clu
       }
 
       if (spatial_distance < spatial_range && time_distance < time_range) {
-        // TODO: optimize the condition for the clostest cluster
+        // TODO: optimize the condition for the closest cluster
         if (spatial_distance < min_distance && time_distance < min_time) {
           found = true;
           closest_cluster_index = j;
@@ -298,7 +289,6 @@ void recoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>& clu
         DpmA =  shifted_y + inco_cell_lenght * 0.5;
         DpmB = -shifted_y + inco_cell_lenght * 0.5;
       }
-      // std::cout << DpmA << " " << DpmB << std::endl;
       if (incomplete_cell.ps1.size() != 0) {
         updateCluster(incomplete_cell, DpmA, 1, module_type, clus.at(closest_cluster_index));
       } else {
@@ -573,10 +563,11 @@ void trackFit(std::vector<cluster>& clu_vec)
   const double xl[5] = {4.44, 4.44, 4.44, 4.44, 5.24};
   for (uint i = 0; i < clu_vec.size(); i++) {
     double apx[3]   = {0, 0, 0};
-    // double eapx[3]  = {0, 0, 0};
     double ctrk[3]  = {0, 0, 0};
-    // double ectrk[3] = {0, 0, 0};
     std::vector<reco_cell> cell_vec[5];
+    // Notice: these are computed but not used. Why?
+    // double eapx[3]  = {0, 0, 0};
+    // double ectrk[3] = {0, 0, 0};
         
     for (uint j = 0; j < clu_vec.at(i).reco_cells.size(); j++) {
       int layer_number = clu_vec.at(i).reco_cells.at(j).lay;
