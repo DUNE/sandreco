@@ -1,13 +1,19 @@
 #include <TObject.h>
 
-#ifndef SANDECALCELLINFO_H
-#define SANDECALCELLINFO_H
+#ifndef ECALCELLINFO_H
+#define ECALCELLINFO_H
+
+namespace sand_geometry
+{
+
+namespace ecal
+{
 
 // class for storing geometric info of the SAND ECAL cells
-class SANDECALCellInfo : public TObject
+class ECALCellInfo : public TObject
 {
  public:
-  enum class Orient { kHorizontal, kVertical };
+  enum class ModuleType { kBarrel, kEndcap };
 
  private:
   int id_;              // id of the cell
@@ -15,32 +21,35 @@ class SANDECALCellInfo : public TObject
   double y_;            // y position of the center of the cell
   double z_;            // z position of the center of the cell
   double length_;       // length of the cell
-  Orient orientation_;  // orientation of the cell
+  ModuleType module_type_;  // ModuleType of the cell
+  
  public:
-  SANDECALCellInfo();  // Default constructor
-  SANDECALCellInfo(int id, double x, double y, double z, double length,
-                   Orient orientation);  // parametric constructor
+  ECALCellInfo();  // Default constructor
+  ECALCellInfo(int id, double x, double y, double z, double length,
+                   ModuleType module_type);  // parametric constructor
 
   // Setter methods for the attributes
-  void id(int arg_id);
-  void x(double arg_x);
-  void y(double arg_y);
-  void z(double arg_z);
-  void length(double arg_length);
-  void orientation(Orient arg_orientation);
+  void setId(int arg_id);
+  void setX(double arg_x);
+  void setY(double arg_y);
+  void setZ(double arg_z);
+  void setLength(double arg_length);
+  void setModuleType(ModuleType arg_module_type);
   // Getter methods for the attributes
-  int id();
-  double x();
-  double y();
-  double z();
-  double length();
-  Orient orientation();
+  int getId() const;
+  double getX() const;
+  double getY() const;
+  double getZ() const;
+  double getLength() const;
+  ModuleType getModuleType() const;
 
-  ClassDef(SANDECALCellInfo, 1);
+  ClassDef(ECALCellInfo, 1);
 };
+} // namespace ecal
+} // namesoace sand_geometry
 
 #ifdef __MAKECINT__
-#pragma link C++ class SANDECALCellInfo + ;
+#pragma link C++ class sand_geometry::ecal::ECALCellInfo + ;
 #endif
 
 #endif

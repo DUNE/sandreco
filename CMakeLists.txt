@@ -37,9 +37,9 @@ target_link_libraries(Struct PUBLIC)
 ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/StructLinkDef.h)
 
 # Create SANDGeoManager lib
-add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDSTTTubeInfo.cpp src/SANDECALCellInfo.cpp)
+add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDSTTTubeInfo.cpp src/SANDECALCellInfo.cpp src/SANDENDCAPModInfo.cpp)
 target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
-ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDSTTTubeInfo.h SANDECALCellInfo.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerLinkDef.h)
+ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDSTTTubeInfo.h SANDECALCellInfo.h SANDENDCAPModInfo.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerLinkDef.h)
 
 # Creates a libUtils shared library
 add_library(Utils SHARED src/utils.cpp src/transf.cpp)
@@ -87,7 +87,7 @@ target_link_libraries(eventDisplay PUBLIC Utils SANDEventDisplay "-lEG -lGui")
 
 # Creates SANDECALClustering executable.
 add_executable(SANDECALClustering src/SANDECALClustering.cpp)
-target_link_libraries(SANDECALClustering PUBLIC Utils SANDClustering)
+target_link_libraries(SANDECALClustering PUBLIC Struct Utils SANDClustering)
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )

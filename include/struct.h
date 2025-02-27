@@ -10,6 +10,52 @@ struct pe {
   double time;
   int h_index;
 };
+struct cluster_generator{
+  int pdg_code; 
+  int parent_pdg_code;
+  int track_id;
+  int parent_track_id; 
+  double dep_energy;
+  double initial_energy;
+  double initial_momentum; 
+  double initial_x; 
+  double initial_y;
+  double initial_z;  
+};
+
+struct truecluster{
+    int tid;
+    double x;
+    double y;
+    double z;
+    double t; 
+    double e;
+    double vis_e;
+    int n_traj;
+    double sx;
+    double sy;
+    double sz;
+    int ntot_cell;
+    int cell_l0;
+    int cell_l1; 
+    int cell_l2;
+    int cell_l3;
+    int cell_l4;
+    double energy_l0;
+    double energy_l1;
+    double energy_l2;
+    double energy_l3;
+    double energy_l4;
+    double lay0_maxE;
+    double lay1_maxE;
+    double lay2_maxE;
+    double lay3_maxE;
+    double lay4_maxE;
+    double asymmetry; 
+    double Eoverp;
+    bool moregens= false;
+    std::vector<cluster_generator> vec_generator;
+};
 
 struct hit {
   std::string det;
@@ -49,18 +95,32 @@ struct dg_cell {
   std::vector<dg_ps> ps2;
 };
 
+/**
+ * @struct reco_cell
+ * @brief Represents a reconstructed detector cell with spatial, energy, and timing information.
+ * 
+ * This structure holds information about a detector cell, including its position, 
+ * energy deposit, time, and associated photodetector signals.
+ */
 struct reco_cell {
-  int id;
-  double z;
-  double y;
-  double x;
-  double l;
-  int mod;
-  int lay;
-  double e;
-  double t; 
-  dg_ps ps1;
-  dg_ps ps2;
+  int id;      /**< Unique identifier of the cell */
+  double z;    /**< Z-coordinate of the cell position */
+  double y;    /**< Y-coordinate of the cell position */
+  double x;    /**< X-coordinate of the cell position */
+  double l;    /**< Reconstructed cell length */
+  int mod;     /**< Module number where the cell is located */
+  int lay;     /**< Layer number of the cell */
+  double e;    /**< Energy deposited in the cell */
+  double t;    /**< Time of the recorded signal */
+
+  dg_ps ps1;   /**< Photodetector signal from the first side */
+  dg_ps ps2;   /**< Photodetector signal from the second side */
+
+  int fired_pmt; /**< Indicates which photodetectors were triggered:
+                  *   - 1 if only ps1 is set
+                  *   - 2 if only ps2 is set
+                  *   - 3 if both ps1 and ps2 are set
+                  */
 };
 
 struct dg_tube {
@@ -93,7 +153,9 @@ struct cluster {
   double varx;
   double vary;
   double varz;
-  //std::vector<dg_cell> cells;
+  int type;   // type 1 barrel
+              // type 2 endcap
+              // type 3 mixed
   std::vector<reco_cell> reco_cells; 
 };
 

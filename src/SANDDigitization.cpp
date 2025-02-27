@@ -118,6 +118,7 @@ void eval_adc_and_tdc_from_photo_electrons(
 
   std::vector<pe> photo_el_digit;
 
+  // iteration over cells
   for (std::map<int, std::vector<pe> >::iterator it = photo_el.begin();
        it != photo_el.end(); ++it) {
     // order by arrival time
@@ -132,7 +133,7 @@ void eval_adc_and_tdc_from_photo_electrons(
     pe_count = 0;
     start_index = 0;
     index = 0;
-
+    // iteration over elements in the pe vector (for each cell entry)
     for (std::vector<pe>::iterator this_pe = it->second.begin();
          this_pe != it->second.end(); ++this_pe) {
       // integrate for int_time
@@ -172,6 +173,7 @@ void eval_adc_and_tdc_from_photo_electrons(
         // get ready for next digiit
         pe_count = 1;
         photo_el_digit.clear();
+        photo_el_digit.push_back(*this_pe);
         int_start = this_pe->time;
         start_index = this_pe - it->second.begin();
       }
@@ -181,8 +183,23 @@ void eval_adc_and_tdc_from_photo_electrons(
       dg_ps signal;
       signal.side = side;
       signal.adc = sand_reco::ecal::acquisition::pe2ADC * pe_count;
-      index = int(sand_reco::ecal::acquisition::costant_fraction * pe_count) +
-              start_index;
+      switch (ecal_digi_mode) {
+        case ECAL_digi_mode::const_fract:
+          index = int(sand_reco::ecal::acquisition::costant_fraction *
+                      pe_count) +
+                  start_index;
+          if (debug) std::cout << " Const. Fract. " << index << std::endl;
+          break;
+        case ECAL_digi_mode::fixed_thresh:
+          double tdc_thresh =
+              (sand_reco::ecal::acquisition::fixed_thresh_pe >
+                sand_reco::ecal::acquisition::pe_threshold)
+                  ? sand_reco::ecal::acquisition::fixed_thresh_pe
+                  : sand_reco::ecal::acquisition::pe_threshold;
+          index = TMath::Ceil(tdc_thresh) + start_index;
+          if (debug) std::cout << " Fix. Thresh. " << index << std::endl;
+          break;
+      }
       signal.tdc = it->second[index].time;
       signal.photo_el = photo_el_digit;
       map_pmt[it->first].push_back(signal);
