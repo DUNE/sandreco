@@ -307,3 +307,4 @@ jobs:
           path: |
             ~/sandreco-reco
             ~/edepsim-events
+            ~/geo
