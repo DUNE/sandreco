@@ -52,7 +52,7 @@ jobs:
       #############################################################################################################################
       - name: CLHEP cache
         id: cache-clhep
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
@@ -65,7 +65,7 @@ jobs:
       #############################################################################################################################
       - name: ROOT cache
         id: cache-root
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
@@ -78,7 +78,7 @@ jobs:
       #############################################################################################################################      
       - name: GEANT4 cache
         id: cache-geant4
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
@@ -91,7 +91,7 @@ jobs:
       #############################################################################################################################      
       - name: EDEPSIM cache
         id: cache-edepsim
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
@@ -104,7 +104,7 @@ jobs:
       #############################################################################################################################
       - name: gegede cache
         id: cache-gegede
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
@@ -117,7 +117,7 @@ jobs:
       #############################################################################################################################
       - name: dunendggd cache
         id: cache-dunendggd
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
@@ -130,7 +130,7 @@ jobs:
       #############################################################################################################################
       - name: geometry cache
         id: cache-geometry
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
@@ -143,7 +143,7 @@ jobs:
       #############################################################################################################################
       - name: edepsim events cache with sand geo
         id: cache-edepsim-events-sand-geo
-        uses: actions/cache@v4.0.2
+        uses: actions/cache@v4
         with:
           # A list of files, directories, and wildcard patterns to cache and restore
           path: |
