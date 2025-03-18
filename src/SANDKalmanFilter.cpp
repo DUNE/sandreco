@@ -563,6 +563,39 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
   current_orientation_ = Orientation::kVertical;
 }
 
+void Manager::initFromSeed(TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
+{
+
+  TMatrixD initial_cov_matrix(5, 5);
+  initial_cov_matrix[0][0] = pow(200E-6, 2);
+  initial_cov_matrix[1][1] = pow(200E-6, 2);
+  initial_cov_matrix[2][2] = pow(0.1, 2);
+  initial_cov_matrix[3][3] = pow(0.01, 2);
+  initial_cov_matrix[4][4] = pow(0.01, 2);
+
+  sand_reco::kf::StateVector initial_state_vector = sand_reco::kf::utils::getStateVector(particleInfo.mom * 1E-3,  // GeV
+                                                                       particleInfo.pos * 1E-3,  // m
+                                                                       particleInfo.charge);
+
+  sand_reco::kf::TrackStep trackStep;
+  trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction,
+                      sand_reco::kf::State(initial_state_vector, initial_cov_matrix));
+  trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering,
+                      sand_reco::kf::State(initial_state_vector, initial_cov_matrix));
+
+
+  trackStep.setPropagatorMatrix(initial_cov_matrix);
+  
+  this_track_.addStep(trackStep);
+
+  particleInfo_       = particleInfo;
+  z_to_tracklets_     = z_to_tracklets;
+  current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
+  current_step_        = 0u;
+  current_z_           = particleInfo.pos.Z(); //Notice: UNITS!!  mm, why?
+  current_orientation_ = Orientation::kVertical;
+}
+
 // To Do: implment a seeding algorithm
 // void Manager::Init(const STTPlaneID& planeID, int clusterID)
   // {
