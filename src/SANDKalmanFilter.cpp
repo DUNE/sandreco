@@ -123,8 +123,8 @@ TMatrixD Manager::getProcessNoiseMatrix(
 
   auto dir = -1. * getDirectiveCosinesFromStateVector(stateVector);
   if (dir.Z() > 0) dir *= -1;
-  auto pathLengthInX0 = SANDTrackerUtils::getPathLengthInX0(
-      (z + dZ)*1000, stateVector.x()*1000, stateVector.y()*1000, z*1000, dir.X(), dir.Y(), dir.Z());
+  auto pathLengthInX0 = dE!=0 ? SANDTrackerUtils::getPathLengthInX0(
+      (z + dZ)*1000, stateVector.x()*1000, stateVector.y()*1000, z*1000, dir.X(), dir.Y(), dir.Z()):0;
 
   // MCS angle
   double radius = stateVector.radius();
@@ -135,8 +135,8 @@ TMatrixD Manager::getProcessNoiseMatrix(
   
   double gamma = sqrt(mom*mom + particle_mass*particle_mass) / particle_mass;
   double beta = sqrt( 1 - pow(1/gamma, 2));
-  auto sigmaMCSAngle = SANDTrackerUtils::getMCSSigmaAngleFromMomentumInMeV(
-      momentumInMeV, beta, pathLengthInX0);
+  auto sigmaMCSAngle = dE!=0 ? SANDTrackerUtils::getMCSSigmaAngleFromMomentumInMeV(
+      momentumInMeV, beta, pathLengthInX0):0;
   auto sigmaMCSAngleSquared = sigmaMCSAngle * sigmaMCSAngle;
 
   auto factor = pow(1 + pow(stateVector.tanLambda(), 2), 2);
@@ -253,7 +253,7 @@ sand_reco::kf::StateVector Manager::propagateState(
 
   auto nextSignedInverseRadius =
       stateVector.signedInverseRadius() +
-      stateVector.charge() * deltaRadius(stateVector, nextPhi, dZ, dE, particle_mass);
+      (dE!=0 ? stateVector.charge() * deltaRadius(stateVector, nextPhi, dZ, dE, particle_mass) : 0);
 
   auto cosNextPhi_corr = cos(stateVector.phi()) + dZ * stateVector.charge() * nextSignedInverseRadius;
   if (cosNextPhi_corr > 1.)
@@ -563,7 +563,7 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
   current_orientation_ = Orientation::kVertical;
 }
 
-void Manager::initFromSeed(TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
+void Manager::initFromReco(TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
 {
 
   TMatrixD initial_cov_matrix(5, 5);
@@ -573,9 +573,24 @@ void Manager::initFromSeed(TrackletMap* z_to_tracklets, const SParticleInfo& par
   initial_cov_matrix[3][3] = pow(0.01, 2);
   initial_cov_matrix[4][4] = pow(0.01, 2);
 
-  sand_reco::kf::StateVector initial_state_vector = sand_reco::kf::utils::getStateVector(particleInfo.mom * 1E-3,  // GeV
-                                                                       particleInfo.pos * 1E-3,  // m
-                                                                       particleInfo.charge);
+  TVector3 mom0(0,0,0);
+  TVector3 SAND_Center(0.0000000, -238.47300, 2391.0000);
+
+  sand_reco::kf::StateVector MC_initial_state_vector = sand_reco::kf::utils::getStateVector(particleInfo.mom * 1E-3,  // GeV
+    particleInfo.pos * 1E-3,  // m
+    particleInfo.charge);
+
+  auto r_guess = std::sqrt(std::pow(particleInfo.pos.X() - SAND_Center.X(), 2) + std::pow(particleInfo.pos.Y() - SAND_Center.Y(), 2)) * 1E-3;
+  auto invr_guess = 1. / r_guess;
+
+  sand_reco::kf::StateVector initial_state_vector(particleInfo.pos.x() * 1E-3,particleInfo.pos.y() * 1E-3,invr_guess,0,0);
+
+  std::cout<<"Initial state vector:   ("<< initial_state_vector.x() <<" , "<< initial_state_vector.y()<< " , " << initial_state_vector.signedInverseRadius() ;
+  std::cout<<" , "<<initial_state_vector.tanLambda() << " , " << initial_state_vector.phi() << " )" << std::endl;
+
+
+  std::cout<<"MC Initial state vector: ("<< MC_initial_state_vector.x() <<" , "<< MC_initial_state_vector.y()<< " , " << MC_initial_state_vector.signedInverseRadius() ;
+  std::cout<<" , "<<MC_initial_state_vector.tanLambda() << " , " << MC_initial_state_vector.phi() << " )" << std::endl;
 
   sand_reco::kf::TrackStep trackStep;
   trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction,
@@ -725,5 +740,120 @@ void Manager::run()
 
   while (current_step_ >= 0) smooth();
 }
+
+void Manager::seed()
+{
+  // criterio per quando fermare la ricerca
+  int stepLength = 1;
+
+  auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;
+  auto currentStep = this_track_.getStep(current_step_);
+
+  auto filteredStateVector =
+      currentStep.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering)
+          .getStateVector();
+
+  auto& next_tracklets = z_to_tracklets_->at(nextZ);
+
+  std::cout<<"Number of tracklets at next step: "<<next_tracklets.size()<<std::endl;
+
+  double dZ = (nextZ - current_z_) / 1000;
+  double dE = 0;
+  double beta = 0;
+
+  propagate(dE, dZ, beta);
+
+  auto predictionStateVector = this_track_.getStep(current_step_)
+          .getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction).getStateVector();
+  auto predictionStateCovMatrix = this_track_.getStep(current_step_).getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction)
+          .getStateCovMatrix();
+  auto prediction = getPrediction(current_orientation_, predictionStateVector);
+
+  std::cout<<"Predicted state vector:   ("<< predictionStateVector.x() <<" , "<< predictionStateVector.y()<< " , " << predictionStateVector.signedInverseRadius() ;
+  std::cout<<" , "<<predictionStateVector.tanLambda() << " , " << predictionStateVector.phi() << " )" << std::endl;
+
+
+
+  // for (int i = 0; i < (int)next_tracklets.size(); i++) {
+  //   sand_reco::kf::Measurement measurement = getMeasurementFromTracklet(next_tracklets[i]);
+  //   std::cout<<"Measurement: "<<measurement[0][0]<<" , "<<measurement[1][0]<<std::endl;
+  // }
+  
+        
+  // for (int i = 0; i < (int)next_tracklets.size(); i++) {
+  //     sand_reco::kf::Measurement measurement = getMeasurementFromTracklet(next_tracklets[i]);
+  // }
+
+  // Notice: if currentZ is not in the map, the second condition is always true
+  //while (stepLength < 100 && std::distance(z_to_tracklets_->begin(), z_to_tracklets_->find(current_z_)) >= stepLength) {
+    // 1- propagate to [currentPlaneID - step]
+  //   auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;
+
+  //   auto currentStep = this_track_.getStep(current_step_);
+  //   auto filteredStateVector =
+  //       currentStep.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering)
+  //           .getStateVector();
+
+  //   auto dir = -1. * getDirectiveCosinesFromStateVector(filteredStateVector);
+
+  //   // To Do: check if this is still valid and add a real fix if needed
+  //   if (dir.Z() > 0) {
+  //     dir *= -1;
+  //   }
+
+  //   auto current_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
+  //                             filteredStateVector.radius(),
+  //                             filteredStateVector.tanLambda()) / 1000;
+  //   double gamma = sqrt(current_mom * current_mom + particleInfo_.mass * particleInfo_.mass) /
+  //                   particleInfo_.mass;
+  //   double beta = sqrt(1 - pow(1 / gamma, 2));
+
+  //   // To Do: check all units
+  //   auto dE = SANDTrackerUtils::getDE(
+  //                       nextZ, 
+  //                       1000 * filteredStateVector.x(), 1000 * filteredStateVector.y(), current_z_, 
+  //                       dir.X(), dir.Y(), dir.Z(),
+  //                       beta, particleInfo_.mass, particleInfo_.charge) / 1000;
+
+  //   double dZ = (nextZ - current_z_) / 1000;
+
+  //   propagate(dE, dZ, beta);
+
+  //   // 2- Search best match
+  //   auto predictionStateVector = this_track_.getStep(current_step_)
+  //           .getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction).getStateVector();
+  //   auto predictionStateCovMatrix = this_track_.getStep(current_step_).getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction)
+  //           .getStateCovMatrix();
+  //   auto prediction = getPrediction(current_orientation_, predictionStateVector);
+
+  //   auto measurementNoiseMatrix = getMeasurementNoiseMatrix();
+  //   auto projectionMatrix = getProjectionMatrix(current_orientation_, 
+  //                                               predictionStateVector);
+  //   TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
+  //                                         projectionMatrix);
+  //   auto Sk = measurementNoiseMatrix + projectionMatrix *
+  //                                             predictionStateCovMatrix *
+  //                                             projectionMatrixTransposed;
+
+  // int tracklet_index = findBestMatch(nextZ, prediction, Sk);
+
+  //   // // 3- If it is found: step = 1
+  //   // //    else step++
+  //   if (tracklet_index != -1) {
+  //     stepLength = 1;
+  //     auto measurement = getMeasurementFromTracklet(z_to_tracklets_->at(nextZ)[tracklet_index]);
+  //     filter(measurement, prediction);
+  //     current_z_ = nextZ;
+  //   } else {
+  //     stepLength++;
+  //     this_track_.removeLastStep();
+  //     current_step_--;
+  //     current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
+  //   }
+  // }
+
+  // while (current_step_ >= 0) smooth();
+}
+
 } // namespace kf
 } // namespace sand_reco

@@ -24,7 +24,8 @@
 
 void trySeedManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
   sand_reco::kf::Manager manager;
-  manager.initFromSeed(&z_to_tracklets, particleInfo);
+  manager.initFromReco(&z_to_tracklets, particleInfo);
+  manager.seed();
   return;
 }
 
@@ -116,7 +117,7 @@ int main(int argc, char* argv[])
 {
   gStyle->SetOptStat(0);  
 
-  TFile f(argv[2], "READ");
+  TFile f(argv[1], "READ");
   TGeoManager* geo = 0;
   geo = (TGeoManager*)f.Get("EDepSimGeometry");
 
@@ -126,7 +127,7 @@ int main(int argc, char* argv[])
   TG4Event* ev = new TG4Event;
   t_h->SetBranchAddress("Event", &ev);
   
-  TFile f_d(argv[3], "READ");
+  TFile f_d(argv[2], "READ");
   TTree* t = (TTree*)f_d.Get("tDigit");
 
   std::vector<dg_wire>* digits = 0;

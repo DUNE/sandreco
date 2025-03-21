@@ -215,8 +215,9 @@ class Manager {
     void filter(const sand_reco::kf::Measurement& measurement, const sand_reco::kf::Measurement& prediction);
     void smooth();
     void initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
-    void initFromSeed(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
+    void initFromReco(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
     void run();
+    void seed();
     const sand_reco::kf::Track& getTrack() {return this_track_; };
   
 };
