@@ -13,7 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_PLATFORM_INDEPENDENT_CODE ON)
 
 # Locate the ROOT package and define a number of useful targets and variables.
-find_package(ROOT REQUIRED)
+find_package(ROOT REQUIRED COMPONENTS RIO Net EG)
 
 # Locate EDep-sim
 find_package(EDepSim REQUIRED)
@@ -94,6 +94,10 @@ target_link_libraries(eventDisplay PUBLIC Utils SANDEventDisplay "-lEG -lGui")
 add_executable(SANDECALClustering src/SANDECALClustering.cpp)
 target_link_libraries(SANDECALClustering PUBLIC Struct Utils SANDClustering)
 
+# Creates MeasurementBuilder executable.
+add_executable(TestVertexing tests/TestVertexing.cpp)
+target_link_libraries(TestVertexing PUBLIC Utils Struct SANDTrackerVertexing ROOT::EG)
+
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
 endif()
@@ -102,7 +106,7 @@ endif()
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
 #install(TARGETS Utils Struct SANDEventDisplay SANDClustering SANDECALClustering SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay
-install(TARGETS Utils Struct SANDEventDisplay SANDClustering SANDECALClustering SANDGeoManager Reconstruct Digitize Display FastCheck eventDisplay
+install(TARGETS TestVertexing Utils Struct SANDEventDisplay SANDClustering SANDECALClustering SANDGeoManager Reconstruct Digitize Display FastCheck eventDisplay
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"

@@ -1,6 +1,7 @@
-//////////////////////////////////
-//      Author: M. Pozzato      //
-//////////////////////////////////
+///////////////////////////////////////////
+//      Original author: M. Pozzato      //
+//      Ported by: V.pia                 //
+///////////////////////////////////////////
 
 #include <algorithm>
 #include <cmath>
@@ -10,6 +11,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <TStyle.h>
 
 #include "struct.h"
 
@@ -48,11 +51,11 @@ class Vertex {
 class TrackerVertexing {
 
   public:
+    void setParameters(double dz, double ip, double merging_radius, std::vector<Track> tracks);
+    int run();
 
   private:
 
-    int run();
-    void setParameters(double dz, double ip, double merging_radius, std::vector<Track> tracks);
     int doVertex();
     int vertexEstimate(Track tr1, int tr1Index, Track tr2, int tr2Index, Vertex &vtx);
     void flagVertex();
@@ -70,6 +73,6 @@ class TrackerVertexing {
     std::vector<Vertex> vertices_;
     std::vector<Vertex> vertices_2_prong_;
     std::vector<Vertex> vertices_multi_prong_;
-    std::vector<std::vector<Vertex>> vertices_list;
+    std::vector<std::vector<Vertex>> vertices_list_;
   
 };

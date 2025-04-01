@@ -1,6 +1,7 @@
-//////////////////////////////////
-//      Author: M. Pozzato      //
-//////////////////////////////////
+///////////////////////////////////////////
+//      Original author: M. Pozzato      //
+//      Ported by: V.pia                 //
+///////////////////////////////////////////
 
 #include "SANDTrackerVertexing.h"
 
@@ -9,22 +10,7 @@ void TrackerVertexing::clearAll() {
   vertices_.clear();
   vertices_2_prong_.clear();
   vertices_multi_prong_.clear();
-  vertices_list.clear();
-}
-
-int index(int i, int j, int nCol) { return i * nCol + j; }
-
-void sort(std::vector<int> &vint) {
-  int dimension = static_cast<int>(vint.size());
-  for (int i = 0; i < dimension - 1; i++) {
-    for (int j = i + 1; j < dimension; j++) {
-      if (vint.at(i) > vint.at(j)) {
-        int temp = vint.at(j);
-        vint.at(j) = vint.at(i);
-        vint.at(i) = temp;
-      }
-    }
-  }
+  vertices_list_.clear();
 }
 
 int TrackerVertexing::vertexEstimate(Track tr1, int tr1Index, Track tr2, int tr2Index,
@@ -80,6 +66,7 @@ int TrackerVertexing::vertexEstimate(Track tr1, int tr1Index, Track tr2, int tr2
   vtx.nProng = 2;
   vtx.indexTrack.push_back(tr1Index);
   vtx.indexTrack.push_back(tr2Index);
+  if (dist == 0) dist = 1E-15;
   vtx.impact.push_back(dist / 2.);
   vtx.impact.push_back(dist / 2.);
   return 0;
@@ -166,7 +153,7 @@ int TrackerVertexing::selectVertex() {
     vertices_.erase(vertices_.begin());
   } else {
     tmp.push_back(vertices_.at(0));
-    vertices_list.push_back(tmp);
+    vertices_list_.push_back(tmp);
     for (int j = static_cast<int>(index.size()) - 1; j >= 0; j--) {
       iter = vertices_.begin();
       vertices_.erase(iter + index.at(j));
@@ -174,6 +161,7 @@ int TrackerVertexing::selectVertex() {
   }
   return 0;
 }
+
 double pointTo3DlineDistance(double x0, double y0, double z0, Track tr) {
   double dist = 0;
   double qp_x = tr.x - x0;
@@ -190,13 +178,13 @@ double pointTo3DlineDistance(double x0, double y0, double z0, Track tr) {
 }
 
 int TrackerVertexing::mergeVertex() {
-  int nVertex = static_cast<int>(vertices_list.size());
+  int nVertex = static_cast<int>(vertices_list_.size());
   if (nVertex == 0) {
     std::cout << "No vertex to merge" << std::endl;
     return 0;
   }
   for (int i = 0; i < nVertex; i++) {
-    int nVtx = static_cast<int>(vertices_list.at(i).size());
+    int nVtx = static_cast<int>(vertices_list_.at(i).size());
     double x = 0;
     double y = 0;
     double z = 0;
@@ -204,10 +192,10 @@ int TrackerVertexing::mergeVertex() {
     double wSum = 0;
 
     for (int j = 0; j < nVtx; j++) {
-      w = 1. / (2 * (vertices_list.at(i).at(j).impact.at(0)));
-      x += vertices_list.at(i).at(j).x * w;
-      y += vertices_list.at(i).at(j).y * w;
-      z += vertices_list.at(i).at(j).z * w;
+      w = 1. / (2 * (vertices_list_.at(i).at(j).impact.at(0)));
+      x += vertices_list_.at(i).at(j).x * w;
+      y += vertices_list_.at(i).at(j).y * w;
+      z += vertices_list_.at(i).at(j).z * w;
       wSum += w;
     }
     x /= wSum;
@@ -221,13 +209,11 @@ int TrackerVertexing::mergeVertex() {
     std::vector<int> trkIndex;
 
     for (int j = 0; j < nVtx; j++) {
-      int nProng = vertices_list.at(i).at(j).nProng;
+      int nProng = vertices_list_.at(i).at(j).nProng;
       for (int k = 0; k < nProng; k++) {
-        trkIndex.push_back(vertices_list.at(i).at(j).indexTrack.at(k));
+        trkIndex.push_back(vertices_list_.at(i).at(j).indexTrack.at(k));
       }
     }
-
-    // sort(trkIndex);
 
     std::sort(trkIndex.begin(), trkIndex.end());
 
@@ -306,8 +292,8 @@ void TrackerVertexing::refineVertexPosition(double stepSize, int nSteps) {
     }
 }
 
+// Notice: this was done for OPERA. It is not updated to work with SAND.
 void TrackerVertexing::flagVertex() {
-  // Notice: this was done for OPERA. It is not updated to work with SAND.
   int nVertex = static_cast<int>(vertices_.size());
   bool isFirst;
   for (int i = 0; i < nVertex; i++) {
@@ -367,8 +353,8 @@ int TrackerVertexing::run() {
     vertices_.push_back(vertices_2_prong_.at(j));
   }
 
-  // std::cout << "Flag vertexes\n";
-  // flagVertex();
+  std::cout << "Flag vertexes\n";
+  flagVertex();
 
   std::cout << "\n\n======== Results ========" << std::endl;
   std::cout << "2-Prong: " << vertices_2_prong_.size() << std::endl;
@@ -377,5 +363,6 @@ int TrackerVertexing::run() {
   std::cout << "\nDump vertexes\n";
   dumpVertex("vertices.txt");
 
+  clearAll();
   return 0;
 }
