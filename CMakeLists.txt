@@ -53,6 +53,11 @@ add_library(SANDClustering SHARED src/SANDClustering.cpp)
 target_link_libraries(SANDClustering PUBLIC Utils)
 ROOT_GENERATE_DICTIONARY(SANDClusteringDict SANDClustering.h MODULE SANDClustering LINKDEF include/SANDClusteringLinkDef.h)
 
+# Create SANDTrackerVertexing lib
+add_library(SANDTrackerVertexing SHARED src/SANDTrackerVertexing.cpp)
+target_link_libraries(SANDTrackerVertexing PUBLIC Struct)
+ROOT_GENERATE_DICTIONARY(SANDTrackerVertexingDict SANDTrackerVertexing.h MODULE SANDTrackerVertexing LINKDEF include/SANDTrackerVertexingLinkDef.h)
+
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp src/SANDDigitization.cpp src/SANDDigitizationEDEPSIM.cpp src/SANDDigitizationFLUKA.cpp)
 target_link_libraries(Digitize Struct SANDGeoManager Utils)
