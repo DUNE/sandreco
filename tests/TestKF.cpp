@@ -48,6 +48,7 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
       
       
     }
+  }
 
   return;
 }
