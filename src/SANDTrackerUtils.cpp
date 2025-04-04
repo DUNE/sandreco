@@ -322,6 +322,131 @@ sand_reco::kf::StateVector getStateVector(TVector3 mom, TVector3 pos, int charge
     return sand_reco::kf::StateVector(pos.X(), pos.Y(), charge/radius, tan_lambda, phi);
 }
 
+
+Double_t makeC(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Double_t y3){
+  //-----------------------------------------------------------------
+  // Initial approzimation of the track curvature
+  //-----------------------------------------------------------------
+  z3 -=z1;
+  z2 -=z1;
+  y3 -=y1;
+  y2 -=y1;
+  //  
+  Double_t det = z3*y2-z2*y3;
+  if (TMath::Abs(det)<1e-10){
+    return 100;
+  }
+  //
+  Double_t u = 0.5* (z2*(z2-z3)+y2*(y2-y3))/det;
+  Double_t z0 = z3*0.5-y3*u;
+  Double_t y0 = y3*0.5+z3*u;
+  Double_t c2 = 1/TMath::Sqrt(z0*z0+y0*y0);
+  if (det<0) c2*=-1;
+  return c2;
+}
+
+
+Double_t makeSnp(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Double_t y3){
+  //-----------------------------------------------------------------
+  // Initial approzimation of the track snp at position z1
+  //-----------------------------------------------------------------
+  z3 -=z1;
+  z2 -=z1;
+  y3 -=y1;
+  y2 -=y1;
+  //  
+  Double_t det = z3*y2-z2*y3;
+  if (TMath::Abs(det)<1e-10) {
+    return 100;
+  }
+  //
+  Double_t u = 0.5* (z2*(z2-z3)+y2*(y2-y3))/det;
+  Double_t z0 = z3*0.5-y3*u; 
+  Double_t y0 = y3*0.5+z3*u;
+  Double_t c2 = 1/TMath::Sqrt(z0*z0+y0*y0);
+  if (det>0) c2*=-1;
+  z0*=c2;  
+  return z0;
+}
+
+Double_t makeYC(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Double_t y3){
+  //-----------------------------------------------------------------
+  // Initial approzimation of the y coordinate of the center of the track circumference 
+  // in the zy plane, with respects to the first point (z1,y1). Used to check consistency 
+  // between points (i.e. if they are in the the same semiplane), not in the seeding itself. 
+  // If the sign of yC is the same, the points are in the same semiplane.
+  //-----------------------------------------------------------------
+  z3 -=z1;
+  z2 -=z1;
+  y3 -=y1;
+  y2 -=y1;
+  //  
+  Double_t det = z3*y2-z2*y3;
+  if (TMath::Abs(det)<1e-10) {
+    return 100;
+  }
+  //
+  Double_t u = 0.5* (z2*(z2-z3)+y2*(y2-y3))/det;
+  Double_t y0 = y3*0.5+z3*u;
+  return y0;
+}
+
+//_____________________________________________________________________________
+Double_t makeTgln(Double_t z1,Double_t y1, Double_t z2,Double_t y2,Double_t x1,Double_t x2,Double_t c){
+  //-----------------------------------------------------------------
+  // Initial approzimation of the tangent of the track dip angle
+  //-----------------------------------------------------------------
+  Double_t d  =  TMath::Sqrt((z1-z2)*(z1-z2)+(y1-y2)*(y1-y2));
+  if (TMath::Abs(d*c*0.5)>1) return 0;
+  Double_t   angle2    = asin(d*c*0.5);
+
+  angle2  = (x1-x2)*c/(angle2*2.);    //dz /(R*dPhi)
+  return angle2;
+  //return (z1 - z2)/sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
+}
+
+sand_reco::kf::State Seed3Points(double xyz0[3], double xyz1[3], double xyz2[3], double sy, double sx, float bz){
+  Double_t sy2=sy*sy;
+  Double_t sx2=sx*sx;
+  TMatrixD param(5,1);
+  Double_t c[15];
+  sand_reco::kf::StateCovarianceMatrix cov;
+  // calculate initial param
+  param[0][0]=xyz0[0];              
+  param[0][1]=xyz0[1];
+  param[0][2]=makeC(xyz0[0],xyz0[1],xyz1[0],xyz1[1],xyz2[0],xyz2[1]);
+  param[0][3]=makeTgln(xyz0[0],xyz0[1],xyz1[0],xyz1[1],xyz0[2],xyz1[2],param[0][2]);
+  param[0][4]=makeSnp(xyz0[0],xyz0[1],xyz1[0],xyz1[1],xyz2[0],xyz2[1]);
+
+  //
+  Double_t f20=(makeC(xyz0[2],xyz0[1]+sy,xyz1[2],xyz1[1],xyz2[2],xyz2[1])-param[0][2])/sy;
+  Double_t f22=(makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1]+sy,xyz2[2],xyz2[1])-param[0][2])/sy;
+  Double_t f23=(makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]+sy)-param[0][2])/sy;
+  //
+  Double_t f40=(makeSnp(xyz0[2],xyz0[1]+sy,xyz1[2],xyz1[1],xyz2[2],xyz2[1])-param[0][4])/sy;
+  Double_t f42=(makeSnp(xyz0[2],xyz0[1],xyz1[2],xyz1[1]+sy,xyz2[2],xyz2[1])-param[0][4])/sy;
+  Double_t f43=(makeSnp(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]+sy)-param[0][4])/sy;
+  //
+  //  makeTgln(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz0[2],xyz1[2],param[0][4]);
+  Double_t f30=(makeTgln(xyz0[2],xyz0[1]+sy,xyz1[2],  xyz1[1],xyz0[0],xyz1[0],param[0][2])-param[0][3])/sy;
+  Double_t f31=(makeTgln(xyz0[2],xyz0[1],xyz1[2],  xyz1[1],xyz0[0]+sx,xyz1[0],param[0][2])-param[0][3])/sx;
+  Double_t f32=(makeTgln(xyz0[2],xyz0[1],xyz1[2],  xyz1[1]+sy,xyz0[0],xyz1[0],param[0][2])-param[0][3])/sy;
+  Double_t f34=(makeTgln(xyz0[2],xyz0[1],xyz1[2],   xyz1[1],xyz0[0],xyz1[0]+sx,param[0][2])-param[0][3])/sx;
+  c[0]=sy2;
+  c[1]=0.;       c[2]=sx2;
+  c[3]=f20*sy2;   c[4]=0.;       c[5]=f20*sy2*f20+f22*sy2*f22+f23*sy2*f23;
+  c[6]=f30*sy2;  c[7]=f31*sx2;  c[8]=f30*sy2*f20+f32*sy2*f22;
+  c[9]=f30*sy2*f30+f31*sx2*f31+f32*sy2*f32+f34*sx2*f34;
+  c[10]=f40*sy2; c[11]=0.; c[12]=f40*sy2*f20+f42*sy2*f22+f43*sy2*f23;
+  c[13]=f30*sy2*f40+f32*sy2*f42;
+  c[14]=f40*sy2*f40+f42*sy2*f42+f43*sy2*f43;
+
+
+
+  sand_reco::kf::State StateSeed;
+  return StateSeed;
+}
+
 ParticleState::ParticleState(const sand_reco::kf::StateVector& vector, double z)
 {
     position_ = TVector3(vector.x(), vector.y(), z);

@@ -561,109 +561,124 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
   current_step_        = 0u;
   current_z_           = particleInfo.pos.Z(); //Notice: UNITS!!  mm, why?
   current_orientation_ = Orientation::kVertical;
+
+  auto is = z_to_tracklets->find(particleInfo.pos.Z());
+  if (is != z_to_tracklets->end() && !is->second.empty()) {
+      std::cout << "Key exists and contains at least one TVectorD. Z= "<< current_z_ << std::endl;
+  } else {
+      std::cout << "Key does not exist or has an empty vector. Z= "<< current_z_  << std::endl;
+  }
 }
 
-void Manager::initFromReco(TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
-{
 
-  TMatrixD initial_cov_matrix(5, 5);
-  initial_cov_matrix[0][0] = pow(200E-6, 2);
-  initial_cov_matrix[1][1] = pow(200E-6, 2);
-  initial_cov_matrix[2][2] = pow(0.1, 2);
-  initial_cov_matrix[3][3] = pow(0.01, 2);
-  initial_cov_matrix[4][4] = pow(0.01, 2);
+double Manager::findClosestNonEmptyKey(const TrackletMap& myMap, double target) {
+  if (myMap.empty()) {
+      throw std::runtime_error("Map is empty!");
+  }
 
-  TVector3 mom0(0,0,0);
-  TVector3 SAND_Center(0.0000000, -238.47300, 2391.0000);
+  // Find the first key that is >= target
+  auto it = myMap.lower_bound(target);
 
-  sand_reco::kf::StateVector MC_initial_state_vector = sand_reco::kf::utils::getStateVector(particleInfo.mom * 1E-3,  // GeV
-    particleInfo.pos * 1E-3,  // m
-    particleInfo.charge);
+  // Ensure we get a key <= target
+  if (it == myMap.end() || it->first > target) {
+      if (it == myMap.begin()) {
+          throw std::runtime_error("No valid key found that is <= target with a non-empty vector!");
+      }
+      --it; // Move back to ensure key ≤ target
+  }
 
-  auto r_guess = std::sqrt(std::pow(particleInfo.pos.X() - SAND_Center.X(), 2) + std::pow(particleInfo.pos.Y() - SAND_Center.Y(), 2)) * 1E-3;
-  auto invr_guess = 1. / r_guess;
+  // Move back until we find a non-empty vector or reach the beginning
+  while (it->first <= target) {
+      if (!it->second.empty()) {
+          return it->first; // Found a valid key
+      }
+      if (it == myMap.begin()) {
+          break; // Stop if we are at the beginning
+      }
+      --it;
+  }
 
-  sand_reco::kf::StateVector initial_state_vector(particleInfo.pos.x() * 1E-3,particleInfo.pos.y() * 1E-3,invr_guess,0,0);
+  throw std::runtime_error("No valid key found that is <= target with a non-empty vector!");
+}
 
-  std::cout<<"Initial state vector:   ("<< initial_state_vector.x() <<" , "<< initial_state_vector.y()<< " , " << initial_state_vector.signedInverseRadius() ;
-  std::cout<<" , "<<initial_state_vector.tanLambda() << " , " << initial_state_vector.phi() << " )" << std::endl;
-
-
-  std::cout<<"MC Initial state vector: ("<< MC_initial_state_vector.x() <<" , "<< MC_initial_state_vector.y()<< " , " << MC_initial_state_vector.signedInverseRadius() ;
-  std::cout<<" , "<<MC_initial_state_vector.tanLambda() << " , " << MC_initial_state_vector.phi() << " )" << std::endl;
-
-  sand_reco::kf::TrackStep trackStep;
-  trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction,
-                      sand_reco::kf::State(initial_state_vector, initial_cov_matrix));
-  trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering,
-                      sand_reco::kf::State(initial_state_vector, initial_cov_matrix));
-
-
-  trackStep.setPropagatorMatrix(initial_cov_matrix);
+TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, int maxSteps){
   
-  this_track_.addStep(trackStep);
+  double closest_key;  // Variable to store the closest key
+  TrackletMap tracklet_map; // Output tracklet map
+  
+  closest_key = findClosestNonEmptyKey(*z_to_tracklets, particloInfo.pos.Z());
+  
+  std::cout << "Closest key in z: " << closest_key << std::endl;
+  std::cout << "Number of traclets in closest key: " << z_to_tracklets->at(closest_key).size() << std::endl;
 
-  particleInfo_       = particleInfo;
-  z_to_tracklets_     = z_to_tracklets;
-  current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
-  current_step_        = 0u;
-  current_z_           = particleInfo.pos.Z(); //Notice: UNITS!!  mm, why?
-  current_orientation_ = Orientation::kVertical;
+
+  // Add the last tracklet to the map
+  std::vector<TVectorD> last_traclet;
+  last_traclet.push_back(z_to_tracklets->at(closest_key)[0]);
+  tracklet_map[closest_key] = last_traclet;
+  std::cout << "First tracklet found (x,y,z) : (" << z_to_tracklets->at(closest_key)[0][0] << " , "; 
+  std::cout << z_to_tracklets->at(closest_key)[0][1] << " , "<<closest_key<<" )" << std::endl;
+
+
+  // Find tracklet maxStep steps below or as close as possible without an empty vector
+  auto trl = z_to_tracklets->find(closest_key);
+
+  int realStep = 0;
+
+  for (int step = 0; step < maxSteps; ++step) {
+    if (trl != z_to_tracklets->begin()) {
+        --trl;
+        realStep++;
+    } else {
+        break; // Stop if we reach the beginning
+    }
+  }
+
+  auto finalStep = realStep;
+  for (int step = 0; step < realStep; ++step) {
+    if (!trl->second.empty()) {
+        std::cout << "Found valid far key: " << trl->first << " for now choosing first value (x,y,z): (";
+        std::cout << trl->second[0][0] << " , " << trl->second[0][1] << " , " << trl->first << " )" << std::endl;
+        std::vector<TVectorD> first_tracklet;
+        first_tracklet.push_back(trl->second[0]);
+        tracklet_map[trl->first] = first_tracklet;
+        break; // Stop searching after finding a valid key
+    } else if (trl->first != closest_key){
+        ++trl; 
+        finalStep--;
+    } else{
+      std::cout << "No valid point found within the given range." << std::endl;
+      return tracklet_map; // Return empty map if no valid point is found
+    }
+  }
+
+  for (int step = 0; step < finalStep; ++step) {
+    if (!trl->second.empty() && step>= finalStep/2) {
+        std::cout << "Found valid middle key: " << trl->first << " for now choosing first value (x,y,z): (";
+        std::cout << trl->second[0][0] << " , " << trl->second[0][1] << " , " << trl->first << " )" << std::endl;
+        std::vector<TVectorD> first_tracklet;
+        first_tracklet.push_back(trl->second[0]);
+        tracklet_map[trl->first] = first_tracklet;
+        break; // Stop searching after finding a valid key
+    } else if (trl->first != closest_key){
+        ++trl; // Stop if we reach the beginning
+    } else{
+      std::cout << "No valid middle point found." << std::endl;
+      return tracklet_map; // Return empty map if no valid point is found
+    }
+  }
+
+  return tracklet_map;
+
+
 }
 
 // To Do: implment a seeding algorithm
-// void Manager::Init(const STTPlaneID& planeID, int clusterID)
-  // {
-  //   auto cluster = sand_reco::kf::ClusterManager::getCluster(clusterID);
-  //   auto trkParameter = cluster.getRecoParameters().at(0).trk;
+void Manager::initFromSeed(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo)
+{
+  
+}
 
-  //   double x, y, invR, tanL, phi;
-  //   auto plane = STTStrawTubeTracker::getPlane(planeID);
-  //   auto defaultCharge = -1;
-  //   auto planeOrientation = plane.getOrientation();
-
-  //   if (planeOrientation == STTPlane::EOrientation::kHorizontal) {
-  //     x = SANDTrackerUtils::getSANDInnerVolumeCenterPosition()[0];
-  //     y = trkParameter.m * plane.getZ() + trkParameter.q;
-  //     invR = defaultCharge /
-  //            SANDTrackerUtils::getRadiusInMMFromPerpMomentumInGeV(1. /*GeV*/);
-  //     tanL = 0.;
-  //     phi = getPhiFromTheta(atan(trkParameter.m), defaultCharge);
-  //   } else {
-  //     x = trkParameter.m * plane.getZ() + trkParameter.q;
-  //     ;
-  //     y = SANDTrackerUtils::getSANDInnerVolumeCenterPosition()[1];
-  //     invR = defaultCharge /
-  //            SANDTrackerUtils::getRadiusInMMFromPerpMomentumInGeV(1. /*GeV*/);
-  //     tanL = trkParameter.m;
-  //     phi = 0.5 * TMath::Pi();
-  //   }
-
-  //   sand_reco::kf::TrackStep trackStep;
-  //   trackStep.setPlaneID(planeID);
-  //   trackStep.setClusterIDForThisState(clusterID);
-  //   sand_reco::kf::StateVector stateVector(x, y, invR, tanL, phi);
-
-  //   auto initialCovMatrix = getInitialCovMatrix(stateVector, planeOrientation);
-
-  //   trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction,
-  //                      sand_reco::kf::State(stateVector, initialCovMatrix));
-  //   trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering,
-  //                      sand_reco::kf::State(stateVector, initialCovMatrix));
-  //   this_track_.AddStep(trackStep);
-
-  //   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
-  //   current_step_ = 0u;
-
-  //   STTTRACKRECO_LOG(
-  //       "INFO", TString::Format("State Vector     : %s",
-  //                               SANDTrackerUtils::PrintStateVector(stateVector).Data())
-  //                   .Data());
-  //   STTTRACKRECO_LOG(
-  //       "INFO", TString::Format("Covariance Matrix: %s",
-  //                               SANDTrackerUtils::PrintMatrix(initialCovMatrix).Data())
-  //                   .Data());
-// }
 
 void Manager::run()
 {
@@ -739,120 +754,6 @@ void Manager::run()
   }
 
   while (current_step_ >= 0) smooth();
-}
-
-void Manager::seed()
-{
-  // criterio per quando fermare la ricerca
-  int stepLength = 1;
-
-  auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;
-  auto currentStep = this_track_.getStep(current_step_);
-
-  auto filteredStateVector =
-      currentStep.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering)
-          .getStateVector();
-
-  auto& next_tracklets = z_to_tracklets_->at(nextZ);
-
-  std::cout<<"Number of tracklets at next step: "<<next_tracklets.size()<<std::endl;
-
-  double dZ = (nextZ - current_z_) / 1000;
-  double dE = 0;
-  double beta = 0;
-
-  propagate(dE, dZ, beta);
-
-  auto predictionStateVector = this_track_.getStep(current_step_)
-          .getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction).getStateVector();
-  auto predictionStateCovMatrix = this_track_.getStep(current_step_).getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction)
-          .getStateCovMatrix();
-  auto prediction = getPrediction(current_orientation_, predictionStateVector);
-
-  std::cout<<"Predicted state vector:   ("<< predictionStateVector.x() <<" , "<< predictionStateVector.y()<< " , " << predictionStateVector.signedInverseRadius() ;
-  std::cout<<" , "<<predictionStateVector.tanLambda() << " , " << predictionStateVector.phi() << " )" << std::endl;
-
-
-
-  // for (int i = 0; i < (int)next_tracklets.size(); i++) {
-  //   sand_reco::kf::Measurement measurement = getMeasurementFromTracklet(next_tracklets[i]);
-  //   std::cout<<"Measurement: "<<measurement[0][0]<<" , "<<measurement[1][0]<<std::endl;
-  // }
-  
-        
-  // for (int i = 0; i < (int)next_tracklets.size(); i++) {
-  //     sand_reco::kf::Measurement measurement = getMeasurementFromTracklet(next_tracklets[i]);
-  // }
-
-  // Notice: if currentZ is not in the map, the second condition is always true
-  //while (stepLength < 100 && std::distance(z_to_tracklets_->begin(), z_to_tracklets_->find(current_z_)) >= stepLength) {
-    // 1- propagate to [currentPlaneID - step]
-  //   auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;
-
-  //   auto currentStep = this_track_.getStep(current_step_);
-  //   auto filteredStateVector =
-  //       currentStep.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering)
-  //           .getStateVector();
-
-  //   auto dir = -1. * getDirectiveCosinesFromStateVector(filteredStateVector);
-
-  //   // To Do: check if this is still valid and add a real fix if needed
-  //   if (dir.Z() > 0) {
-  //     dir *= -1;
-  //   }
-
-  //   auto current_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
-  //                             filteredStateVector.radius(),
-  //                             filteredStateVector.tanLambda()) / 1000;
-  //   double gamma = sqrt(current_mom * current_mom + particleInfo_.mass * particleInfo_.mass) /
-  //                   particleInfo_.mass;
-  //   double beta = sqrt(1 - pow(1 / gamma, 2));
-
-  //   // To Do: check all units
-  //   auto dE = SANDTrackerUtils::getDE(
-  //                       nextZ, 
-  //                       1000 * filteredStateVector.x(), 1000 * filteredStateVector.y(), current_z_, 
-  //                       dir.X(), dir.Y(), dir.Z(),
-  //                       beta, particleInfo_.mass, particleInfo_.charge) / 1000;
-
-  //   double dZ = (nextZ - current_z_) / 1000;
-
-  //   propagate(dE, dZ, beta);
-
-  //   // 2- Search best match
-  //   auto predictionStateVector = this_track_.getStep(current_step_)
-  //           .getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction).getStateVector();
-  //   auto predictionStateCovMatrix = this_track_.getStep(current_step_).getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction)
-  //           .getStateCovMatrix();
-  //   auto prediction = getPrediction(current_orientation_, predictionStateVector);
-
-  //   auto measurementNoiseMatrix = getMeasurementNoiseMatrix();
-  //   auto projectionMatrix = getProjectionMatrix(current_orientation_, 
-  //                                               predictionStateVector);
-  //   TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
-  //                                         projectionMatrix);
-  //   auto Sk = measurementNoiseMatrix + projectionMatrix *
-  //                                             predictionStateCovMatrix *
-  //                                             projectionMatrixTransposed;
-
-  // int tracklet_index = findBestMatch(nextZ, prediction, Sk);
-
-  //   // // 3- If it is found: step = 1
-  //   // //    else step++
-  //   if (tracklet_index != -1) {
-  //     stepLength = 1;
-  //     auto measurement = getMeasurementFromTracklet(z_to_tracklets_->at(nextZ)[tracklet_index]);
-  //     filter(measurement, prediction);
-  //     current_z_ = nextZ;
-  //   } else {
-  //     stepLength++;
-  //     this_track_.removeLastStep();
-  //     current_step_--;
-  //     current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
-  //   }
-  // }
-
-  // while (current_step_ >= 0) smooth();
 }
 
 } // namespace kf

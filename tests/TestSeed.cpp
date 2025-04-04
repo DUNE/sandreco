@@ -23,9 +23,8 @@
 #include "EDEPTree.h"
 
 void trySeedManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
-  sand_reco::kf::Manager manager;
-  manager.initFromReco(&z_to_tracklets, particleInfo);
-  manager.seed();
+  sand_reco::kf::Manager managerMC;
+  auto closest= managerMC.FindSeedPoints_MCstart(&z_to_tracklets, particleInfo);
   return;
 }
 
