@@ -1527,17 +1527,14 @@ void SANDGeoManager::setTrackerInfo()
 {
   geo_->CdTop();
   TGeoHMatrix matrix = *gGeoIdentity;
-  std::string geometry;
   setPlaneInfo(matrix);
   if (geo_->FindVolumeFast("STTtracker_PV")) {
     std::cout << "using SAND tracker : STT\n";
-    geometry = "STT";
   } else {
     std::cout << "using SAND tracker : DRIFT CHAMBER\n";
-    geometry = "DRIFT";
   }
   rearrangePlanes();
-  fillAdjacentCells(geometry);
+  // fillAdjacentCells(geometry);
   printModulesInfo(0);
 }
 

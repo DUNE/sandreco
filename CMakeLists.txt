@@ -92,10 +92,6 @@ target_link_libraries(Reconstruct Struct Utils SANDGeoManager SANDClustering EDE
 add_executable(Display src/display.cpp)
 target_link_libraries(Display Struct Utils)
 
-# Creates test_DisplayReco executable for testing.
-add_executable(test_DisplayReco tests/test_DisplayReco.cpp)
-target_link_libraries(test_DisplayReco Struct Utils)
-
 # Creates FastCheck executable.
 add_executable(FastCheck src/fastcheck.cpp)
 target_link_libraries(FastCheck Struct Utils)

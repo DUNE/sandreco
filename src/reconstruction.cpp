@@ -1621,17 +1621,17 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   binning.push_back(last_z);
 }
 
-//####################################
-// Process events with Kalman Filter #
-//####################################
-void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
+///////////////////////////////////////
+// Process events with Kalman Filter //
+///////////////////////////////////////
+track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
   sand_reco::kf::Manager manager;
   manager.initFromMC(&z_to_tracklets, particleInfo);
   manager.run();
 
-  auto track = manager.getTrack();
+  auto reco_track = manager.getTrack();
 
-  auto step = track.getSteps().back();
+  auto step = reco_track.getSteps().back();
   auto reco_state =
         step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
   auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
@@ -1639,10 +1639,19 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
 
   std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
 
-  return;
+  track trk;
+  trk.tid = particleInfo.id;
+  trk.r   = reco_state.radius();
+  trk.h   = reco_state.charge();
+  trk.b   = reco_state.tanLambda();
+  trk.x0  = reco_state.x();
+  trk.y0  = reco_state.y();
+  trk.z0  = reco_state.y();
+
+  return trk;
 }
 
-void ProcessEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits)
+void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits)
 {
   int p[9] = {100, -2000, 2000, 100, -4000, -1000, 100, 23800, 26000};
 
@@ -1666,10 +1675,6 @@ void ProcessEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   int gg = 0;
   for (const auto& container:clusters.getContainers()) {
     for (const auto& cluster_in_container:container->getClusters()) {
-      // std::cout << 100 * gg / container->getClusters().size() << std::endl;
-      // gg++;
-      // if (gg == 100) break;
-      // if(cluster_in_container.getZ() < 25650) continue;
 
       traklet_finder.setCells(cluster_in_container);
       auto minima = traklet_finder.findTracklets();
@@ -1701,24 +1706,43 @@ void ProcessEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   TDatabasePDG pdg_db;
   std::vector<SParticleInfo> particleInfos;
   for (auto trj:primaryTrj) {
+
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
+      continue;
+    }
+
+    auto particle = pdg_db.GetParticle(trj.GetPDGCode());
+
+    if (!particle) {
+      continue;
+    }
+
+    if (particle->Mass() == 0 || particle->Charge() == 0) {
+      continue;
+    }
+    
     SParticleInfo pi;
     pi.pdg_code = trj.GetPDGCode();
     pi.id       = trj.GetId();
-    auto particle = pdg_db.GetParticle(pi.pdg_code);
-    if (!particle) continue;
     pi.mass = particle->Mass();
     pi.charge = particle->Charge() / 3;
-    try{
-      pi.pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).back().GetPosition().Vect();
-      pi.mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).back().GetMomentum();
+
+    double max_z = 0;
+    bool to_be_reconstructed = false;
+    for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
+      if (point.GetPosition().Z() > max_z && point.GetMomentum().Z() > 100) {
+        max_z = point.GetPosition().Z();
+        pi.pos = point.GetPosition().Vect();
+        pi.mom = point.GetMomentum();
+        to_be_reconstructed = true;
+      }
     }
-    catch (const std::out_of_range& e) {
-      std::cerr << "Out of Range error." << std::endl;
-      continue;
-    }
+
+    if (!to_be_reconstructed) continue;
+
     particleInfos.push_back(pi);
 
-    std::cout << "Initial Momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
+    std::cout << "Initial selected momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
   }
   
   int nParticles = particleInfos.size();
@@ -1730,7 +1754,7 @@ void ProcessEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   }
 
   for (int ip = 0; ip < nParticles; ip++) {
-    tryCompleteManager(z_to_tracklets, particleInfos[ip]);
+    tracks.push_back(runKalmanFilterManager(z_to_tracklets, particleInfos[ip]));
   }
 }
 
@@ -1738,7 +1762,7 @@ enum class STT_Mode {
   fast_only_primaries,
   fast,
   full,
-  kf
+  primary_only_kf
 };
 enum class ECAL_Mode {
   fast
@@ -1764,9 +1788,6 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   TTree* tTrueMC = (TTree*)f_hits.Get("EDepSimEvents");
   TGeoManager* geo = (TGeoManager*)f_hits.Get("EDepSimGeometry");
   TTree* tDigit = (TTree*)f_digits.Get("tDigit");
-  
-  SANDGeoManager sand_geo;
-  sand_geo.init(geo);
 
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
@@ -1780,13 +1801,16 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   }
 
   std::string trackerType = "";
+  std::string geometry;
 
   if (geo->FindVolumeFast("STTtracker_PV")) {
     std::cout << "\n--- STT based simulation ---\n";
     trackerType = "Straw";
+    geometry = "STT";
   } else if (geo->FindVolumeFast("SANDtracker_PV")) {
     std::cout << "\n--- Drift based simulation ---\n";
     trackerType = "DriftVolume";
+    geometry = "DRIFT";
   } else {
     std::cout << "Error in retriving volume information from Geo Manager, "
                  "exiting...\n";
@@ -1861,8 +1885,9 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
                   tol_phi, tol_x, tol_mod, mindigtr, dn_tol, dz_tol);
         TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
         break;
-      case STT_Mode::kf:
-        ProcessEventWithKF(&sand_geo, ev, vec_digi);
+      case STT_Mode::primary_only_kf:
+        sand_geo.fillAdjacentCells(geometry);
+        ProcessEventWithKF(vec_tr, &sand_geo, ev, vec_digi);
         break;
     }
 
@@ -1918,8 +1943,8 @@ int main(int argc, char* argv[])
   } else if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
     stt_mode = STT_Mode::fast;
     std::cout << "STT_Mode: fast\n";
-  } else if (argc > 4 && strcmp(argv[4], "stt_mode::kf") == 0) {
-    stt_mode = STT_Mode::kf;
+  } else if (argc > 4 && strcmp(argv[4], "stt_mode::primary_only_kf") == 0) {
+    stt_mode = STT_Mode::primary_only_kf;
     std::cout << "STT_Mode: kalman filter\n";
   } else {
     std::cout << "STT_Mode: fast_only_primaries\n";
