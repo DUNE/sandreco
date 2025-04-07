@@ -553,14 +553,16 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
 
   trackStep.setPropagatorMatrix(initial_cov_matrix);
   
-  this_track_.addStep(trackStep);
-
+  
   particleInfo_       = particleInfo;
   z_to_tracklets_     = z_to_tracklets;
   current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
   current_step_        = 0u;
   current_z_           = particleInfo.pos.Z(); //Notice: UNITS!!  mm, why?
-  current_orientation_ = Orientation::kVertical;
+  current_orientation_ = Orientation::kHorizontal;
+  
+  this_track_.Clear();
+  this_track_.addStep(trackStep);
 }
 
 // To Do: implment a seeding algorithm
@@ -621,9 +623,15 @@ void Manager::run()
 {
   // criterio per quando fermare la ricerca
   int stepLength = 1;
+  if (z_to_tracklets_->lower_bound(current_z_) == z_to_tracklets_->begin()) {
+    this_track_.removeLastStep();
+    current_step_--;
+    return;
+  }
+
 
   // Notice: if currentZ is not in the map, the second condition is always true
-  while (stepLength < 100 && std::distance(z_to_tracklets_->begin(), z_to_tracklets_->find(current_z_)) >= stepLength) {
+  while (stepLength < 10 && std::distance(z_to_tracklets_->begin(), z_to_tracklets_->lower_bound(current_z_)) >= stepLength) {
     // 1- propagate to [currentPlaneID - step]
     auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;
 

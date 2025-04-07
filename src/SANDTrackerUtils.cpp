@@ -135,7 +135,7 @@ double SANDTrackerUtils::getDE(double z,
 
   double dE = 0.;
   while((lastPosition = geo_->GetCurrentPoint()) && lastPosition[2] > z) {
-    geo_->FindNextBoundary();
+    geo_->FindNextBoundary(1);
     auto density = getDensityInGCM3();
     auto pathLength = getPathLengthInCM();
 

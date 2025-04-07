@@ -11,7 +11,7 @@
 namespace digitization
 {
 
-enum class EcalDigiMode;
+enum class ECAL_digi_mode ;
 
 namespace fluka
 {
@@ -34,7 +34,7 @@ void group_pmts_in_cells(TGeoManager* geo,
 
 void digitize_ecal(TG4Event* ev, TGeoManager* geo,
                    std::vector<dg_cell>& vec_cell,
-                   EcalDigiMode ecal_digi_mode);
+                   ECAL_digi_mode  ecal_digi_mode);
 
 }  // namespace ecal
 
@@ -55,7 +55,7 @@ void digitizeStt(TG4Event* ev, TGeoManager* geo, int NHits,
 }  // namespace stt
 
 void digitize(const char* finname, const char* foutname,
-              EcalDigiMode ecal_digi_mode);
+              ECAL_digi_mode  ecal_digi_mode);
 
 }  // namespace fluka
 

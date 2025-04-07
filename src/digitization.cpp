@@ -23,13 +23,13 @@ int main(int argc, char* argv[])
   }
 
   auto detsim_type = digitization::DetSimType::kEdepsim;
-  auto ecal_digi_mode = digitization::EcalDigiMode::const_fract;
+  auto ecal_digi_mode = digitization::ECAL_digi_mode ::const_fract;
 
   for (int i = 3; i < argc; i++) {
     if (strcmp(argv[i], "detsim_type::fluka") == 0) {
       detsim_type = digitization::DetSimType::kFluka;
     } else if (strcmp(argv[i], "ecal_digi_mode::fixed_thresh") == 0) {
-      ecal_digi_mode = digitization::EcalDigiMode::fixed_thresh;
+      ecal_digi_mode = digitization::ECAL_digi_mode ::fixed_thresh;
       sand_reco::ecal::acquisition::fixed_thresh_pe = atof(argv[++i]);
     }
   }
@@ -37,9 +37,9 @@ int main(int argc, char* argv[])
   std::cout << (detsim_type == digitization::DetSimType::kEdepsim
                     ? "DetSimType: EDEPSIM\n"
                     : "DetSimType: FLUKA\n");
-  std::cout << (ecal_digi_mode == digitization::EcalDigiMode::const_fract
-                    ? "EcalDigiMode: constant fraction\n"
-                    : "EcalDigiMode: fixed threshold\n");
+  std::cout << (ecal_digi_mode == digitization::ECAL_digi_mode ::const_fract
+                    ? "ECAL_digi_mode : constant fraction\n"
+                    : "ECAL_digi_mode : fixed threshold\n");
 
   if (detsim_type == digitization::DetSimType::kEdepsim) {
     digitization::edep_sim::digitize(argv[1], argv[2], ecal_digi_mode);

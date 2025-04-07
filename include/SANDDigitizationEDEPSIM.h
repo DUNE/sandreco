@@ -12,7 +12,7 @@
 namespace digitization
 {
 
-enum class EcalDigiMode;
+enum class ECAL_digi_mode ;
 
 namespace edep_sim
 {
@@ -37,7 +37,7 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
 
 void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
                    std::vector<dg_cell>& vec_cell,
-                   EcalDigiMode ecal_digi_mode);
+                   ECAL_digi_mode  ecal_digi_mode);
 
 }  // namespace ecal
 
@@ -72,7 +72,7 @@ void digitizeDrift(const TG4Event& ev, const SANDGeoManager& geo,
 
 // digitize event
 void digitize(const char* finname, const char* foutname,
-              EcalDigiMode ecal_digi_mode);
+              ECAL_digi_mode  ecal_digi_mode);
 
 }  // namespace edep_sim
 

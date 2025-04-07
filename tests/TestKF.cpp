@@ -28,14 +28,27 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
   manager.run();
 
   auto track = manager.getTrack();
+  if (track.getSteps().size() > 3) {
+    std::cout << track.getSteps().size() << std::endl;
+    auto step = track.getSteps().back();
+    auto reco_state =
+          step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+    auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
+                                  reco_state.radius(), reco_state.tanLambda());
 
-  auto step = track.getSteps().back();
-  auto reco_state =
-        step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
-  auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
-                                reco_state.radius(), reco_state.tanLambda());
+    std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
+    
 
-  std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
+    
+    int i = 0;
+    for (auto& step : track.getSteps()) {
+      auto prediction = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction).getStateVector();
+      auto filtering = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateVector();
+      auto smoothing =  step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+      
+      
+    }
+  }
 
   return;
 }
@@ -82,6 +95,8 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     }
   }
   
+  for (auto z : z_to_tracklets) std::cout << z.first << std::endl;
+  
   int sum = 0;
   for (auto el:z_to_tracklets) {
     sum += el.second.size();
@@ -100,21 +115,49 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   TDatabasePDG pdg_db;
   std::vector<SParticleInfo> particleInfos;
   for (auto trj:primaryTrj) {
+
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
+      continue;
+    }
+
+    auto particle = pdg_db.GetParticle(trj.GetPDGCode());
+
+    if (!particle) {
+      continue;
+    }
+
+    if (particle->Mass() == 0 || particle->Charge() == 0) {
+      continue;
+    }
+    
     SParticleInfo pi;
     pi.pdg_code = trj.GetPDGCode();
     pi.id       = trj.GetId();
-    auto particle = pdg_db.GetParticle(pi.pdg_code);
-    if (!particle) continue;
     pi.mass = particle->Mass();
     pi.charge = particle->Charge() / 3;
 
-    pi.pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).back().GetPosition().Vect();
-    pi.mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).back().GetMomentum();
+    // std::cout << pi.mass << " " << pi.charge << " " << pi.pdg_code << std::endl;
+    // std::cout << trj.GetHitMap().at(string_to_component[tracker_name]).size() << std::endl;
+
+    double max_z = 0;
+    bool to_be_reconstructed = false;
+    for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
+      // std::cout << point.GetPosition().Z() << " " << point.GetMomentum().Mag() << " " << point.GetMomentum().Z() << std::endl;
+      if (point.GetPosition().Z() > max_z && point.GetMomentum().Z() > 100) {
+        max_z = point.GetPosition().Z();
+        pi.pos = point.GetPosition().Vect();
+        pi.mom = point.GetMomentum();
+        to_be_reconstructed = true;
+      }
+    }
+
+    if (!to_be_reconstructed) continue;
+
     particleInfos.push_back(pi);
 
     std::cout << "Initial Momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
+    std::cout << "Selected Momentum " << pi.mom.Mag() << " " << pi.mom.Z() << std::endl;
   }
-
   int nParticles = particleInfos.size();
   
   if (nParticles == 0) {

@@ -4,36 +4,36 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <iomanip>
 
 #include "TFile.h"
 #include "TTree.h"
 
 #include "struct.h"
 
-std::tuple<double, double, double, double> fit_ls(int, double[], double[],
+#include "SANDGeoManager.h"
+
+std::tuple<double, double, double, double> fitLs(int, double[], double[],
                                                   double[]);
 
-std::pair<std::vector<dg_cell>, std::vector<dg_cell>> ProcessMultiHits(
-    std::vector<dg_cell>, std::vector<dg_cell>);
-std::pair<std::vector<dg_cell>, std::vector<int>> GetNeighbours(
-    std::vector<dg_cell>, int, std::vector<int>, std::vector<dg_cell>);
+std::pair<std::vector<dg_cell>, std::vector<dg_cell>> processMultiHits(const SANDGeoManager* sand_geo,
+    const std::vector<dg_cell>&);
+std::pair<std::vector<dg_cell>, std::vector<int>> getNeighbours(
+    const std::vector<dg_cell>&, int, std::vector<int>, std::vector<dg_cell>);
 
+std::vector<cluster> clusterize(const SANDGeoManager* sand_geo, const std::vector<dg_cell>&);
+std::vector<cluster> merge(const std::vector<cluster>&);
+std::vector<cluster> split(const SANDGeoManager* sand_geo, const std::vector<cluster>&, bool&);
 
-std::vector<cluster> clusterize(std::vector<dg_cell>*);
-void Clust_info(cluster);
-std::vector<cluster> TrackFit(std::vector<cluster>);
-std::vector<cluster> Merge(std::vector<cluster>);
-std::vector<cluster> Split(std::vector<cluster>, bool&);
-std::vector<cluster> RecoverIncomplete(std::vector<cluster>,
-                                       std::vector<dg_cell>);
-cluster Calc_variables(std::vector<reco_cell>);
-cluster Create_cluster(std::vector<dg_cell>);
+void recoverIncomplete(const SANDGeoManager* sand_geo, std::vector<cluster>&, const std::vector<dg_cell>&);
+void clustInfo(cluster);
+void trackFit(std::vector<cluster>&);
 
-bool RepetitionCheck(std::vector<int>, int);
-bool isNeighbour(int, int);
+cluster calcVariables(const std::vector<reco_cell>&);
+cluster createCluster(const SANDGeoManager* sand_geo, const std::vector<dg_cell>&);
 
-double EfromADCsingle(double adc, double f);
-double DfromTDC(double, double);
+bool repetitionCheck(std::vector<int>, int);
+bool isNeighbour(const dg_cell&, const dg_cell&);
 
 bool endsWith(const std::string& fullString, const std::string& ending);
 

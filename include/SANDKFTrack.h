@@ -157,6 +157,7 @@ class Track {
     void setStage(int index, TrackStep::TrackStateStage stage, State state) { steps_.at(index).setStage(stage, state); };
     void setClusterIDForState(int index, int cluster_id) { steps_.at(index).setClusterIDForThisState(cluster_id); };
     void removeLastStep() { steps_.erase(steps_.end()-1); };
+    void Clear() {steps_.clear();}
 };
 } // namespace kf
 } // namespace sand_reco

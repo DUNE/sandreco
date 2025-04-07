@@ -236,14 +236,14 @@ void sand_reco::fluka::init(TGeoManager* geo)
 
 int sand_reco::ecal::decoder::EncodeID(int det, int mod, int lay, int cel)
 {
-  return cel + 100 * lay + 1000 * mod + det * 100000;
+  return cel + 100 * lay + 1000 * mod + det * 1e7;
 }
 
 void sand_reco::ecal::decoder::DecodeID(int id, int& det, int& mod, int& lay,
                                         int& cel)
 {
-  det = id / 100000;
-  id -= det * 100000;
+  det = id / 1e7;
+  id -= det * 1e7;
 
   mod = id / 1000;
   id -= mod * 1000;
@@ -357,9 +357,16 @@ double sand_reco::ecal::reco::EfromADC(double adc1, double adc2, double d1,
   double f1 = attenuation::AttenuationFactor(d1, planeID);
   double f2 = attenuation::AttenuationFactor(d2, planeID);
 
-  double const attpassratio = 0.187; //new
   //return 0.5 * (adc1 / f1 + adc2 / f2) * energy_calibration::adc2MeV;
-  return 0.5 * (adc1 / f1 + adc2 / f2) / (attpassratio * acquisition::pe2ADC * photo_sensor::e2pe);
+  return 0.5 * (adc1 / f1 + adc2 / f2) / (energy_calibration::attpassratio * acquisition::pe2ADC * photo_sensor::e2pe);
+}
+
+// energy deposit of the hit from a single adc and 
+// reconstructed longidutinal coordinate of a cluster
+double sand_reco::ecal::reco::EfromADCsingle(double adc, double f)
+{
+  return adc / (f * energy_calibration::attpassratio * sand_reco::ecal::acquisition::pe2ADC *
+                sand_reco::ecal::photo_sensor::e2pe);
 }
 
 // reconstruct hit position, time and energy of the cell
