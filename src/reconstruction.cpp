@@ -1631,22 +1631,24 @@ track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticl
 
   auto reco_track = manager.getTrack();
 
-  auto step = reco_track.getSteps().back();
-  auto reco_state =
-        step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
-  auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
-                                reco_state.radius(), reco_state.tanLambda());
-
-  std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
-
   track trk;
-  trk.tid = particleInfo.id;
-  trk.r   = reco_state.radius();
-  trk.h   = reco_state.charge();
-  trk.b   = reco_state.tanLambda();
-  trk.x0  = reco_state.x();
-  trk.y0  = reco_state.y();
-  trk.z0  = reco_state.y();
+  if (reco_track.getSteps().size() > 3) {
+    auto step = reco_track.getSteps().back();
+    auto reco_state =
+          step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+    auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
+                                  reco_state.radius(), reco_state.tanLambda());
+
+    std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
+
+    trk.tid = particleInfo.id;
+    trk.r   = reco_state.radius();
+    trk.h   = reco_state.charge();
+    trk.b   = reco_state.tanLambda();
+    trk.x0  = reco_state.x();
+    trk.y0  = reco_state.y();
+    trk.z0  = reco_state.y();
+  }
 
   return trk;
 }
@@ -1817,6 +1819,10 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
     exit(-1);
   }
 
+  if (stt_mode == STT_Mode::primary_only_kf) {
+    sand_geo.fillAdjacentCells(geometry);
+  }
+
   std::vector<double> sampling;
 
   DetermineModulesPosition(geo, sampling);
@@ -1886,7 +1892,6 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
         TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
         break;
       case STT_Mode::primary_only_kf:
-        sand_geo.fillAdjacentCells(geometry);
         ProcessEventWithKF(vec_tr, &sand_geo, ev, vec_digi);
         break;
     }
@@ -1924,7 +1929,7 @@ void help_reco()
   std::cout << "    - stt_mode: 'stt_mode::fast_only_primaries' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
   std::cout << "                'stt_mode::full' \n";
-  std::cout << "                'stt_mode::kf' \n";
+  std::cout << "                'stt_mode::primary_only_kf' \n";
 }
 
 int main(int argc, char* argv[])
