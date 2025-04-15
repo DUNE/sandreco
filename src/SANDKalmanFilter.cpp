@@ -460,7 +460,7 @@ void Manager::setNextOrientation()
   }
 }
 
-void SANDKalmanFilterManager::EvaluateInnovation(const SANDKFMeasurement& measurement, 
+void Manager::EvaluateInnovation(const SANDKFMeasurement& measurement, 
                                                                 const SANDKFMeasurement& prediction,
                                                                 const TMatrixD&  Sk)
 {       
@@ -472,7 +472,7 @@ void SANDKalmanFilterManager::EvaluateInnovation(const SANDKFMeasurement& measur
     double C = Sk[i][i];
     g[i] = r/sqrt(C);
   }
-  fThisTrack.SetInnovation(fCurrentStep, g);
+  this_track_.setInnovation(current_step_, g);
 
 }
 
@@ -503,8 +503,8 @@ void Manager::filter(const sand_reco::kf::Measurement& measurement,
 
   setNextOrientation();
 
-  auto predictionStateCovMatrix = fThisTrack.GetStep(fCurrentStep).GetStage(SANDKFTrackStep::SANDKFTrackStateStage::kPrediction)
-            .GetStateCovMatrix();
+  auto predictionStateCovMatrix = this_track_.getStep(current_step_).getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction)
+            .getStateCovMatrix();
   TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
                                           projectionMatrix);
   TMatrixD Sk = measurementNoiseMatrix + projectionMatrix *
@@ -608,9 +608,9 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
   this_track_.Clear();
   this_track_.addStep(trackStep);
 
-  fThisTrack.SetZ(fCurrentStep, particleInfo.pos.Z());
-  fThisTrack.SetX(fCurrentStep, particleInfo.pos.X());
-  fThisTrack.SetY(fCurrentStep, particleInfo.pos.Y());
+  this_track_.setZ(current_step_, particleInfo.pos.Z());
+  this_track_.setX(current_step_, particleInfo.pos.X());
+  this_track_.setY(current_step_, particleInfo.pos.Y());
 
 }
 
@@ -683,7 +683,7 @@ void Manager::run()
   bool in_range = true;
   while (stepLength < 10 && std::distance(z_to_tracklets_->begin(), z_to_tracklets_->lower_bound(current_z_)) >= stepLength) {
     // 1- propagate to [currentPlaneID - step]
-    auto it = (z_to_tracklets_->lower_bound(fCurrentZ));
+    auto it = (z_to_tracklets_->lower_bound(current_z_));
     for(int i= 0; i < stepLength; i++){
       if(it == z_to_tracklets_->begin()){
         in_range = false;
@@ -751,9 +751,9 @@ void Manager::run()
     if (tracklet_index != -1) {
       stepLength = 1;
       auto measurement = getMeasurementFromTracklet(z_to_tracklets_->at(nextZ)[tracklet_index]);
-      fThisTrack.SetZ(fCurrentStep, nextZ);
-      fThisTrack.SetX(fCurrentStep, z_to_tracklets_->at(nextZ)[tracklet_index][0]);
-      fThisTrack.SetY(fCurrentStep, z_to_tracklets_->at(nextZ)[tracklet_index][1]);
+      this_track_.setZ(current_step_, nextZ);
+      this_track_.setX(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][0]);
+      this_track_.setY(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][1]);
       filter(measurement, prediction);
       current_z_ = nextZ;
     } else {

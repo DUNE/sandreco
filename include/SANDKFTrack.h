@@ -150,14 +150,14 @@ class TrackStep {
     const State& getStage(TrackStateStage stage) const;
     void setPropagatorMatrix(TMatrixD propagator_matrix) { propagator_matrix_ = propagator_matrix; };
     const TMatrixD getPropagatorMatrix() { return propagator_matrix_; };
-    void SetInnovation(std::vector<double> innovation) { innovation_ = innovation; };
-    const std::vector<double>& GetInnovation() const { return innovation_ ;};
-    void SetZ(double z){z_ = z;};
-    double GetZ() const {return z_;};
-    void SetX(double x){x_ = x;};
-    double GetX() const {return x_;};
-    void SetY(double y){y_ = y;};
-    double GetY() const {return y_;};
+    void setInnovation(std::vector<double> innovation) { innovation_ = innovation; };
+    const std::vector<double>& getInnovation() const { return innovation_ ;};
+    void setZ(double z){z_ = z;};
+    double getZ() const {return z_;};
+    void setX(double x){x_ = x;};
+    double getX() const {return x_;};
+    void setY(double y){y_ = y;};
+    double getY() const {return y_;};
     
 
 };
@@ -170,10 +170,10 @@ class Track {
     const TrackStep& getStep(int index) const {return steps_.at(index); };
     void addStep(TrackStep state) { steps_.push_back(state); };
     void setStage(int index, TrackStep::TrackStateStage stage, State state) { steps_.at(index).setStage(stage, state); };
-    void SetInnovation(int index, std::vector<double> innovation) { fSteps.at(index).SetInnovation(innovation); };
-    void SetZ(int index, double z){fSteps.at(index).SetZ(z); };
-    void SetX(int index, double x){fSteps.at(index).SetX(x); };
-    void SetY(int index, double y){fSteps.at(index).SetY(y); };
+    void setInnovation(int index, std::vector<double> innovation) { steps_.at(index).setInnovation(innovation); };
+    void setZ(int index, double z){steps_.at(index).setZ(z); };
+    void setX(int index, double x){steps_.at(index).setX(x); };
+    void setY(int index, double y){steps_.at(index).setY(y); };
     void setClusterIDForState(int index, int cluster_id) { steps_.at(index).setClusterIDForThisState(cluster_id); };
     void removeLastStep() { steps_.erase(steps_.end()-1); };
     void Clear() {steps_.clear();}

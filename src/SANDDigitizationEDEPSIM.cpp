@@ -698,8 +698,8 @@ void digitize(const char* finname, const char* foutname,
     // define the T0 for this event
     // for each straw tubs:
     // std::map<int, double> sand_reco::t0
-    // digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
-    //                                             ecal_digi_mode);
+    digitization::edep_sim::ecal::digitize_ecal(ev, sand_geo, vec_cell,
+                                                ecal_digi_mode);
 
     if (geo->FindVolumeFast("STTtracker_PV")) {
       digitization::edep_sim::tracker::stt::DigitizeStt(*ev, sand_geo, wire_digits);
