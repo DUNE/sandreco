@@ -22,27 +22,28 @@
 
 #include "EDEPTree.h"
 
-sand_reco::kf::TrackletMap Find3fromTrajectory(std::vector<EDEPTrajectoryPoint> trj_points){
+sand_reco::kf::TrackletMap Find3fromTrajectory(std::vector<EDEPTrajectoryPoint> trj_points, double sx = 0.0, double sy = 0.0) {
 
   sand_reco::kf::TrackletMap three_tracklets;
+  TRandom3 randGen(0);
 
   TVectorD trklet(8);
-  trklet[0] = trj_points[0].GetPosition().X();
-  trklet[1] = trj_points[0].GetPosition().Y();
+  trklet[0] = trj_points[0].GetPosition().X()+randGen.Gaus(0, sx);
+  trklet[1] = trj_points[0].GetPosition().Y()+randGen.Gaus(0, sy);
   std::vector<TVectorD> trklet_vec;
   trklet_vec.push_back(trklet);
   three_tracklets[trj_points[0].GetPosition().Z()]= trklet_vec;
 
   TVectorD trklet2(8);
-  trklet2[0] = trj_points[trj_points.size()/2].GetPosition().X();
-  trklet2[1] = trj_points[trj_points.size()/2].GetPosition().Y();
+  trklet2[0] = trj_points[trj_points.size()/2].GetPosition().X()+randGen.Gaus(0, sx);
+  trklet2[1] = trj_points[trj_points.size()/2].GetPosition().Y()+randGen.Gaus(0, sy);
   std::vector<TVectorD> trklet_vec2;
   trklet_vec2.push_back(trklet2);
   three_tracklets[trj_points[trj_points.size()/2].GetPosition().Z()]= trklet_vec2;
 
   TVectorD trklet3(8);
-  trklet3[0] = trj_points[trj_points.size()-1].GetPosition().X();
-  trklet3[1] = trj_points[trj_points.size()-1].GetPosition().Y();
+  trklet3[0] = trj_points[trj_points.size()-1].GetPosition().X()+randGen.Gaus(0, sx);
+  trklet3[1] = trj_points[trj_points.size()-1].GetPosition().Y()+randGen.Gaus(0, sy);
   std::vector<TVectorD> trklet_vec3;
   trklet_vec3.push_back(trklet3);
   three_tracklets[trj_points[trj_points.size()-1].GetPosition().Z()]= trklet_vec3;
@@ -52,9 +53,12 @@ sand_reco::kf::TrackletMap Find3fromTrajectory(std::vector<EDEPTrajectoryPoint> 
 }
 
 void trySeedManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo, std::vector<EDEPTrajectoryPoint> trj_points) {
+
+  double sx = 0.004;
+  double sy = 0.004;
   sand_reco::kf::Manager managerSeed;
   //auto closest= managerSeed.FindSeedPoints_MCstart(&z_to_tracklets, particleInfo, 200);
-  auto closest = Find3fromTrajectory(trj_points);
+  auto closest = Find3fromTrajectory(trj_points,sx,sy);
   for (auto el:closest) {
     std::cout << "Z: " << el.first << std::endl;
     for (auto el2:el.second) {
@@ -62,7 +66,7 @@ void trySeedManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo par
     }
   }
   
-  managerSeed.initFromSeed(&closest,&z_to_tracklets, particleInfo);
+  managerSeed.initFromSeed(&closest,&z_to_tracklets, particleInfo, sx, sy);
 
   sand_reco::kf::Manager managerMC;
   managerMC.initFromMC(&z_to_tracklets, particleInfo);

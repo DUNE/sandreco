@@ -168,7 +168,7 @@ TVector3 getVectorMomentum(double radius, double phi, double tan_lambda, int ver
 
 sand_reco::kf::StateVector getStateVector(TVector3 mom, TVector3 pos, int charge);
 
-sand_reco::kf::State Seed3Points(std::array<double,3> xyz0, std::array<double,3> xyz1, std::array<double,3> xyz2, double sy, double sx, float bz);
+sand_reco::kf::State Seed3Points(std::array<double,3> xyz0, std::array<double,3> xyz1, std::array<double,3> xyz2, double sy, double sx);
 
 // Notice: this was used to validate the KF. It is used to generate
 // ideal trajectories and to store their information

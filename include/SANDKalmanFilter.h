@@ -215,7 +215,7 @@ class Manager {
     void filter(const sand_reco::kf::Measurement& measurement, const sand_reco::kf::Measurement& prediction);
     void smooth();
     void initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
-    void initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
+    void initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, double sx = 0.004, double sy = 0.004);
     TrackletMap FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, int maxSteps=10);
     double findClosestNonEmptyKey(const TrackletMap& myMap, double target);
     void run();

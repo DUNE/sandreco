@@ -369,6 +369,17 @@ Double_t makeSnp(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,D
   return z0;
 }
 
+Double_t makePhi(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3, Double_t y3, Double_t c){
+  //-----------------------------------------------------------------
+  // Initial approximation of the track phi at position z1
+  //-----------------------------------------------------------------
+  auto versus = c > 0 ? -1 : 1;
+  auto sintheta = makeSnp(z1,y1,z2,y2,z3,y3);
+  auto phi = std::asin(sintheta) + versus * 0.5 * TMath::Pi();
+
+  return phi;
+}
+
 Double_t makeYC(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Double_t y3){
   //-----------------------------------------------------------------
   // Initial approzimation of the y coordinate of the center of the track circumference 
@@ -405,47 +416,60 @@ Double_t makeTgln(Double_t z1,Double_t y1, Double_t z2,Double_t y2,Double_t x1,D
   //return (z1 - z2)/sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
 }
 
-sand_reco::kf::State Seed3Points(std::array<double,3> xyz0, std::array<double,3> xyz1, std::array<double,3> xyz2, double sy, double sx, float bz){
+sand_reco::kf::State Seed3Points(std::array<double,3> xyz0, std::array<double,3> xyz1, std::array<double,3> xyz2, double sy, double sx){
   Double_t sy2=sy*sy;
   Double_t sx2=sx*sx;
   TMatrixD param(5,1);
-  TMatrixD c(5,5);
+  TMatrixD d(5,6);
+  TMatrixD m(6,6);
   // calculate initial param
   param[0][0]=xyz0[0];              
   param[1][0]=xyz0[1];
-  param[2][0]=makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]);
-  auto versus = param[2][0] > 0 ? -1 : 1; 
+  param[2][0]=makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]); 
   param[3][0]=makeTgln(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz0[0],xyz1[0],param[2][0]);
-  param[4][0]=std::asin(makeSnp(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1])) + versus * 0.5 * TMath::Pi();
+  param[4][0]=makePhi(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1],param[2][0]);
   sand_reco::kf::StateVector vec(param);
 
   //
-  Double_t f20=(makeC(xyz0[2],xyz0[1]+sy,xyz1[2],xyz1[1],xyz2[2],xyz2[1])-param[2][0])/sy;
-  Double_t f22=(makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1]+sy,xyz2[2],xyz2[1])-param[2][0])/sy;
-  Double_t f23=(makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]+sy)-param[2][0])/sy;
+  Double_t dc_dy0=(makeC(xyz0[2],xyz0[1]+sy,xyz1[2],xyz1[1],xyz2[2],xyz2[1])-param[2][0])/sy;
+  Double_t dc_dy1=(makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1]+sy,xyz2[2],xyz2[1])-param[2][0])/sy;
+  Double_t dc_dy2=(makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]+sy)-param[2][0])/sy;
   //
-  Double_t f40=(makeSnp(xyz0[2],xyz0[1]+sy,xyz1[2],xyz1[1],xyz2[2],xyz2[1])-param[4][0])/sy;
-  Double_t f42=(makeSnp(xyz0[2],xyz0[1],xyz1[2],xyz1[1]+sy,xyz2[2],xyz2[1])-param[4][0])/sy;
-  Double_t f43=(makeSnp(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]+sy)-param[4][0])/sy;
+  Double_t dtgl_dx0=(makeTgln(xyz0[2],xyz0[1],xyz1[2],  xyz1[1],xyz0[0]+sx,xyz1[0],param[2][0])-param[3][0])/sx;
+  Double_t dtgl_dy0=(makeTgln(xyz0[2],xyz0[1]+sy,xyz1[2],  xyz1[1],xyz0[0],xyz1[0],param[2][0])-param[3][0])/sy;
+  Double_t dtgl_dx1=(makeTgln(xyz0[2],xyz0[1],xyz1[2],   xyz1[1],xyz0[0],xyz1[0]+sx,param[2][0])-param[3][0])/sx;
+  Double_t dtgl_dy1=(makeTgln(xyz0[2],xyz0[1],xyz1[2],  xyz1[1]+sy,xyz0[0],xyz1[0],param[2][0])-param[3][0])/sy;
   //
-  //  makeTgln(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz0[2],xyz1[2],param[0][4]);
-  Double_t f30=(makeTgln(xyz0[2],xyz0[1]+sy,xyz1[2],  xyz1[1],xyz0[0],xyz1[0],param[2][0])-param[3][0])/sy;
-  Double_t f31=(makeTgln(xyz0[2],xyz0[1],xyz1[2],  xyz1[1],xyz0[0]+sx,xyz1[0],param[2][0])-param[3][0])/sx;
-  Double_t f32=(makeTgln(xyz0[2],xyz0[1],xyz1[2],  xyz1[1]+sy,xyz0[0],xyz1[0],param[2][0])-param[3][0])/sy;
-  Double_t f34=(makeTgln(xyz0[2],xyz0[1],xyz1[2],   xyz1[1],xyz0[0],xyz1[0]+sx,param[2][0])-param[3][0])/sx;
-  c[0][0] = sx2;
-  c[1][0] = 0.;        c[1][1] = sy2;
-  c[2][0] = f20*sy2;   c[2][1] = 0.;       c[2][2] = f20*sy2*f20 + f22*sy2*f22 + f23*sy2*f23;
-  c[3][0] = f30*sy2;   c[3][1] = f31*sx2;  c[3][2] = f30*sy2*f20 + f32*sy2*f22;             c[3][3] = f30*sy2*f30 + f31*sx2*f31 + f32*sy2*f32 + f34*sx2*f34;
-  c[4][0] = f40*sy2;   c[4][1] = 0.;       c[4][2] = f40*sy2*f20 + f42*sy2*f22 + f43*sy2*f23; c[4][3] = f30*sy2*f40 + f32*sy2*f42; c[4][4] = f40*sy2*f40 + f42*sy2*f42 + f43*sy2*f43;
-  
+  Double_t dphi_dy0=(makePhi(xyz0[2],xyz0[1]+sy,xyz1[2],xyz1[1],xyz2[2],xyz2[1],param[2][0])-param[4][0])/sy;
+  Double_t dphi_dy1=(makePhi(xyz0[2],xyz0[1],xyz1[2],xyz1[1]+sy,xyz2[2],xyz2[1],param[2][0])-param[4][0])/sy;
+  Double_t dphi_dy2=(makePhi(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]+sy,param[2][0])-param[4][0])/sy;
+  //
 
-  int n = c.GetNrows(); // Assuming square matrix
-  for (int i = 0; i < n; ++i) {
-    for (int j = i + 1; j < n; ++j) {
-        c[i][j] = c[j][i]; // Mirror lower triangle to upper
-    }
-  }
+  // Partial derivative matrix
+  d[0][0]=1.;
+  d[1][1]=1.;
+  d[2][1]=dc_dy0;     d[2][3]=dc_dy1;     d[2][5]=dc_dy2;
+  d[3][0]=dtgl_dx0;   d[3][1]=dtgl_dy0;   d[3][2]=dtgl_dx1;   d[3][2]=dtgl_dy1;
+  d[4][1]=dphi_dy0;   d[4][3]=dphi_dy1;   d[4][5]=dphi_dy2;
+
+  // Error matrix
+  m[0][0]=sx2; m[1][1]=sy2; 
+  m[2][2]=sx2; m[3][3]=sy2;
+  m[4][4]=sx2; m[5][5]=sy2;
+
+  // Covariance calculation through error propagation
+  TMatrixD d_m = d * m;
+  TMatrixD dt = d.T();
+  TMatrixD c = d_m * dt;
+
+  c.Print();
+
+  // int n = c.GetNrows(); // Assuming square matrix
+  // for (int i = 0; i < n; ++i) {
+  //   for (int j = i + 1; j < n; ++j) {
+  //       c[i][j] = c[j][i]; // Mirror lower triangle to upper
+  //   }
+  // }
 
   param.Print();
 

@@ -676,7 +676,7 @@ TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const S
 }
 
 // To Do: implement a seeding algorithm
-void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
+void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo, double sx, double sy)
 {
   try{
     if(three_tracklets->size()==3){}
@@ -695,7 +695,7 @@ void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_track
     ++it;
   }
 
-  auto state = sand_reco::kf::utils::Seed3Points(xyz[2],xyz[1],xyz[0],0.4,0.4,-5);
+  auto state = sand_reco::kf::utils::Seed3Points(xyz[2],xyz[1],xyz[0],sx,sy);
 
   sand_reco::kf::TrackStep trackStep;
   trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction,
