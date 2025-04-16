@@ -541,8 +541,8 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
   initial_cov_matrix[4][4] = pow(0.01, 2);
 
   sand_reco::kf::StateVector initial_state_vector = sand_reco::kf::utils::getStateVector(particleInfo.mom * 1E-3,  // GeV
-                                                                       particleInfo.pos * 1E-3,  // m
-                                                                       particleInfo.charge);
+                                                                      particleInfo.pos * 1E-3,  // m
+                                                                      particleInfo.charge);
 
   sand_reco::kf::TrackStep trackStep;
   trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction,
@@ -555,19 +555,21 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
   
   this_track_.addStep(trackStep);
 
+  TMatrixD vectorMC(5,1);
+  vectorMC[0][0] = initial_state_vector.x();
+  vectorMC[1][0] = initial_state_vector.y();
+  vectorMC[2][0] = initial_state_vector.signedInverseRadius();
+  vectorMC[3][0] = initial_state_vector.tanLambda();
+  vectorMC[4][0] = initial_state_vector.phi();
+
+  vectorMC.Print();
+
   particleInfo_       = particleInfo;
   z_to_tracklets_     = z_to_tracklets;
   current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
   current_step_        = 0u;
   current_z_           = particleInfo.pos.Z(); //Notice: UNITS!!  mm, why?
   current_orientation_ = Orientation::kVertical;
-
-  auto is = z_to_tracklets->find(particleInfo.pos.Z());
-  if (is != z_to_tracklets->end() && !is->second.empty()) {
-      std::cout << "Key exists and contains at least one TVectorD. Z= "<< current_z_ << std::endl;
-  } else {
-      std::cout << "Key does not exist or has an empty vector. Z= "<< current_z_  << std::endl;
-  }
 }
 
 
@@ -608,16 +610,16 @@ TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const S
   
   closest_key = findClosestNonEmptyKey(*z_to_tracklets, particloInfo.pos.Z());
   
-  std::cout << "Closest key in z: " << closest_key << std::endl;
-  std::cout << "Number of traclets in closest key: " << z_to_tracklets->at(closest_key).size() << std::endl;
+  // std::cout << "Closest key in z: " << closest_key << std::endl;
+  // std::cout << "Number of traclets in closest key: " << z_to_tracklets->at(closest_key).size() << std::endl;
 
 
   // Add the last tracklet to the map
   std::vector<TVectorD> last_traclet;
   last_traclet.push_back(z_to_tracklets->at(closest_key)[0]);
   tracklet_map[closest_key] = last_traclet;
-  std::cout << "First tracklet found (x,y,z) : (" << z_to_tracklets->at(closest_key)[0][0] << " , "; 
-  std::cout << z_to_tracklets->at(closest_key)[0][1] << " , "<<closest_key<<" )" << std::endl;
+  // std::cout << "First tracklet found (x,y,z) : (" << z_to_tracklets->at(closest_key)[0][0] << " , "; 
+  // std::cout << z_to_tracklets->at(closest_key)[0][1] << " , "<<closest_key<<" )" << std::endl;
 
 
   // Find tracklet maxStep steps below or as close as possible without an empty vector
@@ -637,8 +639,8 @@ TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const S
   auto finalStep = realStep;
   for (int step = 0; step < realStep; ++step) {
     if (!trl->second.empty()) {
-        std::cout << "Found valid far key: " << trl->first << " for now choosing first value (x,y,z): (";
-        std::cout << trl->second[0][0] << " , " << trl->second[0][1] << " , " << trl->first << " )" << std::endl;
+        // std::cout << "Found valid far key: " << trl->first << " for now choosing first value (x,y,z): (";
+        // std::cout << trl->second[0][0] << " , " << trl->second[0][1] << " , " << trl->first << " )" << std::endl;
         std::vector<TVectorD> first_tracklet;
         first_tracklet.push_back(trl->second[0]);
         tracklet_map[trl->first] = first_tracklet;
@@ -647,15 +649,15 @@ TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const S
         ++trl; 
         finalStep--;
     } else{
-      std::cout << "No valid point found within the given range." << std::endl;
+      // std::cout << "No valid point found within the given range." << std::endl;
       return tracklet_map; // Return empty map if no valid point is found
     }
   }
 
   for (int step = 0; step < finalStep; ++step) {
     if (!trl->second.empty() && step>= finalStep/2) {
-        std::cout << "Found valid middle key: " << trl->first << " for now choosing first value (x,y,z): (";
-        std::cout << trl->second[0][0] << " , " << trl->second[0][1] << " , " << trl->first << " )" << std::endl;
+        // std::cout << "Found valid middle key: " << trl->first << " for now choosing first value (x,y,z): (";
+        // std::cout << trl->second[0][0] << " , " << trl->second[0][1] << " , " << trl->first << " )" << std::endl;
         std::vector<TVectorD> first_tracklet;
         first_tracklet.push_back(trl->second[0]);
         tracklet_map[trl->first] = first_tracklet;
@@ -663,7 +665,7 @@ TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const S
     } else if (trl->first != closest_key){
         ++trl; // Stop if we reach the beginning
     } else{
-      std::cout << "No valid middle point found." << std::endl;
+      // std::cout << "No valid middle point found." << std::endl;
       return tracklet_map; // Return empty map if no valid point is found
     }
   }
@@ -673,10 +675,45 @@ TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const S
 
 }
 
-// To Do: implment a seeding algorithm
-void Manager::initFromSeed(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo)
+// To Do: implement a seeding algorithm
+void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
 {
+  try{
+    if(three_tracklets->size()==3){}
+    else{throw three_tracklets->size();}
+  }
+  catch (size_t size_tr) {
+    std::cerr << "Error, number of tracklets for Seeding is 3, but given: " << size_tr << std::endl;
+    return;
+  }
+
+  auto it = three_tracklets->begin();
+  std::vector<std::array<double,3>> xyz;
+  for (int i = 0; i < 3; ++i) {
+    std::array<double,3> xyzi = {1E-3*it->second[0][0], 1E-3*it->second[0][1], 1E-3*it->first};
+    xyz.push_back(xyzi);
+    ++it;
+  }
+
+  auto state = sand_reco::kf::utils::Seed3Points(xyz[2],xyz[1],xyz[0],0.4,0.4,-5);
+
+  sand_reco::kf::TrackStep trackStep;
+  trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction,
+                      sand_reco::kf::State(state.getStateVector(), state.getStateCovMatrix()));
+  trackStep.setStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering,
+                      sand_reco::kf::State(state.getStateVector(), state.getStateCovMatrix()));
+
+
+  trackStep.setPropagatorMatrix(state.getStateCovMatrix());
   
+  this_track_.addStep(trackStep);
+
+  particleInfo_       = particleInfo;
+  z_to_tracklets_     = z_to_tracklets;
+  current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
+  current_step_        = 0u;
+  current_z_           = xyz[2][2]; //Notice: UNITS!!  mm, why?
+  current_orientation_ = Orientation::kVertical;
 }
 
 
