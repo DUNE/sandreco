@@ -232,7 +232,6 @@ class SANDGeoManager : public TObject
   
   void setTrackerInfo();
 
-  void fillAdjacentCells(std::string geometry);
   void rearrangePlanes();
 
   std::vector<TVector2> getLocalLinePlaneIntersections(const TVector2& local_2d_position,
@@ -282,6 +281,7 @@ class SANDGeoManager : public TObject
   {
     return cellmap_.at(ecal_cell_id);
   }
+  void fillAdjacentCells(std::string geometry);
   std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator getCellInfo(sand_geometry::tracker::CellID cell_id) const;
   sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::CellID cell_id) const;
   sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::PlaneID unique_plane_id) const;

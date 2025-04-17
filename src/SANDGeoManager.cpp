@@ -983,7 +983,7 @@ sand_geometry::tracker::PlaneID SANDGeoManager::getSttPlaneId(const TString& vol
     // std::cout << "Error: volume path for STT digit not expected!! returning
     // default value (0) for stt plane id" << std::endl;
     delete plane_matches;
-    return 0;
+    return -999;
   }
 
   int plane_replica_id =
@@ -1527,17 +1527,14 @@ void SANDGeoManager::setTrackerInfo()
 {
   geo_->CdTop();
   TGeoHMatrix matrix = *gGeoIdentity;
-  std::string geometry;
   setPlaneInfo(matrix);
   if (geo_->FindVolumeFast("STTtracker_PV")) {
     std::cout << "using SAND tracker : STT\n";
-    geometry = "STT";
   } else {
     std::cout << "using SAND tracker : DRIFT CHAMBER\n";
-    geometry = "DRIFT";
   }
   rearrangePlanes();
-  fillAdjacentCells(geometry);
+  // fillAdjacentCells(geometry);
   printModulesInfo(0);
 }
 
@@ -1770,6 +1767,10 @@ sand_geometry::tracker::CellID SANDGeoManager::getSttTubeId(double x, double y, 
 
   TString node_path = gGeoManager->GetPath();
   sand_geometry::tracker::PlaneID stt_plane_unique_id = getSttPlaneId(node_path);
+
+  if (stt_plane_unique_id == -999) {
+    return sand_geometry::tracker::CellID(-999);
+  }
 
   auto& plane = planes_.at(getPlaneIndex(stt_plane_unique_id)());
 
