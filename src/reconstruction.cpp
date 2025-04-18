@@ -1327,64 +1327,21 @@ bool value_comparer(std::map<int, int>::value_type& i1,
   return i1.second < i2.second;
 }
 
-/*void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
-                        std::vector<cluster>& vec_cl)
-{
-  const double cell_max_dt = 30.;  // ns -> dt > 30. ns is unphysical
-
-  std::vector<int> pid(vec_cell->size());
-  std::map<int, int> hit_pid;
-
-  for (unsigned int i = 0; i < vec_cell->size(); i++) {
-    // find particle corresponding to more p.e.
-    hit_pid.clear();
-
-    if (vec_cell->at(i).ps1.size() > 0)
-      for (unsigned int j = 0; j < vec_cell->at(i).ps1.at(0).photo_el.size();
-           j++) {
-        hit_pid[ev->SegmentDetectors["EMCalSci"]
-                    .at(vec_cell->at(i).ps1.at(0).photo_el.at(j).h_index)
-                    .PrimaryId]++;
+void PidBasedClustering(TG4Event* ev, std::vector<cluster>& vec_cl){std::map<int, int> hit_pid;for (unsigned int i = 0; i < vec_cl.size(); i++) {
+  // find particle corresponding to more p.e.
+  hit_pid.clear();
+  for (const auto& cell : vec_cl.at(i).reco_cells) {
+    if (cell.fired_pmt == 3) {
+      for (unsigned int j = 0; j < cell.ps1.photo_el.size();j++) {
+        hit_pid[ev->SegmentDetectors["EMCalSci"].at(cell.ps1.photo_el.at(j).h_index).PrimaryId]++;
       }
-
-    if (vec_cell->at(i).ps2.size() > 0)
-      for (unsigned int j = 0; j < vec_cell->at(i).ps2.at(0).photo_el.size();
-           j++) {
-        hit_pid[ev->SegmentDetectors["EMCalSci"]
-                    .at(vec_cell->at(i).ps2.at(0).photo_el.at(j).h_index)
-                    .PrimaryId]++;
-      }
-
-    pid[i] =
-        std::max_element(hit_pid.begin(), hit_pid.end(), value_comparer)->first;
-  }
-
-  std::vector<int> unique_pid = pid;
-  std::sort(unique_pid.begin(), unique_pid.end());
-  std::vector<int>::iterator last =
-      std::unique(unique_pid.begin(), unique_pid.end());
-  unique_pid.erase(last, unique_pid.end());
-
-  for (unsigned int i = 0; i < unique_pid.size(); i++) {
-    cluster cl;
-    cl.tid = unique_pid[i];
-
-    for (unsigned int j = 0; j < pid.size(); j++) {
-      if (pid[j] == unique_pid[i]) {
-        // good cell should have signal on both side and a tdc different less
-        // than 30 ns (5.85 ns/m * 4 m)
-        if (vec_cell->at(j).ps1.size() == 0 ||
-            vec_cell->at(j).ps2.size() == 0 ||
-            std::abs(vec_cell->at(j).ps1.at(0).tdc -
-                     vec_cell->at(j).ps2.at(0).tdc) > cell_max_dt)
-          continue;
-
-        cl.cells.push_back(vec_cell->at(j));
+      for (unsigned int j = 0; j < cell.ps2.photo_el.size();j++) {
+        hit_pid[ev->SegmentDetectors["EMCalSci"].at(cell.ps2.photo_el.at(j).h_index).PrimaryId]++;}
       }
     }
-    if (cl.cells.size() != 0) vec_cl.push_back(cl);
+    vec_cl.at(i).tid = std::max_element(hit_pid.begin(), hit_pid.end(), value_comparer)->first;
   }
-}*/
+}
 
 void MeanAndRMS(std::vector<dg_wire>& digits, TH1D& hmeanX, TH1D& hrmsX,
                 TH1I& hnX, TH1D& hmeanY, TH1D& hrmsY, TH1I& hnY)
@@ -1900,9 +1857,9 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
       case ECAL_Mode::fast:
         // PreCluster(vec_cell, vec_cl);
         // Filter(vec_cl);
-        //PidBasedClustering(ev, vec_cell, vec_cl);
         //Merge(vec_cl);
         vec_cl = clusterize(&sand_geo, *vec_cell);
+        PidBasedClustering(ev, vec_cl);
         break;
     }
     tout.Fill();

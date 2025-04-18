@@ -76,6 +76,11 @@ add_library(SANDClustering SHARED src/SANDClustering.cpp)
 target_link_libraries(SANDClustering PUBLIC Utils)
 ROOT_GENERATE_DICTIONARY(SANDClusteringDict SANDClustering.h MODULE SANDClustering LINKDEF include/SANDClusteringLinkDef.h)
 
+# Create SANDTrackerVertexing lib
+add_library(SANDTrackerVertexing SHARED src/SANDTrackerVertexing.cpp)
+target_link_libraries(SANDTrackerVertexing PUBLIC Struct)
+ROOT_GENERATE_DICTIONARY(SANDTrackerVertexingDict SANDTrackerVertexing.h MODULE SANDTrackerVertexing LINKDEF include/SANDTrackerVertexingLinkDef.h)
+
 # Creates Digitize executable.
 add_executable(Digitize src/digitization.cpp src/SANDDigitization.cpp src/SANDDigitizationEDEPSIM.cpp src/SANDDigitizationFLUKA.cpp)
 target_link_libraries(Digitize Struct SANDGeoManager Utils)
@@ -84,9 +89,9 @@ target_link_libraries(Digitize Struct SANDGeoManager Utils)
 add_executable(Reconstruct src/reconstruction.cpp)
 target_link_libraries(Reconstruct PUBLIC Struct Utils SANDGeoManager SANDClustering EDEPTree TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils SANDKalmanFilter ROOT::EG)
 
-# # Creates Analyze executable.
-# add_executable(Analyze src/analysis.cpp)
-# target_link_libraries(Analyze Struct Utils ROOT::EG)
+# Creates Analyze executable.
+add_executable(Analyze src/analysis.cpp)
+target_link_libraries(Analyze Struct Utils ROOT::EG)
 
 # Creates Display executable.
 add_executable(Display src/display.cpp)
@@ -129,6 +134,10 @@ target_link_libraries(eventDisplay PUBLIC Utils SANDEventDisplay "-lEG -lGui")
 add_executable(SANDECALClustering src/SANDECALClustering.cpp)
 target_link_libraries(SANDECALClustering PUBLIC Struct Utils SANDClustering)
 
+# Creates MeasurementBuilder executable.
+add_executable(TestVertexing tests/TestVertexing.cpp)
+target_link_libraries(TestVertexing PUBLIC Utils Struct SANDTrackerVertexing ROOT::EG)
+
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
 endif()
@@ -136,8 +145,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
-#install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay Analyze TestKF SANDClustering  SANDECALClustering
- install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils
+ install(TARGETS TestVertexing Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
