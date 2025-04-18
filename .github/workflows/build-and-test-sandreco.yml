@@ -305,6 +305,7 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
           source ~/sandreco/setup.sh
+          source ~/edep-reader/setup.sh
           mkdir ~/sandreco-reco
           cd ~/sandreco-reco
           GEO=${{matrix.sand-geometry}}
