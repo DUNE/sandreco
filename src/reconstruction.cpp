@@ -189,22 +189,21 @@ void getVertCoord(const std::vector<double>& z_v, std::vector<double>& y_v,
   dy = TMath::Sqrt(dy_sq);
   y_v.push_back(tr.yc + sign * dy);
 
+  int i1 = 1;
+  if (forward == 0) {
+    i1 = 2;
+    if (z_v.size() >= 2) {
+      forward = z_v[i1] - z_v[i1 - 1] > 0 ? 1 : -1;
+      if (forward == 0) {
+        i1 = 3;
+        if (z_v.size() >= 3) {
+          forward = z_v[i1] - z_v[i1 - 1] > 0 ? 1 : -1;
+        }
+      }
+    }
+  }
 
-    int i1=1;
-    if (forward == 0) {
-       i1 = 2;
-       if (z_v.size() >= 2) {
-	  forward = z_v[i1] - z_v[i1-1] > 0 ? 1 : -1;
-	  if (forward == 0) {
-	     i1 = 3;
-	     if (z_v.size() >= 3) {
-		forward = z_v[i1] - z_v[i1-1] > 0 ? 1 : -1;
-		}
-	     }
-	   }
-         }
-
-    for (unsigned int i = i1; i < z_v.size(); i++) {
+  for (unsigned int i = i1; i < z_v.size(); i++) {
     if ((z_v[i] - z_v[i - 1]) * forward >= 0.) {
       dy_sq = tr.r * tr.r - (z_v[i] - tr.zc) * (z_v[i] - tr.zc);
 
@@ -451,6 +450,7 @@ enum class TrackFilter { all_tracks, only_primaries };
 
 void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
                std::vector<track>& vec_tr,
+               std::string const trackerType = "Straw",
                TrackFilter const track_filter = TrackFilter::all_tracks)
 {
   vec_tr.clear();
@@ -479,8 +479,8 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
       std::vector<TG4HitSegment> vhits;
 
       for (unsigned int m = 0; m < vec_digi->at(k).hindex.size(); m++) {
-        const TG4HitSegment& hseg =
-            ev->SegmentDetectors["Straw"].at(vec_digi->at(k).hindex.at(m));
+        const TG4HitSegment& hseg = ev->SegmentDetectors[trackerType.c_str()]
+                                        .at(vec_digi->at(k).hindex.at(m));
 
         if (hseg.PrimaryId == tr.tid)
           if (ishitok(ev, tr.tid, hseg)) vhits.push_back(hseg);
@@ -489,9 +489,9 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
       if (vhits.size() > 0u) {
         std::sort(vhits.begin(), vhits.end(),
                   [](const TG4HitSegment& h1, const TG4HitSegment& h2) {
-                    return (h1.GetStart().T() + h1.GetStop().T()) <
-                           (h2.GetStart().T() + h2.GetStop().T());
-                  });
+          return (h1.GetStart().T() + h1.GetStop().T()) <
+                 (h2.GetStart().T() + h2.GetStop().T());
+        });
         auto& fdig = vhits.front().GetStart();
         auto& ldig = vhits.back().GetStop();
 
@@ -1313,64 +1313,21 @@ bool value_comparer(std::map<int, int>::value_type& i1,
   return i1.second < i2.second;
 }
 
-/*void PidBasedClustering(TG4Event* ev, std::vector<dg_cell>* vec_cell,
-                        std::vector<cluster>& vec_cl)
-{
-  const double cell_max_dt = 30.;  // ns -> dt > 30. ns is unphysical
-
-  std::vector<int> pid(vec_cell->size());
-  std::map<int, int> hit_pid;
-
-  for (unsigned int i = 0; i < vec_cell->size(); i++) {
-    // find particle corresponding to more p.e.
-    hit_pid.clear();
-
-    if (vec_cell->at(i).ps1.size() > 0)
-      for (unsigned int j = 0; j < vec_cell->at(i).ps1.at(0).photo_el.size();
-           j++) {
-        hit_pid[ev->SegmentDetectors["EMCalSci"]
-                    .at(vec_cell->at(i).ps1.at(0).photo_el.at(j).h_index)
-                    .PrimaryId]++;
+void PidBasedClustering(TG4Event* ev, std::vector<cluster>& vec_cl){std::map<int, int> hit_pid;for (unsigned int i = 0; i < vec_cl.size(); i++) {
+  // find particle corresponding to more p.e.
+  hit_pid.clear();
+  for (const auto& cell : vec_cl.at(i).reco_cells) {
+    if (cell.fired_pmt == 3) {
+      for (unsigned int j = 0; j < cell.ps1.photo_el.size();j++) {
+        hit_pid[ev->SegmentDetectors["EMCalSci"].at(cell.ps1.photo_el.at(j).h_index).PrimaryId]++;
       }
-
-    if (vec_cell->at(i).ps2.size() > 0)
-      for (unsigned int j = 0; j < vec_cell->at(i).ps2.at(0).photo_el.size();
-           j++) {
-        hit_pid[ev->SegmentDetectors["EMCalSci"]
-                    .at(vec_cell->at(i).ps2.at(0).photo_el.at(j).h_index)
-                    .PrimaryId]++;
-      }
-
-    pid[i] =
-        std::max_element(hit_pid.begin(), hit_pid.end(), value_comparer)->first;
-  }
-
-  std::vector<int> unique_pid = pid;
-  std::sort(unique_pid.begin(), unique_pid.end());
-  std::vector<int>::iterator last =
-      std::unique(unique_pid.begin(), unique_pid.end());
-  unique_pid.erase(last, unique_pid.end());
-
-  for (unsigned int i = 0; i < unique_pid.size(); i++) {
-    cluster cl;
-    cl.tid = unique_pid[i];
-
-    for (unsigned int j = 0; j < pid.size(); j++) {
-      if (pid[j] == unique_pid[i]) {
-        // good cell should have signal on both side and a tdc different less
-        // than 30 ns (5.85 ns/m * 4 m)
-        if (vec_cell->at(j).ps1.size() == 0 ||
-            vec_cell->at(j).ps2.size() == 0 ||
-            std::abs(vec_cell->at(j).ps1.at(0).tdc -
-                     vec_cell->at(j).ps2.at(0).tdc) > cell_max_dt)
-          continue;
-
-        cl.cells.push_back(vec_cell->at(j));
+      for (unsigned int j = 0; j < cell.ps2.photo_el.size();j++) {
+        hit_pid[ev->SegmentDetectors["EMCalSci"].at(cell.ps2.photo_el.at(j).h_index).PrimaryId]++;}
       }
     }
-    if (cl.cells.size() != 0) vec_cl.push_back(cl);
+    vec_cl.at(i).tid = std::max_element(hit_pid.begin(), hit_pid.end(), value_comparer)->first;
   }
-}*/
+}
 
 void MeanAndRMS(std::vector<dg_tube>& digits, TH1D& hmeanX, TH1D& hrmsX,
                 TH1I& hnX, TH1D& hmeanY, TH1D& hrmsY, TH1I& hnY)
@@ -1642,6 +1599,20 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
     exit(-1);
   }
 
+  std::string trackerType = "";
+
+  if (geo->FindVolumeFast("STTtracker_PV")) {
+    std::cout << "\n--- STT based simulation ---\n";
+    trackerType = "Straw";
+  } else if (geo->FindVolumeFast("SANDtracker_PV")) {
+    std::cout << "\n--- Drift based simulation ---\n";
+    trackerType = "DriftVolume";
+  } else {
+    std::cout << "Error in retriving volume information from Geo Manager, "
+                 "exiting...\n";
+    exit(-1);
+  }
+
   std::vector<double> sampling;
 
   DetermineModulesPosition(geo, sampling);
@@ -1695,11 +1666,12 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 
     switch (stt_mode) {
       case STT_Mode::fast_only_primaries:
-        TrackFind(ev, vec_digi, vec_tr, TrackFilter::only_primaries);
+        TrackFind(ev, vec_digi, vec_tr, trackerType,
+                  TrackFilter::only_primaries);
         TrackFit(vec_tr);
         break;
       case STT_Mode::fast:
-        TrackFind(ev, vec_digi, vec_tr);
+        TrackFind(ev, vec_digi, vec_tr, trackerType);
         TrackFit(vec_tr);
         break;
       case STT_Mode::full:
@@ -1715,9 +1687,9 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
       case ECAL_Mode::fast:
         // PreCluster(vec_cell, vec_cl);
         // Filter(vec_cl);
-        //PidBasedClustering(ev, vec_cell, vec_cl);
         //Merge(vec_cl);
         vec_cl = clusterize(&sand_geo, *vec_cell);
+        PidBasedClustering(ev, vec_cl);
         break;
     }
     tout.Fill();
