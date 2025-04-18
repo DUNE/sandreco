@@ -256,6 +256,14 @@ int main(int argc, char* argv[])
 
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
+  
+  std::string geometry;
+  if (geo->FindVolumeFast("STTtracker_PV")) {
+    geometry = "STT";
+  } else if (geo->FindVolumeFast("SANDtracker_PV")) {
+    geometry = "DRIFT";
+  } 
+  sand_geo.fillAdjacentCells(geometry);
 
   for (int i = 0; i < 20; i++) {
     t_h->GetEntry(i);

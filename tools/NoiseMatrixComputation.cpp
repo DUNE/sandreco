@@ -28,7 +28,7 @@
 struct TrackletInfo {
   double x_trj, theta_x_trj, tan_x_trj, y_trj, theta_y_trj, tan_y_trj; //True measurements
   double x_trk, theta_x_trk, tan_x_trk, y_trk, theta_y_trk, tan_y_trk; //Predicted measurements
-  double delta_x, delta_theta_x, delta_tan_x, delta_y, delta_theta_y, delta_tan_y;
+  double delta_x, delta_theta_x, delta_tan_x, delta_y, delta_theta_y, delta_tan_y; //Residuals
 };
 
 
@@ -200,15 +200,15 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
     TVector3 interpolated_mom = first_point.GetMomentum() * (1 - alpha) + second_point.GetMomentum() * alpha;
 
     //Select the best traklet based on position and direction
-      auto point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i_min);
-      auto p_trj =  point.GetMomentum();
-      
+    auto point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i_min);
+    auto p_trj =  point.GetMomentum();
+    
 
-      TVector3 p_trj_dir = interpolated_mom.Unit();
-      TVector3 best_trj_point = interpolated_pos;
-      TVectorD best_tracklet(z.second[0].GetNrows());
+    TVector3 p_trj_dir = interpolated_mom.Unit();
+    TVector3 best_trj_point = interpolated_pos;
+    TVectorD best_tracklet(z.second[0].GetNrows());
 
-      std::vector<double> position_errors, direction_errors;
+    std::vector<double> position_errors, direction_errors;
       
       double best_score = 1e8;
       for(const auto& tracklet : z.second){
@@ -217,33 +217,33 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
         double theta_xz = tracklet[2];
         double theta_yz = tracklet[3];
 
-        //Find the closest (x,y)
-        // double position_distance =  sqrt(pow(x_trk - x_trj, 2) + pow(y_trk - y_trj, 2));
-        double position_distance = sqrt(pow(x_trk - best_trj_point.X(), 2) + pow(y_trk - best_trj_point.Y(), 2));
-        
-        //Find the best direction
-        double px_trk = cos(theta_xz);
-        double py_trk = sin(theta_yz);
-        double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
+    //Find the closest (x,y)
+    // double position_distance =  sqrt(pow(x_trk - x_trj, 2) + pow(y_trk - y_trj, 2));
+    double position_distance = sqrt(pow(x_trk - best_trj_point.X(), 2) + pow(y_trk - best_trj_point.Y(), 2));
+    
+    //Find the best direction
+    double px_trk = cos(theta_xz);
+    double py_trk = sin(theta_yz);
+    double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
 
-        TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
-        
-        //to be precise this is the cos of the angle between the trajectory and the traklet              
-        double direction = p_trk_dir.Dot(p_trj_dir); 
+    TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
+    
+    //to be precise this is the cos of the angle between the trajectory and the traklet              
+    double direction = p_trk_dir.Dot(p_trj_dir); 
 
-        position_errors.push_back(position_distance);
-        direction_errors.push_back(direction);
+    position_errors.push_back(position_distance);
+    direction_errors.push_back(direction);
 
-        double score = position_distance / 200E-3 + acos(direction) / 0.2;
-        if (score < best_score) {
-          best_score = score;
-          std::cout << "z: " << z.first<< " position distance  "  
-                  << position_distance 
-                  << " angular distance  "  
-                  << direction
-                  << " SCORE " 
-                  << best_score 
-                  << std::endl;
+    double score = position_distance / 200E-3 + acos(direction) / 0.2;
+    if (score < best_score) {
+      best_score = score;
+      std::cout << "z: " << z.first<< " position distance  "  
+              << position_distance 
+              << " angular distance  "  
+              << direction
+              << " SCORE " 
+              << best_score 
+              << std::endl;
         }
       }
 
@@ -310,19 +310,12 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
         info.delta_tan_y = tan(best_tracklet[3] - std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI));
         
         tracklet_info->Fill();
-        // trajectory_info->Fill();
-        // res->Fill();
-
+   
         h_D->Fill(best_score);
         h_x->Fill(best_tracklet[0] - best_trj_point.X());
         h_y->Fill(best_tracklet[1] - best_trj_point.Y());
         h_theta_x->Fill(best_tracklet[2] - atan2(p_trj_dir.Z(), p_trj_dir.X()));
         h_theta_y->Fill(best_tracklet[3] - std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI));
-
-        std::cout << "theta_xz " << best_tracklet[2] << " " << atan(p_trj_dir.Z() / p_trj_dir.X()) << std::endl;
-         
-        // int n = x_vs_theta->GetN();
-        // x_vs_theta->SetPoint(n, best_tracklet[0] - best_trj_point.X(), best_tracklet[2] - atan2(p_trj_dir.Z(), p_trj_dir.X()));
        
       }
     
@@ -373,12 +366,12 @@ int main(int argc, char* argv[])
   t->SetBranchAddress("dg_wire", &digits);
 
   TFile* tools_test = new TFile("tools_test.root", "RECREATE");
-  TH1D* h_p_reco = new TH1D("h_p_reco", "Reconstrcuted momentum", 500, -2, 2);
+  // TH1D* h_p_reco = new TH1D("h_p_reco", "Reconstrcuted momentum", 500, -2, 2);
   TH1D* h_D = new TH1D("h_D", "Distribution of D ;D score;Entries", 200, 0, 200);
-  TH1D* h_x = new TH1D("h_x", "", 100, -5, 5);
-  TH1D* h_y = new TH1D("h_y", "", 100, -5, 5);
-  TH1D* h_theta_x = new TH1D("h_theta_x", "", 200, -3, 3);
-  TH1D* h_theta_y = new TH1D("h_theta_y", "", 200, -2, 2);
+  TH1D* h_x = new TH1D("h_x", ";x_{trk} - x_{trj} [mm];Entries", 100, -5, 5);
+  TH1D* h_y = new TH1D("h_y", ";y_{trk} - y_{trj} [mm];Entries", 100, -5, 5);
+  TH1D* h_theta_x = new TH1D("h_theta_x", ";#theta^{trk}_{xz} - x^{trj}_{xz} [rad];Entries", 200, -3, 3);
+  TH1D* h_theta_y = new TH1D("h_theta_y", ";#theta^{trk}_{yz} - x^{trj}_{yz} [rad];Entries", 200, -2, 2);
 
   TrackletInfo info;
 
@@ -406,8 +399,17 @@ int main(int argc, char* argv[])
 
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
+
+  std::string geometry;
+  if (geo->FindVolumeFast("STTtracker_PV")) {
+    geometry = "STT";
+  } else if (geo->FindVolumeFast("SANDtracker_PV")) {
+    geometry = "DRIFT";
+  } 
+  sand_geo.fillAdjacentCells(geometry);
+
   int nev = t_h->GetEntries();
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < 20; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i); 
 
