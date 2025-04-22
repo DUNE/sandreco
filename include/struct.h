@@ -1,7 +1,8 @@
-// File struct.h
 #include <map>
 #include <string>
 #include <vector>
+#include <cstdint>
+#include <cstddef>
 #include <TString.h>
 #include <TGeoManager.h>
 
@@ -186,22 +187,22 @@ struct cluster
 
 struct track
 {
-  int tid;
-  double yc;
-  double zc;
-  double r;
-  double a;
-  double b;
-  double h;
-  double ysig;
-  double x0;
-  double y0;
-  double z0;
-  double t0;
-  int ret_ln;
-  double chi2_ln;
-  int ret_cr;
-  double chi2_cr;
+  int tid = -1;
+  double yc = NAN;
+  double zc = NAN;
+  double r = NAN;
+  double a = NAN;
+  double b = NAN;
+  double h = NAN;
+  double ysig = NAN;
+  double x0 = NAN;
+  double y0 = NAN;
+  double z0 = NAN;
+  double t0 = NAN;
+  int ret_ln = -1;
+  double chi2_ln = NAN;
+  int ret_cr = -1;
+  double chi2_cr = NAN;
   std::vector<dg_wire> clX;
   std::vector<dg_wire> clY;
 };
@@ -274,6 +275,80 @@ struct volume
   TGeoVolume* geo_volume;
   TString volume_path;
   bool IsActive;
+};
+
+struct wf_grain
+{
+   std::vector<pe> photo_el;
+   std::vector<float> samples;
+   float t0;
+};
+
+// grain detector response
+
+struct dg_grain
+{
+   uint16_t channel_id;
+   double time_rising_edge;
+   double time_over_threshold;
+   double charge;
+   std::vector<int> h_indices; 
+};
+
+using grain_sparse_image = std::vector<dg_grain>;
+
+// grain spill slicer
+
+struct grain_dense_image 
+{
+    std::vector<float> charge;
+    std::vector<float> time;
+    uint16_t camera_id;  
+    std::vector<std::vector<int>> h_indices_img;   
+};
+
+// volumereco
+
+struct voxel_grain
+{
+    size_t vox_dims_x;
+    size_t vox_dims_y;
+    size_t vox_dims_z;
+    
+    std::vector<float> voxels;
+    float at(size_t x_idx, size_t y_idx, size_t z_idx) const
+    {
+        return voxels.at(z_idx + y_idx * vox_dims_z + x_idx * vox_dims_y * vox_dims_z); 
+    }
+
+    float& at(size_t x_idx, size_t y_idx, size_t z_idx)
+    {
+        return voxels.at(z_idx + y_idx * vox_dims_z + x_idx * vox_dims_y * vox_dims_z); 
+    }
+
+};
+
+// volumereco analyis or lens analyis
+
+struct tracklet_grain
+{
+    float x; 
+    float y; 
+    float z;
+    float px;
+    float py;
+    float pz;
+    float energy;
+    float thickness;
+    std::vector<int> h_indices;     
+};
+
+struct cluster_grain
+{
+    std::vector<tracklet_grain> tracklets;
+    float cx;
+    float cy;
+    float cz;
 };
 
 #endif

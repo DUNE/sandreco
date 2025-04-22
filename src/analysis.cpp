@@ -64,6 +64,7 @@ void FillParticleInfo(TG4Event* ev, std::map<int, particle>& map_part)
     p.tid = ev->Trajectories.at(j).TrackId;
     p.pdg = ev->Trajectories.at(j).PDGCode;
     p.parent_tid = ev->Trajectories.at(j).ParentId;
+    p.kalman_ok = false;
 
     TParticlePDG* part = db.GetParticle(p.pdg);
     if (part != 0) {
@@ -204,17 +205,18 @@ void RecoFromTrack(particle& p)
 void RecoFromBeta(particle& p, double x0, double y0, double z0, double t0)
 {
   // evaluate neutron velocity using earlier cell
-  std::vector<double> cell_t(p.cl.cells.size());
-  std::vector<double> cell_x(p.cl.cells.size());
-  std::vector<double> cell_y(p.cl.cells.size());
-  std::vector<double> cell_z(p.cl.cells.size());
+  std::vector<double> cell_t(p.cl.reco_cells.size());
+  std::vector<double> cell_x(p.cl.reco_cells.size());
+  std::vector<double> cell_y(p.cl.reco_cells.size());
+  std::vector<double> cell_z(p.cl.reco_cells.size());
 
   double e;
 
-  for (unsigned int i = 0; i < p.cl.cells.size(); i++) {
-    sand_reco::ecal::reco::CellXYZTE(p.cl.cells.at(i), cell_x.at(i),
-                                     cell_y.at(i), cell_z.at(i), cell_t.at(i),
-                                     e);
+  for (unsigned int i = 0; i < p.cl.reco_cells.size(); i++) {
+    cell_x.push_back(p.cl.reco_cells.at(i).x); 
+    cell_y.push_back(p.cl.reco_cells.at(i).y); 
+    cell_z.push_back(p.cl.reco_cells.at(i).z);
+    cell_t.push_back(p.cl.reco_cells.at(i).t);  
   }
 
   int idx_min = std::distance(cell_t.begin(),
@@ -816,10 +818,15 @@ void Analyze(const char* fMc, const char* fIn)
     }
 
     for (unsigned int j = 0; j < vec_cl->size(); j++) {
-      std::map<int, particle>::iterator it = map_part.find(vec_cl->at(j).tid);
-      // FillClusterInfo(ev, vec_cl->at(j), it->second);
-      it->second.has_cluster = true;
-      it->second.cl = vec_cl->at(j);
+      auto it = map_part.find(vec_cl->at(j).tid);
+      if (it != map_part.end()) {
+          // FillClusterInfo(ev, vec_cl->at(j), it->second);
+          it->second.has_cluster = true;
+          it->second.cl = vec_cl->at(j);
+          std::cout << i << ": cluster id = traj_id: " << vec_cl->at(j).tid << ", " << map_part.at(vec_cl->at(j).tid).tid << std::endl; 
+      } else {
+          std::cout << "Error: tid " << vec_cl->at(j).tid << " not found in map_part!" << std::endl;
+      }
     }
 
     for (std::map<int, particle>::iterator it = map_part.begin();

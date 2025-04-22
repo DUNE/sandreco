@@ -181,7 +181,9 @@ class ParticleState {
     public:
         ParticleState(): position_(), momentum_() {};
         ParticleState(const TVector3& p, const TVector3& m): position_(p), momentum_(m) {};
+        ParticleState(const ParticleState& particle_state): position_(particle_state.position_), momentum_(particle_state.momentum_) {}
         ParticleState(const sand_reco::kf::StateVector& vector, double z);
+
         TrajectoryParameters getTrajectoryParameter(int charge) const;
         sand_reco::kf::StateVector getStateVector(int charge) const;
         const TVector3& getPosition() const { return position_; };
