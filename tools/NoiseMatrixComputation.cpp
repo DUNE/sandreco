@@ -144,10 +144,10 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
     //Find the closest z coordinates of the trajectory to the traklet
     for(const auto& z : z_to_tracklets){
       double z_trk = z.first;
-      int i_min = 0;
+      uint i_min = 0;
       double z_min = 10E8;
 
-    for(int i = 0; i < trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++ ){ 
+    for(uint i = 0; i < trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++ ){ 
       auto point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i);
       double z_trj = point.GetPosition().Vect().Z();
       double z_distance = fabs(z_trk - z_trj);
@@ -193,8 +193,8 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
       second_point = point_min;
     }
 
-    double z_diff =z_trk - first_point.GetPosition().Z();
-    double alpha = z_diff / fabs(second_point.GetPosition().Z()); - first_point.GetPosition().Z();
+    double z_diff = z_trk - first_point.GetPosition().Z();
+    double alpha = z_diff / fabs(second_point.GetPosition().Z() - first_point.GetPosition().Z());
 
     TVector3 interpolated_pos = first_point.GetPosition().Vect() * (1 - alpha) + second_point.GetPosition().Vect() * alpha;
     TVector3 interpolated_mom = first_point.GetMomentum() * (1 - alpha) + second_point.GetMomentum() * alpha;
@@ -337,7 +337,7 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
     std::string name_mg = "YZ_" + std::to_string(ip);
     TMultiGraph* mg = new TMultiGraph(name_mg.c_str(), name_mg.c_str());
     TGraph* yz_true = new TGraph(primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size());
-    for (int i = 0; i <  primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++){
+    for (uint i = 0; i <  primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++){
       auto point = primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name])[i];
        yz_true->SetPoint(i, point.GetPosition().Z() , point.GetPosition().Y());
     }

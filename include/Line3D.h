@@ -16,6 +16,14 @@ class Line3D
 
   Line3D(const Line3D &line);
 
+  Line3D operator =(const Line3D& line) {
+    this->point_ = line.point_;
+    this->direction_ = line.direction_;
+    this->u_ = line.u_;
+    this->v_ = line.v_;
+    return *this;
+}
+
   static double distance(const Line3D &line1, const Line3D &line2);
   TVector3 getPoint() const
   {

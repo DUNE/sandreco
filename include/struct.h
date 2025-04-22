@@ -186,22 +186,22 @@ struct cluster
 
 struct track
 {
-  int tid;
-  double yc;
-  double zc;
-  double r;
-  double a;
-  double b;
-  double h;
-  double ysig;
-  double x0;
-  double y0;
-  double z0;
-  double t0;
-  int ret_ln;
-  double chi2_ln;
-  int ret_cr;
-  double chi2_cr;
+  int tid = -1;
+  double yc = NAN;
+  double zc = NAN;
+  double r = NAN;
+  double a = NAN;
+  double b = NAN;
+  double h = NAN;
+  double ysig = NAN;
+  double x0 = NAN;
+  double y0 = NAN;
+  double z0 = NAN;
+  double t0 = NAN;
+  int ret_ln = -1;
+  double chi2_ln = NAN;
+  int ret_cr = -1;
+  double chi2_cr = NAN;
   std::vector<dg_wire> clX;
   std::vector<dg_wire> clY;
 };

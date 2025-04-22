@@ -33,9 +33,9 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
   auto track = manager.getTrack();
   if (track.getSteps().size() > 3) {
     std::cout << track.getSteps().size() << std::endl;
-    auto step = track.getSteps().back();
+    auto last_step = track.getSteps().back();
     auto reco_state =
-          step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+          last_step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
     auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
                                   reco_state.radius(), reco_state.tanLambda());
 
@@ -215,7 +215,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     TMultiGraph* mg = new TMultiGraph(name_mg.c_str(), name_mg.c_str());
     TGraph* yz_true = new TGraph(primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size());
 
-    for (int i = 0; i <  primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++){
+    for (uint i = 0; i <  primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++){
       auto point = primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name])[i];
        yz_true->SetPoint(i, point.GetPosition().Z() , point.GetPosition().Y());
     }
