@@ -160,6 +160,23 @@ TMatrixD Manager::getMeasurementNoiseMatrix()
                                  SANDTrackerUtils::getSigmaPositionMeasurement();
   measurementNoiseMatrix[1][1] = SANDTrackerUtils::getSigmaAngleMeasurement() *
                                  SANDTrackerUtils::getSigmaAngleMeasurement();
+  // double sigma_x = 2E-3; //m
+  // double sigma_y = 1E-3;
+  // double sigma_theta_x = 1.0; //rad
+  // double sigma_theta_y = 0.3;
+
+  
+//   switch (orientation) {
+//     case Orientation::kVertical:
+//         measurementNoiseMatrix[0][0] = sigma_x * sigma_x;
+//         measurementNoiseMatrix[1][1] = sigma_theta_x * sigma_theta_x;
+//         break;
+    
+//     case Orientation::kHorizontal:
+//         measurementNoiseMatrix[0][0] = sigma_y * sigma_y;
+//         measurementNoiseMatrix[1][1] = sigma_theta_y * sigma_theta_y;
+//         break;
+// }
   return measurementNoiseMatrix;
 }
 
@@ -427,7 +444,7 @@ int Manager::findBestMatch(double& nextZ, const sand_reco::kf::Measurement& pred
       best_tracklet_index = i;
     }
   }
-  if (best_chi < 1.5) {
+  if (best_chi < 10) {
     return best_tracklet_index;
   } else {
     return -1;
@@ -443,8 +460,25 @@ void Manager::setNextOrientation()
   }
 }
 
+void Manager::EvaluateInnovation(const SANDKFMeasurement& measurement, 
+                                                                const SANDKFMeasurement& prediction,
+                                                                const TMatrixD&  Sk)
+{       
+  auto innovation = measurement - prediction;
+  std::vector<double> g(innovation.GetNrows());
+
+  for (int i = 0; i < innovation.GetNrows(); i++) {  
+    double r = innovation[i][0];
+    double C = Sk[i][i];
+    g[i] = r/sqrt(C);
+  }
+  this_track_.setInnovation(current_step_, g);
+
+}
+
+
 void Manager::filter(const sand_reco::kf::Measurement& measurement,
-                                      const sand_reco::kf::Measurement& prediction)
+  const sand_reco::kf::Measurement& prediction)
 {
 
   auto currentState = this_track_.getStep(current_step_);
@@ -468,7 +502,17 @@ void Manager::filter(const sand_reco::kf::Measurement& measurement,
   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
 
   setNextOrientation();
+
+  auto predictionStateCovMatrix = this_track_.getStep(current_step_).getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction)
+            .getStateCovMatrix();
+  TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
+                                          projectionMatrix);
+  TMatrixD Sk = measurementNoiseMatrix + projectionMatrix *
+                                              predictionStateCovMatrix *
+                                              projectionMatrixTransposed;
+  EvaluateInnovation(measurement, prediction, Sk);
 }
+ 
 
 void Manager::smooth()
 {
@@ -534,11 +578,11 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
 {
 
   TMatrixD initial_cov_matrix(5, 5);
-  initial_cov_matrix[0][0] = pow(200E-6, 2);
-  initial_cov_matrix[1][1] = pow(200E-6, 2);
-  initial_cov_matrix[2][2] = pow(0.1, 2);
-  initial_cov_matrix[3][3] = pow(0.01, 2);
-  initial_cov_matrix[4][4] = pow(0.01, 2);
+  initial_cov_matrix[0][0] = 5*pow(200E-6, 2);
+  initial_cov_matrix[1][1] = 5*pow(200E-6, 2);
+  initial_cov_matrix[2][2] = 5*pow(0.1, 2);
+  initial_cov_matrix[3][3] = 5*pow(0.1, 2);
+  initial_cov_matrix[4][4] = 5*pow(0.1, 2);
 
   sand_reco::kf::StateVector initial_state_vector = sand_reco::kf::utils::getStateVector(particleInfo.mom * 1E-3,  // GeV
                                                                        particleInfo.pos * 1E-3,  // m
@@ -553,7 +597,7 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
 
   trackStep.setPropagatorMatrix(initial_cov_matrix);
   
-  
+
   particleInfo_       = particleInfo;
   z_to_tracklets_     = z_to_tracklets;
   current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
@@ -563,6 +607,11 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
   
   this_track_.Clear();
   this_track_.addStep(trackStep);
+
+  this_track_.setZ(current_step_, particleInfo.pos.Z());
+  this_track_.setX(current_step_, particleInfo.pos.X());
+  this_track_.setY(current_step_, particleInfo.pos.Y());
+
 }
 
 // To Do: implment a seeding algorithm
@@ -631,9 +680,23 @@ void Manager::run()
 
 
   // Notice: if currentZ is not in the map, the second condition is always true
+  bool in_range = true;
   while (stepLength < 10 && std::distance(z_to_tracklets_->begin(), z_to_tracklets_->lower_bound(current_z_)) >= stepLength) {
     // 1- propagate to [currentPlaneID - step]
-    auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;
+    auto it = (z_to_tracklets_->lower_bound(current_z_));
+    for(int i= 0; i < stepLength; i++){
+      if(it == z_to_tracklets_->begin()){
+        in_range = false;
+        break;
+      }
+      --it;
+    }
+
+    if (!in_range) {
+      break;
+
+    }
+    auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;   
 
     auto currentStep = this_track_.getStep(current_step_);
     auto filteredStateVector =
@@ -688,6 +751,9 @@ void Manager::run()
     if (tracklet_index != -1) {
       stepLength = 1;
       auto measurement = getMeasurementFromTracklet(z_to_tracklets_->at(nextZ)[tracklet_index]);
+      this_track_.setZ(current_step_, nextZ);
+      this_track_.setX(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][0]);
+      this_track_.setY(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][1]);
       filter(measurement, prediction);
       current_z_ = nextZ;
     } else {

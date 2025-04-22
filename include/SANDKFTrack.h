@@ -115,6 +115,11 @@ class TrackStep {
     State prediction_;
     State filtered_;
     State smoothed_;
+    std::vector<double> innovation_;
+    double z_;
+    double x_;
+    double y_;
+
 
     // the propagation that bring the vector in this state
     TMatrixD propagator_matrix_; 
@@ -145,6 +150,16 @@ class TrackStep {
     const State& getStage(TrackStateStage stage) const;
     void setPropagatorMatrix(TMatrixD propagator_matrix) { propagator_matrix_ = propagator_matrix; };
     const TMatrixD getPropagatorMatrix() { return propagator_matrix_; };
+    void setInnovation(std::vector<double> innovation) { innovation_ = innovation; };
+    const std::vector<double>& getInnovation() const { return innovation_ ;};
+    void setZ(double z){z_ = z;};
+    double getZ() const {return z_;};
+    void setX(double x){x_ = x;};
+    double getX() const {return x_;};
+    void setY(double y){y_ = y;};
+    double getY() const {return y_;};
+    
+
 };
 
 class Track {
@@ -155,6 +170,10 @@ class Track {
     const TrackStep& getStep(int index) const {return steps_.at(index); };
     void addStep(TrackStep state) { steps_.push_back(state); };
     void setStage(int index, TrackStep::TrackStateStage stage, State state) { steps_.at(index).setStage(stage, state); };
+    void setInnovation(int index, std::vector<double> innovation) { steps_.at(index).setInnovation(innovation); };
+    void setZ(int index, double z){steps_.at(index).setZ(z); };
+    void setX(int index, double x){steps_.at(index).setX(x); };
+    void setY(int index, double y){steps_.at(index).setY(y); };
     void setClusterIDForState(int index, int cluster_id) { steps_.at(index).setClusterIDForThisState(cluster_id); };
     void removeLastStep() { steps_.erase(steps_.end()-1); };
     void Clear() {steps_.clear();}

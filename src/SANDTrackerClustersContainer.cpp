@@ -83,9 +83,9 @@ const sand_reco::tracker::Cluster &sand_reco::tracker::ClustersByProximity::getN
 {
   // To Do: yes
   std::cout << "ERR: Calling sand_reco::tracker::ClustersByProximity::getNearestCluster(double x, double y) "
-            << "but it is not implemented yet and you are getting a default (empty) sand_reco::tracker::Cluster" << std::endl;
-  sand_reco::tracker::Cluster clu;
-  return clu;
+            << "but it is not implemented yet and you are getting the first cluster of the list." << std::endl;
+  throw std::logic_error("Not implemented");
+  return getClusters().at(0);
 }
 
 void sand_reco::tracker::ClustersInPlane::clusterize(const std::vector<sand_reco::tracker::DigitID>& digits)
