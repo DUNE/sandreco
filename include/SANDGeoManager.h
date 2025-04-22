@@ -1,10 +1,13 @@
 #include "SANDECALCellInfo.h"
 #include "SANDENDCAPModInfo.h"
-#include "SANDSTTTubeInfo.h"
+#include "SANDWireInfo.h"
+#include "SANDTrackerModule.h"
+#include "struct.h"
 
 #include <TGeoManager.h>
 #include <TPRegexp.h>
 #include <TVector3.h>
+#include <TG4HitSegment.h>
 
 #include <map>
 
@@ -13,49 +16,69 @@
 
 namespace sand_geometry
 {
-namespace stt
-{
-const char* const path_internal_volume =
+const std::string path_internal_volume =
     "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/sand_inner_volume_PV_0";
-const char* const name_internal_volume = "sand_inner_volume_PV";
+const std::string name_internal_volume = "sand_inner_volume_PV";
 
-const char* const stt_tube_regex_string =
+namespace tracker
+{
+
+namespace chamber
+{
+const std::string wire_regex_string =
+    "(C|C3H6)DriftModule_([0-2]+)(_X0_|_X1_|_A_|_B_|_C_|_)(F|S)wire_PV_([0-9]+)"
+    "(/|)";
+const std::string drift_plane_regex_string =
+    "(C|C3H6)DriftModule_([0-2]+)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-9])(/|)";
+const std::string drift_chamber_regex_string =
+    "(C|C3H6)DriftChamber(_X0_|_X1_|_A_|_B_|_C_|_)PV_0(/|)";
+const std::string module_regex_string =
+    "(C|C3H6)Mod(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-9]+)(/|)";
+const std::string supermodule_regex_string =
+    "(Trk|SuperMod)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-1]+)(/|)";
+}  // namespace chamber
+
+namespace stt
+{
+const std::string path_internal_volume =
+    "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0";
+const std::string name_internal_volume = "sand_inner_volume_PV";
+
+const std::string stt_single_tube_regex_string =
     "(C|C3H6|Trk)Mod_([0-9]+)_plane(XX|YY)_straw_PV_([0-9]+)(/|)";
-// "(horizontalST_(Ar|Xe)|STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_vv_ST)_PV_([0-9]+"
-// ")(/|)";
-// "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
-// "0-9]+)";
-const char* const stt_two_tubes_regex_string =
-    "STT_([0-9]+)_(Trk|C3H6|C)Mod_(ST_|)(hh|vv)_2straw_PV_([0-9]+)<(/|)>";
-const char* const stt_plane_regex_string =
-    // "STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_(hh|vv)_PV_([0-9]+)(/|)";
-    // "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
-    "(C|C3H6|Trk)Mod_([0-9]+)_plane(XX|YY)_PV_([0-9]+)(/|)";
-const char* const stt_module_regex_string =
-    // "STT_([0-9]+)_(Trk|C3H6|C)Mod_PV_([0-9]+)(/|)";
-    "(C|C3H6|Trk)Mod_([0-9]+)_PV_([0-9]+)(/|)";
-}  // namespace stt
+// const std::string stt_two_tubes_regex_string =
+//  "(Trk|C3H6|C)Mod_([0-9]+)_plane(XX|YY)_2straw_stGas_(Xe|Ar)19_PV_([0-9]+)(/|)";
 
+const std::string stt_plane_regex_string =
+    "(C|C3H6|Trk)Mod_([0-9]+)_plane(XX|YY)_PV_([0-9]+)(/|)";
+const std::string stt_module_regex_string =
+    "(C|C3H6|Trk)Mod_([0-9]+)_PV_([0-9]+)(/|)";
+
+const std::string stt_supermodule_regex_string =
+    "(Trk|SuperMod)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-1]+)(/|)";
+}  // namespace stt
+} // namespace tracker
 namespace ecal
 {
-const char* const path_barrel_template =
+const std::string path_barrel_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_lv_PV_%d";
-const char* const path_endcapL_template =
+const std::string path_endcapL_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_0";
-const char* const path_endcapR_template =
+const std::string path_endcapR_template =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/kloe_calo_volume_PV_0/ECAL_end_lv_PV_1";
-const char* const endcap_mod_regex_string =
+const std::string endcap_mod_regex_string =
     "ECAL_ec_mod_([0-9]+)_lv_PV_([0-9]+)(/|)";
-const char* const endcap_mod_path_regex_string =
+const std::string endcap_mod_path_regex_string =
     "ECAL_endcap_lv_PV_([0-9]+)/ECAL_ec_mod_([0-9]+)_lv_PV_([0-9]+)(/|)";
 
-const char* const barrel_module_name = "ECAL_lv_PV";
-const char* const endcap_module_name = "ECAL_end_lv_PV";
-const char* const barrel_last_passive_slab_name = "volECALPassiveSlab_208_PV";
+const std::string barrel_module_name = "ECAL_lv_PV";
+const std::string endcap_module_name = "ECAL_end_lv_PV";
+const std::string barrel_last_passive_slab_name = "volECALPassiveSlab_208_PV";
 
 const double endcap_cell_width = 44.4;
 const int number_of_layers = 5;
@@ -92,29 +115,26 @@ class SANDGeoManager : public TObject
   TGeoManager* geo_;  // TGeoManager pointer to ND site geometry
   std::map<int,  sand_geometry::ecal::ECALCellInfo> cellmap_;  // map of ecal cell (key: id,
                                              // value: info on cell)
-  std::map<int, SANDSTTTubeInfo> sttmap_;    // map of stt tube (key: id, value:
-                                             // info on tube)
+
+  std::vector<sand_geometry::tracker::Plane> planes_;
+  std::map<sand_geometry::tracker::PlaneID, sand_geometry::tracker::plane_iterator> id_to_plane_;
+
 
   std::map<int,  sand_geometry::ecal::ENDCAPModInfo> endcapmap_;  // map of the endcap modules
                                                 // (key: mod id, value: mod
                                                 // info)
 
-  mutable TPRegexp stt_tube_regex_{
-      sand_geometry::stt::stt_tube_regex_string};  // regular expression
-                                                   // to match relevant
-                                                   // info about tube
-                                                   // from volume path
-  mutable TPRegexp stt_two_tubes_regex_{
-      sand_geometry::stt::stt_two_tubes_regex_string};  // regular expression to
-                                                        // match relevant info
-                                                        // about tube couple
-                                                        // from volume path
-  mutable TPRegexp stt_plane_regex_{
-      sand_geometry::stt::stt_plane_regex_string};  // regular expression to
+  mutable TPRegexp stt_tube_regex_ = TPRegexp(
+      sand_geometry::tracker::stt::stt_single_tube_regex_string);  // regular expression
+                                                          // to match relevant
+                                                          // info about tube
+                                                          // from volume path
+  mutable TPRegexp stt_plane_regex_ = TPRegexp(
+      sand_geometry::tracker::stt::stt_plane_regex_string);  // regular expression to
                                                     // match relevant info about
                                                     // plane from volume path
-  mutable TPRegexp stt_module_regex_{
-      sand_geometry::stt::stt_module_regex_string};  // regular expression to
+  mutable TPRegexp stt_module_regex_ = TPRegexp(
+      sand_geometry::tracker::stt::stt_module_regex_string);  // regular expression to
                                                      // match relevant info
                                                      // about module from volume
                                                      // path
@@ -129,10 +149,28 @@ class SANDGeoManager : public TObject
                                                            // info about endcap
                                                            // module from volume
                                                            // path
-  std::map<int, std::map<double, int> >
-      stt_tube_tranverse_position_map_;  // map (key: plane id, value: map (key:
-                                         // tube id, value: 2D position [i.e. x
-                                         // = z, y = transversal coord]))
+  mutable TPRegexp stt_supermodule_regex_ = TPRegexp(
+      sand_geometry::tracker::stt::stt_supermodule_regex_string);  // regular expression
+                                                          // to
+                                                          // match relevant info
+                                                          // about supermodule from volume
+                                                          // path
+
+
+  bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector2& intersection);
+  void setDriftPlaneInfo(sand_geometry::tracker::Plane& plane, double angle);
+  void printModulesInfo(int verbose = 1);
+  void drawModulesInfo();
+
+  // DRIFT CHAMBER
+  mutable TPRegexp wire_regex_ = TPRegexp(sand_geometry::tracker::chamber::wire_regex_string);
+  mutable TPRegexp drift_plane_regex_ = TPRegexp(
+      sand_geometry::tracker::chamber::drift_plane_regex_string);
+  mutable TPRegexp drift_chamber_regex_ = TPRegexp(
+      sand_geometry::tracker::chamber::drift_chamber_regex_string);
+  mutable TPRegexp module_regex_ = TPRegexp(sand_geometry::tracker::chamber::module_regex_string);
+  mutable TPRegexp supermodule_regex_ = TPRegexp(
+      sand_geometry::tracker::chamber::supermodule_regex_string);
 
   // ECAL
   std::vector<double> get_levels_z(double half_module_height,
@@ -191,51 +229,105 @@ class SANDGeoManager : public TObject
   void set_ecal_info();
   void set_ecal_endcap_info(const TGeoHMatrix& matrix);
   void set_ecal_endcap_info();
+  
+  void setTrackerInfo();
 
+  void rearrangePlanes();
+
+  std::vector<TVector2> getLocalLinePlaneIntersections(const TVector2& local_2d_position,
+                                                       const sand_geometry::tracker::Plane& plane);
+  std::vector<TVector2> getGlobalLinePlaneIntersections(const TVector2& local_2d_position, 
+                                                        const sand_geometry::tracker::Plane& plane);
+  double getMinDistanceBetweenSegments(TVector3 a, TVector3 b,
+                                       TVector3 c, TVector3 d);
   // STT
-  bool is_stt_tube(const TString& volume_name) const;
-  bool is_stt_plane(const TString& volume_name) const;
-  int get_stt_plane_id(const TString& volume_path) const;
-  void set_stt_tube_info(const TGeoNode* const node, const TGeoHMatrix& matrix,
-                         int stt_plane_id);
-  void set_stt_info(const TGeoHMatrix& matrix);
-  void set_stt_info();
+  sand_geometry::tracker::ModuleID getSttModuleId(const TString& volume_path) const;
+  bool isSttTube(const TString& volume_name) const;
+  bool isSttPlane(const TString& volume_name) const;
+  sand_geometry::tracker::PlaneID getSttPlaneId(const TString& volume_path, bool justLocal) const;
+  void setSttWireInfo(sand_geometry::tracker::Plane& plane, const TGeoNode* const node, const TGeoHMatrix& matrix);
+  void setSttPlaneInfo(const TGeoNode* const node, const TGeoHMatrix& matrix);
+
+  // DRIFT CHAMEBER
+  void setPlaneInfo(const TGeoHMatrix& matrix);
+  void setDriftPlaneInfo(const TGeoNode* const node, const TGeoHMatrix& matrix);
+  void setDriftWireInfo(sand_geometry::tracker::Plane& plane);
+  sand_geometry::tracker::PlaneID getDriftPlaneId(const TString& volume_path, bool JustLocalId) const;
+  sand_geometry::tracker::ModuleID getDriftModuleId(const TString& volume_path) const;
+  sand_geometry::tracker::ModuleID getDriftSupermoduleId(const TString& volume_path) const;
+  sand_geometry::tracker::ModuleID getDriftModuleReplicaId(const TString& volume_path) const;
+  sand_geometry::tracker::WireID getWireId(const TString& volume_path) const;
+  bool isDriftPlane(const TString& volume_name) const;
+  bool isSwire(const TString& volume_path) const;
+  void writeMapOnFile(std::string fName,
+                      const std::map<sand_geometry::tracker::WireID, sand_geometry::tracker::WireInfo>& map);
 
  public:
   SANDGeoManager()
       : cellmap_(),
-        sttmap_(),
-        stt_tube_regex_(sand_geometry::stt::stt_tube_regex_string),
-        stt_two_tubes_regex_(sand_geometry::stt::stt_two_tubes_regex_string),
-        stt_plane_regex_(sand_geometry::stt::stt_plane_regex_string),
-        stt_module_regex_(sand_geometry::stt::stt_module_regex_string),
-        stt_tube_tranverse_position_map_()
+        stt_tube_regex_(sand_geometry::tracker::stt::stt_single_tube_regex_string),
+        // stt_two_tubes_regex_(sand_geometry::tracker::stt::stt_two_tubes_regex_string),
+        stt_plane_regex_(sand_geometry::tracker::stt::stt_plane_regex_string),
+        stt_module_regex_(sand_geometry::tracker::stt::stt_module_regex_string),
+        stt_supermodule_regex_(
+            sand_geometry::tracker::stt::stt_supermodule_regex_string)
   {
   }
   void init(TGeoManager* const geo);
-  int save_to_file(const char* name = 0, Int_t option = 0, Int_t bufsize = 0)
-  {
-    geo_ = 0;
-    return Write(name, option, bufsize);
-  }
+  void setGeoCurrentPoint(double x, double y, double z) const;
+  void setGeoCurrentDirection(double x, double y, double z) const;
+  void initVolume(volume& v) const;
   const  sand_geometry::ecal::ECALCellInfo& get_ecal_cell_info(int ecal_cell_id) const
   {
     return cellmap_.at(ecal_cell_id);
   }
-  const SANDSTTTubeInfo& get_stt_tube_info(int stt_tube_id) const
-  {
-    return sttmap_.at(stt_tube_id);
-  }
+  void fillAdjacentCells(std::string geometry);
+  std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator getCellInfo(sand_geometry::tracker::CellID cell_id) const;
+  sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::CellID cell_id) const;
+  sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::PlaneID unique_plane_id) const;
   const std::map<int,  sand_geometry::ecal::ECALCellInfo>& get_ecal_cell_info() const
   {
     return cellmap_;
   }
-  const std::map<int, SANDSTTTubeInfo>& get_stt_tube_info() const
+  const std::vector<sand_geometry::tracker::Plane>&
+      getPlanes() const
   {
-    return sttmap_;
+    return planes_;
+  }
+  std::vector<sand_geometry::tracker::Plane>&
+      getPlanes()
+  {
+    return planes_;
+  }
+
+  const sand_geometry::tracker::PlaneIndex getPlaneIndex(const sand_geometry::tracker::PlaneID& plane_uid) const
+  {
+    return sand_geometry::tracker::PlaneIndex(std::distance(planes_.cbegin(), id_to_plane_.at(plane_uid)));
   }
   int get_ecal_cell_id(double x, double y, double z, bool include_passive) const;
-  int get_stt_tube_id(double x, double y, double z) const;
+  sand_geometry::tracker::CellID getSttTubeId(double x, double y, double z) const;
+  long printSttTubeId(double x, double y, double z) const;
+  
+  // Notice: is the non-const version needed?
+  const TGeoManager* getTGeoManager() const {return geo_;};
+  TGeoManager* getTGeoManager() {return geo_;};
+  long get_wire_id(long drift_plane_id, double z,
+                   double transverse_coord) const;
+  std::vector<sand_geometry::tracker::CellID> getSegmentIds(const TG4HitSegment& hseg) const;
+  TVector3 findClosestDrift(TVector3 point, double epsilon) const;
+  TVector3 smearPoint(TVector3 point, double epsilon) const;
+  
+  const TVector2 pointInRotatedSystem(TVector2 v, double angle) const;
+  const TVector2 globalToLocal(TVector2 global, const sand_geometry::tracker::Plane& plane) const;
+  const TVector2 localToRotated(TVector2 local, const sand_geometry::tracker::Plane& plane) const;
+  const TVector2 globalToRotated(TVector2 global, const sand_geometry::tracker::Plane& plane) const;
+  const TVector2 rotatedToLocal(TVector2 rotated, const sand_geometry::tracker::Plane& plane) const;
+  const TVector2 localToGlobal(TVector2 local, const sand_geometry::tracker::Plane& plane) const;
+  const TVector2 rotatedToGlobal(TVector2 rotated, const sand_geometry::tracker::Plane& plane) const;
+  sand_geometry::tracker::CellID getClosestCellToHit(TVector3 hit_center, const sand_geometry::tracker::Plane& plane, bool checkCloseCells) const;
+  double getHitCellDistance(TVector2 rotated_local_yz_hit_position, 
+                                        std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator cell_it, 
+                                        const sand_geometry::tracker::Plane& plane) const;
 
   double compute_cell_d1(const double& cell_l, const double& tdc_1,
                          const double& tdc_2) const;
@@ -248,6 +340,8 @@ class SANDGeoManager : public TObject
   static void decode_ecal_cell_id(int cell_global_id, int& detector_id,
                                   int& module_id, int& layer_id,
                                   int& cell_local_id);
+  TString FindNextActiveLayer(const double* starting_point,
+                              const double* direction) const;
   int get_hit_path_len(const double& hx, const double& hy, const double& hz,
                        const int& global_cell_id, double& d1, double& d2) const;
                        
@@ -256,14 +350,18 @@ class SANDGeoManager : public TObject
                        double& reco_y, double& reco_z) const;
 
   // STT
-  static int encode_stt_tube_id(int stt_plane_global_id, int stt_tube_local_id);
-  static void decode_stt_tube_id(int stt_tube_global_id,
-                                 int& stt_plane_global_id,
-                                 int& stt_tube_local_id);
-  static int encode_stt_plane_id(int stt_module_id, int stt_plane_local_id,
-                                 int stt_plane_type);
-  static void decode_stt_plane_id(int stt_plane_global_id, int& stt_module_id,
-                                  int& stt_plane_local_id, int& stt_plane_type);
+  static sand_geometry::tracker::CellID encodeCellId(sand_geometry::tracker::PlaneID plane_global_id, sand_geometry::tracker::CellID wire_local_id);
+  static void decodeCellId(sand_geometry::tracker::CellID   cell_global_id, 
+                             sand_geometry::tracker::PlaneID& plane_global_id,
+                             sand_geometry::tracker::CellID&  cell_local_id);
+  static sand_geometry::tracker::PlaneID encodePlaneId(sand_geometry::tracker::ModuleID unique_module_id,
+                              sand_geometry::tracker::PlaneID plane_local_id, sand_geometry::tracker::PlaneID plane_type);
+  static void decodePlaneId(sand_geometry::tracker::PlaneID plane_global_id, sand_geometry::tracker::ModuleID& unique_module_id, 
+                              sand_geometry::tracker::PlaneID& plane_local_id, sand_geometry::tracker::PlaneID& plane_type);
+  static sand_geometry::tracker::ModuleID encodeModuleId(sand_geometry::tracker::ModuleID supermodule_id, 
+                               sand_geometry::tracker::ModuleID module_id, sand_geometry::tracker::ModuleID module_replica_id);
+  static void decodeModuleId(sand_geometry::tracker::ModuleID unique_module_id, sand_geometry::tracker::ModuleID& supermodule_id, 
+                               sand_geometry::tracker::ModuleID& module_id, sand_geometry::tracker::ModuleID& module_replica_id);
 
   ClassDef(SANDGeoManager, 1);
 };

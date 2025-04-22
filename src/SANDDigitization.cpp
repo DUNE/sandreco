@@ -149,13 +149,13 @@ void eval_adc_and_tdc_from_photo_electrons(
           signal.side = side;
           signal.adc = sand_reco::ecal::acquisition::pe2ADC * pe_count;
           switch (ecal_digi_mode) {
-            case ECAL_digi_mode::const_fract:
+            case ECAL_digi_mode ::const_fract:
               index = int(sand_reco::ecal::acquisition::costant_fraction *
                           pe_count) +
                       start_index;
               if (debug) std::cout << " Const. Fract. " << index << std::endl;
               break;
-            case ECAL_digi_mode::fixed_thresh:
+            case ECAL_digi_mode ::fixed_thresh:
               double tdc_thresh =
                   (sand_reco::ecal::acquisition::fixed_thresh_pe >
                    sand_reco::ecal::acquisition::pe_threshold)

@@ -11,7 +11,7 @@
 namespace digitization
 {
 
-enum class ECAL_digi_mode;
+enum class ECAL_digi_mode ;
 
 namespace fluka
 {
@@ -34,28 +34,28 @@ void group_pmts_in_cells(TGeoManager* geo,
 
 void digitize_ecal(TG4Event* ev, TGeoManager* geo,
                    std::vector<dg_cell>& vec_cell,
-                   ECAL_digi_mode ecal_digi_mode);
+                   ECAL_digi_mode  ecal_digi_mode);
 
 }  // namespace ecal
 
 namespace stt
 {
-void group_hits_by_tube(TG4Event* ev, TGeoManager* geo, int NHits,
+void groupHitsByTube(TG4Event* ev, TGeoManager* geo, int NHits,
                         Int_t DetType[10000], Float_t xPos[10000],
                         Float_t yPos[10000], Float_t zPos[10000],
                         std::map<int, std::vector<hit> >& hits2Tube);
 
-void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
-                             std::vector<dg_tube>& digit_vec);
+void createDigitsFromHits(std::map<int, std::vector<hit> >& hits2Tube,
+                             std::vector<dg_wire>& digit_vec);
 
-void digitize_stt(TG4Event* ev, TGeoManager* geo, int NHits,
+void digitizeStt(TG4Event* ev, TGeoManager* geo, int NHits,
                   Int_t DetType[10000], Float_t xPos[10000],
                   Float_t yPos[10000], Float_t zPos[10000],
-                  std::vector<dg_tube>& digit_vec);
+                  std::vector<dg_wire>& digit_vec);
 }  // namespace stt
 
 void digitize(const char* finname, const char* foutname,
-              ECAL_digi_mode ecal_digi_mode);
+              ECAL_digi_mode  ecal_digi_mode);
 
 }  // namespace fluka
 

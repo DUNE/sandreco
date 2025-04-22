@@ -14,6 +14,7 @@
 
 namespace sand_reco
 {
+extern std::map<int, double> t0;
 
 namespace stt
 {
@@ -24,30 +25,6 @@ const char* const path_internal_volume =
 const char* const name_internal_volume = "sand_inner_volume_PV";
 ////////////////////////////////////////////////////
 
-// const char* const rST_string =
-//     "(horizontalST_(Ar|Xe)|STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_vv_ST)_PV_([0-9]+"
-//     ")(/|)";
-// //
-// "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_ST_stGas_(Xe|Ar)19_vol_PV_(["
-// // "0-9]+)";
-// const char* const r2ST_string =
-//     "STT_([0-9]+)_(Trk|C3H6|C)Mod_(ST_|)(hh|vv)_2straw_PV_([0-9]+)(/|)";
-// const char* const rSTplane_string =
-//     "STT_([0-9]+)_(Trk|C3H6|C)Mod(_ST|)_(hh|vv)_PV_([0-9]+)(/|)";
-// // "_(C3H6|C|Tr)Mod_([0-9]+)_(ST_|)(hor|ver|hor2)_vol_PV_0";
-// const char* const rSTmod_string =
-//     "STT_([0-9]+)_(Trk|C3H6|C)Mod_PV_([0-9]+)(/|)";
-
-// extern TPRegexp* rST;
-// extern TPRegexp* r2ST;
-// extern TPRegexp* rSTplane;
-// extern TPRegexp* rSTmod;
-
-// stt resolution and threshold
-// const double res_x = 0.2;            // 0.2 mm
-// const double res_t = 0.;             // 1 ns
-// const double e_threshold = 0.25E-3;  // 0.25E-3 MeV
-
 extern double stt_center[3];
 const double stt_int_time = 400.;     // ns
 const double bucket_rms = 1.;         // ns
@@ -56,55 +33,20 @@ const double v_drift = 0.05;          // mm/ns
 const double v_signal_inwire = 200.;  // mm/ns
 const double tm_stt_smearing = 3.5;   // ns
 
-// extern std::map<int, std::map<double, int> > stX;
-// extern std::map<int, double> stL;
-// extern std::map<int, std::map<int, TVector2> > stPos;
-// extern std::map<int, TVector2> tubePos;
-extern std::map<int, double> t0;
-
-// bool isST(TString name);
-// bool isSTPlane(TString name);
-// // int getSTId(TString name);
-// int getPlaneID(TString name);
-// void getSTinfo(TGeoNode* nod, TGeoHMatrix mat, int pid,
-//                std::map<double, int>& stX, std::map<int, double>& stL,
-//                std::map<int, TVector2>& stPos);
-// void getSTPlaneinfo(TGeoHMatrix mat, std::map<int, std::map<double, int> >&
-// stX,
-//                     std::map<int, double>& stL,
-//                     std::map<int, std::map<int, TVector2> >& stPos);
-// int getSTUniqID(TGeoManager* g, double x, double y, double z);
-// int encodeSTID(int planeid, int tubeid);
-// void decodeSTID(int id, int& planeid, int& tubeid);
-// int encodePlaneID(int moduleid, int planelocid, int type);
-// void decodePlaneID(int id, int& moduleid, int& planelocid, int& type);
 double getT(double y1, double y2, double y, double z1, double z2, double z);
-bool isDigBefore(dg_tube d1, dg_tube d2);
-bool isDigUpstream(const dg_tube& d1, const dg_tube& d2);
+bool isDigBefore(dg_wire d1, dg_wire d2);
+bool isDigUpstream(const dg_wire& d1, const dg_wire& d2);
 void initT0(TG4Event* ev, SANDGeoManager& geo);
 }  // namespace stt
 
 namespace ecal
 {
 
-// const int nLay = 5;
-// const int nCel = 12;
-// const int nMod = 24;
-
-// thickness of the layers in mm
-// const double dzlay[nLay] = {44., 44., 44., 44., 54.};
-// extern double czlay[nLay];
-// extern double cxlay[nLay][nCel];
-
 namespace barrel
 {
-// const double lCalBarrel = 4300;
 }
 namespace endcap
 {
-// const int nCel_ec = 90;
-// extern double ec_r;
-// extern double ec_dz;
 }  // namespace endcap
 
 namespace geometry
@@ -142,15 +84,6 @@ namespace geometry
 
 namespace attenuation
 {
-/*
-    dE/dx attenuation - Ea=p1*exp(-d/atl1)+(1.-p1)*exp(-d/atl2)
-    d    distance from photocatode - 2 cells/cell; d1 and d2
-    atl1  50. cm
-    atl2  430 cm planes 1-2    innermost plane is 1
-            380 cm plane 3
-            330 cm planes 4-5
-    p1   0.35
-*/
 const double p1 = 0.35;
 const double atl1 = 500.;
 const double atl2_01 = 4300.0;
@@ -179,9 +112,7 @@ const double e2pe = 18.5;
 
 namespace acquisition
 {
-// photoelectron/counts = 0.25
 const double pe2ADC = 1 / .25;
-// ADC integration time = 30 ns
 const double int_time = 30.;
 // dead time
 const double dead_time = 0.;
@@ -228,8 +159,8 @@ const double B = 0.6;
 }
 
 bool isPeBefore(const pe& p1, const pe& p2);
-bool isCluBigger(const std::vector<dg_tube>& v1,
-                 const std::vector<dg_tube>& v2);
+bool isCluBigger(const std::vector<dg_wire>& v1,
+                 const std::vector<dg_wire>& v2);
 bool isHitBefore(hit h1, hit h2);
 bool isCellBefore(dg_cell c1, dg_cell c2);
 }  // namespace ecal

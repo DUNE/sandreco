@@ -12,7 +12,7 @@
 namespace digitization
 {
 
-enum class ECAL_digi_mode;
+enum class ECAL_digi_mode ;
 
 namespace edep_sim
 {
@@ -37,26 +37,42 @@ void group_pmts_in_cells(const SANDGeoManager& geo,
 
 void digitize_ecal(TG4Event* ev, const SANDGeoManager& geo,
                    std::vector<dg_cell>& vec_cell,
-                   ECAL_digi_mode ecal_digi_mode);
+                   ECAL_digi_mode  ecal_digi_mode);
 
 }  // namespace ecal
 
+namespace tracker
+{
+std::vector<TLorentzVector> wireHitClosestPoints(hit& h, const sand_geometry::tracker::WireInfo& wire);
+
+double getMinWireTime(const TLorentzVector& point, const sand_geometry::tracker::WireInfo& wire);
+
+void createDigitsFromHits(const SANDGeoManager& geo,
+                             const std::map<sand_geometry::tracker::CellID, std::vector<hit>>& hits2cell,
+                             std::vector<dg_wire>& wire_digits);
+
 namespace stt
 {
-void group_hits_by_tube(TG4Event* ev, const SANDGeoManager& geo,
+void groupHitsByTube(const TG4Event& ev, const SANDGeoManager& geo,
                         std::map<int, std::vector<hit> >& hits2Tube);
 
-void create_digits_from_hits(const SANDGeoManager& geo,
-                             std::map<int, std::vector<hit> >& hits2Tube,
-                             std::vector<dg_tube>& digit_vec);
-
-void digitize_stt(TG4Event* ev, const SANDGeoManager& geo,
-                  std::vector<dg_tube>& digit_vec);
+void digitizeStt(const TG4Event& ev, const SANDGeoManager& geo,
+                  std::vector<dg_wire>& wire_digits);
 }  // namespace stt
+
+namespace chamber
+{
+void groupHitsByCell(const TG4Event& ev, const SANDGeoManager& geo,
+                        std::map<sand_geometry::tracker::CellID, std::vector<hit>>& hits2cell);
+
+void digitizeDrift(const TG4Event& ev, const SANDGeoManager& geo,
+                    std::vector<dg_wire>& wire_digits);
+}  // namespace chamber
+} // namespace tracker
 
 // digitize event
 void digitize(const char* finname, const char* foutname,
-              ECAL_digi_mode ecal_digi_mode);
+              ECAL_digi_mode  ecal_digi_mode);
 
 }  // namespace edep_sim
 

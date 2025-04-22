@@ -74,7 +74,7 @@ TCanvas* cev = 0;
 TCanvas* cpr = 0;
 
 std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
-std::vector<dg_tube>* vec_tube = new std::vector<dg_tube>;
+std::vector<dg_wire>* vec_wire = new std::vector<dg_wire>;
 std::vector<track>* vec_tr = new std::vector<track>;
 std::vector<cluster>* vec_cl = new std::vector<cluster>;
 std::map<int, gcell> calocell;
@@ -97,8 +97,15 @@ const char* path_endcapL_template =
 
 const char* path_GRAIN =
     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
-    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/"
-    "GRAIN_LAr_lv_PV_0";
+    "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/";
+
+// const char* path_GRAIN =
+//     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+//     "MagIntVol_volume_PV_0/sand_inner_volume_PV_0/GRAIN_lv_PV_0/"
+//     "GRAIN_Ext_vessel_outer_layer_lv_PV_0/"
+//     "GRAIN_Honeycomb_layer_lv_PV_0/GRAIN_Ext_vessel_inner_layer_lv_PV_0/"
+//     "GRAIN_gap_between_vessels_lv_PV_0/"
+//     "GRAIN_inner_vessel_lv_PV_0/GRAIN_LAr_lv_PV_0";
 
 // const char* path_GRIAN =
 //     "volWorld_PV_1/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
@@ -138,8 +145,12 @@ void init(TFile* fmc, std::vector<TFile*> vf)
     tt = reinterpret_cast<TTree*>(f->Get("tDigit"));
     if (tt) tDigit = tt;
   }
-
+  
   if (!tEdep) return;
+
+  geo = reinterpret_cast<TGeoManager*>(fmc->Get("EDepSimGeometry"));
+
+  if (!geo) return;
 
   if (tReco) tEdep->AddFriend(tReco);
   if (tDigit) tEdep->AddFriend(tDigit);
@@ -148,16 +159,12 @@ void init(TFile* fmc, std::vector<TFile*> vf)
 
   tEdep->SetBranchAddress("Event", &ev);
   if (tDigit) tDigit->SetBranchAddress("dg_cell", &vec_cell);
-  if (tDigit) tDigit->SetBranchAddress("dg_tube", &vec_tube);
+  if (tDigit) tDigit->SetBranchAddress("dg_wire", &vec_wire);
   if (tReco) tReco->SetBranchAddress("track", &vec_tr);
   if (tReco) tReco->SetBranchAddress("cluster", &vec_cl);
   if (tEvent) tEvent->SetBranchAddress("event", &evt);
 
   t = tEdep;
-
-  geo = reinterpret_cast<TGeoManager*>(fmc->Get("EDepSimGeometry"));
-
-  if (!geo) return;
 
   double dummyLoc[3];
   double dummyMas[3];
@@ -601,7 +608,8 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
 
         // pion+/pion-
         case 211:
-        case -211:;
+        case -211:
+          ;
           tr_zy->SetLineColor(kCyan);
           tr_zx->SetLineColor(kCyan);
           break;
@@ -620,7 +628,7 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   }
 
   if (showede) {
-    for (auto det : {"Straw", "EMCalSci", "LArHit"}) {
+    for (auto det : {"Straw", "EMCalSci", "LArHit", "DriftVolume"}) {
       for (auto& h : ev->SegmentDetectors[det]) {
         TLine* lzx =
             new TLine(h.Start.Z(), h.Start.X(), h.Stop.Z(), h.Stop.X());
@@ -635,19 +643,32 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   }
 
   if (showdig) {
-    for (unsigned int i = 0; i < vec_tube->size(); i++) {
-      if (vec_tube->at(i).hor) {
-        TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).y, 6);
+    for (unsigned int i = 0; i < vec_wire->size(); i++) {
+      if (vec_wire->at(i).hor) {
+        TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).y, 6);
         cev->cd(1);
         m->Draw();
       } else {
-        TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).x, 6);
+        TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).x, 6);
+        cev->cd(2);
+        m->Draw();
+      }
+    }
+
+    for (unsigned int i = 0; i < vec_wire->size(); i++) {
+      if (vec_wire->at(i).hor) {
+        TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).y, 6);
+        cev->cd(1);
+        m->Draw();
+      } else {
+        TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).x, 6);
         cev->cd(2);
         m->Draw();
       }
     }
 
     for (unsigned int j = 0; j < vec_cell->size(); j++) {
+
       int id = vec_cell->at(j).id;
 
       TGraph* gr = new TGraph(4, calocell[id].Z, calocell[id].Y);
@@ -685,13 +706,13 @@ void show(int index, bool showtrj, bool showede, bool showdig, bool showrec)
   // }
 
   // if (showdig) {
-  //   for (unsigned int i = 0; i < vec_tube->size(); i++) {
-  //     if (vec_tube->at(i).hor) {
-  //       TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).y, 6);
+  //   for (unsigned int i = 0; i < vec_wire->size(); i++) {
+  //     if (vec_wire->at(i).hor) {
+  //       TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).y, 6);
   //       cev->cd(1);
   //       m->Draw();
   //     } else {
-  //       TMarker* m = new TMarker(vec_tube->at(i).z, vec_tube->at(i).x, 6);
+  //       TMarker* m = new TMarker(vec_wire->at(i).z, vec_wire->at(i).x, 6);
   //       cev->cd(2);
   //       m->Draw();
   //     }
@@ -853,9 +874,9 @@ void showPri(int index)
 
   TLorentzVector vpos = ev->Primaries.at(0).GetPosition();
 
-  cpr->cd(1)->DrawFrame(
-      -1 + vpos.X(), -1 + vpos.Y(), 1 + vpos.X(), 1 + vpos.Y(),
-      TString::Format("XY (front) [Event: %d]", index).Data());
+  cpr->cd(1)
+      ->DrawFrame(-1 + vpos.X(), -1 + vpos.Y(), 1 + vpos.X(), 1 + vpos.Y(),
+                  TString::Format("XY (front) [Event: %d]", index).Data());
   cpr->cd(2)->DrawFrame(-1 + vpos.Z(), -1 + vpos.Y(), 1 + vpos.Z(),
                         1 + vpos.Y(),
                         TString::Format("ZY (side) [Event: %d]", index).Data());
@@ -871,8 +892,7 @@ void showPri(int index)
 
   std::cout << "TRUE "
                "==============================================================="
-               "===="
-            << std::endl;
+               "====" << std::endl;
 
   std::cout << std::setw(10) << "PDG"
             << " |" << std::setw(10) << "ID"
@@ -883,8 +903,7 @@ void showPri(int index)
             << " |" << std::endl;
 
   std::cout << "==============================================================="
-               "========="
-            << std::endl;
+               "=========" << std::endl;
 
   for (unsigned int i = 0; i < ev->Primaries.at(0).Particles.size(); i++) {
     TVector3 mom;
@@ -917,8 +936,7 @@ void showPri(int index)
               << std::endl;
   }
   std::cout << "==============================================================="
-               "========="
-            << std::endl;
+               "=========" << std::endl;
 
   cpr->cd(1);
   for (unsigned int i = 0; i < pmom.size(); i++) {
@@ -967,7 +985,8 @@ void showPri(int index)
 
       // pion+/pion-
       case 211:
-      case -211:;
+      case -211:
+        ;
         par->SetLineColor(kCyan);
         par->SetFillColor(kCyan);
         break;
@@ -1029,7 +1048,8 @@ void showPri(int index)
 
       // pion+/pion-
       case 211:
-      case -211:;
+      case -211:
+        ;
         par->SetLineColor(kCyan);
         par->SetFillColor(kCyan);
         break;
@@ -1091,7 +1111,8 @@ void showPri(int index)
 
       // pion+/pion-
       case 211:
-      case -211:;
+      case -211:
+        ;
         par->SetLineColor(kCyan);
         par->SetFillColor(kCyan);
         break;
@@ -1137,8 +1158,7 @@ void showPri(int index)
 
     std::cout << "RECO "
                  "============================================================="
-                 "======"
-              << std::endl;
+                 "======" << std::endl;
 
     std::cout << std::setw(10) << "PDG"
               << " |" << std::setw(10) << "ID"
@@ -1149,8 +1169,7 @@ void showPri(int index)
               << " |" << std::endl;
 
     std::cout << "============================================================="
-                 "==========="
-              << std::endl;
+                 "===========" << std::endl;
 
     for (unsigned int i = 0; i < evt->particles.size(); i++) {
       if (evt->particles.at(i).primary == 1 &&
@@ -1204,8 +1223,7 @@ void showPri(int index)
       }
     }
     std::cout << "============================================================="
-                 "==========="
-              << std::endl;
+                 "===========" << std::endl;
 
     double frac = 0.5;
     double dx = std::max<double>(10., xmax - xmin);
@@ -1220,20 +1238,20 @@ void showPri(int index)
     double yc = 0.5 * (ymax + ymin);
     double zc = 0.5 * (zmax + zmin);
 
-    cpr->cd(4)->DrawFrame(
-        xc - (1. + frac) * dXYmax, yc - (1. + frac) * dXYmax,
-        xc + (1. + frac) * dXYmax, yc + (1. + frac) * dXYmax,
-        TString::Format("XY (front) [Event: %d]", index).Data());
+    cpr->cd(4)
+        ->DrawFrame(xc - (1. + frac) * dXYmax, yc - (1. + frac) * dXYmax,
+                    xc + (1. + frac) * dXYmax, yc + (1. + frac) * dXYmax,
+                    TString::Format("XY (front) [Event: %d]", index).Data());
 
-    cpr->cd(5)->DrawFrame(
-        zc - (1. + frac) * dYZmax, yc - (1. + frac) * dYZmax,
-        zc + (1. + frac) * dYZmax, yc + (1. + frac) * dYZmax,
-        TString::Format("ZY (side) [Event: %d]", index).Data());
+    cpr->cd(5)
+        ->DrawFrame(zc - (1. + frac) * dYZmax, yc - (1. + frac) * dYZmax,
+                    zc + (1. + frac) * dYZmax, yc + (1. + frac) * dYZmax,
+                    TString::Format("ZY (side) [Event: %d]", index).Data());
 
-    cpr->cd(6)->DrawFrame(
-        zc - (1. + frac) * dXZmax, xc - (1. + frac) * dXZmax,
-        zc + (1. + frac) * dXZmax, xc + (1. + frac) * dXZmax,
-        TString::Format("ZX (top) [Event: %d]", index).Data());
+    cpr->cd(6)
+        ->DrawFrame(zc - (1. + frac) * dXZmax, xc - (1. + frac) * dXZmax,
+                    zc + (1. + frac) * dXZmax, xc + (1. + frac) * dXZmax,
+                    TString::Format("ZX (top) [Event: %d]", index).Data());
 
     cpr->cd(4);
     for (unsigned int i = 0; i < pmom_reco.size(); i++) {
@@ -1286,7 +1304,8 @@ void showPri(int index)
 
         // pion+/pion-
         case 211:
-        case -211:;
+        case -211:
+          ;
           par->SetLineColor(kCyan);
           par->SetFillColor(kCyan);
           break;
@@ -1352,7 +1371,8 @@ void showPri(int index)
 
         // pion+/pion-
         case 211:
-        case -211:;
+        case -211:
+          ;
           par->SetLineColor(kCyan);
           par->SetFillColor(kCyan);
           break;
@@ -1418,7 +1438,8 @@ void showPri(int index)
 
         // pion+/pion-
         case 211:
-        case -211:;
+        case -211:
+          ;
           par->SetLineColor(kCyan);
           par->SetFillColor(kCyan);
           break;
@@ -1467,8 +1488,7 @@ void help()
                "--trj          -- to show trajectories\n"
                "--ede          -- to show energy deposits\n"
                "--dgt          -- to show digits\n"
-               "--rec          -- to show reco objects\n"
-            << std::endl;
+               "--rec          -- to show reco objects\n" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -1496,40 +1516,55 @@ int main(int argc, char* argv[])
   while (index < argc) {
     TString opt = argv[index];
     if (opt.CompareTo("-e") == 0) {
-      try {
+      try
+      {
         evid = atoi(argv[++index]);
         is_ev_number_set = true;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }
     } else if (opt.CompareTo("-mc") == 0) {
-      try {
+      try
+      {
         fmc = new TFile(argv[++index]);
         is_mc_file_set = true;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }
     } else if (opt.CompareTo("-f") == 0) {
-      try {
+      try
+      {
         vf.push_back(new TFile(argv[++index]));
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }
     } else if (opt.CompareTo("-o") == 0) {
-      try {
+      try
+      {
         fout = argv[++index];
         is_out_file_set = true;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }
     } else if (opt.CompareTo("--batch") == 0) {
-      try {
+      try
+      {
         is_batch_mode_set = true;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         std::cerr << e.what() << '\n';
         return 1;
       }

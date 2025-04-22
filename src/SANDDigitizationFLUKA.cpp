@@ -26,7 +26,7 @@ double energy_to_photo_electrons(double E)
 {
   if (debug)
     std::cout << "E = " << E
-              << " -> p.e. = " << sand_reco::fluka::ecal::e2p2_fluka * E
+              << " -> p.e. = " << sand_reco::fluka::ecal::e2p2_fluka* E
               << std::endl;
 
   return sand_reco::fluka::ecal::e2p2_fluka * E;
@@ -195,15 +195,16 @@ bool process_hit(const TG4HitSegment& hit, int& detID, int& modID, int& planeID,
     sand_reco::fluka::ecal::cellCoordEndcap[int(modID / 10)][planeID][cellID]
                                            [1] = 0;
     if (modID == 40)
-      sand_reco::fluka::ecal::cellCoordEndcap[int(modID /
-                                                  10)][planeID][cellID][2] =
-          44 / 2 + cellID * 44 -
-          sand_reco::fluka::ecal::ec_rf;  // crescono all'aumentare di cellID
+      sand_reco::fluka::ecal::cellCoordEndcap
+          [int(modID / 10)][planeID][cellID][2] =
+              44 / 2 + cellID * 44 -
+              sand_reco::fluka::ecal::ec_rf;  // crescono all'aumentare di
+                                              // cellID
     else
-      sand_reco::fluka::ecal::cellCoordEndcap[int(modID /
-                                                  10)][planeID][cellID][2] =
-          44 / 2 - (cellID)*44 +
-          sand_reco::fluka::ecal::ec_rf;  // crescono al diminuire di cellID
+      sand_reco::fluka::ecal::cellCoordEndcap
+          [int(modID / 10)][planeID][cellID][2] =
+              44 / 2 - (cellID) * 44 +
+              sand_reco::fluka::ecal::ec_rf;  // crescono al diminuire di cellID
 
   } else if (str == "tracker" || str == "outside") {
     if (debug) std::cout << std::endl;
@@ -317,7 +318,7 @@ void group_pmts_in_cells(TGeoManager* geo,
 // simulate calorimeter responce for whole event
 void digitize_ecal(TG4Event* ev, TGeoManager* geo,
                    std::vector<dg_cell>& vec_cell,
-                   ECAL_digi_mode ecal_digi_mode)
+                   ECAL_digi_mode  ecal_digi_mode)
 {
   std::map<int, std::vector<pe> > photo_el;
   std::map<int, std::vector<dg_ps> > ps;
@@ -416,7 +417,7 @@ void group_hits_by_tube(TG4Event* ev, TGeoManager* geo, int NHits,
 // tdc is the time of closest point to wire + drift time
 // adc is the sum of energy deposit within integration time window
 void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
-                             std::vector<dg_tube>& digit_vec)
+                             std::vector<dg_wire>& digit_vec)
 {
   digit_vec.clear();
 
@@ -433,12 +434,12 @@ void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
 
     TVector2 wire = sand_reco::fluka::stt::tubePos[did];
 
-    dg_tube d;
+    dg_wire d;
     d.det = it->second[0].det;
     d.did = did;
     d.de = 0;
     d.hor = (type % 2 == 0);
-    d.t0 = sand_reco::stt::t0[pla];
+    d.t0 = sand_reco::t0[pla];
 
     if (d.hor == true) {
       d.x = sand_reco::stt::stt_center[0];
@@ -475,9 +476,8 @@ void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
 
       TVector2 min_dist_point(x, y);
       double min_dist_hit = (min_dist_point - wire).Mod();
-      double min_time_hit = t +
-                            (min_dist_hit - sand_reco::stt::wire_radius) /
-                                sand_reco::stt::v_drift +
+      double min_time_hit = t + (min_dist_hit - sand_reco::stt::wire_radius) /
+                                    sand_reco::stt::v_drift +
                             dwire / sand_reco::stt::v_signal_inwire;
 
       if (min_time_hit < min_time_tub) min_time_tub = min_time_hit;
@@ -498,7 +498,7 @@ void create_digits_from_hits(std::map<int, std::vector<hit> >& hits2Tube,
 void digitize_stt(TG4Event* ev, TGeoManager* geo, int NHits,
                   Int_t DetType[10000], Float_t xPos[10000],
                   Float_t yPos[10000], Float_t zPos[10000],
-                  std::vector<dg_tube>& digit_vec)
+                  std::vector<dg_wire>& digit_vec)
 {
   std::map<int, std::vector<hit> > hits2Tube;
   digit_vec.clear();
@@ -510,7 +510,7 @@ void digitize_stt(TG4Event* ev, TGeoManager* geo, int NHits,
 
 // digitize event
 void digitize(const char* finname, const char* foutname,
-              ECAL_digi_mode ecal_digi_mode)
+              ECAL_digi_mode  ecal_digi_mode)
 {
   TFile f(finname, "READ");
 
@@ -584,14 +584,14 @@ void digitize(const char* finname, const char* foutname,
   sand_reco::fluka::init(geo);
 
   // vector of ECAL and STT digits
-  std::vector<dg_tube> digit_vec;
+  std::vector<dg_wire> digit_vec;
   std::vector<dg_cell> vec_cell;
 
   // output
   TFile fout(foutname, "RECREATE");
   TTree tout("tDigit", "Digitization");
   tout.Branch("dg_cell", "std::vector<dg_cell>", &vec_cell);
-  tout.Branch("dg_tube", "std::vector<dg_tube>", &digit_vec);
+  tout.Branch("dg_wire", "std::vector<dg_wire>", &digit_vec);
 
   // number of events
   const int nev = t->GetEntries();
@@ -613,6 +613,8 @@ void digitize(const char* finname, const char* foutname,
 
     // digitize ECAL and STT
     digitization::fluka::ecal::digitize_ecal(ev, geo, vec_cell, ecal_digi_mode);
+    
+    // To Do: update this as in EDEPSIM version
     digitization::fluka::stt::digitize_stt(ev, geo, NHits, DetType, xHits,
                                            yHits, zHits, digit_vec);
 
@@ -633,7 +635,7 @@ void digitize(const char* finname, const char* foutname,
   sand_reco::fluka::stt::stX.clear();
   sand_reco::fluka::stt::stPos.clear();
   sand_reco::fluka::stt::tubePos.clear();
-  sand_reco::stt::t0.clear();
+  sand_reco::t0.clear();
 }
 
 }  // namespace fluka

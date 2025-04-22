@@ -26,22 +26,52 @@ ECALCellInfo::ECALCellInfo(int arg_id, double arg_x, double arg_y,
 }
 
 // Setter methods for the attributes
-void ECALCellInfo::setId(int arg_id) { id_ = arg_id; }
-void ECALCellInfo::setX(double arg_x) { x_ = arg_x; }
-void ECALCellInfo::setY(double arg_y) { y_ = arg_y; }
-void ECALCellInfo::setZ(double arg_z) { z_ = arg_z; }
-void ECALCellInfo::setLength(double arg_length) { length_ = arg_length; }
+void ECALCellInfo::setId(int arg_id)
+{
+  id_ = arg_id;
+}
+void ECALCellInfo::setX(double arg_x)
+{
+  x_ = arg_x;
+}
+void ECALCellInfo::setY(double arg_y)
+{
+  y_ = arg_y;
+}
+void ECALCellInfo::setZ(double arg_z)
+{
+  z_ = arg_z;
+}
+void ECALCellInfo::setLength(double arg_length)
+{
+  length_ = arg_length;
+}
 void ECALCellInfo::setModuleType(ModuleType arg_module_type)
 {
   module_type_ = arg_module_type;
 }
 
 // Getter methods for the attributes
-int ECALCellInfo::getId() const { return id_; }
-double ECALCellInfo::getX() const { return x_; }
-double ECALCellInfo::getY() const { return y_; }
-double ECALCellInfo::getZ() const { return z_; }
-double ECALCellInfo::getLength() const { return length_; }
+int ECALCellInfo::getId() const
+{
+  return id_;
+}
+double ECALCellInfo::getX() const
+{
+  return x_;
+}
+double ECALCellInfo::getY() const
+{
+  return y_;
+}
+double ECALCellInfo::getZ() const
+{
+  return z_;
+}
+double ECALCellInfo::getLength() const
+{
+  return length_;
+}
 ECALCellInfo::ModuleType ECALCellInfo::getModuleType() const {
   return module_type_;
 }

@@ -1,35 +1,3 @@
-# Description
-
-SANDECALClustering takes as input the digitized photodetector signals in `<digit file>` and produces clusters of reconstructed cells in the ECAL. The output `<cluster file>` has the following structure: 
-
-### `TTree tCluster`
-```
-cluster
-cluster.tid
-cluster.x (y, z) 
-cluster.t
-cluster.e
-cluster.ax (ay, az) #apex
-cluster.sx (sy, sz) #direction
-cluster.varx (vay, varz) #variance
-cluster.reco_cells 
-```
-Each `reco_cell` object has the following structure:
-```
-int id;
-double z;
-double y;
-double x;
-double l;
-int mod;
-int lay;
-double e;
-double t; 
-dg_ps ps1; #photodetector 1 digitized photo-signal
-dg_ps ps2; #photodetector 2 digitized photo-signal
-
-```
-
 # Installation
 
 Currently, there are only two supported building and development environments:
@@ -75,7 +43,7 @@ make install
 ```
 
 ## CNAF machine
-On the CNAF machine run, [CMake](https://cmake.org/) is used to build `sandreco` using the following commands:
+On the CNAF machine run, [CMake](https://cmake.org/) is used to build `sandreco`. Before doing that, be sure to have the EDEPReader installed and source as detailed [here](https://baltig.infn.it/dune/edep-reader). You can then install `sandreco` using the following commands:
 
 ```console
 mkdir <installation path>
@@ -133,6 +101,38 @@ $ Digitize <MC file> <digit file>
 
 ```console
 $ SANDECALClustering -d <digit file>
+```
+
+# Description
+
+SANDECALClustering takes as input the digitized photodetector signals in `<digit file>` and produces clusters of reconstructed cells in the ECAL. The output `<cluster file>` has the following structure: 
+
+# `TTree tCluster`
+```
+cluster
+cluster.tid
+cluster.x (y, z) 
+cluster.t
+cluster.e
+cluster.ax (ay, az) #apex
+cluster.sx (sy, sz) #direction
+cluster.varx (vay, varz) #variance
+cluster.reco_cells 
+```
+Each `reco_cell` object has the following structure:
+```
+int id;
+double z;
+double y;
+double x;
+double l;
+int mod;
+int lay;
+double e;
+double t; 
+dg_ps ps1; #photodetector 1 digitized photo-signal
+dg_ps ps2; #photodetector 2 digitized photo-signal
+
 ```
 
 ### Reconstruct

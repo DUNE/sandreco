@@ -2,11 +2,14 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <TString.h>
+#include <TGeoManager.h>
 
 #ifndef STRUCT_H
 #define STRUCT_H
 
-struct pe {
+struct pe
+{
   double time;
   int h_index;
 };
@@ -74,14 +77,16 @@ struct hit {
 };
 
 // photo-signal
-struct dg_ps {
+struct dg_ps
+{
   int side;
   double adc;
   double tdc;
   std::vector<pe> photo_el;
 };
 
-struct dg_cell {
+struct dg_cell
+{
   int id;
   double z;
   double y;
@@ -123,21 +128,41 @@ struct reco_cell {
                   */
 };
 
-struct dg_tube {
+struct dg_wire
+{
   std::string det;
-  int did;
+  long did;
   double x;
   double y;
   double z;
   double t0;
   double de;
   double adc;
-  double tdc;
+  double tdc = 1e9;
   bool hor;
+  double wire_length;
   std::vector<int> hindex;
+  /*
+    ADDENDUM
+    tdc = drift_time + signal_time + t_hit
+    added to check validity of track fitting
+    reconstruction method for drift chamber
+  */
+  // true quantities
+  double t_hit = 1e9;
+  double signal_time = 1e9;
+  double drift_time = 1e9;
+  // measured quantities
+  double t_hit_measured = 1e9;        // via global trigger
+  double signal_time_measured = 1e9;  // exploit different wire orientation
+  double drift_time_measured =
+      1e9;  // tdc - signal_time_measured - t_hit_measured
+
+  double missing_coordinate = 1e9;
 };
 
-struct cluster {
+struct cluster
+{
   int tid;
   double x;
   double y;
@@ -159,28 +184,30 @@ struct cluster {
   std::vector<reco_cell> reco_cells; 
 };
 
-struct track {
-  int tid;
-  double yc;
-  double zc;
-  double r;
-  double a;
-  double b;
-  double h;
-  double ysig;
-  double x0;
-  double y0;
-  double z0;
-  double t0;
-  int ret_ln;
-  double chi2_ln;
-  int ret_cr;
-  double chi2_cr;
-  std::vector<dg_tube> clX;
-  std::vector<dg_tube> clY;
+struct track
+{
+  int tid = -1;
+  double yc = NAN;
+  double zc = NAN;
+  double r = NAN;
+  double a = NAN;
+  double b = NAN;
+  double h = NAN;
+  double ysig = NAN;
+  double x0 = NAN;
+  double y0 = NAN;
+  double z0 = NAN;
+  double t0 = NAN;
+  int ret_ln = -1;
+  double chi2_ln = NAN;
+  int ret_cr = -1;
+  double chi2_cr = NAN;
+  std::vector<dg_wire> clX;
+  std::vector<dg_wire> clY;
 };
 
-struct particle {
+struct particle
+{
   int primary;
   int pdg;
   int tid;
@@ -216,7 +243,8 @@ struct particle {
   std::vector<particle> daughters;
 };
 
-struct event {
+struct event
+{
   double x;
   double y;
   double z;
@@ -232,12 +260,20 @@ struct event {
   std::vector<particle> particles;
 };
 
-struct gcell {
+struct gcell
+{
   int id;
   double Z[4];
   double Y[4];
   double adc;
   double tdc;
+};
+
+struct volume
+{
+  TGeoVolume* geo_volume;
+  TString volume_path;
+  bool IsActive;
 };
 
 #endif

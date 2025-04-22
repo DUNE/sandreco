@@ -11,11 +11,19 @@
 
 #include <algorithm>
 #include <iostream>
-#include "SANDClustering.h"
+#include <iomanip>
 
+#include "SANDClustering.h"
 #include "struct.h"
 #include "utils.h"
-#include <iomanip>
+
+//added for kalman filter
+#include "SANDTrackletFinder.h"
+#include "SANDKalmanFilter.h"
+
+#include <TDatabasePDG.h>
+
+#include "EDEPTree.h"
 
 using namespace sand_reco;
 
@@ -51,9 +59,12 @@ void evalUV(double& u, double& v, double zv, double yv, double z, double y)
   v /= d;
 }
 
-void evalPhi(double& phi, double u, double v) { phi = TMath::ATan2(v, u); }
+void evalPhi(double& phi, double u, double v)
+{
+  phi = TMath::ATan2(v, u);
+}
 
-void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_tube>& vd,
+void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_wire>& vd,
                     double zv, double yv)
 {
   double dphi = 1E3;
@@ -70,7 +81,7 @@ void findNearDigPhi(int& idx, double exp_phi, std::vector<dg_tube>& vd,
   }
 }
 
-bool findNearDigX(int& idx, double exp_x, std::vector<dg_tube>& vd, double xvtx)
+bool findNearDigX(int& idx, double exp_x, std::vector<dg_wire>& vd, double xvtx)
 {
   double dx = 10000.;
 
@@ -235,7 +246,7 @@ void GetRho(const std::vector<double>& z_v, const std::vector<double>& y_v,
 
 void FillPositionInfo(track& tr, int signy, double cos, double sin)
 {
-  dg_tube d = (sand_reco::stt::isDigBefore(tr.clX.front(), tr.clY.front())
+  dg_wire d = (sand_reco::stt::isDigBefore(tr.clX.front(), tr.clY.front())
                    ? tr.clX.front()
                    : tr.clY.front());
   tr.z0 = d.z;
@@ -446,9 +457,12 @@ void fillInfoCircFit(int n, const std::vector<double>& z,
   tr.ysig = evalYSign(y, tr.yc);
 }
 
-enum class TrackFilter { all_tracks, only_primaries };
+enum class TrackFilter {
+  all_tracks,
+  only_primaries
+};
 
-void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
+void TrackFind(TG4Event* ev, std::vector<dg_wire>* vec_digi,
                std::vector<track>& vec_tr,
                std::string const trackerType = "Straw",
                TrackFilter const track_filter = TrackFilter::all_tracks)
@@ -471,8 +485,8 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
 
     TRandom3 rand(0);
 
-    std::map<double, dg_tube> time_ordered_XZdigit;
-    std::map<double, dg_tube> time_ordered_YZdigit;
+    std::map<double, dg_wire> time_ordered_XZdigit;
+    std::map<double, dg_wire> time_ordered_YZdigit;
 
     for (unsigned int k = 0; k < vec_digi->size(); k++) {
 
@@ -519,8 +533,8 @@ void TrackFind(TG4Event* ev, std::vector<dg_tube>* vec_digi,
   }
 }
 
-void fillLayers(std::map<int, std::vector<dg_tube> >& m,
-                std::vector<dg_tube>& d, TH1D& hdummy, int hor)
+void fillLayers(std::map<int, std::vector<dg_wire> >& m,
+                std::vector<dg_wire>& d, TH1D& hdummy, int hor)
 {
   for (unsigned int k = 0; k < d.size(); k++) {
     if (d.at(k).hor == hor)
@@ -528,8 +542,8 @@ void fillLayers(std::map<int, std::vector<dg_tube> >& m,
   }
 }
 
-void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
-                 std::vector<std::vector<dg_tube> >& clustersY, TH1D& hdummy,
+void findTracksY(std::map<int, std::vector<dg_wire> >& mdY,
+                 std::vector<std::vector<dg_wire> >& clustersY, TH1D& hdummy,
                  double xvtx_reco, double yvtx_reco, double zvtx_reco,
                  double phi_tol = 0.1, double dlay_tol = 5)
 {
@@ -540,13 +554,13 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
 
   double u, v, phi, dphi;
 
-  dg_tube current_digit;
+  dg_wire current_digit;
 
   // loop on modules
   while (mdY.size() != 0) {
     // get most downstream module
-    std::map<int, std::vector<dg_tube> >::iterator ite = mdY.begin();
-    std::vector<dg_tube>* layer = &(ite->second);
+    std::map<int, std::vector<dg_wire> >::iterator ite = mdY.begin();
+    std::vector<dg_wire>* layer = &(ite->second);
 
     // loop on digits in the module
     while (layer->size() != 0) {
@@ -554,7 +568,7 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
       current_digit = layer->front();
 
       // create cluster and insert first digit
-      std::vector<dg_tube> clY;
+      std::vector<dg_wire> clY;
       clY.push_back(std::move(current_digit));
 
       // remove the current digit from the module
@@ -564,7 +578,7 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
       prev_mod = ite->first;
 
       // get iterator to the next module
-      std::map<int, std::vector<dg_tube> >::iterator nite = std::next(ite);
+      std::map<int, std::vector<dg_wire> >::iterator nite = std::next(ite);
 
       // reset parameters
       evalUV(u, v, zvtx_reco, yvtx_reco, current_digit.z, current_digit.y);
@@ -579,7 +593,7 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
         // check if module are downstream the reco vtx
         if (hdummy.GetXaxis()->GetBinUpEdge(-1 * nite->first) > zvtx_reco) {
           // get next layer
-          std::vector<dg_tube>* nlayer = &(nite->second);
+          std::vector<dg_wire>* nlayer = &(nite->second);
 
           // evaluate the distance (in number of modules) between this module
           // and the previous one
@@ -622,7 +636,7 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
 
               // remove module if it is empty
               if (nlayer->size() == 0) {
-                std::map<int, std::vector<dg_tube> >::iterator dummy =
+                std::map<int, std::vector<dg_wire> >::iterator dummy =
                     std::next(nite);
                 mdY.erase(nite);
                 nite = dummy;
@@ -642,8 +656,8 @@ void findTracksY(std::map<int, std::vector<dg_tube> >& mdY,
   }
 }
 
-void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
-                 std::vector<std::vector<dg_tube> >& clustersX, TH1D& hdummy,
+void findTracksX(std::map<int, std::vector<dg_wire> >& mdX,
+                 std::vector<std::vector<dg_wire> >& clustersX, TH1D& hdummy,
                  double xvtx_reco, double yvtx_reco, double zvtx_reco,
                  double x_tol = 100, double dlay_tol = 5)
 {
@@ -652,13 +666,13 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
 
   double prev_x, dx;
 
-  dg_tube current_digit;
+  dg_wire current_digit;
 
   // loop on modules from downstream to upstream
   while (mdX.size() != 0) {
     // get most downstream module
-    std::map<int, std::vector<dg_tube> >::iterator ite = mdX.begin();
-    std::vector<dg_tube>* layer = &(ite->second);
+    std::map<int, std::vector<dg_wire> >::iterator ite = mdX.begin();
+    std::vector<dg_wire>* layer = &(ite->second);
 
     // loop on digits in the module
     while (layer->size() != 0) {
@@ -666,7 +680,7 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
       current_digit = layer->front();
 
       // create cluster and insert first digit
-      std::vector<dg_tube> clX;
+      std::vector<dg_wire> clX;
       clX.push_back(std::move(current_digit));
 
       // remove the current digit from the module
@@ -676,7 +690,7 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
       prev_mod = ite->first;
 
       // get iterator to the next module
-      std::map<int, std::vector<dg_tube> >::iterator nite = std::next(ite);
+      std::map<int, std::vector<dg_wire> >::iterator nite = std::next(ite);
 
       // reset parameters
       prev_x = current_digit.x;
@@ -687,7 +701,7 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
         // check if module are downstream the reco vtx
         if (hdummy.GetXaxis()->GetBinUpEdge(-1 * nite->first) > zvtx_reco) {
           // get next layer
-          std::vector<dg_tube>* nlayer = &(nite->second);
+          std::vector<dg_wire>* nlayer = &(nite->second);
 
           // evaluate the distance (in number of modules) between this module
           // and the previous one
@@ -717,7 +731,7 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
 
                 // remove module if it is empty
                 if (nlayer->size() == 0) {
-                  std::map<int, std::vector<dg_tube> >::iterator dummy =
+                  std::map<int, std::vector<dg_wire> >::iterator dummy =
                       std::next(nite);
                   mdX.erase(nite);
                   nite = dummy;
@@ -738,8 +752,8 @@ void findTracksX(std::map<int, std::vector<dg_tube> >& mdX,
   }
 }
 
-void mergeXYTracks(std::vector<std::vector<dg_tube> >& clustersX,
-                   std::vector<std::vector<dg_tube> >& clustersY,
+void mergeXYTracks(std::vector<std::vector<dg_wire> >& clustersX,
+                   std::vector<std::vector<dg_wire> >& clustersY,
                    std::vector<track>& tr3D, double dn_tol, double dz_tol)
 {
   double dzend;
@@ -787,23 +801,23 @@ void mergeXYTracks(std::vector<std::vector<dg_tube> >& clustersX,
   }
 }
 
-void TrackFind(std::vector<track>& tracks, std::vector<dg_tube> digits,
+void TrackFind(std::vector<track>& tracks, std::vector<dg_wire> digits,
                std::vector<double>& binning, double xvtx_reco, double yvtx_reco,
                double zvtx_reco, double tol_phi, double tol_x, int tol_mod,
                unsigned int mindigtr, const double dn_tol, const double dz_tol)
 {
   TH1D hdummy("hdummy", "hdummy;Z (mm); multipliciy", binning.size() - 1,
               binning.data());
-  std::vector<std::vector<dg_tube> > clustersY;
-  std::vector<std::vector<dg_tube> > clustersX;
+  std::vector<std::vector<dg_wire> > clustersY;
+  std::vector<std::vector<dg_wire> > clustersX;
 
   // track finding with clustering in arctg(v/u) VS z
-  std::map<int, std::vector<dg_tube> > mdY;
+  std::map<int, std::vector<dg_wire> > mdY;
   fillLayers(mdY, digits, hdummy, 1);
   clustersY.clear();
 
   // find track on XZ view
-  std::map<int, std::vector<dg_tube> > mdX;
+  std::map<int, std::vector<dg_wire> > mdX;
   fillLayers(mdX, digits, hdummy, 0);
   clustersX.clear();
 
@@ -1329,7 +1343,7 @@ void PidBasedClustering(TG4Event* ev, std::vector<cluster>& vec_cl){std::map<int
   }
 }
 
-void MeanAndRMS(std::vector<dg_tube>& digits, TH1D& hmeanX, TH1D& hrmsX,
+void MeanAndRMS(std::vector<dg_wire>& digits, TH1D& hmeanX, TH1D& hrmsX,
                 TH1I& hnX, TH1D& hmeanY, TH1D& hrmsY, TH1I& hnY)
 {
 
@@ -1415,7 +1429,7 @@ void filterDigitsModule(std::map<int, double>& yd, std::vector<int>& toremove,
   }
 }
 
-void filterDigits(std::vector<dg_tube>& digits, TH1D& hdummy,
+void filterDigits(std::vector<dg_wire>& digits, TH1D& hdummy,
                   const double epsilon)
 {
   std::map<int, std::map<int, double> > dy;
@@ -1490,7 +1504,7 @@ void vtxfinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
 }
 
 void VertexFind(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
-                int& VtxType, std::vector<dg_tube> digits,
+                int& VtxType, std::vector<dg_wire> digits,
                 std::vector<double>& binning, double epsilon)
 {
   TH1D hrmsX("hrmsX", "rmsX;Z (mm); rmsX (mm)", binning.size() - 1,
@@ -1525,8 +1539,8 @@ void VertexFind(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
 ///////// to be reimplemented with SANDGeoManager
 void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
 {
-  TString path_prefix(stt::path_internal_volume);
-  TGeoVolume* v = g->FindVolumeFast(stt::name_internal_volume);
+  TString path_prefix(sand_geometry::path_internal_volume);
+  TGeoVolume* v = g->FindVolumeFast(sand_geometry::name_internal_volume.c_str());
 
   double origin[3];
   double master[3];
@@ -1564,8 +1578,154 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   binning.push_back(last_z);
 }
 
-enum class STT_Mode { fast_only_primaries, fast, full };
-enum class ECAL_Mode { fast };
+///////////////////////////////////////
+// Process events with Kalman Filter //
+///////////////////////////////////////
+track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
+  sand_reco::kf::Manager manager;
+  manager.initFromMC(&z_to_tracklets, particleInfo);
+  manager.run();
+
+  auto reco_track = manager.getTrack();
+
+  track trk;
+  if (reco_track.getSteps().size() > 3) {
+    auto step = reco_track.getSteps().back();
+    auto reco_state =
+          step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+    auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
+                                  reco_state.radius(), reco_state.tanLambda());
+
+    std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
+
+    trk.tid = particleInfo.id;
+    trk.r   = reco_state.radius();
+    trk.h   = reco_state.charge();
+    trk.b   = reco_state.tanLambda();
+    trk.x0  = reco_state.x();
+    trk.y0  = reco_state.y();
+    trk.z0  = reco_state.y();
+  }
+
+  return trk;
+}
+
+void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits)
+{
+  int p[9] = {100, -2000, 2000, 100, -4000, -1000, 100, 23800, 26000};
+
+  sand_reco::tracker::DigitCollection::fillMap(digits);
+  auto digit_map =  sand_reco::tracker::DigitCollection::getDigits();
+  if (sand_reco::tracker::DigitCollection::getDigits().empty()) {
+    return;
+  }
+  std::string tracker_name = sand_reco::tracker::DigitCollection::getDigits().begin()->det;
+  sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
+
+  TrackletFinder traklet_finder;
+  traklet_finder.setVolumeParameters(p);
+  traklet_finder.setSigmaPosition(0.2);
+  traklet_finder.setSigmaAngle(0.2);
+
+  std::map<double, std::vector<TVectorD>> z_to_tracklets;
+
+  SANDTrackerUtils::init(sand_geo->getTGeoManager());
+  
+  int gg = 0;
+  for (const auto& container:clusters.getContainers()) {
+    for (const auto& cluster_in_container:container->getClusters()) {
+
+      traklet_finder.setCells(cluster_in_container);
+      auto minima = traklet_finder.findTracklets();
+      double z_start = cluster_in_container.getZ();
+      for (uint trk = 0; trk < minima.size(); trk++) {
+        if (minima[trk][4] < 1E-2) {
+          z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
+        }
+      }
+      traklet_finder.clear();
+    }
+  }
+
+  int sum = 0;
+  for (auto el:z_to_tracklets) {
+    sum += el.second.size();
+  }
+  if (sum == 0) {
+    return;
+  }
+
+  EDEPTree tree;
+  tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
+
+  std::vector<EDEPTrajectory> primaryTrj;
+  tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
+    [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
+
+  TDatabasePDG pdg_db;
+  std::vector<SParticleInfo> particleInfos;
+  for (auto trj:primaryTrj) {
+
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
+      continue;
+    }
+
+    auto particle = pdg_db.GetParticle(trj.GetPDGCode());
+
+    if (!particle) {
+      continue;
+    }
+
+    if (particle->Mass() == 0 || particle->Charge() == 0) {
+      continue;
+    }
+    
+    SParticleInfo pi;
+    pi.pdg_code = trj.GetPDGCode();
+    pi.id       = trj.GetId();
+    pi.mass = particle->Mass();
+    pi.charge = particle->Charge() / 3;
+
+    double max_z = 0;
+    bool to_be_reconstructed = false;
+    for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
+      if (point.GetPosition().Z() > max_z && point.GetMomentum().Z() > 100) {
+        max_z = point.GetPosition().Z();
+        pi.pos = point.GetPosition().Vect();
+        pi.mom = point.GetMomentum();
+        to_be_reconstructed = true;
+      }
+    }
+
+    if (!to_be_reconstructed) continue;
+
+    particleInfos.push_back(pi);
+
+    std::cout << "Initial selected momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
+  }
+  
+  int nParticles = particleInfos.size();
+
+  if (nParticles == 0) {
+    std::cerr << "no particles to be reconstructed...process aborted"
+              << std::endl;
+    return;
+  }
+
+  for (int ip = 0; ip < nParticles; ip++) {
+    tracks.push_back(runKalmanFilterManager(z_to_tracklets, particleInfos[ip]));
+  }
+}
+
+enum class STT_Mode {
+  fast_only_primaries,
+  fast,
+  full,
+  primary_only_kf
+};
+enum class ECAL_Mode {
+  fast
+};
 
 void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
                  std::string const& fname_out, STT_Mode stt_mode,
@@ -1600,17 +1760,24 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   }
 
   std::string trackerType = "";
+  std::string geometry;
 
   if (geo->FindVolumeFast("STTtracker_PV")) {
     std::cout << "\n--- STT based simulation ---\n";
     trackerType = "Straw";
+    geometry = "STT";
   } else if (geo->FindVolumeFast("SANDtracker_PV")) {
     std::cout << "\n--- Drift based simulation ---\n";
     trackerType = "DriftVolume";
+    geometry = "DRIFT";
   } else {
     std::cout << "Error in retriving volume information from Geo Manager, "
                  "exiting...\n";
     exit(-1);
+  }
+
+  if (stt_mode == STT_Mode::primary_only_kf) {
+    sand_geo.fillAdjacentCells(geometry);
   }
 
   std::vector<double> sampling;
@@ -1624,10 +1791,10 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   TG4Event* ev = new TG4Event;
   t->SetBranchAddress("Event", &ev);
 
-  std::vector<dg_tube>* vec_digi = new std::vector<dg_tube>;
+  std::vector<dg_wire>* vec_digi = new std::vector<dg_wire>;
   std::vector<dg_cell>* vec_cell = new std::vector<dg_cell>;
 
-  t->SetBranchAddress("dg_tube", &vec_digi);
+  t->SetBranchAddress("dg_wire", &vec_digi);
   t->SetBranchAddress("dg_cell", &vec_cell);
 
   std::vector<track> vec_tr;
@@ -1650,10 +1817,10 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
 
   for (int i = 0; i < nev; i++) {
+    t->GetEntry(i);
+
     std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i) / nev * 100)
               << "%]" << std::flush;
-
-    t->GetEntry(i);
 
     vec_tr.clear();
     vec_cl.clear();
@@ -1661,8 +1828,8 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
     double xvtx_reco, yvtx_reco, zvtx_reco;
     int VtxType;
 
-    std::vector<dg_tube> clustersY;
-    std::vector<dg_tube> clustersX;
+    std::vector<dg_wire> clustersY;
+    std::vector<dg_wire> clustersX;
 
     switch (stt_mode) {
       case STT_Mode::fast_only_primaries:
@@ -1681,6 +1848,9 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
                   tol_phi, tol_x, tol_mod, mindigtr, dn_tol, dz_tol);
         TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
         break;
+      case STT_Mode::primary_only_kf:
+        ProcessEventWithKF(vec_tr, &sand_geo, ev, vec_digi);
+        break;
     }
 
     switch (ecal_mode) {
@@ -1694,11 +1864,6 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
     }
     tout.Fill();
   }
-  
-
-  
-  std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
-  std::cout << std::endl;
 
   vec_tr.clear();
   vec_cl.clear();
@@ -1721,6 +1886,7 @@ void help_reco()
   std::cout << "    - stt_mode: 'stt_mode::fast_only_primaries' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
   std::cout << "                'stt_mode::full' \n";
+  std::cout << "                'stt_mode::primary_only_kf' \n";
 }
 
 int main(int argc, char* argv[])
@@ -1739,10 +1905,12 @@ int main(int argc, char* argv[])
   } else if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
     stt_mode = STT_Mode::fast;
     std::cout << "STT_Mode: fast\n";
+  } else if (argc > 4 && strcmp(argv[4], "stt_mode::primary_only_kf") == 0) {
+    stt_mode = STT_Mode::primary_only_kf;
+    std::cout << "STT_Mode: kalman filter\n";
   } else {
     std::cout << "STT_Mode: fast_only_primaries\n";
   }
-
   Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast);
   return 0;
 }

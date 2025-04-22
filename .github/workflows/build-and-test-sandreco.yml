@@ -210,6 +210,20 @@ jobs:
           make -j8 install
 
       #############################################################################################################################
+      # Install EDEPReader
+      #############################################################################################################################
+      ## https://baltig.infn.it/dune/edep-reader
+      - name: Install edep-reader
+        run: |
+          mkdir -p ~/edep-reader
+          cd ~/edep-reader
+          git clone --depth 1 https://baltig.infn.it/dune/edep-reader source
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim" ../source
+          make -j8 install
+
+      #############################################################################################################################
       # Get sandreco
       #############################################################################################################################
       - name: Checkout sandreco
@@ -228,7 +242,7 @@ jobs:
           cd ~/sandreco
           mkdir build
           cd build
-          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim" ../source
+          cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim;~/edep-reader" ../source
           make -j8 install
   
       #############################################################################################################################
@@ -291,6 +305,7 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:~/geant4/lib64:~/root/lib:~/edepsim/lib
           source ~/sandreco/setup.sh
+          source ~/edep-reader/setup.sh
           mkdir ~/sandreco-reco
           cd ~/sandreco-reco
           GEO=${{matrix.sand-geometry}}
