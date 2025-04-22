@@ -215,61 +215,12 @@ class Manager {
     void filter(const sand_reco::kf::Measurement& measurement, const sand_reco::kf::Measurement& prediction);
     void smooth();
     void initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
+    void initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, double sx = 0.004, double sy = 0.004);
+    TrackletMap FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, int maxSteps=10);
+    double findClosestNonEmptyKey(const TrackletMap& myMap, double target);
     void run();
     const sand_reco::kf::Track& getTrack() {return this_track_; };
     void EvaluateInnovation(const SANDKFMeasurement& measurement, const SANDKFMeasurement& prediction, const TMatrixD& Sk);
-    // std::vector<std::vector<double> GetDebugVariables(const SANDKFTrack& track, SANDKFTrackStep::SANDKFTrackStateStage stage);
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // double x_true, y_true, z_true, tan_true, phi_true;
-    // double x_reco, y_reco, tan_reco, phi_reco;
-    // double p_true, p_reco;
-    // std::vector<SANDKFMeasurement> measurements;
-    // std::vector<SANDKFMeasurement> predictions;
-    // std::vector<double> innovation;
-    //vector di measurement true (measurements/observation) e predicted (predictions)
-    //measurement cov matrix
-    
-
-
-
-
-
-      //Questo andrebbe nel cpp poi ce lo metto
-      // double SANDKalmanFilterManager::EvaluateResiduals(
-      //   const TVectorD& observation, 
-      //   const TVectorD& prediction, 
-      //   const TMatrixD& covarianceMatrix)
-      // {
-
-      //   if (observation.GetNrows() != prediction.GetNrows()) {
-      //       std::cout << "Vectors have diffrent size." << std::endl;
-      //   } else if (covarianceMatrix.GetNrows() != covarianceMatrix.GetNcols() ||
-      //             covarianceMatrix.GetNrows() != observation.GetNrows()) {
-      //       std::cout << "Covariance matrix does not match the size of the vectors." << std::endl;
-      //   } else {
-        
-      //   TVectorD residual = observation - prediction; //sarebbe innovation
-      //   TMatrixD covarianceMatrixInverted(TMatrixD::kInverted, covarianceMatrix);
-      //   TVectorD normalizedResidual = sqrt(covarianceMatrixInverted) * residual; //g should be a normal distribution       
-      //   }
-      //   return normalizedResidual;
-      
-      // };
-
-
-
 };
 
 } // namespace kf

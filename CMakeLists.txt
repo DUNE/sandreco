@@ -114,9 +114,13 @@ ROOT_GENERATE_DICTIONARY(SANDKFTrackDict SANDKFTrack.h MODULE SANDKFTrack LINKDE
 add_library(SANDKalmanFilter SHARED src/SANDKalmanFilter.cpp)
 target_link_libraries(SANDKalmanFilter PUBLIC SANDTrackerUtils SANDKFTrack)
 
-# Creates MeasurementBuilder executable.
+# Creates TestKF executable.
 add_executable(TestKF tests/TestKF.cpp)
 target_link_libraries(TestKF PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter)
+
+# Creates TestSeed executable.
+add_executable(TestSeed tests/TestSeed.cpp)
+target_link_libraries(TestSeed PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter)
 
 # Creates NoiseMatrixComputation executable.
 add_executable(NoiseMatrixComputation tools/NoiseMatrixComputation.cpp)
@@ -149,7 +153,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
- install(TARGETS TestVertexing Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils
+ install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF TestSeed TestVertexing SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
