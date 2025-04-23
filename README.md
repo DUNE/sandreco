@@ -50,7 +50,7 @@ To install EDEPReader, use the following commands:
 ```console
 mkdir <EDEPReader installation path>
 cd <EDEPReader installation path>
-git clone https://baltig.infn.it/vpia/edep-reader.git
+git clone https://baltig.infn.it/dune/edep-reader
 mkdir install
 mkdir build && cd build
 source /opt/exp_software/neutrino/al9/env.sh
