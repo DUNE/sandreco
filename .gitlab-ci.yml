@@ -17,8 +17,6 @@ build-job:
     - cmake -DCMAKE_INSTALL_PREFIX=../install ../source
     - make -j8 install
     - source ../install/setup.sh
-    - declare EDEPTree_DIR=${PWD}/install/lib/cmake/EDEPTree/
-    - ls ${EDEPTree_DIR}
     - popd
     
     - mkdir build
