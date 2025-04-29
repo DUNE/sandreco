@@ -43,11 +43,27 @@ make install
 ```
 
 ## CNAF machine
-On the CNAF machine run, [CMake](https://cmake.org/) is used to build `sandreco`. Before doing that, be sure to have the EDEPReader installed and source as detailed [here](https://baltig.infn.it/dune/edep-reader). You can then install `sandreco` using the following commands:
+On the CNAF machine run, [CMake](https://cmake.org/) is used to build `sandreco`. 
+
+Currently, `sandreco` depends on the [EDEPReader](https://baltig.infn.it/dune/edep-reader) library. Thus, it is necessary to install and source it before installing `sandreco`. 
+To install EDEPReader, use the following commands:
+```console
+mkdir <EDEPReader installation path>
+cd <EDEPReader installation path>
+git clone https://baltig.infn.it/dune/edep-reader
+mkdir install
+mkdir build && cd build
+source /opt/exp_software/neutrino/al9/env.sh
+cmake -DCMAKE_INSTALL_PREFIX=../install
+make -j8
+make install
+source ../install/setup.sh
+```
+If everything went well, you can now install `sandreco` using the following commands:
 
 ```console
-mkdir <installation path>
-cd <installation path>
+mkdir <sandreco installation path>
+cd <sandreco installation path>
 git clone https://github.com/DUNE/sandreco.git
 mkdir build && cd build
 source /opt/exp_software/neutrino/al9/env.sh
