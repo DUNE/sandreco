@@ -35,16 +35,58 @@ sand_reco::kf::TrackletMap GenerateHelixZY(
 
   double R = 1.0 / invR;
   double omega = invR;  // curvature = 1/R = delta(phi)/ds
+  // auto dir = stepX < 0 ? 1. : -1.;
   TRandom3 randGen(0);
   sand_reco::kf::TrackletMap three_tracklets;
+  auto dir = phi0 > TMath::PiOver2() ? -1. : 1.;
 
   for (int i = 0; i < nPoints; ++i) {
       double x = x0 + i * stepX;
       double s = (x - x0) / tanLambda;  // arc length along helix
 
       double phi = phi0 + omega * s;  // angle swept
-      double z = z0 + R * ( std::cos(phi) -  std::cos(phi0));
-      double y = y0 + R * ( std::sin(phi) -  std::sin(phi0));
+      double z = z0 + dir * R * ( std::sin(phi) -  std::sin(phi0));
+      double y = y0 + dir * R * ( std::cos(phi) -  std::cos(phi0));
+
+      TVectorD trklet(8);
+      trklet[0] = x+randGen.Gaus(0, sx);
+      trklet[1] = y+randGen.Gaus(0, sy);
+      std::vector<TVectorD> trklet_vec;
+      trklet_vec.push_back(trklet);
+      three_tracklets[z]= trklet_vec;
+  }
+
+  return three_tracklets;
+}
+
+// Generate helix trajectory points
+sand_reco::kf::TrackletMap GenerateHelix_alongZ(
+  double z0, double y0, double x0,
+  double invR, double tanLambda,
+  double phi0,
+  int nPoints,
+  double stepZ,
+  double sx,
+  double sy  // distance between x samples
+) {
+
+  double R = 1.0 / invR;
+  double q = R>0 ? 1.  : -1.;
+
+  TRandom3 randGen(0);
+  sand_reco::kf::TrackletMap three_tracklets;
+
+  for (int i = 0; i < nPoints; ++i) {
+      double dZ = i * stepZ;
+      double z = z0 + dZ;
+
+      double sinphi0 = std::sin(phi0);
+      double cosphi0 = std::cos(phi0);
+      double sinphi = sinphi0 + dZ * invR;
+      double cosphi = std::sqrt(1 - sinphi*sinphi);
+
+      double y = y0 + q * dZ * (sinphi0 +sinphi) / (cosphi0 + cosphi);
+      double x = x0 + tanLambda * R * std::asin(cosphi0*sinphi-cosphi*sinphi0);
 
       TVectorD trklet(8);
       trklet[0] = x+randGen.Gaus(0, sx);
@@ -108,45 +150,81 @@ void trySeedManager(sand_reco::kf::TrackletMap z_to_tracklets,
                     TMatrixD & StateVectorMC,
                     TMatrixD & StateCovMC,
                     TMatrixD & StateVectorSeed,
-                    TMatrixD & StateCovSeed) {
+                    TMatrixD & StateCovSeed,
+                    const char * test_type = "simple_helix") {
 
   double sx = SANDTrackerUtils::getSigmaPositionMeasurement();
   double sy = SANDTrackerUtils::getSigmaPositionMeasurement();
   sand_reco::kf::Manager managerSeed;
-  //auto closest= managerSeed.FindSeedPoints_MCstart(&z_to_tracklets, particleInfo, 200);
-  auto closest = Find3fromTrajectory(trj_points,sx,sy);
-  for (auto el:closest) {
-    std::cout << "Z: " << el.first*1E-3 << std::endl;
-    for (auto el2:el.second) {
-      std::cout << "X: " << el2[0]*1E-3 << " Y: " << el2[1]*1E-3 << std::endl;
-    }
-  }
-  
-  managerSeed.initFromSeed(&closest,&z_to_tracklets, particleInfo, sx, sy);
-  
-
   sand_reco::kf::Manager managerMC;
+
   managerMC.initFromMC(&z_to_tracklets, particleInfo);
   StateVectorMC = managerMC.getTrack().getStep(0).getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateVector()();
   StateCovMC = managerMC.getTrack().getStep(0).getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateCovMatrix();
+  
+  if (test_type == "smeared_trajectory") {
+    auto closest = Find3fromTrajectory(trj_points,sx,sy);
+    for (auto el:closest) {
+      std::cout << "Z: " << el.first*1E-3 << std::endl;
+      for (auto el2:el.second) {
+        std::cout << "X: " << el2[0]*1E-3 << " Y: " << el2[1]*1E-3 << std::endl;
+      }
+    }
+    
+    managerSeed.initFromSeed(&closest,&z_to_tracklets, particleInfo, sx, sy);
+
+  } else if (test_type == "simple_helix"){
+
+    auto closest = Find3fromTrajectory(trj_points,0,0);
+    size_t n = 0;
+    double x0 = 0; 
+    double deltaX = 0;
+    for (auto el:closest) {
+      std::cout << "Z: " << el.first;
+      for (auto el2:el.second) {
+        std::cout << " X: " << el2[0] << " Y: " << el2[1] << std::endl;
+        auto x = el2[0];
+        if (n==1) x0 = x;
+        if (n==2) deltaX = x-x0;
+        n++;
+      }
+    }
+
+    std::cout<<"------------------------" << std::endl;
+
+    auto dir=-1.0;
+    auto simple_helix = GenerateHelixZY(
+    particleInfo.pos.Z(), StateVectorMC[1][0]*1E3, StateVectorMC[0][0]*1E3,
+    StateVectorMC[2][0]*1E-3, StateVectorMC[3][0],
+    StateVectorMC[4][0],
+    3,  // number of points
+    -deltaX,    // stepX
+    sx*1E3,sy*1E3); // sigmaX, sigmaY
+  
+    for (auto el:simple_helix) {
+      std::cout << "Z: " << el.first ;
+      for (auto el2:el.second) {
+        std::cout << " X: " << el2[0] << " Y: " << el2[1] << std::endl;
+      }
+    }
+
+
+    managerSeed.initFromSeed(&simple_helix,&z_to_tracklets, particleInfo, sx, sy);
+  } else if (test_type == "MC_helix"){ 
+    auto closest= managerSeed.FindSeedPoints_MCstart(&z_to_tracklets, particleInfo, 200);
+    managerSeed.initFromSeed(&closest,&z_to_tracklets, particleInfo, sx, sy);
+  } else {
+    std::cerr << "Error, test_type not recognized" << std::endl;
+    return;
+  }
   StateVectorSeed = managerSeed.getTrack().getStep(0).getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateVector()();
   StateCovSeed = managerSeed.getTrack().getStep(0).getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateCovMatrix();
 
-  auto dir=-1.0;
-  auto simple_helix = GenerateHelixZY(
-  particleInfo.pos.Z()*1E-3, StateVectorMC[1][0], StateVectorMC[0][0],
-  dir*StateVectorMC[2][0], dir*StateVectorMC[3][0],
-  StateVectorMC[4][0],
-  3,  // number of points
-  dir*0.6,    // stepX
-  0,0);
 
-  for (auto el:simple_helix) {
-    std::cout << "Z: " << el.first << std::endl;
-    for (auto el2:el.second) {
-      std::cout << "X: " << el2[0] << " Y: " << el2[1] << std::endl;
-    }
-  }
+  std::cout << "StateVectorMC: " << std::endl;
+  StateVectorMC.Print();
+  std::cout << "StateVectorSeed: " << std::endl;
+  StateVectorSeed.Print();
   
   return;
 }
@@ -228,8 +306,6 @@ void processEventWithSeed(SANDGeoManager* sand_geo,
 
     auto points = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
     trj_points.push_back(points);
-
-    std::cout << "Initial Momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
   }
 
   int nParticles = particleInfos.size();
@@ -244,7 +320,6 @@ void processEventWithSeed(SANDGeoManager* sand_geo,
     trySeedManager(z_to_tracklets, particleInfos[ip], trj_points[ip],
                    StateVectorMC, StateCovMC,
                    StateVectorSeed, StateCovSeed);
-    std::cout << "Number of trajectory points inside the tracker: " << trj_points[ip].size() << std::endl;
   }
 }
 
@@ -269,7 +344,7 @@ int main(int argc, char* argv[])
   t->SetBranchAddress("dg_wire", &digits);
 
     
-  TFile* h_out = new TFile("seed_out.root", "RECREATE");
+  TFile* h_out = new TFile("/storage/gpfs_data/neutrino/users/battisti/sandreco_development/workspace/seed_out.root", "RECREATE");
 
   // Create a TTree
   TTree *tree = new TTree("MatrixTree", "Tree with TMatrixD branches");
@@ -293,10 +368,21 @@ int main(int argc, char* argv[])
 
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
+  
+  std::string geometry;
+  if (geo->FindVolumeFast("STTtracker_PV")) {
+    geometry = "STT";
+  } else if (geo->FindVolumeFast("SANDtracker_PV")) {
+    geometry = "DRIFT";
+  } 
+  sand_geo.fillAdjacentCells(geometry);
+  auto nentries = t_h->GetEntries();
 
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < nentries; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
+
+    std::cout << "Event: " << i << std::endl;
 
     processEventWithSeed(&sand_geo, ev, digits,
                          *StateVectorMC_mat, *StateCovMC_mat,
@@ -320,7 +406,7 @@ int main(int argc, char* argv[])
   tree->Write();
   h_out->Close();
 
-  std::cout << "Tree saved to tree_with_matrices.root" << std::endl;
+  std::cout << "Tree saved to seed_out.root" << std::endl;
 
   // Clean up
   delete StateVectorMC_mat;

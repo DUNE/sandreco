@@ -341,7 +341,7 @@ Double_t makeC(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Dou
   Double_t z0 = z3*0.5-y3*u;
   Double_t y0 = y3*0.5+z3*u;
   Double_t c2 = 1/TMath::Sqrt(z0*z0+y0*y0);
-  if (det<0) c2*=-1;
+  if (det>0) c2*=-1;
   return c2;
 }
 
@@ -373,34 +373,14 @@ Double_t makePhi(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3, 
   //-----------------------------------------------------------------
   // Initial approximation of the track phi at position z1
   //-----------------------------------------------------------------
-  auto versus = c > 0 ? -1 : 1;
+  auto versus = c < 0 ? -1 : 1;
   auto sintheta = makeSnp(z1,y1,z2,y2,z3,y3);
-  auto phi = std::asin(sintheta) + versus * 0.5 * TMath::Pi();
+  auto phi = versus * std::asin(sintheta);// + versus * 0.5 * TMath::Pi();
+  if (phi < 0) phi += TMath::Pi();
 
   return phi;
 }
 
-Double_t makeYC(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Double_t y3){
-  //-----------------------------------------------------------------
-  // Initial approzimation of the y coordinate of the center of the track circumference 
-  // in the zy plane, with respects to the first point (z1,y1). Used to check consistency 
-  // between points (i.e. if they are in the the same semiplane), not in the seeding itself. 
-  // If the sign of yC is the same, the points are in the same semiplane.
-  //-----------------------------------------------------------------
-  z3 -=z1;
-  z2 -=z1;
-  y3 -=y1;
-  y2 -=y1;
-  //  
-  Double_t det = z3*y2-z2*y3;
-  if (TMath::Abs(det)<1e-10) {
-    return 100;
-  }
-  //
-  Double_t u = 0.5* (z2*(z2-z3)+y2*(y2-y3))/det;
-  Double_t y0 = y3*0.5+z3*u;
-  return y0;
-}
 
 //_____________________________________________________________________________
 Double_t makeTgln(Double_t z1,Double_t y1, Double_t z2,Double_t y2,Double_t x1,Double_t x2,Double_t c){
@@ -449,7 +429,7 @@ sand_reco::kf::State Seed3Points(std::array<double,3> xyz0, std::array<double,3>
   d[0][0]=1.;
   d[1][1]=1.;
   d[2][1]=dc_dy0;     d[2][3]=dc_dy1;     d[2][5]=dc_dy2;
-  d[3][0]=dtgl_dx0;   d[3][1]=dtgl_dy0;   d[3][2]=dtgl_dx1;   d[3][2]=dtgl_dy1;
+  d[3][0]=dtgl_dx0;   d[3][1]=dtgl_dy0;   d[3][2]=dtgl_dx1;   d[3][3]=dtgl_dy1;
   d[4][1]=dphi_dy0;   d[4][3]=dphi_dy1;   d[4][5]=dphi_dy2;
 
   // Error matrix
@@ -462,16 +442,6 @@ sand_reco::kf::State Seed3Points(std::array<double,3> xyz0, std::array<double,3>
   TMatrixD dt = d.T();
   TMatrixD c = d_m * dt;
 
-  c.Print();
-
-  // int n = c.GetNrows(); // Assuming square matrix
-  // for (int i = 0; i < n; ++i) {
-  //   for (int j = i + 1; j < n; ++j) {
-  //       c[i][j] = c[j][i]; // Mirror lower triangle to upper
-  //   }
-  // }
-
-  param.Print();
 
   sand_reco::kf::State StateSeed(param,c);
   return StateSeed;
