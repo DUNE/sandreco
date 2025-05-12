@@ -25,12 +25,32 @@ To develop `sandreco`, first install `edepsim` downloading the installation [fil
 curl -O https://raw.githubusercontent.com/wiki/DUNE/sandreco/files/install-edepsim-with-spack.sh
 source install-edepsim-with-spack.sh <spack installation folder>
 ```
+Then, build `edep-reader` using the following commands: 
 
+```console
+cd <edepreader installation path>
+git clone https://baltig.infn.it/vpia/edep-reader.git
+```
+in file `<edep-reader installation folder>/edep-reader/CMakeList.txt`: change `set(CMAKE_CXX_STANDARD 14)` into `set(CMAKE_CXX_STANDARD 17)`, then use the following commands: 
+
+```console
+cd edep-reader
+mkdir build
+mkdir install
+cd build
+spack load geant4@10.6.1
+spack load geant4-data@10.6.1
+spack load root@6.28.06
+spack load cmake@3.27.7
+cmake -DCMAKE_INSTALL_PREFIX=./../install ./.. -DEDepSim_DIR=$(dirname $(find $(spack location -i edepsim@3.2.0) -name "EDepSimConfig.cmake"))
+make -j8 
+make install
+source ../install/setup.sh
+```
 Then, build `sandreco` using the following commands:
 
 ```console
-mkdir <installation path>
-cd <installation path>
+cd <sandreco installation path>
 git clone https://github.com/DUNE/sandreco.git
 mkdir build && cd build
 spack load gcc@12.2.0
