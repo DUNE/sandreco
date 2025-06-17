@@ -1670,8 +1670,8 @@ void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
 
 
     auto trj_points = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
-    auto state_vector = sand_reco::kf::utils::getStateVector(trj_points[1].GetMomentum(),
-                                                             trj_points[1].GetPosition().Vect(),
+    auto state_vector = sand_reco::kf::utils::getStateVector(trj_points[0].GetMomentum(),
+                                                             trj_points[0].GetPosition().Vect(),
                                                              particle->Charge());
 
     track trk;
@@ -1682,9 +1682,9 @@ void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
     trk.x0  = state_vector.x();
     trk.y0  = state_vector.y();
 
-    trk.z0 = trj_points[1].GetPosition().Z();
+    trk.z0 = trj_points[0].GetPosition().Z();
     trk.yc = state_vector.y() - state_vector.radius() * sin(state_vector.phi());
-    trk.zc = trj_points[1].GetPosition().Z() - state_vector.radius() * cos(state_vector.phi());
+    trk.zc = trj_points[0].GetPosition().Z() - state_vector.radius() * cos(state_vector.phi());
 
     tracks.push_back(trk);
   }
