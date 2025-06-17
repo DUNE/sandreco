@@ -322,6 +322,161 @@ sand_reco::kf::StateVector getStateVector(TVector3 mom, TVector3 pos, int charge
     return sand_reco::kf::StateVector(pos.X(), pos.Y(), charge/radius, tan_lambda, phi);
 }
 
+
+Double_t makeC(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Double_t y3){
+  //-----------------------------------------------------------------
+  // Initial approzimation of the track curvature
+  //-----------------------------------------------------------------
+  z3 -=z1;
+  z2 -=z1;
+  y3 -=y1;
+  y2 -=y1;
+  //  
+  Double_t det = z3*y2-z2*y3;
+  if (TMath::Abs(det)<1e-10){
+    return 100;
+  }
+  //
+  Double_t u = 0.5* (z2*(z2-z3)+y2*(y2-y3))/det;
+  Double_t z0 = z3*0.5-y3*u;
+  Double_t y0 = y3*0.5+z3*u;
+  Double_t c2 = 1/TMath::Sqrt(z0*z0+y0*y0);
+  if (det<0) c2*=-1;
+  return c2;
+}
+
+
+Double_t makeSnp(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Double_t y3){
+  //-----------------------------------------------------------------
+  // Initial approzimation of the track snp at position z1
+  //-----------------------------------------------------------------
+  z3 -=z1;
+  z2 -=z1;
+  y3 -=y1;
+  y2 -=y1;
+  //  
+  Double_t det = z3*y2-z2*y3;
+  if (TMath::Abs(det)<1e-10) {
+    return 100;
+  }
+  //
+  Double_t u = 0.5* (z2*(z2-z3)+y2*(y2-y3))/det;
+  Double_t z0 = z3*0.5-y3*u; 
+  Double_t y0 = y3*0.5+z3*u;
+  Double_t c2 = 1/TMath::Sqrt(z0*z0+y0*y0);
+  if (det>0) c2*=-1;
+  z0*=c2;  
+  return z0;
+}
+
+Double_t makePhi(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3, Double_t y3, Double_t c){
+  //-----------------------------------------------------------------
+  // Initial approximation of the track phi at position z1
+  //-----------------------------------------------------------------
+  auto versus = c > 0 ? -1 : 1;
+  auto sintheta = makeSnp(z1,y1,z2,y2,z3,y3);
+  auto phi = std::asin(sintheta) + versus * 0.5 * TMath::Pi();
+
+  return phi;
+}
+
+Double_t makeYC(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Double_t y3){
+  //-----------------------------------------------------------------
+  // Initial approzimation of the y coordinate of the center of the track circumference 
+  // in the zy plane, with respects to the first point (z1,y1). Used to check consistency 
+  // between points (i.e. if they are in the the same semiplane), not in the seeding itself. 
+  // If the sign of yC is the same, the points are in the same semiplane.
+  //-----------------------------------------------------------------
+  z3 -=z1;
+  z2 -=z1;
+  y3 -=y1;
+  y2 -=y1;
+  //  
+  Double_t det = z3*y2-z2*y3;
+  if (TMath::Abs(det)<1e-10) {
+    return 100;
+  }
+  //
+  Double_t u = 0.5* (z2*(z2-z3)+y2*(y2-y3))/det;
+  Double_t y0 = y3*0.5+z3*u;
+  return y0;
+}
+
+//_____________________________________________________________________________
+Double_t makeTgln(Double_t z1,Double_t y1, Double_t z2,Double_t y2,Double_t x1,Double_t x2,Double_t c){
+  //-----------------------------------------------------------------
+  // Initial approzimation of the tangent of the track dip angle
+  //-----------------------------------------------------------------
+  Double_t d  =  TMath::Sqrt((z1-z2)*(z1-z2)+(y1-y2)*(y1-y2));
+  if (TMath::Abs(d*c*0.5)>1) return 0;
+  Double_t   angle2    = asin(d*c*0.5);
+
+  angle2  = (x1-x2)*c/(angle2*2.);    //dz /(R*dPhi)
+  return angle2;
+  //return (z1 - z2)/sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
+}
+
+sand_reco::kf::State Seed3Points(std::array<double,3> xyz0, std::array<double,3> xyz1, std::array<double,3> xyz2, double sy, double sx){
+  Double_t sy2=sy*sy;
+  Double_t sx2=sx*sx;
+  TMatrixD param(5,1);
+  TMatrixD d(5,6);
+  TMatrixD m(6,6);
+  // calculate initial param
+  param[0][0]=xyz0[0];              
+  param[1][0]=xyz0[1];
+  param[2][0]=makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]); 
+  param[3][0]=makeTgln(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz0[0],xyz1[0],param[2][0]);
+  param[4][0]=makePhi(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1],param[2][0]);
+  sand_reco::kf::StateVector vec(param);
+
+  //
+  Double_t dc_dy0=(makeC(xyz0[2],xyz0[1]+sy,xyz1[2],xyz1[1],xyz2[2],xyz2[1])-param[2][0])/sy;
+  Double_t dc_dy1=(makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1]+sy,xyz2[2],xyz2[1])-param[2][0])/sy;
+  Double_t dc_dy2=(makeC(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]+sy)-param[2][0])/sy;
+  //
+  Double_t dtgl_dx0=(makeTgln(xyz0[2],xyz0[1],xyz1[2],  xyz1[1],xyz0[0]+sx,xyz1[0],param[2][0])-param[3][0])/sx;
+  Double_t dtgl_dy0=(makeTgln(xyz0[2],xyz0[1]+sy,xyz1[2],  xyz1[1],xyz0[0],xyz1[0],param[2][0])-param[3][0])/sy;
+  Double_t dtgl_dx1=(makeTgln(xyz0[2],xyz0[1],xyz1[2],   xyz1[1],xyz0[0],xyz1[0]+sx,param[2][0])-param[3][0])/sx;
+  Double_t dtgl_dy1=(makeTgln(xyz0[2],xyz0[1],xyz1[2],  xyz1[1]+sy,xyz0[0],xyz1[0],param[2][0])-param[3][0])/sy;
+  //
+  Double_t dphi_dy0=(makePhi(xyz0[2],xyz0[1]+sy,xyz1[2],xyz1[1],xyz2[2],xyz2[1],param[2][0])-param[4][0])/sy;
+  Double_t dphi_dy1=(makePhi(xyz0[2],xyz0[1],xyz1[2],xyz1[1]+sy,xyz2[2],xyz2[1],param[2][0])-param[4][0])/sy;
+  Double_t dphi_dy2=(makePhi(xyz0[2],xyz0[1],xyz1[2],xyz1[1],xyz2[2],xyz2[1]+sy,param[2][0])-param[4][0])/sy;
+  //
+
+  // Partial derivative matrix
+  d[0][0]=1.;
+  d[1][1]=1.;
+  d[2][1]=dc_dy0;     d[2][3]=dc_dy1;     d[2][5]=dc_dy2;
+  d[3][0]=dtgl_dx0;   d[3][1]=dtgl_dy0;   d[3][2]=dtgl_dx1;   d[3][2]=dtgl_dy1;
+  d[4][1]=dphi_dy0;   d[4][3]=dphi_dy1;   d[4][5]=dphi_dy2;
+
+  // Error matrix
+  m[0][0]=sx2; m[1][1]=sy2; 
+  m[2][2]=sx2; m[3][3]=sy2;
+  m[4][4]=sx2; m[5][5]=sy2;
+
+  // Covariance calculation through error propagation
+  TMatrixD d_m = d * m;
+  TMatrixD dt = d.T();
+  TMatrixD c = d_m * dt;
+
+  c.Print();
+
+  // int n = c.GetNrows(); // Assuming square matrix
+  // for (int i = 0; i < n; ++i) {
+  //   for (int j = i + 1; j < n; ++j) {
+  //       c[i][j] = c[j][i]; // Mirror lower triangle to upper
+  //   }
+  // }
+
+  param.Print();
+
+  sand_reco::kf::State StateSeed(param,c);
+  return StateSeed;
+}
+
 ParticleState::ParticleState(const sand_reco::kf::StateVector& vector, double z)
 {
     position_ = TVector3(vector.x(), vector.y(), z);
