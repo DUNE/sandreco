@@ -381,13 +381,13 @@ void Manager::propagate(double& dE,
   auto predictedCovMatrix = propagateCovMatrix(
       currentStage.getStateCovMatrix(), propagatorMatrix, processNoiseMatrix);
 
-  sand_reco::kf::TrackStep predictedTrackState;
-  predictedTrackState.setStage(
+  sand_reco::kf::TrackStep predictedTrackStep;
+  predictedTrackStep.setStage(
       sand_reco::kf::TrackStep::TrackStateStage::kPrediction,
       sand_reco::kf::State(predictedStateVector, predictedCovMatrix));
-  predictedTrackState.setPropagatorMatrix(propagatorMatrix);
+  predictedTrackStep.setPropagatorMatrix(propagatorMatrix);
   
-  this_track_.addStep(predictedTrackState);
+  this_track_.addStep(predictedTrackStep);
 
   current_step_++;
   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kPrediction;
@@ -400,9 +400,12 @@ double Manager::evalChi2(
   auto residualVector = observation - prediction;
   TMatrixD residualVectorTransposed(TMatrixD::kTransposed, residualVector);
   TMatrixD measurementNoiseMatrixInverted(TMatrixD::kInverted,
-                                          measurementNoiseMatrix);
-  auto chi2Matrix = residualVectorTransposed * measurementNoiseMatrixInverted *
-                    residualVector;
+    measurementNoiseMatrix);
+    auto chi2Matrix = residualVectorTransposed * measurementNoiseMatrixInverted *
+    residualVector;
+    residualVector.Print();
+    measurementNoiseMatrix.Print();
+    measurementNoiseMatrixInverted.Print();
   return chi2Matrix[0][0];
 }
 
@@ -430,16 +433,22 @@ int Manager::findBestMatch(double& nextZ, const sand_reco::kf::Measurement& pred
   auto& next_tracklets = z_to_tracklets_->at(nextZ);
   auto best_tracklet_index = -1;
 
+  std::cout << "next_tracklets.size(): " << next_tracklets.size() << std::endl;
+  
   for (int i = 0; i < (int)next_tracklets.size(); i++) {
     sand_reco::kf::Measurement measurement = getMeasurementFromTracklet(next_tracklets[i]);
-
+    
     auto chi2 = evalChi2(measurement, prediction, Sk);
+    measurement.Print();
+    prediction.Print();
+    std::cout << "chi2: " << chi2 << std::endl;
     if (chi2 < best_chi) {
       best_chi = chi2;
       best_tracklet_index = i;
     }
   }
   if (best_chi < 10) {
+    std::cout << "best_chi: " << best_chi << std::endl;
     return best_tracklet_index;
   } else {
     return -1;
@@ -475,6 +484,9 @@ void Manager::EvaluateInnovation(const SANDKFMeasurement& measurement,
 void Manager::filter(const sand_reco::kf::Measurement& measurement,
   const sand_reco::kf::Measurement& prediction)
 {
+
+  measurement.Print();
+  prediction.Print();
 
   auto currentState = this_track_.getStep(current_step_);
   auto predictedStage =
@@ -765,6 +777,9 @@ void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_track
 
 void Manager::run()
 {
+  std::cout << "Processing z: " << current_z_ << std::endl;
+  std::cout << "current_step_: " << current_step_ << std::endl;
+
   // criterio per quando fermare la ricerca
   int stepLength = 1;
   if (z_to_tracklets_->lower_bound(current_z_) == z_to_tracklets_->begin()) {
@@ -781,17 +796,20 @@ void Manager::run()
     auto it = (z_to_tracklets_->lower_bound(current_z_));
     for(int i= 0; i < stepLength; i++){
       if(it == z_to_tracklets_->begin()){
+        std::cout << "HERE" << std::endl;
         in_range = false;
         break;
       }
+      std::cout << "NOW HERE" << std::endl;
       --it;
     }
-
+    
     if (!in_range) {
+      std::cout << "NOW NOW HERE" << std::endl;
       break;
-
     }
     auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;   
+    std::cout << "Next z: " << nextZ << std::endl;
 
     auto currentStep = this_track_.getStep(current_step_);
     auto filteredStateVector =
@@ -820,8 +838,10 @@ void Manager::run()
                         beta, particleInfo_.mass, particleInfo_.charge) / 1000;
 
     double dZ = (nextZ - current_z_) / 1000;
+    std::cout << "current_step_: " << current_step_ << std::endl;
 
     propagate(dE, dZ, beta);
+    std::cout << "current_step_: " << current_step_ << std::endl;
 
     // 2- Search best match
     auto predictionStateVector = this_track_.getStep(current_step_)
@@ -839,20 +859,31 @@ void Manager::run()
                                               predictionStateCovMatrix *
                                               projectionMatrixTransposed;
 
-    int tracklet_index = findBestMatch(nextZ, prediction, Sk);
+    // measurementNoiseMatrix.Print();
+    // projectionMatrix.Print();
+    // predictionStateCovMatrix.Print();
+    int tracklet_index = findBestMatch(nextZ, prediction, measurementNoiseMatrix);
 
     // // 3- If it is found: step = 1
     // //    else step++
+  std::cout << "current_step_: " << current_step_ << std::endl;
+
     if (tracklet_index != -1) {
       stepLength = 1;
       auto measurement = getMeasurementFromTracklet(z_to_tracklets_->at(nextZ)[tracklet_index]);
       this_track_.setZ(current_step_, nextZ);
       this_track_.setX(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][0]);
       this_track_.setY(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][1]);
+  std::cout << "current_step_: " << current_step_ << std::endl;
+
       filter(measurement, prediction);
+      std::cout << "current_step_: " << current_step_ << std::endl;
+
+      std::cout << "fatto filter" << std::endl;
       current_z_ = nextZ;
     } else {
       stepLength++;
+      std::cout << "rimosso last sterp" << std::endl;
       this_track_.removeLastStep();
       current_step_--;
       current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;

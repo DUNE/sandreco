@@ -90,9 +90,9 @@ std::map<double, std::vector<TVectorD>> findBestTracklet(const std::map<double, 
 
 
     //Select the best traklet based on position and direction
-    TVector3 p_trj_dir = current_z.second.at(1).Unit();
     TVector3 best_trj_point = current_z.second.at(0);
     TVectorD best_tracklet(tracklets_at_current_z.at(0).GetNrows());
+    TVector3 p_trj_dir = current_z.second.at(1).Unit();
 
     std::vector<double> position_errors, direction_errors;
     
@@ -123,6 +123,13 @@ std::map<double, std::vector<TVectorD>> findBestTracklet(const std::map<double, 
       if (score < best_score) {
         best_score = score;
         best_tracklet = tracklet;
+        std::cout << "z: " << current_z.first<< " position distance  "  
+                  << position_distance 
+                  << " angular distance  "  
+                  << direction
+                  << " SCORE " 
+                  << best_score 
+                  << std::endl;
       }
     }
 

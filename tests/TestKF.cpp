@@ -26,13 +26,13 @@
 
 //#include "EDEPTree.h"
 
-void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TMultiGraph* mg) {
+void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TMultiGraph* mg, TMultiGraph* mgx) {
   sand_reco::kf::Manager manager;
   manager.initFromMC(&z_to_tracklets, particle);
   manager.run();
 
   auto track = manager.getTrack();
-  if (track.getSteps().size() > 3) {
+  // if (track.getSteps().size() > 3) {
     std::cout << track.getSteps().size() << std::endl;
     auto last_step = track.getSteps().back();
     auto reco_state =
@@ -46,6 +46,10 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
     TGraph* yz_filtered = new TGraph(track.getSteps().size());
     TGraph* yz_smoothed = new TGraph(track.getSteps().size());
     TGraph* yz_measured = new TGraph(track.getSteps().size());
+    TGraph* xz_predicted = new TGraph(track.getSteps().size());
+    TGraph* xz_filtered = new TGraph(track.getSteps().size());
+    TGraph* xz_smoothed = new TGraph(track.getSteps().size());
+    TGraph* xz_measured = new TGraph(track.getSteps().size());
     
     int i = 0;
     for (auto& step : track.getSteps()) {
@@ -57,6 +61,10 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
       yz_filtered->SetPoint(i, step.getZ() , filtering.y()*1000);
       yz_smoothed->SetPoint(i, step.getZ() , smoothing.y()*1000);
       yz_measured->SetPoint(i, step.getZ() , step.getY());
+      xz_predicted->SetPoint(i, step.getZ(), prediction.x()*1000 );
+      xz_filtered->SetPoint(i, step.getZ() , filtering.x()*1000);
+      xz_smoothed->SetPoint(i, step.getZ() , smoothing.x()*1000);
+      xz_measured->SetPoint(i, step.getZ() , step.getX());
       i++;
   
       auto tanLambda = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateVector().tanLambda();
@@ -81,10 +89,22 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
       mg->Add(yz_smoothed);
       yz_measured->SetLineColor(2);
       yz_measured->SetMarkerStyle(2);
-      
       mg->Add(yz_measured);
+
+      xz_predicted->SetLineColor(3);
+      xz_predicted->SetMarkerStyle(3);
+      mgx->Add(xz_predicted);
+      xz_filtered->SetLineColor(4);
+      xz_filtered->SetMarkerStyle(4);
+      mgx->Add(xz_filtered);
+      xz_smoothed->SetLineColor(6);
+      xz_smoothed->SetMarkerStyle(5);
+      mgx->Add(xz_smoothed);
+      xz_measured->SetLineColor(2);
+      xz_measured->SetMarkerStyle(2);
+      mgx->Add(xz_measured);
     }
-  }
+  // }
 
   return;
 }
@@ -210,6 +230,11 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
     std::map<double, std::vector<TVector3>> z_to_interpolated_tracklets = getInterpolatedZ(trj.GetTrajectoryPoints().at(string_to_component[tracker_name]), z_to_tracklets);
     z_to_best_tracklet = findBestTracklet(z_to_tracklets, z_to_interpolated_tracklets);
+
+    for (auto t:z_to_interpolated_tracklets) {
+      std::cout << "Interpolated z: " << t.first 
+                << ", does the same z from tracklets exist?: " <<  (z_to_tracklets.find(t.first) != z_to_tracklets.end())  << std::endl;
+    }
   }
   
   int nParticles = particleInfos.size();
@@ -224,23 +249,31 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     std::string name_mg = "YZ_" + std::to_string(ip);
     TMultiGraph* mg = new TMultiGraph(name_mg.c_str(), name_mg.c_str());
     TGraph* yz_true = new TGraph(primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size());
+    std::string name_mgx = "XZ_" + std::to_string(ip);
+    TMultiGraph* mgx = new TMultiGraph(name_mgx.c_str(), name_mgx.c_str());
+    TGraph* xz_true = new TGraph(primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size());
 
     for (uint i = 0; i <  primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++){
       auto point = primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name])[i];
        yz_true->SetPoint(i, point.GetPosition().Z() , point.GetPosition().Y());
+       xz_true->SetPoint(i, point.GetPosition().Z() , point.GetPosition().X());
     }
 
     bool use_interpolated = true;
     if (use_interpolated) {
-      tryCompleteManager(z_to_best_tracklet, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg);
+      tryCompleteManager(z_to_best_tracklet, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
     } else {
-      tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg);
+      tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
     }
 
     mg->SetTitle("YZ view; z [mm]; y [mm]");
     yz_true->SetMarkerStyle(4);
     mg->Add(yz_true);
     mg->Write();
+    mgx->SetTitle("XZ view; z [mm]; x [mm]");
+    xz_true->SetMarkerStyle(4);
+    mgx->Add(xz_true);
+    mgx->Write();
   }
 }
 
