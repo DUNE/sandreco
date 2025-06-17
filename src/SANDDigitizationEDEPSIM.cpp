@@ -98,7 +98,8 @@ void CreateDigitsFromHits(const SANDGeoManager& geo,
        it != hits2cell.end(); ++it)  // run over wires
   {
     long did = it->first();  // wire unique id
-    const sand_geometry::tracker::WireInfo& wire_info = geo.getCellInfo(it->first())->second.getWire();
+    const auto& cell_info = geo.getCellInfo(it->first())->second;
+    const sand_geometry::tracker::WireInfo& wire_info = cell_info.getWire();
     double wire_time = 10e8;
     double drift_time = 10e8;
     double signal_time = 10e8;
@@ -107,6 +108,8 @@ void CreateDigitsFromHits(const SANDGeoManager& geo,
     dg_wire d;
     d.det = it->second[0].det;
     d.did = did;
+    if(!cell_info.getPlane()) std::cout << "Sto male" << std::endl;
+    d.hor = (cell_info.getPlane()->getRotation() == 0) ? true : false;
     d.de = 0;
     // To Do: what point do we want to save? 
     // Center or one of the attachment points?

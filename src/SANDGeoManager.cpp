@@ -1519,8 +1519,13 @@ void SANDGeoManager::rearrangePlanes()
 
   for (auto it = planes_.begin();
             it != planes_.end(); ++it) {
-    id_to_plane_[it->uId()] = it;
-  }
+              id_to_plane_[it->uId()] = it;
+            }
+            
+  for (auto it = planes_.begin();
+            it != planes_.end(); ++it) {
+              it->updateCells();
+            }
 }
 
 void SANDGeoManager::setTrackerInfo()
