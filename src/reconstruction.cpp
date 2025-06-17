@@ -1908,7 +1908,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
 
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < nev; i++) {
     t->GetEntry(i);
 
     std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i) / nev * 100)
@@ -1916,6 +1916,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 
     vec_tr.clear();
     vec_cl.clear();
+    vec_vtx.clear();
 
     double xvtx_reco, yvtx_reco, zvtx_reco;
     int VtxType;
