@@ -142,108 +142,108 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
     std::cout << "x" << trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).back().GetPosition().Vect().X() << std::endl;
 
     //Find the closest z coordinates of the trajectory to the traklet
-    for(const auto& z : z_to_tracklets){
+    for (const auto& z : z_to_tracklets) {
       double z_trk = z.first;
       uint i_min = 0;
       double z_min = 10E8;
 
-    for(uint i = 0; i < trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++ ){ 
-      auto point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i);
-      double z_trj = point.GetPosition().Vect().Z();
-      double z_distance = fabs(z_trk - z_trj);
+      for(uint i = 0; i < trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++ ){ 
+        auto point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i);
+        double z_trj = point.GetPosition().Vect().Z();
+        double z_distance = fabs(z_trk - z_trj);
 
-      if(z_distance < z_min){
-        z_min = z_distance;
-        i_min = i;
+        if(z_distance < z_min){
+          z_min = z_distance;
+          i_min = i;
+        }
       }
-    }
     
-    int i_second_min = 10E8;
-    if(i_min == trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).size() - 1 ){
-      i_second_min = i_min - 1;
-    } else if (i_min == 0) {
-      i_second_min = i_min + 1;
-    } else {
-      auto prev_point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i_min - 1);
-      auto next_point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i_min + 1);
-      double prev_z = prev_point.GetPosition().Vect().Z();
-      double next_z = next_point.GetPosition().Vect().Z();
-
-      double prev_z_distance = fabs(z_trk - prev_z);
-      double next_z_distance = fabs(z_trk - next_z);
-
-      if (prev_z_distance < next_z_distance) {
+      int i_second_min = 10E8;
+      if(i_min == trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).size() - 1 ){
         i_second_min = i_min - 1;
+      } else if (i_min == 0) {
+        i_second_min = i_min + 1;
       } else {
-        i_second_min = i_min +   1;
+        auto prev_point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i_min - 1);
+        auto next_point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i_min + 1);
+        double prev_z = prev_point.GetPosition().Vect().Z();
+        double next_z = next_point.GetPosition().Vect().Z();
+
+        double prev_z_distance = fabs(z_trk - prev_z);
+        double next_z_distance = fabs(z_trk - next_z);
+
+        if (prev_z_distance < next_z_distance) {
+          i_second_min = i_min - 1;
+        } else {
+          i_second_min = i_min +   1;
+        }
       }
-    }
 
-    //Interpolation of z coordinate
-    auto point_min        = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[i_min];
-    auto point_second_min = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[i_second_min];
-    
-    auto first_point = point_min;
-    auto second_point = point_second_min;
-    if (point_min.GetPosition().Z() < point_second_min.GetPosition().Z()) {
-      first_point  = point_min;
-      second_point = point_second_min;
-    } else {
-      first_point  = point_second_min;
-      second_point = point_min;
-    }
+      //Interpolation of z coordinate
+      auto point_min        = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[i_min];
+      auto point_second_min = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[i_second_min];
+      
+      auto first_point = point_min;
+      auto second_point = point_second_min;
+      if (point_min.GetPosition().Z() < point_second_min.GetPosition().Z()) {
+        first_point  = point_min;
+        second_point = point_second_min;
+      } else {
+        first_point  = point_second_min;
+        second_point = point_min;
+      }
 
-    double z_diff = z_trk - first_point.GetPosition().Z();
-    double alpha = z_diff / fabs(second_point.GetPosition().Z() - first_point.GetPosition().Z());
+      double z_diff = z_trk - first_point.GetPosition().Z();
+      double alpha = z_diff / fabs(second_point.GetPosition().Z() - first_point.GetPosition().Z());
 
-    TVector3 interpolated_pos = first_point.GetPosition().Vect() * (1 - alpha) + second_point.GetPosition().Vect() * alpha;
-    TVector3 interpolated_mom = first_point.GetMomentum() * (1 - alpha) + second_point.GetMomentum() * alpha;
+      TVector3 interpolated_pos = first_point.GetPosition().Vect() * (1 - alpha) + second_point.GetPosition().Vect() * alpha;
+      TVector3 interpolated_mom = first_point.GetMomentum() * (1 - alpha) + second_point.GetMomentum() * alpha;
 
-    //Select the best traklet based on position and direction
-    auto point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i_min);
-    auto p_trj =  point.GetMomentum();
-    
+      //Select the best traklet based on position and direction
+      auto point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).at(i_min);
+      auto p_trj =  point.GetMomentum();
+      
 
-    TVector3 p_trj_dir = interpolated_mom.Unit();
-    TVector3 best_trj_point = interpolated_pos;
-    TVectorD best_tracklet(z.second[0].GetNrows());
+      TVector3 p_trj_dir = interpolated_mom.Unit();
+      TVector3 best_trj_point = interpolated_pos;
+      TVectorD best_tracklet(z.second[0].GetNrows());
 
-    std::vector<double> position_errors, direction_errors;
+      std::vector<double> position_errors, direction_errors;
       
       double best_score = 1e8;
-      for(const auto& tracklet : z.second){
+      for (const auto& tracklet : z.second) {
         double x_trk = tracklet[0];
         double y_trk = tracklet[1];
         double theta_xz = tracklet[2];
         double theta_yz = tracklet[3];
 
-    //Find the closest (x,y)
-    // double position_distance =  sqrt(pow(x_trk - x_trj, 2) + pow(y_trk - y_trj, 2));
-    double position_distance = sqrt(pow(x_trk - best_trj_point.X(), 2) + pow(y_trk - best_trj_point.Y(), 2));
-    
-    //Find the best direction
-    double px_trk = cos(theta_xz);
-    double py_trk = sin(theta_yz);
-    double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
+        //Find the closest (x,y)
+        // double position_distance =  sqrt(pow(x_trk - x_trj, 2) + pow(y_trk - y_trj, 2));
+        double position_distance = sqrt(pow(x_trk - best_trj_point.X(), 2) + pow(y_trk - best_trj_point.Y(), 2));
+        
+        //Find the best direction
+        double px_trk = cos(theta_xz);
+        double py_trk = sin(theta_yz);
+        double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
 
-    TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
-    
-    //to be precise this is the cos of the angle between the trajectory and the traklet              
-    double direction = p_trk_dir.Dot(p_trj_dir); 
+        TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
+        
+        //to be precise this is the cos of the angle between the trajectory and the traklet              
+        double direction = p_trk_dir.Dot(p_trj_dir); 
 
-    position_errors.push_back(position_distance);
-    direction_errors.push_back(direction);
+        position_errors.push_back(position_distance);
+        direction_errors.push_back(direction);
 
-    double score = position_distance / 200E-3 + acos(direction) / 0.2;
-    if (score < best_score) {
-      best_score = score;
-      std::cout << "z: " << z.first<< " position distance  "  
-              << position_distance 
-              << " angular distance  "  
-              << direction
-              << " SCORE " 
-              << best_score 
-              << std::endl;
+        double score = position_distance / 200E-3 + acos(direction) / 0.2;
+        if (score < best_score) {
+          best_score = score;
+          std::cout << "z: " << z.first<< " position distance  "  
+                    << position_distance 
+                    << " angular distance  "  
+                    << direction
+                    << " SCORE " 
+                    << best_score 
+                    << std::endl;
         }
       }
 
@@ -370,8 +370,8 @@ int main(int argc, char* argv[])
   TH1D* h_D = new TH1D("h_D", "Distribution of D ;D score;Entries", 200, 0, 200);
   TH1D* h_x = new TH1D("h_x", ";x_{trk} - x_{trj} [mm];Entries", 100, -5, 5);
   TH1D* h_y = new TH1D("h_y", ";y_{trk} - y_{trj} [mm];Entries", 100, -5, 5);
-  TH1D* h_theta_x = new TH1D("h_theta_x", ";#theta^{trk}_{xz} - x^{trj}_{xz} [rad];Entries", 200, -3, 3);
-  TH1D* h_theta_y = new TH1D("h_theta_y", ";#theta^{trk}_{yz} - x^{trj}_{yz} [rad];Entries", 200, -2, 2);
+  TH1D* h_theta_x = new TH1D("h_theta_x", ";#theta^{trk}_{xz} - #theta^{trj}_{xz} [rad];Entries", 200, -3, 3);
+  TH1D* h_theta_y = new TH1D("h_theta_y", ";#theta^{trk}_{yz} - #theta^{trj}_{yz} [rad];Entries", 200, -2, 2);
 
   TrackletInfo info;
 
@@ -409,7 +409,7 @@ int main(int argc, char* argv[])
   sand_geo.fillAdjacentCells(geometry);
 
   int nev = t_h->GetEntries();
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < 200; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i); 
 

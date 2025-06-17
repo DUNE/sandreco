@@ -91,7 +91,7 @@ class SANDTrackerUtils
   static inline double getMomentumInGeVFromRadiusInMM(double radius, double tanl) {return getPerpMomentumInGeVFromRadiusInMM(radius) * sqrt(1 + tanl*tanl); };
   static inline double getMomentumInMeVFromRadiusInMM(double radius, double tanl) {return 1.E3 * getMomentumInGeVFromRadiusInMM(radius, tanl); };
   static inline double getSigmaPositionMeasurement() {return 200E-6 /*m*/; };
-  static inline double getSigmaAngleMeasurement() {return 0.2 /*rad*/; };
+  static inline double getSigmaAngleMeasurement() {return 0.02 /*rad*/; };
   static double getMagneticField() { return kMagneticFieldInT_; };
   static double getk() { return k_; };
   static double getc() { return c_; };

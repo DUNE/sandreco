@@ -18,12 +18,13 @@
 
 #include "SANDGeoManager.h"
 #include "SANDTrackletFinder.h"
+#include "SANDProcessTracklets.h"
 #include "SANDTrackerClusterCollection.h"
 #include "SANDTrackerDigitCollection.h"
 #include "SANDKalmanFilter.h"
 #include "utils.h"
 
-#include "EDEPTree.h"
+//#include "EDEPTree.h"
 
 void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TMultiGraph* mg) {
   sand_reco::kf::Manager manager;
@@ -58,6 +59,7 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
       yz_measured->SetPoint(i, step.getZ() , step.getY());
       i++;
   
+      auto tanLambda = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateVector().tanLambda();
       
       auto& innovation = step.getInnovation();
       if (innovation.empty()) {
@@ -66,6 +68,7 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
   
       h_gpos_distribution->Fill(innovation[0]);
       h_gang_distribution->Fill(innovation[1]);
+    
       
       yz_predicted->SetLineColor(3);
       yz_predicted->SetMarkerStyle(3);
@@ -102,7 +105,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   TrackletFinder traklet_finder;
   traklet_finder.setVolumeParameters(p);
   traklet_finder.setSigmaPosition(0.2);
-  traklet_finder.setSigmaAngle(0.2);
+  traklet_finder.setSigmaAngle(0.02);
 
   std::map<double, std::vector<TVectorD>> z_to_tracklets;
 
@@ -118,6 +121,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
       traklet_finder.setCells(cluster_in_container);
       auto minima = traklet_finder.findTracklets();
+
       double z_start = cluster_in_container.getZ();
       for (uint trk = 0; trk < minima.size(); trk++) {
         if (minima[trk][4] < 1E-2) {
@@ -148,6 +152,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   TDatabasePDG pdg_db;
   std::vector<SParticleInfo> particleInfos;
   TRandom3 rand(0);
+  std::map<double, std::vector<TVectorD>> z_to_best_tracklet;
 
   double sigma_pos = 0;
   double sigma_mom = 0;
@@ -199,9 +204,14 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     pi.mom = TVector3(px_smeared, py_smeared, pz_smeared);
     particleInfos.push_back(pi);
 
+
     std::cout << "Initial Momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
     std::cout << "Selected Momentum " << pi.mom.Mag() << " " << pi.mom.Z() << std::endl;
+
+    std::map<double, std::vector<TVector3>> z_to_interpolated_tracklets = getInterpolatedZ(trj.GetTrajectoryPoints().at(string_to_component[tracker_name]), z_to_tracklets);
+    z_to_best_tracklet = findBestTracklet(z_to_tracklets, z_to_interpolated_tracklets);
   }
+  
   int nParticles = particleInfos.size();
   
   if (nParticles == 0) {
@@ -220,7 +230,12 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
        yz_true->SetPoint(i, point.GetPosition().Z() , point.GetPosition().Y());
     }
 
-    tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg);
+    bool use_interpolated = true;
+    if (use_interpolated) {
+      tryCompleteManager(z_to_best_tracklet, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg);
+    } else {
+      tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg);
+    }
 
     mg->SetTitle("YZ view; z [mm]; y [mm]");
     yz_true->SetMarkerStyle(4);
@@ -253,7 +268,6 @@ int main(int argc, char* argv[])
   TFile* innovation_test = new TFile("innovation_test.root", "RECREATE");
   TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -3, 3);
   TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -3, 3);
-
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
   

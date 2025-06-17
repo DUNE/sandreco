@@ -110,9 +110,13 @@ ROOT_GENERATE_DICTIONARY(SANDKFTrackDict SANDKFTrack.h MODULE SANDKFTrack LINKDE
 add_library(SANDKalmanFilter SHARED src/SANDKalmanFilter.cpp)
 target_link_libraries(SANDKalmanFilter PUBLIC SANDTrackerUtils SANDKFTrack)
 
+# Creates a libProcessTracklets shared library with a generated dictionary.
+add_library(ProcessTracklets SHARED src/SANDProcessTracklets.cpp)
+target_link_libraries(ProcessTracklets PUBLIC Utils EDEPTree)
+
 # Creates MeasurementBuilder executable.
 add_executable(TestKF tests/TestKF.cpp)
-target_link_libraries(TestKF PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter)
+target_link_libraries(TestKF PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter ProcessTracklets)
 
 # Creates NoiseMatrixComputation executable.
 add_executable(NoiseMatrixComputation tools/NoiseMatrixComputation.cpp)

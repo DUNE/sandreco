@@ -158,14 +158,9 @@ TMatrixD Manager::getMeasurementNoiseMatrix()
   TMatrixD measurementNoiseMatrix(2, 2);
   measurementNoiseMatrix[0][0] = SANDTrackerUtils::getSigmaPositionMeasurement() *
                                  SANDTrackerUtils::getSigmaPositionMeasurement();
-  measurementNoiseMatrix[1][1] = SANDTrackerUtils::getSigmaAngleMeasurement() *
-                                 SANDTrackerUtils::getSigmaAngleMeasurement();
-  // double sigma_x = 2E-3; //m
-  // double sigma_y = 1E-3;
-  // double sigma_theta_x = 1.0; //rad
-  // double sigma_theta_y = 0.3;
 
-  
+  measurementNoiseMatrix[1][1] = SANDTrackerUtils::getSigmaAngleMeasurement()*
+                                 SANDTrackerUtils::getSigmaAngleMeasurement();
 //   switch (orientation) {
 //     case Orientation::kVertical:
 //         measurementNoiseMatrix[0][0] = sigma_x * sigma_x;
@@ -598,8 +593,8 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
   trackStep.setPropagatorMatrix(initial_cov_matrix);
   
 
-  particleInfo_       = particleInfo;
-  z_to_tracklets_     = z_to_tracklets;
+  particleInfo_        = particleInfo;
+  z_to_tracklets_      = z_to_tracklets;
   current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
   current_step_        = 0u;
   current_z_           = particleInfo.pos.Z(); //Notice: UNITS!!  mm, why?
