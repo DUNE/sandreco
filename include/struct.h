@@ -244,6 +244,15 @@ struct particle
   std::vector<particle> daughters;
 };
 
+struct vertex 
+{
+  int id;
+  double x;
+  double y;
+  double z;
+  std::vector<int> track_ids;
+};
+
 struct event
 {
   double x;

@@ -321,11 +321,35 @@ void TrackerVertexing::flagVertex() {
   }
 }
 
-void TrackerVertexing::setParameters(double dz, double ip, double merging_radius, std::vector<Track> tracks) {
+// vertexing tracks
+void TrackerVertexing::setTracks(std::vector<Track> tracks) {
+  clearAll();
+  tracks_ = tracks;
+}
+
+// struct tracks
+void TrackerVertexing::setTracks(std::vector<track> tracks) {
+  clearAll();
+  for (const auto& t : tracks) {
+    Track converted_track;
+     converted_track.id = t.tid;
+     converted_track.x = t.x0;
+     converted_track.y = t.y0; 
+     converted_track.z = t.z0; 
+     converted_track.tx = t.b;
+
+     double m_yz = (t.y0 - t.yc) / (t.z0 - t.zc);
+     converted_track.ty = m_yz;
+     std::cout << "Computed tan(phi) = " << converted_track.ty << std::endl;
+
+    tracks_.push_back(converted_track);
+  }
+}
+
+void TrackerVertexing::setParameters(double dz, double ip, double merging_radius) {
   dz_ = dz;
   ip_ = ip;
   merging_radius_ = merging_radius;
-  tracks_ = tracks;
 
   std::cout << tracks_.size() << " tracks read." << std::endl;
   std::cout << "DZ: " << dz_ << "\nIP: " << ip_
@@ -361,8 +385,7 @@ int TrackerVertexing::run() {
   std::cout << "Multi-Prong: " << vertices_multi_prong_.size() << std::endl;
   std::cout << "=========================" << std::endl;
   std::cout << "\nDump vertexes\n";
-  dumpVertex("vertices.txt");
+  // dumpVertex("vertices.txt");
 
-  clearAll();
   return 0;
 }
