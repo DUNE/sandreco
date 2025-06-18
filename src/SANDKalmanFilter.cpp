@@ -2,6 +2,7 @@
 #include "SANDTrackerClusterCollection.h"
 #include "SANDTrackerUtils.h"
 
+
 #include <vector>
 
 #include "TVectorD.h"
@@ -309,7 +310,7 @@ sand_reco::kf::Measurement Manager::getPrediction(
   } else {
     projector[0][0] = stateVector.x();
     projector[1][0] = -stateVector.charge() *
-                      atan(stateVector.tanLambda() / sin(stateVector.phi()));
+                      atan2(stateVector.tanLambda() , sin(stateVector.phi()));
   }
   return projector;
 }
@@ -447,7 +448,7 @@ int Manager::findBestMatch(double& nextZ, const sand_reco::kf::Measurement& pred
       best_tracklet_index = i;
     }
   }
-  if (best_chi < 10) {
+  if (best_chi < 20) {
     std::cout << "best_chi: " << best_chi << std::endl;
     return best_tracklet_index;
   } else {
@@ -855,8 +856,7 @@ void Manager::run()
                                                 predictionStateVector);
     TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
                                           projectionMatrix);
-    auto Sk = measurementNoiseMatrix + projectionMatrix *
-                                              predictionStateCovMatrix *
+    auto Sk = measurementNoiseMatrix + projectionMatrix * predictionStateCovMatrix *
                                               projectionMatrixTransposed;
 
     // measurementNoiseMatrix.Print();

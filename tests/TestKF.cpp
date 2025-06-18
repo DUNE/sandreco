@@ -66,8 +66,6 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
       xz_smoothed->SetPoint(i, step.getZ() , smoothing.x()*1000);
       xz_measured->SetPoint(i, step.getZ() , step.getX());
       i++;
-  
-      auto tanLambda = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateVector().tanLambda();
       
       auto& innovation = step.getInnovation();
       if (innovation.empty()) {
@@ -198,8 +196,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     pi.mass = particle->Mass();
     pi.charge = particle->Charge() / 3;
 
-    // std::cout << pi.mass << " " << pi.charge << " " << pi.pdg_code << std::endl;
-    // std::cout << trj.GetHitMap().at(string_to_component[tracker_name]).size() << std::endl;
+    std::cout << "HIT " << trj.GetHitMap().at(string_to_component[tracker_name]).size() << std::endl;
 
     double max_z = 0;
     bool to_be_reconstructed = false;
@@ -227,6 +224,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
     std::cout << "Initial Momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
     std::cout << "Selected Momentum " << pi.mom.Mag() << " " << pi.mom.Z() << std::endl;
+   
 
     std::map<double, std::vector<TVector3>> z_to_interpolated_tracklets = getInterpolatedZ(trj.GetTrajectoryPoints().at(string_to_component[tracker_name]), z_to_tracklets);
     z_to_best_tracklet = findBestTracklet(z_to_tracklets, z_to_interpolated_tracklets);
@@ -235,7 +233,17 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
       std::cout << "Interpolated z: " << t.first 
                 << ", does the same z from tracklets exist?: " <<  (z_to_tracklets.find(t.first) != z_to_tracklets.end())  << std::endl;
     }
+
+    std::vector<double> z_difference = computeZDistance(trj.GetTrajectoryPoints().at(string_to_component[tracker_name]), z_to_tracklets);
+    
+    for(auto z:z_difference){
+      std::cout << "distnza fra due z è: " << z << std::endl;
+    }
+  
+    
   }
+
+   
   
   int nParticles = particleInfos.size();
   
@@ -275,6 +283,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     mgx->Add(xz_true);
     mgx->Write();
   }
+
 }
 
 int main(int argc, char* argv[])
@@ -312,12 +321,13 @@ int main(int argc, char* argv[])
   } 
   sand_geo.fillAdjacentCells(geometry);
 
-  for (int i = 0; i < 20; i++) {
+  for (int i = 1; i < 20; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 
     processEventWithKF(&sand_geo, ev, digits, h_gpos_distribution, h_gang_distribution);
   }
+
   h_gpos_distribution->Write();
   h_gang_distribution->Write();
   innovation_test->Close();
