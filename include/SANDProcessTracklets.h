@@ -33,5 +33,5 @@ std::vector<double> computeZDistance(const std::vector<EDEPTrajectoryPoint>& trj
 
 std::map<double, std::vector<TVectorD>> findBestTracklet(const std::map<double, std::vector<TVectorD>>& z_to_tracklets,
                                                          const std::map<double, std::vector<TVector3>>& z_to_interpolated_tracklets);
-                                                         
-
+std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z);          
+double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet);

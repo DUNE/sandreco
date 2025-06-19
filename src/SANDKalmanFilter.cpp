@@ -405,8 +405,8 @@ double Manager::evalChi2(
     auto chi2Matrix = residualVectorTransposed * measurementNoiseMatrixInverted *
     residualVector;
     residualVector.Print();
-    measurementNoiseMatrix.Print();
-    measurementNoiseMatrixInverted.Print();
+    // measurementNoiseMatrix.Print();
+    // measurementNoiseMatrixInverted.Print();
   return chi2Matrix[0][0];
 }
 
@@ -434,22 +434,22 @@ int Manager::findBestMatch(double& nextZ, const sand_reco::kf::Measurement& pred
   auto& next_tracklets = z_to_tracklets_->at(nextZ);
   auto best_tracklet_index = -1;
 
-  std::cout << "next_tracklets.size(): " << next_tracklets.size() << std::endl;
+  // std::cout << "next_tracklets.size(): " << next_tracklets.size() << std::endl;
   
   for (int i = 0; i < (int)next_tracklets.size(); i++) {
     sand_reco::kf::Measurement measurement = getMeasurementFromTracklet(next_tracklets[i]);
     
     auto chi2 = evalChi2(measurement, prediction, Sk);
-    measurement.Print();
-    prediction.Print();
-    std::cout << "chi2: " << chi2 << std::endl;
+    // measurement.Print();
+    // prediction.Print();
+    // std::cout << "chi2: " << chi2 << std::endl;
     if (chi2 < best_chi) {
       best_chi = chi2;
       best_tracklet_index = i;
     }
   }
-  if (best_chi < 20) {
-    std::cout << "best_chi: " << best_chi << std::endl;
+  if (best_chi < 10) {
+    // std::cout << "best_chi: " << best_chi << std::endl;
     return best_tracklet_index;
   } else {
     return -1;
@@ -486,8 +486,8 @@ void Manager::filter(const sand_reco::kf::Measurement& measurement,
   const sand_reco::kf::Measurement& prediction)
 {
 
-  measurement.Print();
-  prediction.Print();
+  // measurement.Print();
+  // prediction.Print();
 
   auto currentState = this_track_.getStep(current_step_);
   auto predictedStage =

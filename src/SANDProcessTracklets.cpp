@@ -9,6 +9,57 @@ double ComputeStd(const std::vector<double>& values, double mean) {
 }
 
 
+std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z){
+
+  // Interpolation of z coordinate
+  auto first_point = start;
+  auto second_point = stop;
+
+  double z_diff = z - first_point.Z();
+  double alpha = z_diff / fabs(second_point.Z() - first_point.Z());
+
+  TVector3 interpolated_pos = first_point * (1 - alpha) + second_point * alpha;
+  TVector3 interpolated_dir = (stop - start).Unit();
+
+  return { interpolated_pos, interpolated_dir };
+}
+
+double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet){
+
+  //Select the best traklet based on position and direction
+  TVector3 best_trj_point = true_tracklet.at(0);
+  TVector3 p_trj_dir = true_tracklet.at(1).Unit();
+
+  // best_trj_point.Print();
+  // p_trj_dir.Print();
+  // tracklet.Print();
+
+  double x_trk = tracklet[0];
+  double y_trk = tracklet[1];
+  double theta_xz = tracklet[2];
+  double theta_yz = tracklet[3];
+
+  //Find the closest (x,y)
+  double position_distance = sqrt(pow(x_trk - best_trj_point.X(), 2) + pow(y_trk - best_trj_point.Y(), 2));
+
+  //Find the best direction
+  double px_trk = cos(theta_xz);
+  double py_trk = sin(theta_yz);
+  double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
+
+  TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
+
+  //to be precise this is the cos of the angle between the trajectory and the traklet              
+  double direction = p_trk_dir.Dot(p_trj_dir); 
+
+  double score = position_distance / 200E-3 + acos(direction) / 0.2;
+
+  return score;
+}
+
+
+
+
 std::map<double, std::vector<TVector3>> getInterpolatedZ(const std::vector<EDEPTrajectoryPoint>& trj_points,
                                                          const std::map<double, std::vector<TVectorD>>& z_to_tracklets){
 
@@ -184,17 +235,23 @@ std::map<double, std::vector<TVectorD>> findBestTracklet(const std::map<double, 
       position_errors.push_back(position_distance);
       direction_errors.push_back(direction);
 
-      double score = position_distance / 200E-3 + acos(direction) / 0.2;
+      double score = position_distance / 200E-3 + acos(direction) / 0.02;
+
+      // std::cout << "z: " << current_z.first<< " position distance  "  
+      //             << position_distance 
+      //             << " angular distance  "  
+      //             << direction
+      //             << " SCORE " 
+      //             << score
+      //             << " x distance: " << x_trk - best_trj_point.X()
+      //             << " y distance: " << y_trk - best_trj_point.Y()
+      //             << std::endl;
       if (score < best_score) {
         best_score = score;
         best_tracklet = tracklet;
-        std::cout << "z: " << current_z.first<< " position distance  "  
-                  << position_distance 
-                  << " angular distance  "  
-                  << direction
-                  << " SCORE " 
-                  << best_score 
-                  << std::endl;
+        // std::cout << "BEST SCORE " 
+        //           << best_score
+        //           << std::endl;
       }
     }
 

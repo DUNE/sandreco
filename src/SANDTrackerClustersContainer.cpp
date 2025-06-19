@@ -71,7 +71,7 @@ void sand_reco::tracker::ClustersByProximity::clusterize(const std::vector<sand_
     });
 
     // To Do: should be a a config paramenter
-    int cluster_size = 3;
+    int cluster_size = 4;
     for (auto it = fMap.begin(); it != fMap.end(); it++) {
       std::vector<sand_reco::tracker::DigitID> current_cluster = {it->second};
       findCluster(current_cluster, it, fMap, cluster_size);
