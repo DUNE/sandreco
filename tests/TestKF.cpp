@@ -32,9 +32,9 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
   manager.run();
 
   auto track = manager.getTrack();
-  // if (track.getSteps().size() > 3) {
+   if (track.getSteps().size() > 0) { // was commented, with > 3
     std::cout << track.getSteps().size() << std::endl;
-    auto last_step = track.getSteps().back();
+    auto last_step = track.getSteps().back(); //crash if empty due to the .back().
     auto reco_state =
           last_step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
     auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
@@ -88,21 +88,8 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
       yz_measured->SetLineColor(2);
       yz_measured->SetMarkerStyle(2);
       mg->Add(yz_measured);
-
-      xz_predicted->SetLineColor(3);
-      xz_predicted->SetMarkerStyle(3);
-      mgx->Add(xz_predicted);
-      xz_filtered->SetLineColor(4);
-      xz_filtered->SetMarkerStyle(4);
-      mgx->Add(xz_filtered);
-      xz_smoothed->SetLineColor(6);
-      xz_smoothed->SetMarkerStyle(5);
-      mgx->Add(xz_smoothed);
-      xz_measured->SetLineColor(2);
-      xz_measured->SetMarkerStyle(2);
-      mgx->Add(xz_measured);
     }
-  // }
+  }
 
   return;
 }
@@ -835,11 +822,6 @@ int main(int argc, char* argv[])
       h_trj_best_tracklet_xz->Draw();
     }
   }
-
-
-
-
-
 
 
   if (!plots) {
