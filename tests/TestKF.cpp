@@ -94,7 +94,8 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
   return;
 }
 
-void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, TH1D* h_gpos_distribution,TH1D* h_gang_distribution)
+void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, TH1D* h_gpos_distribution,TH1D* h_gang_distribution,
+                        TH1D* h_x_diff, TH1D* h_y_diff, TH1D* h_theta_x_diff, TH1D* h_theta_y_diff)
 {
   
   int p[9] = {100, -2000, 2000, 100, -4000, -0, 100, 22500, 26000};
@@ -151,16 +152,22 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
                 
       double z_start = cluster_in_container.getZ();
       for (uint trk = 0; trk < minima.size(); trk++) {
-        if (minima[trk][4] < 1E-2) {
+        // if (minima[trk][4] < 1E-2) {
           double score = getScore(minima[trk], true_tracklet);
           if (score < best_score) {
             best_tracklet = minima[trk];
             best_score = score;
           }
-          z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
-        }
+          // z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
+        // }
       }
-      // z_to_tracklets[cluster_in_container.getZ()].push_back(best_tracklet);
+      z_to_tracklets[cluster_in_container.getZ()].push_back(best_tracklet);
+
+      h_x_diff->Fill(best_tracklet[0] - true_tracklet[0].X());
+      h_y_diff->Fill(best_tracklet[1] - true_tracklet[0].Y());
+      h_theta_x_diff->Fill(best_tracklet[2] - atan(true_tracklet[1].Z() / true_tracklet[1].X()));
+      h_theta_y_diff->Fill(best_tracklet[3] - atan(true_tracklet[1].Y() / true_tracklet[1].Z()));
+
       traklet_finder.clear();
     }
   }
@@ -321,10 +328,14 @@ int main(int argc, char* argv[])
   std::vector<dg_wire>* digits = 0;
   t->SetBranchAddress("dg_wire", &digits);
 
-  bool plots = false;
+  bool plots = true;
   TFile* innovation_test = new TFile("innovation_test.root", "RECREATE");
   TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -3, 3);
   TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -3, 3);
+  TH1D* h_x_diff = new TH1D("h_x_diff", "h_x_diff", 1000, -3, 3);
+  TH1D* h_y_diff = new TH1D("h_y_diff", "h_y_diff", 1000, -3, 3);
+  TH1D* h_theta_x_diff = new TH1D("h_theta_x_diff", "h_theta_x_diff", 1000, -3, 3);
+  TH1D* h_theta_y_diff = new TH1D("h_theta_y_diff", "h_theta_y_diff", 1000, -3, 3);
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
   
@@ -338,13 +349,13 @@ int main(int argc, char* argv[])
 
   TFile* h_out = new TFile("h_out.root", "RECREATE");
 
-  for (int i = 0; i < 1; i++) {
+  for (int i = 2; i < 3; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 
     if (!plots) {
       innovation_test->cd();
-      processEventWithKF(&sand_geo, ev, digits, h_gpos_distribution, h_gang_distribution);
+      processEventWithKF(&sand_geo, ev, digits, h_gpos_distribution, h_gang_distribution, h_x_diff, h_y_diff, h_theta_x_diff, h_theta_y_diff);
     }
 
     if (plots) {
@@ -405,7 +416,7 @@ int main(int argc, char* argv[])
           
           traklet_finder.setCells(cluster_in_container);
           auto minima = traklet_finder.findTracklets();
-          
+
           // Draw tracklets
           if (minima.size() != 0) {
             canvas_cluster->cd();
@@ -431,11 +442,12 @@ int main(int argc, char* argv[])
 
                 TVector2 start_tracklet_yz(z_start, minima[trk][1]);
                 TVector2 start_tracklet_xz(z_start, minima[trk][0]);
-                double z_end = z_start + 5 * cos(minima[trk][3]);
+                double zy_end = z_start + 5 * cos(minima[trk][3]);
+                double zx_end = z_start + 5 * sin(minima[trk][2]);
                 double y_end = minima[trk][1] + 5 * sin(minima[trk][3]);
                 double x_end = minima[trk][0] + 5 * cos(minima[trk][2]);
-                TVector2 end_tracklet_yz(z_end, y_end);
-                TVector2 end_tracklet_xz(z_end, x_end);
+                TVector2 end_tracklet_yz(zy_end, y_end);
+                TVector2 end_tracklet_xz(zx_end, x_end);
                 
                 TLine* line_yz_tracklet = new TLine(start_tracklet_yz.X(), start_tracklet_yz.Y(), end_tracklet_yz.X(), end_tracklet_yz.Y());
                 TLine* line_xz_tracklet = new TLine(start_tracklet_xz.X(), start_tracklet_xz.Y(), end_tracklet_xz.X(), end_tracklet_xz.Y());
@@ -453,11 +465,12 @@ int main(int argc, char* argv[])
 
             TVector2 start_tracklet_yz(z_start, best_tracklet[1]);
             TVector2 start_tracklet_xz(z_start, best_tracklet[0]);
-            double z_end = z_start + 5 * cos(best_tracklet[3]);
+            double zy_end = z_start + 5 * cos(best_tracklet[3]);
+            double zx_end = z_start + 5 * sin(best_tracklet[2]);
             double y_end = best_tracklet[1] + 5 * sin(best_tracklet[3]);
             double x_end = best_tracklet[0] + 5 * cos(best_tracklet[2]);
-            TVector2 end_tracklet_yz(z_end, y_end);
-            TVector2 end_tracklet_xz(z_end, x_end);
+            TVector2 end_tracklet_yz(zy_end, y_end);
+            TVector2 end_tracklet_xz(zx_end, x_end);
             
             TLine* line_yz_tracklet = new TLine(start_tracklet_yz.X(), start_tracklet_yz.Y(), end_tracklet_yz.X(), end_tracklet_yz.Y());
             TLine* line_xz_tracklet = new TLine(start_tracklet_xz.X(), start_tracklet_xz.Y(), end_tracklet_xz.X(), end_tracklet_xz.Y());
@@ -470,11 +483,32 @@ int main(int argc, char* argv[])
             line_yz_tracklet->Draw();
             canvas_cluster->cd(2);
             line_xz_tracklet->Draw();
+
+            TVector2 start_true_tracklet_yz(z_start, true_tracklet[0].Y());
+            TVector2 start_true_tracklet_xz(z_start, true_tracklet[0].X());
+            zy_end = z_start + 5 * cos(atan(true_tracklet[1].Y() / true_tracklet[1].Z()));
+            zx_end = z_start + 5 * cos(atan(true_tracklet[1].X() / true_tracklet[1].Z()));
+            y_end = true_tracklet[0].Y() + 5 * sin(atan(true_tracklet[1].Y() / true_tracklet[1].Z()));
+            x_end = true_tracklet[0].X() + 5 * sin(atan(true_tracklet[1].X() / true_tracklet[1].Z()));
+            TVector2 end_true_tracklet_yz(zy_end, y_end);
+            TVector2 end_true_tracklet_xz(zx_end, x_end);
+            
+            TLine* line_yz_true_tracklet = new TLine(start_true_tracklet_yz.X(), start_true_tracklet_yz.Y(), end_true_tracklet_yz.X(), end_true_tracklet_yz.Y());
+            TLine* line_xz_true_tracklet = new TLine(start_true_tracklet_xz.X(), start_true_tracklet_xz.Y(), end_true_tracklet_xz.X(), end_true_tracklet_xz.Y());
+            line_yz_true_tracklet->SetLineColor(color + 1);
+            line_yz_true_tracklet->SetLineWidth(3);
+            line_xz_true_tracklet->SetLineColor(color + 1);
+            line_xz_true_tracklet->SetLineWidth(3);
+            
+            canvas_cluster->cd(1);
+            line_yz_true_tracklet->Draw();
+            canvas_cluster->cd(2);
+            line_xz_true_tracklet->Draw();
           }
 
           bool ok = false;
           for (uint trk = 0; trk < minima.size(); trk++) {
-            if (minima[trk][4] < 1E-4) {
+            if (minima[trk][4] < 1E-2) {
               ok = true;
               break;
             }
@@ -731,95 +765,6 @@ int main(int argc, char* argv[])
 
 
 
-
-
-
-
-      TCanvas* canvas_trj_best_tracklet = new TCanvas("canvas_trj_best_tracklet","canvas_trj_best_tracklet",2000,1000);
-      canvas_trj_best_tracklet->Divide(2,1);
-      TH2D* h_trj_best_tracklet_yz = new TH2D("h","h", p[6],p[7], p[8], p[3],p[4], p[5]);
-      TH2D* h_trj_best_tracklet_xz = new TH2D("h","h", p[6],p[7], p[8], p[0],p[1], p[2]);
-      canvas_trj_best_tracklet->cd(1);
-      h_trj_best_tracklet_yz->Draw();
-      canvas_trj_best_tracklet->cd(2);
-      h_trj_best_tracklet_xz->Draw();
-
-      EDEPTree tree;
-      tree.InizializeFromEdep(*ev, sand_geo.getTGeoManager());
-      
-      std::vector<EDEPTrajectory> primaryTrj;
-      tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
-        [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
-
-      TDatabasePDG pdg_db;
-      std::map<double, std::vector<TVectorD>> z_to_best_tracklet;
-
-      for (auto trj:primaryTrj) {
-
-        if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
-          continue;
-        }
-
-        auto particle = pdg_db.GetParticle(trj.GetPDGCode());
-
-        if (!particle) {
-          continue;
-        }
-
-        if (particle->Mass() == 0 || particle->Charge() == 0) {
-          continue;
-        }
-
-        std::map<double, std::vector<TVector3>> z_to_interpolated_tracklets = getInterpolatedZ(trj.GetTrajectoryPoints().at(string_to_component[tracker_name]), z_to_tracklets);
-        z_to_best_tracklet = findBestTracklet(z_to_tracklets, z_to_interpolated_tracklets);
-
-        for (uint pp = 0; pp <  trj.GetTrajectoryPoints().at(string_to_component[tracker_name]).size() - 1; pp++){
-          auto point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[pp];
-          auto next_point = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[pp+1];
-          TLine* line_yz_trj = new TLine(point.GetPosition().Z(), point.GetPosition().Y(), next_point.GetPosition().Z(), next_point.GetPosition().Y());
-          TLine* line_xz_trj = new TLine(point.GetPosition().Z(), point.GetPosition().X(), next_point.GetPosition().Z(), next_point.GetPosition().X());
-
-          line_yz_trj->SetLineColor(1);
-          line_yz_trj->SetLineWidth(1);
-          line_xz_trj->SetLineColor(1);
-          line_xz_trj->SetLineWidth(1);
-          canvas_trj_best_tracklet->cd(1);
-          line_yz_trj->Draw();
-          canvas_trj_best_tracklet->cd(2);
-          line_xz_trj->Draw();
-        }
-
-        for (const auto& z:z_to_best_tracklet) {
-          TVector2 start_tracklet_yz(z.first, z.second[0][1]);
-          TVector2 start_tracklet_xz(z.first, z.second[0][0]);
-          double z_end = z.first + 5 * cos(z.second[0][3]);
-          double y_end = z.second[0][1] + 5 * sin(z.second[0][3]);
-          double x_end = z.second[0][0] + 5 * cos(z.second[0][2]);
-          TVector2 end_tracklet_yz(z_end, y_end);
-          TVector2 end_tracklet_xz(z_end, x_end);
-          
-          TLine* line_yz_tracklet = new TLine(start_tracklet_yz.X(), start_tracklet_yz.Y(), end_tracklet_yz.X(), end_tracklet_yz.Y());
-          TLine* line_xz_tracklet = new TLine(start_tracklet_xz.X(), start_tracklet_xz.Y(), end_tracklet_xz.X(), end_tracklet_xz.Y());
-          line_yz_tracklet->SetLineColor(2);
-          line_yz_tracklet->SetLineWidth(1);
-          line_xz_tracklet->SetLineColor(2);
-          line_xz_tracklet->SetLineWidth(1);
-          
-          canvas_trj_best_tracklet->cd(1);
-          line_yz_tracklet->Draw();
-          canvas_trj_best_tracklet->cd(2);
-          line_xz_tracklet->Draw();
-        }
-      }
-
-      canvas_trj_best_tracklet->Write();
-      canvas_trj_best_tracklet->Clear();
-
-      canvas_trj_best_tracklet->Divide(2,1);
-      canvas_trj_best_tracklet->cd(1);
-      h_trj_best_tracklet_yz->Draw();
-      canvas_trj_best_tracklet->cd(2);
-      h_trj_best_tracklet_xz->Draw();
     }
   }
 
@@ -828,6 +773,10 @@ int main(int argc, char* argv[])
     innovation_test->cd();
     h_gpos_distribution->Write();
     h_gang_distribution->Write();
+    h_x_diff->Write();
+    h_y_diff->Write();
+    h_theta_x_diff->Write();
+    h_theta_y_diff->Write();
     innovation_test->Close();
   }
 }

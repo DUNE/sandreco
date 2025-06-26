@@ -30,9 +30,11 @@ double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_trac
   TVector3 best_trj_point = true_tracklet.at(0);
   TVector3 p_trj_dir = true_tracklet.at(1).Unit();
 
-  // best_trj_point.Print();
-  // p_trj_dir.Print();
-  // tracklet.Print();
+  double true_theta_yz = atan(p_trj_dir.Y() / p_trj_dir.Z());
+  double true_theta_xz = atan(p_trj_dir.Z() / p_trj_dir.X());
+  if (true_theta_xz < 0) {
+    true_theta_xz = M_PI + true_theta_xz;
+  } 
 
   double x_trk = tracklet[0];
   double y_trk = tracklet[1];
@@ -41,18 +43,22 @@ double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_trac
 
   //Find the closest (x,y)
   double position_distance = sqrt(pow(x_trk - best_trj_point.X(), 2) + pow(y_trk - best_trj_point.Y(), 2));
+  double anglular_distance_xz = fabs(true_theta_xz - theta_xz);
+  double anglular_distance_yz = fabs(true_theta_yz - theta_yz);
 
   //Find the best direction
-  double px_trk = cos(theta_xz);
-  double py_trk = sin(theta_yz);
-  double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
+  // double px_trk = cos(theta_xz);
+  // double py_trk = sin(theta_yz);
+  // double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
 
-  TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
+  // TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
 
-  //to be precise this is the cos of the angle between the trajectory and the traklet              
-  double direction = p_trk_dir.Dot(p_trj_dir); 
+  //to be precise this is the cos of the angle between the trajectory and the traklet    
+  // p_trk_dir.Print();
+  // p_trj_dir.Print();
+  // double direction = p_trk_dir.Dot(p_trj_dir); 
 
-  double score = position_distance / 200E-3 + acos(direction) / 0.2;
+  double score = position_distance / 2 + anglular_distance_xz / 0.2 + anglular_distance_yz / 0.2;
 
   return score;
 }

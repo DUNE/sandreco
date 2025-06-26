@@ -58,7 +58,7 @@ class TrackletFinder {
     void draw3D();
     void draw3DWires();
     void draw2DWires();
-    void draw2DDistance();
+    void draw2DDistance(TFile* h);
     void draw2DDigits();
 
   private:

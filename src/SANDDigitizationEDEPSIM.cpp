@@ -140,6 +140,12 @@ void CreateDigitsFromHits(const SANDGeoManager& geo,
         d.y = closest_point_hit_l.Vect().Y();
         d.z = closest_point_hit_l.Vect().Z();
 
+        // Notice: this is also temporary. Used to plot something useful.
+        //         Must be removed when plots are not needed anymore
+        d.x = running_hit.x1;
+        d.y = running_hit.y1;
+        d.z = running_hit.z1;
+
         wire_time = hit_smallest_time;
         t_hit = closest_point_hit_l.T();
         drift_time = closest_point_wire_l.T() - t_hit;
