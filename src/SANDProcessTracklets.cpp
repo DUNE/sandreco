@@ -24,14 +24,18 @@ std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, do
   return { interpolated_pos, interpolated_dir };
 }
 
+
 double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet){
 
   //Select the best traklet based on position and direction
   TVector3 best_trj_point = true_tracklet.at(0);
   TVector3 p_trj_dir = true_tracklet.at(1).Unit();
 
-  double true_theta_yz = atan(p_trj_dir.Y() / p_trj_dir.Z());
-  double true_theta_xz = atan(p_trj_dir.Z() / p_trj_dir.X());
+  // double true_theta_yz = atan(p_trj_dir.Y() / p_trj_dir.Z());
+  // double true_theta_xz = atan(p_trj_dir.Z() / p_trj_dir.X());
+
+  double true_theta_yz = atan2(p_trj_dir.Y(), p_trj_dir.Z());
+  double true_theta_xz = atan2(p_trj_dir.Z(), p_trj_dir.X());
   if (true_theta_xz < 0) {
     true_theta_xz = M_PI + true_theta_xz;
   } 
@@ -71,7 +75,7 @@ std::map<double, std::vector<TVector3>> getInterpolatedZ(const std::vector<EDEPT
 
   std::map<double, std::vector<TVector3>> interpolated_z;
 
-  //Find the closest z coordinates of the MC trajector0y to the tracklet
+  //Find the closest z coordinates of the MC trajectory to the tracklet
   for (const auto& z : z_to_tracklets) {
     double z_trk = z.first;
     uint i_min = 0;

@@ -141,32 +141,48 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
           first_point = TVector3(digit.x, digit.y, digit.z);
         }
       }
-      auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, cluster_in_container.getZ());
 
       traklet_finder.setCells(cluster_in_container);
-      auto minima = traklet_finder.findTracklets();
 
-      double best_score = 10e8;
-      TVectorD best_tracklet(9);
+      auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, cluster_in_container.getZ());
+      
+      TVector3 true_pos = true_tracklet[0];
+      TVector3 true_dir = true_tracklet[1];     
+      double true_theta_yz = atan2(true_dir.Y(), true_dir.Z());
+      double true_theta_xz = atan2(true_dir.Z(), true_dir.X());
 
-                
-      double z_start = cluster_in_container.getZ();
-      for (uint trk = 0; trk < minima.size(); trk++) {
-        // if (minima[trk][4] < 1E-2) {
-          double score = getScore(minima[trk], true_tracklet);
-          if (score < best_score) {
-            best_tracklet = minima[trk];
-            best_score = score;
-          }
-          // z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
-        // }
-      }
-      z_to_tracklets[cluster_in_container.getZ()].push_back(best_tracklet);
+      TVectorD measurement_from_true_tracklet(4);
+      measurement_from_true_tracklet(0) = true_pos.X();
+      measurement_from_true_tracklet(1) = true_pos.Y();
+      measurement_from_true_tracklet(2) = true_theta_xz;
+      measurement_from_true_tracklet(3) = true_theta_yz;
 
-      h_x_diff->Fill(best_tracklet[0] - true_tracklet[0].X());
-      h_y_diff->Fill(best_tracklet[1] - true_tracklet[0].Y());
-      h_theta_x_diff->Fill(best_tracklet[2] - atan(true_tracklet[1].Z() / true_tracklet[1].X()));
-      h_theta_y_diff->Fill(best_tracklet[3] - atan(true_tracklet[1].Y() / true_tracklet[1].Z()));
+      z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
+      
+
+
+      //auto minima = traklet_finder.findTracklets();
+
+      // double best_score = 10e8;
+      // TVectorD best_tracklet(9);
+
+      // double z_start = cluster_in_container.getZ();
+      // for (uint trk = 0; trk < minima.size(); trk++) {
+      //   // if (minima[trk][4] < 1E-2) {
+      //     double score = getScore(minima[trk], true_tracklet);
+      //     if (score < best_score) {
+      //       best_tracklet = minima[trk];
+      //       best_score = score;
+      //     }
+      //     // z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
+      //   // }
+      // }
+      //z_to_tracklets[cluster_in_container.getZ()].push_back(best_tracklet);
+
+      // h_x_diff->Fill(best_tracklet[0] - true_tracklet[0].X());
+      // h_y_diff->Fill(best_tracklet[1] - true_tracklet[0].Y());
+      // h_theta_x_diff->Fill(best_tracklet[2] - atan(true_tracklet[1].Z() / true_tracklet[1].X()));
+      // h_theta_y_diff->Fill(best_tracklet[3] - atan(true_tracklet[1].Y() / true_tracklet[1].Z()));
 
       traklet_finder.clear();
     }
@@ -223,7 +239,6 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     double max_z = 0;
     bool to_be_reconstructed = false;
     for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
-      // std::cout << point.GetPosition().Z() << " " << point.GetMomentum().Mag() << " " << point.GetMomentum().Z() << std::endl;
       if (point.GetPosition().Z() > max_z && point.GetMomentum().Z() > 100) {
         max_z = point.GetPosition().Z();
         pi.pos = point.GetPosition().Vect();
@@ -248,19 +263,19 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     std::cout << "Selected Momentum " << pi.mom.Mag() << " " << pi.mom.Z() << std::endl;
    
 
-    std::map<double, std::vector<TVector3>> z_to_interpolated_tracklets = getInterpolatedZ(trj.GetTrajectoryPoints().at(string_to_component[tracker_name]), z_to_tracklets);
-    z_to_best_tracklet = findBestTracklet(z_to_tracklets, z_to_interpolated_tracklets);
+    // std::map<double, std::vector<TVector3>> z_to_interpolated_tracklets = getInterpolatedZ(trj.GetTrajectoryPoints().at(string_to_component[tracker_name]), z_to_tracklets);
+    // z_to_best_tracklet = findBestTracklet(z_to_tracklets, z_to_interpolated_tracklets);
 
-    for (auto t:z_to_interpolated_tracklets) {
-      std::cout << "Interpolated z: " << t.first 
-                << ", does the same z from tracklets exist?: " <<  (z_to_tracklets.find(t.first) != z_to_tracklets.end())  << std::endl;
-    }
+    // for (auto t:z_to_interpolated_tracklets) {
+    //   std::cout << "Interpolated z: " << t.first 
+    //             << ", does the same z from tracklets exist?: " <<  (z_to_tracklets.find(t.first) != z_to_tracklets.end())  << std::endl;
+    // }
 
-    std::vector<double> z_difference = computeZDistance(trj.GetTrajectoryPoints().at(string_to_component[tracker_name]), z_to_tracklets);
+    // std::vector<double> z_difference = computeZDistance(trj.GetTrajectoryPoints().at(string_to_component[tracker_name]), z_to_tracklets);
     
-    for(auto z:z_difference){
-      std::cout << "distnza fra due z è: " << z << std::endl;
-    }
+    // for(auto z:z_difference){
+    //   std::cout << "distnza fra due z è: " << z << std::endl;
+    // }
   
     
   }
@@ -289,12 +304,14 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
        xz_true->SetPoint(i, point.GetPosition().Z() , point.GetPosition().X());
     }
 
-    bool use_interpolated = false;
-    if (use_interpolated) {
-      tryCompleteManager(z_to_best_tracklet, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
-    } else {
-      tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
-    }
+    // bool use_interpolated = false;
+    // if (use_interpolated) {
+    //   tryCompleteManager(z_to_best_tracklet, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
+    // } else {
+    //   tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
+    // }
+
+    tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
 
     mg->SetTitle("YZ view; z [mm]; y [mm]");
     yz_true->SetMarkerStyle(4);
@@ -349,7 +366,7 @@ int main(int argc, char* argv[])
 
   TFile* h_out = new TFile("h_out.root", "RECREATE");
 
-  for (int i = 2; i < 3; i++) {
+  for (int i = 0; i < 5; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 
