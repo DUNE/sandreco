@@ -16,6 +16,8 @@ struct SParticleInfo {
 
   TVector3 pos;
   TVector3 mom;
+  TVector3 initial_pos;
+  TVector3 initial_mom;
 };
 
 namespace sand_reco

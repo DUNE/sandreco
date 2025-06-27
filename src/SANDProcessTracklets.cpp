@@ -34,8 +34,8 @@ double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_trac
   // double true_theta_yz = atan(p_trj_dir.Y() / p_trj_dir.Z());
   // double true_theta_xz = atan(p_trj_dir.Z() / p_trj_dir.X());
 
-  double true_theta_yz = atan2(p_trj_dir.Y(), p_trj_dir.Z());
-  double true_theta_xz = atan2(p_trj_dir.Z(), p_trj_dir.X());
+  double true_theta_yz = atan(p_trj_dir.Y() / p_trj_dir.Z());
+  double true_theta_xz = atan(p_trj_dir.Z() / p_trj_dir.X());
   if (true_theta_xz < 0) {
     true_theta_xz = M_PI + true_theta_xz;
   } 

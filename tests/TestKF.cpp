@@ -22,11 +22,12 @@
 #include "SANDTrackerClusterCollection.h"
 #include "SANDTrackerDigitCollection.h"
 #include "SANDKalmanFilter.h"
+#include "SANDTrackerUtils.h"
 #include "utils.h"
 
 //#include "EDEPTree.h"
 
-void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TMultiGraph* mg, TMultiGraph* mgx) {
+void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TH1D* x_res, TH1D* y_res, TH1D* theta_y_res, TH1D* theta_x_res, TH1D* mom_res, TMultiGraph* mg, TMultiGraph* mgx) {
   sand_reco::kf::Manager manager;
   manager.initFromMC(&z_to_tracklets, particle);
   manager.run();
@@ -40,6 +41,10 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
     auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
                                   reco_state.radius(), reco_state.tanLambda());
 
+    auto initial_state = sand_reco::kf::utils::getStateVector(particle.initial_mom , particle.initial_pos, particle.charge);
+    auto initial_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(initial_state.radius(), initial_state.tanLambda());
+ 
+
     std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
     
     TGraph* yz_predicted = new TGraph(track.getSteps().size());
@@ -50,6 +55,14 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
     TGraph* xz_filtered = new TGraph(track.getSteps().size());
     TGraph* xz_smoothed = new TGraph(track.getSteps().size());
     TGraph* xz_measured = new TGraph(track.getSteps().size());
+
+    x_res->Fill(initial_state.x() - reco_state.x()); 
+    y_res->Fill(initial_state.y() - reco_state.y()); 
+    theta_y_res->Fill(initial_state.phi() - reco_state.phi()); 
+    theta_x_res->Fill(initial_state.tanLambda() - reco_state.tanLambda()); 
+    mom_res->Fill(initial_mom - reco_mom); 
+
+
     
     int i = 0;
     for (auto& step : track.getSteps()) {
@@ -88,6 +101,19 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
       yz_measured->SetLineColor(2);
       yz_measured->SetMarkerStyle(2);
       mg->Add(yz_measured);
+
+      xz_predicted->SetLineColor(3);
+      xz_predicted->SetMarkerStyle(3);
+      mgx->Add(xz_predicted);
+      xz_filtered->SetLineColor(4);
+      xz_filtered->SetMarkerStyle(4);
+      mgx->Add(xz_filtered);
+      xz_smoothed->SetLineColor(6);
+      xz_smoothed->SetMarkerStyle(5);
+      mgx->Add(xz_smoothed);
+      xz_measured->SetLineColor(2);
+      xz_measured->SetMarkerStyle(2);
+      mgx->Add(xz_measured);
     }
   }
 
@@ -95,7 +121,7 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
 }
 
 void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, TH1D* h_gpos_distribution,TH1D* h_gang_distribution,
-                        TH1D* h_x_diff, TH1D* h_y_diff, TH1D* h_theta_x_diff, TH1D* h_theta_y_diff)
+                        TH1D* h_x_diff, TH1D* h_y_diff, TH1D* h_theta_x_diff, TH1D* h_theta_y_diff, TH1D* x_res, TH1D* y_res, TH1D* theta_y_res, TH1D* theta_x_res, TH1D* mom_res)
 {
   
   int p[9] = {100, -2000, 2000, 100, -4000, -0, 100, 22500, 26000};
@@ -148,8 +174,8 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
       
       TVector3 true_pos = true_tracklet[0];
       TVector3 true_dir = true_tracklet[1];     
-      double true_theta_yz = atan2(true_dir.Y(), true_dir.Z());
-      double true_theta_xz = atan2(true_dir.Z(), true_dir.X());
+      double true_theta_yz = atan(true_dir.Y() / true_dir.Z());
+      double true_theta_xz = atan(true_dir.Z() / true_dir.X());
 
       TVectorD measurement_from_true_tracklet(4);
       measurement_from_true_tracklet(0) = true_pos.X();
@@ -256,10 +282,11 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
     pi.pos = TVector3(x_smeared, y_smeared, pi.pos.Z());
     pi.mom = TVector3(px_smeared, py_smeared, pz_smeared);
+    pi.initial_pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetPosition().Vect();
+    pi.initial_mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetMomentum();
     particleInfos.push_back(pi);
 
-
-    std::cout << "Initial Momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
+    std::cout << "Initial Momentum " << trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetMomentum().Mag() << std::endl;
     std::cout << "Selected Momentum " << pi.mom.Mag() << " " << pi.mom.Z() << std::endl;
    
 
@@ -311,7 +338,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     //   tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
     // }
 
-    tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
+    tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, x_res, y_res, theta_y_res, theta_x_res, mom_res, mg, mgx);
 
     mg->SetTitle("YZ view; z [mm]; y [mm]");
     yz_true->SetMarkerStyle(4);
@@ -345,7 +372,7 @@ int main(int argc, char* argv[])
   std::vector<dg_wire>* digits = 0;
   t->SetBranchAddress("dg_wire", &digits);
 
-  bool plots = true;
+  bool plots = false;
   TFile* innovation_test = new TFile("innovation_test.root", "RECREATE");
   TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -3, 3);
   TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -3, 3);
@@ -353,6 +380,11 @@ int main(int argc, char* argv[])
   TH1D* h_y_diff = new TH1D("h_y_diff", "h_y_diff", 1000, -3, 3);
   TH1D* h_theta_x_diff = new TH1D("h_theta_x_diff", "h_theta_x_diff", 1000, -3, 3);
   TH1D* h_theta_y_diff = new TH1D("h_theta_y_diff", "h_theta_y_diff", 1000, -3, 3);
+  TH1D* x_res = new TH1D("x_res", "x_res", 1000, -0.1, 0.1);
+  TH1D* y_res = new TH1D("y_res", "y_res", 1000, -0.1, 0.1);
+  TH1D* theta_y_res = new TH1D("theta_y_res", "theta_y_res", 1000, -1, 1);
+  TH1D* theta_x_res = new TH1D("theta_x_res", "theta_x_res", 1000, -1, 1);
+  TH1D* mom_res = new TH1D("mom_res", "mom_res", 1000, -1000, 1000);
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
   
@@ -372,7 +404,7 @@ int main(int argc, char* argv[])
 
     if (!plots) {
       innovation_test->cd();
-      processEventWithKF(&sand_geo, ev, digits, h_gpos_distribution, h_gang_distribution, h_x_diff, h_y_diff, h_theta_x_diff, h_theta_y_diff);
+      processEventWithKF(&sand_geo, ev, digits, h_gpos_distribution, h_gang_distribution, h_x_diff, h_y_diff, h_theta_x_diff, h_theta_y_diff,  x_res,  y_res,  theta_y_res,  theta_x_res,  mom_res);
     }
 
     if (plots) {
@@ -775,16 +807,8 @@ int main(int argc, char* argv[])
       }
       canvas_cluster->Print("clu.pdf)","pdf");
 
-
-
-
-
-
-
-
     }
   }
-
 
   if (!plots) {
     innovation_test->cd();
@@ -794,6 +818,11 @@ int main(int argc, char* argv[])
     h_y_diff->Write();
     h_theta_x_diff->Write();
     h_theta_y_diff->Write();
+    x_res->Write();
+    y_res->Write();
+    theta_y_res->Write();
+    theta_x_res->Write();
+    mom_res->Write();
     innovation_test->Close();
   }
 }
