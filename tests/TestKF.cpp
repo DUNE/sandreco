@@ -33,8 +33,7 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
   manager.run();
 
   auto track = manager.getTrack();
-   if (track.getSteps().size() > 0) { // was commented, with > 3
-    std::cout << track.getSteps().size() << std::endl;
+  if (track.getSteps().size() > 0) { // was commented, with > 3
     auto last_step = track.getSteps().back(); //crash if empty due to the .back().
     auto reco_state =
           last_step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
@@ -177,6 +176,10 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     }
   }
   
+  if (z_to_tracklets.empty()) {
+    return;
+  }
+
   EDEPTree tree;
   tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
   
@@ -191,9 +194,16 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
   double sigma_pos = 0;
   double sigma_mom = 0;
+  std::vector<int> indeces;
+  int ii = -1;
   for (auto trj:primaryTrj) {
+    ii++;
 
     if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
+      continue;
+    }
+    
+    if (trj.GetTrajectoryPoints().find(string_to_component[tracker_name]) == trj.GetTrajectoryPoints().end()) {
       continue;
     }
 
@@ -206,7 +216,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     if (particle->Mass() == 0 || particle->Charge() == 0) {
       continue;
     }
-    
+
     SParticleInfo pi;
     pi.pdg_code = trj.GetPDGCode();
     pi.id       = trj.GetId();
@@ -236,9 +246,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     pi.initial_pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetPosition().Vect();
     pi.initial_mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetMomentum();
     particleInfos.push_back(pi);
-
-    std::cout << "Initial Momentum " << trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetMomentum().Mag() << std::endl;
-    std::cout << "Selected Momentum " << pi.mom.Mag() << " " << pi.mom.Z() << std::endl;
+    indeces.push_back(ii);
   }
 
    
@@ -251,26 +259,20 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     return;
   }
 
-  for (int ip = 0; ip < nParticles; ip++) {
-    std::string name_mg = "YZ_" + std::to_string(ip);
+  for (int ip = 0; ip < (int)indeces.size(); ip++) {
+    std::string name_mg = "YZ_" + std::to_string(indeces[ip]);
     TMultiGraph* mg = new TMultiGraph(name_mg.c_str(), name_mg.c_str());
-    TGraph* yz_true = new TGraph(primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size());
-    std::string name_mgx = "XZ_" + std::to_string(ip);
+    TGraph* yz_true = new TGraph(primaryTrj[indeces[ip]].GetTrajectoryPoints().at(string_to_component[tracker_name]).size());
+    std::string name_mgx = "XZ_" + std::to_string(indeces[ip]);
     TMultiGraph* mgx = new TMultiGraph(name_mgx.c_str(), name_mgx.c_str());
-    TGraph* xz_true = new TGraph(primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size());
+    TGraph* xz_true = new TGraph(primaryTrj[indeces[ip]].GetTrajectoryPoints().at(string_to_component[tracker_name]).size());
 
-    for (uint i = 0; i <  primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++){
-      auto point = primaryTrj[ip].GetTrajectoryPoints().at(string_to_component[tracker_name])[i];
+    for (uint i = 0; i <  primaryTrj[indeces[ip]].GetTrajectoryPoints().at(string_to_component[tracker_name]).size(); i++){
+      auto point = primaryTrj[indeces[ip]].GetTrajectoryPoints().at(string_to_component[tracker_name])[i];
        yz_true->SetPoint(i, point.GetPosition().Z() , point.GetPosition().Y());
        xz_true->SetPoint(i, point.GetPosition().Z() , point.GetPosition().X());
     }
 
-    // bool use_interpolated = false;
-    // if (use_interpolated) {
-    //   tryCompleteManager(z_to_best_tracklet, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
-    // } else {
-    //   tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx);
-    // }
 
     tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, x_res, y_res, theta_y_res, theta_x_res, mom_res, mg, mgx);
 
@@ -306,7 +308,7 @@ int main(int argc, char* argv[])
   std::vector<dg_wire>* digits = 0;
   t->SetBranchAddress("dg_wire", &digits);
 
-  bool plots = true;
+  bool plots = false;
   TFile* innovation_test = new TFile("innovation_test.root", "RECREATE");
   TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -3, 3);
   TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -3, 3);
@@ -332,7 +334,7 @@ int main(int argc, char* argv[])
 
   TFile* h_out = new TFile("h_out.root", "RECREATE");
 
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < 500; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 
@@ -373,7 +375,6 @@ int main(int argc, char* argv[])
       for (const auto& container:clusters.getContainers()) {
         int gg = 0;
         for (const auto& cluster_in_container:container->getClusters()) {
-          std::cout << gg << std::endl;
           gg++;
           if (color > 9) color = 2;
           
@@ -395,154 +396,29 @@ int main(int argc, char* argv[])
           }
 
           auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, cluster_in_container.getZ());
-          
-          
-          traklet_finder.setCells(cluster_in_container);
-          auto minima = traklet_finder.findTracklets();
-
+          double z_start = cluster_in_container.getZ();
           // Draw tracklets
-          if (minima.size() != 0) {
-            canvas_cluster->cd();
-            std::sort(minima.begin(), minima.end(),
-            [](TVectorD v1, TVectorD v2){ return v1[4] < v2[4];});
-            double z_start = cluster_in_container.getZ();
-
-            double best_score = 10e8;
-            TVectorD best_tracklet(9);
-
-            for (uint trk = 0; trk < minima.size(); trk++) {
-              if (minima[trk][4] < 1E-2) {
-                
-                double score = getScore(minima[trk], true_tracklet);
-                std::cout << "SCORE: " << score << std::endl;
-                if (score < best_score) {
-                  best_tracklet = minima[trk];
-                  best_tracklet.Print();
-                  best_score = score;
-                }
-                
-                z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
-
-                TVector2 start_tracklet_yz(z_start, minima[trk][1]);
-                TVector2 start_tracklet_xz(z_start, minima[trk][0]);
-                double zy_end = z_start + 5 * cos(minima[trk][3]);
-                double zx_end = z_start + 5 * sin(minima[trk][2]);
-                double y_end = minima[trk][1] + 5 * sin(minima[trk][3]);
-                double x_end = minima[trk][0] + 5 * cos(minima[trk][2]);
-                TVector2 end_tracklet_yz(zy_end, y_end);
-                TVector2 end_tracklet_xz(zx_end, x_end);
-                
-                TLine* line_yz_tracklet = new TLine(start_tracklet_yz.X(), start_tracklet_yz.Y(), end_tracklet_yz.X(), end_tracklet_yz.Y());
-                TLine* line_xz_tracklet = new TLine(start_tracklet_xz.X(), start_tracklet_xz.Y(), end_tracklet_xz.X(), end_tracklet_xz.Y());
-                line_yz_tracklet->SetLineColor(color);
-                line_yz_tracklet->SetLineWidth(1);
-                line_xz_tracklet->SetLineColor(color);
-                line_xz_tracklet->SetLineWidth(1);
-                
-                canvas_cluster->cd(1);
-                line_yz_tracklet->Draw();
-                canvas_cluster->cd(2);
-                line_xz_tracklet->Draw();
-              }
-            }
-
-            TVector2 start_tracklet_yz(z_start, best_tracklet[1]);
-            TVector2 start_tracklet_xz(z_start, best_tracklet[0]);
-            double zy_end = z_start + 5 * cos(best_tracklet[3]);
-            double zx_end = z_start + 5 * sin(best_tracklet[2]);
-            double y_end = best_tracklet[1] + 5 * sin(best_tracklet[3]);
-            double x_end = best_tracklet[0] + 5 * cos(best_tracklet[2]);
-            TVector2 end_tracklet_yz(zy_end, y_end);
-            TVector2 end_tracklet_xz(zx_end, x_end);
-            
-            TLine* line_yz_tracklet = new TLine(start_tracklet_yz.X(), start_tracklet_yz.Y(), end_tracklet_yz.X(), end_tracklet_yz.Y());
-            TLine* line_xz_tracklet = new TLine(start_tracklet_xz.X(), start_tracklet_xz.Y(), end_tracklet_xz.X(), end_tracklet_xz.Y());
-            line_yz_tracklet->SetLineColor(color);
-            line_yz_tracklet->SetLineWidth(3);
-            line_xz_tracklet->SetLineColor(color);
-            line_xz_tracklet->SetLineWidth(3);
-            
-            canvas_cluster->cd(1);
-            line_yz_tracklet->Draw();
-            canvas_cluster->cd(2);
-            line_xz_tracklet->Draw();
-
-            TVector2 start_true_tracklet_yz(z_start, true_tracklet[0].Y());
-            TVector2 start_true_tracklet_xz(z_start, true_tracklet[0].X());
-            zy_end = z_start + 5 * cos(atan(true_tracklet[1].Y() / true_tracklet[1].Z()));
-            zx_end = z_start + 5 * cos(atan(true_tracklet[1].X() / true_tracklet[1].Z()));
-            y_end = true_tracklet[0].Y() + 5 * sin(atan(true_tracklet[1].Y() / true_tracklet[1].Z()));
-            x_end = true_tracklet[0].X() + 5 * sin(atan(true_tracklet[1].X() / true_tracklet[1].Z()));
-            TVector2 end_true_tracklet_yz(zy_end, y_end);
-            TVector2 end_true_tracklet_xz(zx_end, x_end);
-            
-            TLine* line_yz_true_tracklet = new TLine(start_true_tracklet_yz.X(), start_true_tracklet_yz.Y(), end_true_tracklet_yz.X(), end_true_tracklet_yz.Y());
-            TLine* line_xz_true_tracklet = new TLine(start_true_tracklet_xz.X(), start_true_tracklet_xz.Y(), end_true_tracklet_xz.X(), end_true_tracklet_xz.Y());
-            line_yz_true_tracklet->SetLineColor(color + 1);
-            line_yz_true_tracklet->SetLineWidth(3);
-            line_xz_true_tracklet->SetLineColor(color + 1);
-            line_xz_true_tracklet->SetLineWidth(3);
-            
-            canvas_cluster->cd(1);
-            line_yz_true_tracklet->Draw();
-            canvas_cluster->cd(2);
-            line_xz_true_tracklet->Draw();
-          }
-
-          bool ok = false;
-          for (uint trk = 0; trk < minima.size(); trk++) {
-            if (minima[trk][4] < 1E-2) {
-              ok = true;
-              break;
-            }
-          }  
-          if(!ok) {
-            traklet_finder.clear();
-            continue;
-          }
-
-          auto digitId_to_drift_time = traklet_finder.getDigitToDriftTimeMap();
+          TVector2 start_true_tracklet_yz(z_start, true_tracklet[0].Y());
+          TVector2 start_true_tracklet_xz(z_start, true_tracklet[0].X());
+          double zy_end = z_start + 5 * cos(atan(true_tracklet[1].Y() / true_tracklet[1].Z()));
+          double zx_end = z_start + 5 * cos(atan(true_tracklet[1].X() / true_tracklet[1].Z()));
+          double y_end = true_tracklet[0].Y() + 5 * sin(atan(true_tracklet[1].Y() / true_tracklet[1].Z()));
+          double x_end = true_tracklet[0].X() + 5 * sin(atan(true_tracklet[1].X() / true_tracklet[1].Z()));
+          TVector2 end_true_tracklet_yz(zy_end, y_end);
+          TVector2 end_true_tracklet_xz(zx_end, x_end);
           
-          // Draw cells of all digits
-          // for (auto digit:digit_map) {
-          //   auto cell = sand_geo.getCellInfo(sand_geometry::tracker::CellID(digit.did));
-          //   auto h = cell->second.getSize().h;
-          //   auto w = cell->second.getSize().w;
-
-
-          //   TVector3 r = cell->second.getWire().getDirection();
-          //   TVector3 leftend = cell->second.getWire().getReadoutPoint();
-
-          //   TVector3 AP = TVector3(digit.x, digit.y, digit.z) - leftend; 
-          //   double t_prime = AP.Dot(r) / r.Mag2();
-          //   t_prime = std::max(0.0, std::min(1.0, t_prime));
-          //   TVector3 position_along_wire = leftend + t_prime * r;
-
-          //   TBox* box_yz = new TBox(position_along_wire.Z() - h/2., position_along_wire.Y() - w/2., position_along_wire.Z() + h/2., position_along_wire.Y() + w/2.);
-          //   TBox* box_xz = new TBox(position_along_wire.Z() - h/2., position_along_wire.X() - w/2., position_along_wire.Z() + h/2., position_along_wire.X() + w/2.);
-          //   box_yz->SetFillStyle(0);
-          //   box_yz->SetLineColor(1);
-          //   box_yz->SetLineWidth(1);
-          //   box_xz->SetFillStyle(0);
-          //   box_xz->SetLineColor(1);
-          //   box_xz->SetLineWidth(1);
-          //   canvas_cluster->cd(1);
-          //   box_yz->Draw();
-          //   canvas_cluster->cd(2);
-          //   box_xz->Draw();
-
-          //   TMarker* mark_yz = new TMarker(position_along_wire.Z(), position_along_wire.Y(), 5);
-          //   mark_yz->SetMarkerColor(1);
-          //   mark_yz->SetMarkerSize(0.5);
-          //   canvas_cluster->cd(1);
-          //   mark_yz->Draw();
-
-          //   TMarker* mark_xz = new TMarker(position_along_wire.Z(), position_along_wire.X(), 5);
-          //   mark_xz->SetMarkerColor(1);
-          //   mark_xz->SetMarkerSize(0.5);
-          //   canvas_cluster->cd(2);
-          //   mark_xz->Draw();
-          // }
+          TLine* line_yz_true_tracklet = new TLine(start_true_tracklet_yz.X(), start_true_tracklet_yz.Y(), end_true_tracklet_yz.X(), end_true_tracklet_yz.Y());
+          TLine* line_xz_true_tracklet = new TLine(start_true_tracklet_xz.X(), start_true_tracklet_xz.Y(), end_true_tracklet_xz.X(), end_true_tracklet_xz.Y());
+          line_yz_true_tracklet->SetLineColor(color + 1);
+          line_yz_true_tracklet->SetLineWidth(3);
+          line_xz_true_tracklet->SetLineColor(color + 1);
+          line_xz_true_tracklet->SetLineWidth(3);
+          
+          canvas_cluster->cd(1);
+          line_yz_true_tracklet->Draw();
+          canvas_cluster->cd(2);
+          line_xz_true_tracklet->Draw();
+        
 
 
           for (auto digit:digit_map) {
@@ -589,83 +465,6 @@ int main(int argc, char* argv[])
           }
 
           std::vector<sand_reco::tracker::DigitID> digits_cluster = cluster_in_container.getDigits();
-          // for (uint d = 0; d < digits_cluster.size(); d++) {
-          //   canvas_cluster->cd();
-
-          //   auto digit = sand_reco::tracker::DigitCollection::getDigit(digits_cluster[d]);
-          //   auto cell = sand_geo.getCellInfo(sand_geometry::tracker::CellID(digit.did));
-
-            
-          //   // Draw cells of cluster
-          //   auto h = cell->second.getSize().h;
-          //   auto w = cell->second.getSize().w;
-          //   TVector3 r = cell->second.getWire().getDirection();
-          //   TVector3 leftend = cell->second.getWire().getReadoutPoint();
-
-          //   TVector3 AP = TVector3(digit.x, digit.y, digit.z) - leftend; 
-          //   double t_prime = AP.Dot(r) / r.Mag2();
-          //   t_prime = std::max(0.0, std::min(1.0, t_prime));
-          //   TVector3 position_along_wire = leftend + t_prime * r;
-
-          //   TBox* box_yz = new TBox(position_along_wire.Z() - h/2., position_along_wire.Y() - w/2., position_along_wire.Z() + h/2., position_along_wire.Y() + w/2.);
-          //   TBox* box_xz = new TBox(position_along_wire.Z() - h/2., position_along_wire.X() - w/2., position_along_wire.Z() + h/2., position_along_wire.X() + w/2.);
-          //   box_yz->SetFillStyle(0);
-          //   box_yz->SetLineColor(color);
-          //   box_yz->SetLineWidth(1);
-          //   box_xz->SetFillStyle(0);
-          //   box_xz->SetLineColor(color);
-          //   box_xz->SetLineWidth(1);
-          //   canvas_cluster->cd(1);
-          //   box_yz->Draw();
-          //   canvas_cluster->cd(2);
-          //   box_xz->Draw();
-            
-
-          //   // Draw reco drift time of digits in cluster
-          //   TEllipse* el_yz_comp = new TEllipse(position_along_wire.Z(), position_along_wire.Y(), 
-          //                         sand_reco::stt::wire_radius + cell->second.getDriftVelocity() * digitId_to_drift_time[digits_cluster[d]]);
-          //   TEllipse* el_xz_comp = new TEllipse(position_along_wire.Z(), position_along_wire.X(), 
-          //                         sand_reco::stt::wire_radius + cell->second.getDriftVelocity() * digitId_to_drift_time[digits_cluster[d]]);
-          //   el_yz_comp->SetFillStyle(0);
-          //   el_yz_comp->SetLineColor(color);
-          //   el_yz_comp->SetLineWidth(1);
-          //   el_xz_comp->SetFillStyle(0);
-          //   el_xz_comp->SetLineColor(color);
-          //   el_xz_comp->SetLineWidth(1);
-          //   canvas_cluster->cd(1);
-          //   el_yz_comp->Draw();
-          //   canvas_cluster->cd(2);
-          //   el_xz_comp->Draw();
-            
-          //   // Draw true drift time of digits in cluster
-          //   TEllipse* el_yz = new TEllipse(position_along_wire.Z(), position_along_wire.Y(), 
-          //                         sand_reco::stt::wire_radius + cell->second.getDriftVelocity() * digit.drift_time);
-          //   TEllipse* el_xz = new TEllipse(position_along_wire.Z(), position_along_wire.X(), 
-          //                         sand_reco::stt::wire_radius + cell->second.getDriftVelocity() * digit.drift_time);
-          //   el_yz->SetFillStyle(0);
-          //   el_yz->SetLineWidth(1);
-          //   el_yz->SetLineColor(1);
-          //   el_xz->SetFillStyle(0);
-          //   el_xz->SetLineWidth(1);
-          //   el_xz->SetLineColor(1);
-          //   canvas_cluster->cd(1);
-          //   el_yz->Draw();
-          //   canvas_cluster->cd(2);
-          //   el_xz->Draw();
-
-          //   // Draw hit segments for the cluster
-          //   for (auto& kk:digit.hindex) {
-          //     const TG4HitSegment& hseg = ev->SegmentDetectors[digit.det].at(kk);
-          //     TLine* l_yz = new TLine(hseg.Start.Z(), hseg.Start.Y(), hseg.Stop.Z(), hseg.Stop.Y());
-          //     TLine* l_xz = new TLine(hseg.Start.Z(), hseg.Start.X(), hseg.Stop.Z(), hseg.Stop.X());
-          //     l_yz->SetLineColor(1);
-          //     l_xz->SetLineColor(1);
-          //     canvas_cluster->cd(1);
-          //     l_yz->Draw();
-          //     canvas_cluster->cd(2);
-          //     l_xz->Draw();
-          //   }
-          // }
 
           for (uint d = 0; d < digits_cluster.size(); d++) {
             canvas_cluster->cd();
@@ -691,23 +490,6 @@ int main(int argc, char* argv[])
             canvas_cluster->cd(2);
             box_xz->Draw();
             
-
-            // Draw reco drift time of digits in cluster
-            TEllipse* el_yz_comp = new TEllipse(cell->second.getWire().getCenter().Z(), cell->second.getWire().getCenter().Y(), 
-                                  sand_reco::stt::wire_radius + cell->second.getDriftVelocity() * digitId_to_drift_time[digits_cluster[d]]);
-            TEllipse* el_xz_comp = new TEllipse(cell->second.getWire().getCenter().Z(), cell->second.getWire().getCenter().X(), 
-                                  sand_reco::stt::wire_radius + cell->second.getDriftVelocity() * digitId_to_drift_time[digits_cluster[d]]);
-            el_yz_comp->SetFillStyle(0);
-            el_yz_comp->SetLineColor(color);
-            el_yz_comp->SetLineWidth(1);
-            el_xz_comp->SetFillStyle(0);
-            el_xz_comp->SetLineColor(color);
-            el_xz_comp->SetLineWidth(1);
-            canvas_cluster->cd(1);
-            el_yz_comp->Draw();
-            canvas_cluster->cd(2);
-            el_xz_comp->Draw();
-            
             // Draw true drift time of digits in cluster
             TEllipse* el_yz = new TEllipse(cell->second.getWire().getCenter().Z(), cell->second.getWire().getCenter().Y(), 
                                   sand_reco::stt::wire_radius + cell->second.getDriftVelocity() * digit.drift_time);
@@ -729,8 +511,8 @@ int main(int argc, char* argv[])
               const TG4HitSegment& hseg = ev->SegmentDetectors[digit.det].at(kk);
               TLine* l_yz = new TLine(hseg.Start.Z(), hseg.Start.Y(), hseg.Stop.Z(), hseg.Stop.Y());
               TLine* l_xz = new TLine(hseg.Start.Z(), hseg.Start.X(), hseg.Stop.Z(), hseg.Stop.X());
-              l_yz->SetLineColor(1);
-              l_xz->SetLineColor(1);
+              l_yz->SetLineColor(color);
+              l_xz->SetLineColor(color);
               canvas_cluster->cd(1);
               l_yz->Draw();
               canvas_cluster->cd(2);

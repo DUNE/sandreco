@@ -404,9 +404,6 @@ double Manager::evalChi2(
     measurementNoiseMatrix);
     auto chi2Matrix = residualVectorTransposed * measurementNoiseMatrixInverted *
     residualVector;
-    residualVector.Print();
-    // measurementNoiseMatrix.Print();
-    // measurementNoiseMatrixInverted.Print();
   return chi2Matrix[0][0];
 }
 
@@ -613,7 +610,7 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
   vectorMC[3][0] = initial_state_vector.tanLambda();
   vectorMC[4][0] = initial_state_vector.phi();
 
-  vectorMC.Print();
+  // vectorMC.Print();
 
   particleInfo_        = particleInfo;
   z_to_tracklets_      = z_to_tracklets;
@@ -778,8 +775,6 @@ void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_track
 
 void Manager::run()
 {
-  std::cout << "Processing z: " << current_z_ << std::endl;
-  std::cout << "current_step_: " << current_step_ << std::endl;
 
   // criterio per quando fermare la ricerca
   int stepLength = 1;
@@ -797,20 +792,16 @@ void Manager::run()
     auto it = (z_to_tracklets_->lower_bound(current_z_));
     for(int i= 0; i < stepLength; i++){
       if(it == z_to_tracklets_->begin()){
-        std::cout << "HERE" << std::endl;
         in_range = false;
         break;
       }
-      std::cout << "NOW HERE" << std::endl;
       --it;
     }
     
     if (!in_range) {
-      std::cout << "NOW NOW HERE" << std::endl;
       break;
     }
     auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;   
-    std::cout << "Next z: " << nextZ << std::endl;
 
     auto currentStep = this_track_.getStep(current_step_);
     auto filteredStateVector =
@@ -839,10 +830,8 @@ void Manager::run()
                         beta, particleInfo_.mass, particleInfo_.charge) / 1000;
 
     double dZ = (nextZ - current_z_) / 1000;
-    std::cout << "current_step_: " << current_step_ << std::endl;
 
     propagate(dE, dZ, beta);
-    std::cout << "current_step_: " << current_step_ << std::endl;
 
     // 2- Search best match
     auto predictionStateVector = this_track_.getStep(current_step_)
@@ -866,7 +855,6 @@ void Manager::run()
 
     // // 3- If it is found: step = 1
     // //    else step++
-  std::cout << "current_step_: " << current_step_ << std::endl;
 
     if (tracklet_index != -1) {
       stepLength = 1;
@@ -874,16 +862,12 @@ void Manager::run()
       this_track_.setZ(current_step_, nextZ);
       this_track_.setX(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][0]);
       this_track_.setY(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][1]);
-  std::cout << "current_step_: " << current_step_ << std::endl;
 
       filter(measurement, prediction);
-      std::cout << "current_step_: " << current_step_ << std::endl;
 
-      std::cout << "fatto filter" << std::endl;
       current_z_ = nextZ;
     } else {
       stepLength++;
-      std::cout << "rimosso last sterp" << std::endl;
       this_track_.removeLastStep();
       current_step_--;
       current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
