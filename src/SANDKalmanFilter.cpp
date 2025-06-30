@@ -310,7 +310,7 @@ sand_reco::kf::Measurement Manager::getPrediction(
   } else {
     projector[0][0] = stateVector.x();
     projector[1][0] = -stateVector.charge() *
-                      atan2(stateVector.tanLambda() , sin(stateVector.phi()));
+                      atan(stateVector.tanLambda() / sin(stateVector.phi()));
   }
   return projector;
 }
@@ -418,7 +418,7 @@ sand_reco::kf::Measurement Manager::getMeasurementFromTracklet(const TVectorD& t
   if (current_orientation_ == Orientation::kVertical) {
     // To Do: Check units!
     measurement[0][0] = tracklet[0] / 1000.;
-    measurement[1][0] = M_PI_2 - tracklet[2];
+    measurement[1][0] = tracklet[2];
   } else {
     measurement[0][0] = tracklet[1] / 1000.;
     measurement[1][0] = tracklet[3];
@@ -448,7 +448,7 @@ int Manager::findBestMatch(double& nextZ, const sand_reco::kf::Measurement& pred
       best_tracklet_index = i;
     }
   }
-  if (best_chi < 10) {
+  if (best_chi < 3) {
     // std::cout << "best_chi: " << best_chi << std::endl;
     return best_tracklet_index;
   } else {
