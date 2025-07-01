@@ -1481,7 +1481,7 @@ void SANDGeoManager::fillAdjacentCells(std::string geometry)
   for(auto plane_it = planes_.begin(); plane_it != planes_.end(); plane_it++) {
     // std::cout << "Checking plane " << plane_it->uId()() << std::endl;
     int c = 0;
-    for(auto next_plane_it = plane_it; c < 3 && next_plane_it != planes_.end(); next_plane_it++) {
+    for(auto next_plane_it = plane_it; c < 2 && next_plane_it != planes_.end(); next_plane_it++) {
       // std::cout << "with plane " << next_plane_it->uId()() << std::endl;
       c++;
       auto&      plane_it_cells =      plane_it->getIdToCellMap();
