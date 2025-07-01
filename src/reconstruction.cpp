@@ -1624,8 +1624,8 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
 
   TrackletFinder traklet_finder;
   traklet_finder.setVolumeParameters(p);
-  traklet_finder.setSigmaPosition(0.2);
-  traklet_finder.setSigmaAngle(0.2);
+  traklet_finder.setSigmaPosition(SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3); // mm
+  traklet_finder.setSigmaAngle(SANDTrackerUtils::getSigmaAngleMeasurement());             // rad
 
   std::map<double, std::vector<TVectorD>> z_to_tracklets;
 

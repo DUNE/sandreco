@@ -62,7 +62,9 @@ double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_trac
   // p_trj_dir.Print();
   // double direction = p_trk_dir.Dot(p_trj_dir); 
 
-  double score = position_distance / 2 + anglular_distance_xz / 0.2 + anglular_distance_yz / 0.2;
+  double score = position_distance / (SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3)  // mm
+               + anglular_distance_xz / SANDTrackerUtils::getSigmaAngleMeasurement()          // rad
+               + anglular_distance_yz / SANDTrackerUtils::getSigmaAngleMeasurement();         // rad
 
   return score;
 }
@@ -155,10 +157,10 @@ std::vector<double> computeZDistance(const std::vector<EDEPTrajectoryPoint>& trj
     for(uint i = 0; i < trj_points.size(); i++ ){ 
       auto point = trj_points.at(i);
       double z_trj = point.GetPosition().Vect().Z();
-      double z_distance = fabs(z_trk - z_trj);
+      double current_z_distance = fabs(z_trk - z_trj);
 
-      if(z_distance < z_min){
-        z_min = z_distance;
+      if(current_z_distance < z_min){
+        z_min = current_z_distance;
         i_min = i;
       }
     }
@@ -198,7 +200,7 @@ std::vector<double> computeZDistance(const std::vector<EDEPTrajectoryPoint>& trj
       second_point = point_min;
     }
 
-  z_distance = fabs(first_point.GetPosition().Z() - second_point.GetPosition().Z()); 
+    z_distance = fabs(first_point.GetPosition().Z() - second_point.GetPosition().Z()); 
   }
  z_distance_vec.push_back(z_distance);
 return z_distance_vec;

@@ -58,8 +58,8 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
   
   TrackletFinder traklet_finder;
   traklet_finder.setVolumeParameters(p);
-  traklet_finder.setSigmaPosition(0.2);
-  traklet_finder.setSigmaAngle(0.2);
+  traklet_finder.setSigmaPosition(SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3); // mm
+  traklet_finder.setSigmaAngle(SANDTrackerUtils::getSigmaAngleMeasurement());             // rad
 
   std::map<double, std::vector<TVectorD>> z_to_tracklets;
 
@@ -234,7 +234,8 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
         position_errors.push_back(position_distance);
         direction_errors.push_back(direction);
 
-        double score = position_distance / 200E-3 + acos(direction) / 0.2;
+        double score = position_distance / (SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3) // mm
+                       + acos(direction) / SANDTrackerUtils::getSigmaAngleMeasurement();           // rad
         if (score < best_score) {
           best_score = score;
           std::cout << "z: " << z.first<< " position distance  "  
@@ -257,8 +258,8 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
       double best_direction =  -1;
       double best_position_distance = 1e8;
       for (size_t i = 0; i < position_errors.size(); i++) {
-        double pos_sigmas = position_errors[i] / 200E-3;
-        double ang_sigmas = acos(direction_errors[i]) / 0.2;
+        double pos_sigmas = position_errors[i] / (SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3); // mm
+        double ang_sigmas = acos(direction_errors[i]) / SANDTrackerUtils::getSigmaAngleMeasurement(); 
         // if (pos_sigmas < 3 && ang_sigmas < 3) {
           double score = pos_sigmas + ang_sigmas;
           if (score < best_score) {

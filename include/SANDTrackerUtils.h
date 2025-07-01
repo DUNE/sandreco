@@ -37,6 +37,8 @@ class SANDTrackerUtils
   static const double kMagneticFieldInT_;
   static const double k_;
   static const double c_;
+  static const double sigma_pos_;
+  static const double sigma_ang_;
 
   static const double kEdepSimDensityToGCM3_;
     // https://github.com/ClarkMcGrew/edep-sim/blob/master/README.md#reading-the-output
@@ -90,8 +92,8 @@ class SANDTrackerUtils
   static double getRadiusInMMFromPerpMomentumInGeV(double perpMom);
   static inline double getMomentumInGeVFromRadiusInMM(double radius, double tanl) {return getPerpMomentumInGeVFromRadiusInMM(radius) * sqrt(1 + tanl*tanl); };
   static inline double getMomentumInMeVFromRadiusInMM(double radius, double tanl) {return 1.E3 * getMomentumInGeVFromRadiusInMM(radius, tanl); };
-  static inline double getSigmaPositionMeasurement() {return 2E-3 /*m*/; };
-  static inline double getSigmaAngleMeasurement() {return 0.2 /*rad*/; };
+  static inline double getSigmaPositionMeasurement() {return SANDTrackerUtils::sigma_pos_; }; // m
+  static inline double getSigmaAngleMeasurement() {return SANDTrackerUtils::sigma_ang_; }; // rad
   static double getMagneticField() { return kMagneticFieldInT_; };
   static double getk() { return k_; };
   static double getc() { return c_; };
