@@ -276,11 +276,13 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
     tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, x_res, y_res, theta_y_res, theta_x_res, mom_res, mg, mgx);
 
-    mg->SetTitle("YZ view; z [mm]; y [mm]");
+    std::string title = name_mg + "; z [mm]; y [mm]";
+    mg->SetTitle(title.c_str());
     yz_true->SetMarkerStyle(4);
     mg->Add(yz_true);
     mg->Write();
-    mgx->SetTitle("XZ view; z [mm]; x [mm]");
+    title = name_mgx + "; z [mm]; x [mm]";
+    mgx->SetTitle(title.c_str());
     xz_true->SetMarkerStyle(4);
     mgx->Add(xz_true);
     mgx->Write();
@@ -308,7 +310,7 @@ int main(int argc, char* argv[])
   std::vector<dg_wire>* digits = 0;
   t->SetBranchAddress("dg_wire", &digits);
 
-  bool plots = false;
+  bool plots = true;
   TFile* innovation_test = new TFile("innovation_test.root", "RECREATE");
   TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -3, 3);
   TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -3, 3);
@@ -334,7 +336,7 @@ int main(int argc, char* argv[])
 
   TFile* h_out = new TFile("h_out.root", "RECREATE");
 
-  for (int i = 0; i < 500; i++) {
+  for (int i = 1; i < 2; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 
@@ -351,12 +353,6 @@ int main(int argc, char* argv[])
       sand_reco::tracker::ClusterCollection clusters(&sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
       auto digit_map =  sand_reco::tracker::DigitCollection::getDigits();
       std::string tracker_name = digit_map.begin()->det;
-      
-      TrackletFinder traklet_finder;
-      traklet_finder.setVolumeParameters(p);
-      traklet_finder.setSigmaPosition(0.2);
-      traklet_finder.setSigmaAngle(0.02);
-      
 
       TCanvas* canvas_cluster = new TCanvas("canvas_cluster","canvas_cluster",2000,1000);
       canvas_cluster->Divide(2,1);
@@ -378,6 +374,35 @@ int main(int argc, char* argv[])
           gg++;
           if (color > 9) color = 2;
           
+          EDEPTree tree;
+          tree.InizializeFromEdep(*ev, sand_geo.getTGeoManager());
+          
+          std::vector<EDEPTrajectory> primaryTrj;
+          tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
+            [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
+
+          for (auto trj:primaryTrj) {
+            
+            if (trj.GetTrajectoryPoints().find(string_to_component[tracker_name]) == trj.GetTrajectoryPoints().end()) {
+              continue;
+            }
+            
+            for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
+              TEllipse* pt_yz = new TEllipse(point.GetPosition().Z(), point.GetPosition().Y(), 5);
+              TEllipse* pt_xz = new TEllipse(point.GetPosition().Z(), point.GetPosition().X(), 5);
+              pt_yz->SetFillStyle(0);
+              pt_yz->SetLineWidth(1);
+              pt_yz->SetLineColor(1);
+              pt_xz->SetFillStyle(0);
+              pt_xz->SetLineWidth(1);
+              pt_xz->SetLineColor(1);
+              canvas_cluster->cd(1);
+              pt_yz->Draw();
+              canvas_cluster->cd(2);
+              pt_xz->Draw();
+            }
+          }
+
           TVector3 first_point;
           TVector3 last_point;
           double min_z = 10e8;
@@ -530,7 +555,6 @@ int main(int argc, char* argv[])
           h_cluster_yz->Draw();
           canvas_cluster->cd(2);
           h_cluster_xz->Draw();
-          traklet_finder.clear();
 
         }
       }
