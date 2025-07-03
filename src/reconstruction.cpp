@@ -18,12 +18,13 @@
 #include "utils.h"
 
 //added for kalman filter
+#include "SANDProcessTracklets.h"
 #include "SANDTrackletFinder.h"
 #include "SANDKalmanFilter.h"
 
 #include <TDatabasePDG.h>
 
-#include "EDEPTree.h"
+// #include "EDEPTree.h"
 
 using namespace sand_reco;
 
@@ -1596,6 +1597,10 @@ track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticl
     auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
                                   reco_state.radius(), reco_state.tanLambda());
 
+    auto initial_state = sand_reco::kf::utils::getStateVector(particleInfo.initial_mom * 1E-3, particleInfo.initial_pos * 1E-3, particleInfo.charge);
+    auto initial_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(initial_state.radius(), initial_state.tanLambda());
+ 
+    std::cout << "Initial Momentum " << initial_mom << std::endl;
     std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
 
     trk.tid = particleInfo.id;
@@ -1604,7 +1609,7 @@ track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticl
     trk.b   = reco_state.tanLambda();
     trk.x0  = reco_state.x();
     trk.y0  = reco_state.y();
-    trk.z0  = reco_state.y();
+    trk.z0  = step.getZ();
   }
 
   return trk;
@@ -1612,8 +1617,6 @@ track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticl
 
 void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits)
 {
-  int p[9] = {100, -2000, 2000, 100, -4000, -1000, 100, 23800, 26000};
-
   sand_reco::tracker::DigitCollection::fillMap(digits);
   auto digit_map =  sand_reco::tracker::DigitCollection::getDigits();
   if (sand_reco::tracker::DigitCollection::getDigits().empty()) {
@@ -1622,51 +1625,73 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
   std::string tracker_name = sand_reco::tracker::DigitCollection::getDigits().begin()->det;
   sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
 
-  TrackletFinder traklet_finder;
-  traklet_finder.setVolumeParameters(p);
-  traklet_finder.setSigmaPosition(SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3); // mm
-  traklet_finder.setSigmaAngle(SANDTrackerUtils::getSigmaAngleMeasurement());             // rad
-
   std::map<double, std::vector<TVectorD>> z_to_tracklets;
 
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
   
-  int gg = 0;
+  TRandom3 rand(0);
   for (const auto& container:clusters.getContainers()) {
     for (const auto& cluster_in_container:container->getClusters()) {
 
-      traklet_finder.setCells(cluster_in_container);
-      auto minima = traklet_finder.findTracklets();
-      double z_start = cluster_in_container.getZ();
-      for (uint trk = 0; trk < minima.size(); trk++) {
-        if (minima[trk][4] < 1E-2) {
-          z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
+      TVector3 first_point;
+      TVector3 last_point;
+      double min_z = 10e8;
+      double max_z = -10e8;
+      for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
+        auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
+        
+        if (digit.z > max_z) {
+          max_z = digit.z;
+          last_point = TVector3(digit.x, digit.y, digit.z);
+        }
+        if (digit.z < min_z) {
+          min_z = digit.z;
+          first_point = TVector3(digit.x, digit.y, digit.z);
         }
       }
-      traklet_finder.clear();
+
+      auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, cluster_in_container.getZ());
+      
+      TVector3 true_pos = true_tracklet[0];
+      TVector3 true_dir = true_tracklet[1];     
+      double true_theta_yz = atan(true_dir.Y() / true_dir.Z());
+      double true_theta_xz = atan(true_dir.X() / true_dir.Z());
+      if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
+
+      TVectorD measurement_from_true_tracklet(4);
+      measurement_from_true_tracklet(0) = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet(1) = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet(2) = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+      measurement_from_true_tracklet(3) = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+
+      z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
     }
   }
 
-  int sum = 0;
-  for (auto el:z_to_tracklets) {
-    sum += el.second.size();
-  }
-  if (sum == 0) {
+  if (z_to_tracklets.empty()) {
     return;
   }
 
   EDEPTree tree;
   tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
-
+  
   std::vector<EDEPTrajectory> primaryTrj;
   tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
     [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
 
   TDatabasePDG pdg_db;
   std::vector<SParticleInfo> particleInfos;
+  std::map<double, std::vector<TVectorD>> z_to_best_tracklet;
+
+  double sigma_pos = 0;
+  double sigma_mom = 0;
   for (auto trj:primaryTrj) {
 
     if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
+      continue;
+    }
+    
+    if (trj.GetTrajectoryPoints().find(string_to_component[tracker_name]) == trj.GetTrajectoryPoints().end()) {
       continue;
     }
 
@@ -1679,12 +1704,12 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
     if (particle->Mass() == 0 || particle->Charge() == 0) {
       continue;
     }
-    
+
     SParticleInfo pi;
     pi.pdg_code = trj.GetPDGCode();
     pi.id       = trj.GetId();
-    pi.mass = particle->Mass();
-    pi.charge = particle->Charge() / 3;
+    pi.mass     = particle->Mass();
+    pi.charge   = particle->Charge() / 3;
 
     double max_z = 0;
     bool to_be_reconstructed = false;
@@ -1698,10 +1723,17 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
     }
 
     if (!to_be_reconstructed) continue;
+    double x_smeared = rand.Gaus(pi.pos.X(), sigma_pos);
+    double y_smeared = rand.Gaus(pi.pos.Y(), sigma_pos);
+    double px_smeared = pi.mom.X() * rand.Gaus(1, sigma_mom);
+    double py_smeared = pi.mom.Y() * rand.Gaus(1, sigma_mom);
+    double pz_smeared = pi.mom.Z() * rand.Gaus(1, sigma_mom);
 
+    pi.pos = TVector3(x_smeared, y_smeared, pi.pos.Z());
+    pi.mom = TVector3(px_smeared, py_smeared, pz_smeared);
+    pi.initial_pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetPosition().Vect();
+    pi.initial_mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetMomentum();
     particleInfos.push_back(pi);
-
-    std::cout << "Initial selected momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
   }
   
   int nParticles = particleInfos.size();

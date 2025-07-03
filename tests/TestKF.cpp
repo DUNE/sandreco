@@ -25,7 +25,7 @@
 #include "SANDTrackerUtils.h"
 #include "utils.h"
 
-//#include "EDEPTree.h"
+// #include "EDEPTree.h"
 
 void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TH1D* x_res, TH1D* y_res, TH1D* theta_y_res, TH1D* theta_x_res, TH1D* mom_res, TMultiGraph* mg, TMultiGraph* mgx) {
   sand_reco::kf::Manager manager;
@@ -88,33 +88,33 @@ void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo
       h_gpos_distribution->Fill(innovation[0]);
       h_gang_distribution->Fill(innovation[1]);
     
-      
-      yz_predicted->SetLineColor(3);
-      yz_predicted->SetMarkerStyle(3);
-      mg->Add(yz_predicted);
-      yz_filtered->SetLineColor(4);
-      yz_filtered->SetMarkerStyle(4);
-      mg->Add(yz_filtered);
-      yz_smoothed->SetLineColor(6);
-      yz_smoothed->SetMarkerStyle(5);
-      mg->Add(yz_smoothed);
-      yz_measured->SetLineColor(2);
-      yz_measured->SetMarkerStyle(2);
-      mg->Add(yz_measured);
-
-      xz_predicted->SetLineColor(3);
-      xz_predicted->SetMarkerStyle(3);
-      mgx->Add(xz_predicted);
-      xz_filtered->SetLineColor(4);
-      xz_filtered->SetMarkerStyle(4);
-      mgx->Add(xz_filtered);
-      xz_smoothed->SetLineColor(6);
-      xz_smoothed->SetMarkerStyle(5);
-      mgx->Add(xz_smoothed);
-      xz_measured->SetLineColor(2);
-      xz_measured->SetMarkerStyle(2);
-      mgx->Add(xz_measured);
     }
+      
+    yz_predicted->SetLineColor(3);
+    yz_predicted->SetMarkerStyle(3);
+    mg->Add(yz_predicted);
+    yz_filtered->SetLineColor(4);
+    yz_filtered->SetMarkerStyle(4);
+    mg->Add(yz_filtered);
+    yz_smoothed->SetLineColor(6);
+    yz_smoothed->SetMarkerStyle(5);
+    mg->Add(yz_smoothed);
+    yz_measured->SetLineColor(2);
+    yz_measured->SetMarkerStyle(2);
+    mg->Add(yz_measured);
+
+    xz_predicted->SetLineColor(3);
+    xz_predicted->SetMarkerStyle(3);
+    mgx->Add(xz_predicted);
+    xz_filtered->SetLineColor(4);
+    xz_filtered->SetMarkerStyle(4);
+    mgx->Add(xz_filtered);
+    xz_smoothed->SetLineColor(6);
+    xz_smoothed->SetMarkerStyle(5);
+    mgx->Add(xz_smoothed);
+    xz_measured->SetLineColor(2);
+    xz_measured->SetMarkerStyle(2);
+    mgx->Add(xz_measured);
   }
 
   return;
@@ -138,6 +138,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
 
+  TRandom3 rand(0);
   for (const auto& container:clusters.getContainers()) {
     for (const auto& cluster_in_container:container->getClusters()) {
 
@@ -167,10 +168,12 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
       if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
 
       TVectorD measurement_from_true_tracklet(4);
-      measurement_from_true_tracklet(0) = true_pos.X();
-      measurement_from_true_tracklet(1) = true_pos.Y();
-      measurement_from_true_tracklet(2) = true_theta_xz;
-      measurement_from_true_tracklet(3) = true_theta_yz;
+      measurement_from_true_tracklet(0) = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet(1) = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet(2) = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+      measurement_from_true_tracklet(3) = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+
+      // std::cout << true_pos.X() << std::endl;
 
       z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
     }
@@ -189,7 +192,6 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
   TDatabasePDG pdg_db;
   std::vector<SParticleInfo> particleInfos;
-  TRandom3 rand(0);
   std::map<double, std::vector<TVectorD>> z_to_best_tracklet;
 
   double sigma_pos = 0;
@@ -310,10 +312,10 @@ int main(int argc, char* argv[])
   std::vector<dg_wire>* digits = 0;
   t->SetBranchAddress("dg_wire", &digits);
 
-  bool plots = true;
+  bool plots = false;
   TFile* innovation_test = new TFile("innovation_test.root", "RECREATE");
-  TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -3, 3);
-  TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -3, 3);
+  TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -0.01, 0.01);
+  TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -0.01, 0.01);
   TH1D* h_x_diff = new TH1D("h_x_diff", "h_x_diff", 1000, -3, 3);
   TH1D* h_y_diff = new TH1D("h_y_diff", "h_y_diff", 1000, -3, 3);
   TH1D* h_theta_x_diff = new TH1D("h_theta_x_diff", "h_theta_x_diff", 1000, -3, 3);
@@ -336,7 +338,7 @@ int main(int argc, char* argv[])
 
   TFile* h_out = new TFile("h_out.root", "RECREATE");
 
-  for (int i = 1; i < 2; i++) {
+  for (int i = 0; i < 500; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 

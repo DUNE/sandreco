@@ -399,6 +399,9 @@ double Manager::evalChi2(
     const TMatrixD& measurementNoiseMatrix)
 {
   auto residualVector = observation - prediction;
+  // residualVector.Print();
+  // observation.Print();
+  // prediction.Print();
   TMatrixD residualVectorTransposed(TMatrixD::kTransposed, residualVector);
   TMatrixD measurementNoiseMatrixInverted(TMatrixD::kInverted,
     measurementNoiseMatrix);
@@ -445,7 +448,7 @@ int Manager::findBestMatch(double& nextZ, const sand_reco::kf::Measurement& pred
       best_tracklet_index = i;
     }
   }
-  if (best_chi < 3) {
+  if (best_chi < 10) {
     // std::cout << "best_chi: " << best_chi << std::endl;
     return best_tracklet_index;
   } else {
@@ -472,7 +475,7 @@ void Manager::EvaluateInnovation(const SANDKFMeasurement& measurement,
   for (int i = 0; i < innovation.GetNrows(); i++) {  
     double r = innovation[i][0];
     double C = Sk[i][i];
-    g[i] = r/sqrt(C);
+    g[i] = r; // /sqrt(C);
   }
   this_track_.setInnovation(current_step_, g);
 
@@ -583,11 +586,11 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
 {
 
   TMatrixD initial_cov_matrix(5, 5);
-  initial_cov_matrix[0][0] = 5*pow(200E-6, 2);
-  initial_cov_matrix[1][1] = 5*pow(200E-6, 2);
-  initial_cov_matrix[2][2] = 5*pow(0.1, 2);
-  initial_cov_matrix[3][3] = 5*pow(0.1, 2);
-  initial_cov_matrix[4][4] = 5*pow(0.1, 2);
+  initial_cov_matrix[0][0] = 3*pow(200E-6, 2);
+  initial_cov_matrix[1][1] = 3*pow(200E-6, 2);
+  initial_cov_matrix[2][2] = 3*pow(0.1, 2);
+  initial_cov_matrix[3][3] = 3*pow(0.1, 2);
+  initial_cov_matrix[4][4] = 3*pow(0.1, 2);
 
   sand_reco::kf::StateVector initial_state_vector = sand_reco::kf::utils::getStateVector(particleInfo.mom * 1E-3,  // GeV
                                                                       particleInfo.pos * 1E-3,  // m
@@ -851,7 +854,7 @@ void Manager::run()
     // measurementNoiseMatrix.Print();
     // projectionMatrix.Print();
     // predictionStateCovMatrix.Print();
-    int tracklet_index = findBestMatch(nextZ, prediction, measurementNoiseMatrix);
+    int tracklet_index = findBestMatch(nextZ, prediction, Sk);
 
     // // 3- If it is found: step = 1
     // //    else step++

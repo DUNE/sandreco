@@ -91,7 +91,7 @@ target_link_libraries(Digitize Struct SANDGeoManager Utils)
 
 # Creates Reconstruct executable.
 add_executable(Reconstruct src/reconstruction.cpp)
-target_link_libraries(Reconstruct PUBLIC Struct Utils SANDGeoManager SANDClustering EDEPTree TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils SANDKalmanFilter ROOT::EG)
+target_link_libraries(Reconstruct PUBLIC Struct Utils SANDGeoManager SANDClustering EDEPTree TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils SANDKalmanFilter ROOT::EG ProcessTracklets)
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)

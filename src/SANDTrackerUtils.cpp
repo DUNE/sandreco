@@ -7,8 +7,8 @@ const double SANDTrackerUtils::kEdepSimDensityToGCM3_ = 6.24E18;
 const double SANDTrackerUtils::k_ = 0.299792458;
 const double SANDTrackerUtils::c_ = SANDTrackerUtils::k_ * 1E3;  // mm/ns
 
-const double SANDTrackerUtils::sigma_pos_ = 200000E-6;  // m
-const double SANDTrackerUtils::sigma_ang_ = 0.2;     // rad
+const double SANDTrackerUtils::sigma_pos_ = 200E-5;  // m
+const double SANDTrackerUtils::sigma_ang_ = 0.02;     // rad
 
 void SANDTrackerUtils::clear()
 {
