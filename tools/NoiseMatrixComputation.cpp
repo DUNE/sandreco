@@ -61,7 +61,7 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
   traklet_finder.setSigmaPosition(SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3); // mm
   traklet_finder.setSigmaAngle(SANDTrackerUtils::getSigmaAngleMeasurement());             // rad
 
-  std::map<double, std::vector<TVectorD>> z_to_tracklets;
+  sand_reco::kf::utils::TrackletMap z_to_tracklets;
 
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
 
@@ -77,7 +77,7 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
       auto minima = traklet_finder.findTracklets();
       double z_start = cluster_in_container.getZ();
       for (uint trk = 0; trk < minima.size(); trk++) {
-        if (minima[trk][4] < 1E-2) {
+        if (minima[trk].chi2 < 1E-2) {
           z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
         }
       }
@@ -206,16 +206,16 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
 
       TVector3 p_trj_dir = interpolated_mom.Unit();
       TVector3 best_trj_point = interpolated_pos;
-      TVectorD best_tracklet(z.second[0].GetNrows());
+      Tracklet best_tracklet;
 
       std::vector<double> position_errors, direction_errors;
       
       double best_score = 1e8;
       for (const auto& tracklet : z.second) {
-        double x_trk = tracklet[0];
-        double y_trk = tracklet[1];
-        double theta_xz = tracklet[2];
-        double theta_yz = tracklet[3];
+        double x_trk = tracklet.x;
+        double y_trk = tracklet.y;
+        double theta_xz = tracklet.theta_xz;
+        double theta_yz = tracklet.theta_yz;
 
         //Find the closest (x,y)
         // double position_distance =  sqrt(pow(x_trk - x_trj, 2) + pow(y_trk - y_trj, 2));
@@ -270,8 +270,8 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
       }
 
       if (best_score < 15) {
-        double theta_best_xz = best_tracklet[2];
-        double theta_best_yz = best_tracklet[3];   
+        double theta_best_xz = best_tracklet.theta_xz;
+        double theta_best_yz = best_tracklet.theta_yz;   
         double px_best_trk = cos(theta_best_xz);
         double py_best_trk = sin(theta_best_yz);
         std::cout << theta_best_xz << " " << theta_best_yz << std::endl;
@@ -281,7 +281,7 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
         best_direction = p_best_trk_dir.Dot(p_trj_dir); 
 
         std::cout << " min position distance  "  
-                  << sqrt(pow(best_tracklet[0] - best_trj_point.X(), 2) + pow(best_tracklet[1] - best_trj_point.Y(), 2)) 
+                  << sqrt(pow(best_tracklet.x - best_trj_point.X(), 2) + pow(best_tracklet.y - best_trj_point.Y(), 2)) 
                   << " min angular distance  "  
                   << best_direction
                   << " SCORE " 
@@ -289,12 +289,12 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
                   << std::endl;
 
         //Tracklet infos
-        info.x_trk = best_tracklet[0];
-        info.theta_x_trk = best_tracklet[2];
-        info.tan_x_trk = tan(best_tracklet[2]);
-        info.y_trk = best_tracklet[1];
-        info.theta_y_trk = best_tracklet[3];
-        info.tan_y_trk = tan(best_tracklet[3]);
+        info.x_trk = best_tracklet.x;
+        info.theta_x_trk = best_tracklet.theta_xz;
+        info.tan_x_trk = tan(best_tracklet.theta_xz);
+        info.y_trk = best_tracklet.y;
+        info.theta_y_trk = best_tracklet.theta_yz;
+        info.tan_y_trk = tan(best_tracklet.theta_yz);
         //Trajectory infos
         info.x_trj = best_trj_point.X();
         info.theta_x_trj = atan2(p_trj_dir.Z(), p_trj_dir.X());
@@ -303,27 +303,23 @@ void ProcessTracklets(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<
         info.theta_y_trj = std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI);
         info.tan_y_trj = tan(std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI));  
         //Residuals
-        info.delta_x = best_tracklet[0] - best_trj_point.X();        
-        info.delta_theta_x = best_tracklet[2] - atan2(p_trj_dir.Z(), p_trj_dir.X());
-        info.delta_tan_x = tan(best_tracklet[2] - atan2(p_trj_dir.Z(), p_trj_dir.X()));
-        info.delta_y = best_tracklet[1] - best_trj_point.Y();    
-        info.delta_theta_y = best_tracklet[3] - std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI);      
-        info.delta_tan_y = tan(best_tracklet[3] - std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI));
+        info.delta_x = best_tracklet.x - best_trj_point.X();        
+        info.delta_theta_x = best_tracklet.theta_xz - atan2(p_trj_dir.Z(), p_trj_dir.X());
+        info.delta_tan_x = tan(best_tracklet.theta_xz - atan2(p_trj_dir.Z(), p_trj_dir.X()));
+        info.delta_y = best_tracklet.y - best_trj_point.Y();    
+        info.delta_theta_y = best_tracklet.theta_yz - std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI);      
+        info.delta_tan_y = tan(best_tracklet.theta_yz - std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI));
         
         tracklet_info->Fill();
    
         h_D->Fill(best_score);
-        h_x->Fill(best_tracklet[0] - best_trj_point.X());
-        h_y->Fill(best_tracklet[1] - best_trj_point.Y());
-        h_theta_x->Fill(best_tracklet[2] - atan2(p_trj_dir.Z(), p_trj_dir.X()));
-        h_theta_y->Fill(best_tracklet[3] - std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI));
+        h_x->Fill(best_tracklet.x - best_trj_point.X());
+        h_y->Fill(best_tracklet.y - best_trj_point.Y());
+        h_theta_x->Fill(best_tracklet.theta_xz - atan2(p_trj_dir.Z(), p_trj_dir.X()));
+        h_theta_y->Fill(best_tracklet.theta_yz - std::fmod(atan(p_trj_dir.Y() / p_trj_dir.Z()), M_PI));
        
       }
-    
     }
-
-   
-
   }
 
   int nParticles = particleInfos.size();

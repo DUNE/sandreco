@@ -51,7 +51,7 @@ class TrackletFinder {
 
     const std::map<sand_reco::tracker::DigitID, double>& getDigitToDriftTimeMap() const {return digitId_to_drift_time_;};
 
-    std::vector<TVectorD> findTracklets();
+    std::vector<Tracklet> findTracklets();
 
     void clear();
 

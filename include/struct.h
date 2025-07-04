@@ -185,6 +185,14 @@ struct cluster
   std::vector<reco_cell> reco_cells; 
 };
 
+struct Tracklet {
+  double x;
+  double y;
+  double theta_xz;
+  double theta_yz;
+  double chi2;
+};
+
 struct track
 {
   int tid = -1;

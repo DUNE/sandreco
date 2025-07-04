@@ -27,7 +27,7 @@
 
 // #include "EDEPTree.h"
 
-void tryCompleteManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TH1D* x_res, TH1D* y_res, TH1D* theta_y_res, TH1D* theta_x_res, TH1D* mom_res, TMultiGraph* mg, TMultiGraph* mgx) {
+void tryCompleteManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TH1D* x_res, TH1D* y_res, TH1D* theta_y_res, TH1D* theta_x_res, TH1D* mom_res, TMultiGraph* mg, TMultiGraph* mgx) {
   sand_reco::kf::Manager manager;
   manager.initFromMC(&z_to_tracklets, particle);
   manager.run();
@@ -134,7 +134,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   std::string tracker_name = sand_reco::tracker::DigitCollection::getDigits().begin()->det;
   sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
   
-  std::map<double, std::vector<TVectorD>> z_to_tracklets;
+  std::map<double, std::vector<Tracklet>> z_to_tracklets;
 
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
 
@@ -167,11 +167,11 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
       double true_theta_xz = atan(true_dir.X() / true_dir.Z());
       if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
 
-      TVectorD measurement_from_true_tracklet(4);
-      measurement_from_true_tracklet(0) = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-      measurement_from_true_tracklet(1) = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-      measurement_from_true_tracklet(2) = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
-      measurement_from_true_tracklet(3) = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+      Tracklet measurement_from_true_tracklet;
+      measurement_from_true_tracklet.x = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+      measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
 
       // std::cout << true_pos.X() << std::endl;
 

@@ -1582,7 +1582,7 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
 ///////////////////////////////////////
 // Process events with Kalman Filter //
 ///////////////////////////////////////
-track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
+track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
   sand_reco::kf::Manager manager;
   manager.initFromMC(&z_to_tracklets, particleInfo);
   manager.run();
@@ -1625,7 +1625,7 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
   std::string tracker_name = sand_reco::tracker::DigitCollection::getDigits().begin()->det;
   sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
 
-  std::map<double, std::vector<TVectorD>> z_to_tracklets;
+  sand_reco::kf::utils::TrackletMap z_to_tracklets;
 
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
   
@@ -1658,11 +1658,11 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
       double true_theta_xz = atan(true_dir.X() / true_dir.Z());
       if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
 
-      TVectorD measurement_from_true_tracklet(4);
-      measurement_from_true_tracklet(0) = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-      measurement_from_true_tracklet(1) = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-      measurement_from_true_tracklet(2) = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
-      measurement_from_true_tracklet(3) = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+      Tracklet measurement_from_true_tracklet;
+      measurement_from_true_tracklet.x = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+      measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
 
       z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
     }

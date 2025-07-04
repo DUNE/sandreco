@@ -22,29 +22,29 @@
 
 #include "EDEPTree.h"
 
-sand_reco::kf::TrackletMap Find3fromTrajectory(std::vector<EDEPTrajectoryPoint> trj_points, double sx = 0.0, double sy = 0.0) {
+sand_reco::kf::utils::TrackletMap Find3fromTrajectory(std::vector<EDEPTrajectoryPoint> trj_points, double sx = 0.0, double sy = 0.0) {
 
-  sand_reco::kf::TrackletMap three_tracklets;
+  sand_reco::kf::utils::TrackletMap three_tracklets;
   TRandom3 randGen(0);
 
-  TVectorD trklet(8);
-  trklet[0] = trj_points[0].GetPosition().X()+randGen.Gaus(0, sx);
-  trklet[1] = trj_points[0].GetPosition().Y()+randGen.Gaus(0, sy);
-  std::vector<TVectorD> trklet_vec;
+  Tracklet trklet;
+  trklet.x = trj_points[0].GetPosition().X()+randGen.Gaus(0, sx);
+  trklet.y = trj_points[0].GetPosition().Y()+randGen.Gaus(0, sy);
+  std::vector<Tracklet> trklet_vec;
   trklet_vec.push_back(trklet);
   three_tracklets[trj_points[0].GetPosition().Z()]= trklet_vec;
 
-  TVectorD trklet2(8);
-  trklet2[0] = trj_points[trj_points.size()/2].GetPosition().X()+randGen.Gaus(0, sx);
-  trklet2[1] = trj_points[trj_points.size()/2].GetPosition().Y()+randGen.Gaus(0, sy);
-  std::vector<TVectorD> trklet_vec2;
+  Tracklet trklet2;
+  trklet2.x = trj_points[trj_points.size()/2].GetPosition().X()+randGen.Gaus(0, sx);
+  trklet2.y = trj_points[trj_points.size()/2].GetPosition().Y()+randGen.Gaus(0, sy);
+  std::vector<Tracklet> trklet_vec2;
   trklet_vec2.push_back(trklet2);
   three_tracklets[trj_points[trj_points.size()/2].GetPosition().Z()]= trklet_vec2;
 
-  TVectorD trklet3(8);
-  trklet3[0] = trj_points[trj_points.size()-1].GetPosition().X()+randGen.Gaus(0, sx);
-  trklet3[1] = trj_points[trj_points.size()-1].GetPosition().Y()+randGen.Gaus(0, sy);
-  std::vector<TVectorD> trklet_vec3;
+  Tracklet trklet3;
+  trklet3.x = trj_points[trj_points.size()-1].GetPosition().X()+randGen.Gaus(0, sx);
+  trklet3.y = trj_points[trj_points.size()-1].GetPosition().Y()+randGen.Gaus(0, sy);
+  std::vector<Tracklet> trklet_vec3;
   trklet_vec3.push_back(trklet3);
   three_tracklets[trj_points[trj_points.size()-1].GetPosition().Z()]= trklet_vec3;
 
@@ -52,7 +52,7 @@ sand_reco::kf::TrackletMap Find3fromTrajectory(std::vector<EDEPTrajectoryPoint> 
   
 }
 
-void trySeedManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo, std::vector<EDEPTrajectoryPoint> trj_points) {
+void trySeedManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParticleInfo particleInfo, std::vector<EDEPTrajectoryPoint> trj_points) {
 
   double sx = 0.004;
   double sy = 0.004;
@@ -62,7 +62,7 @@ void trySeedManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo par
   for (auto el:closest) {
     std::cout << "Z: " << el.first << std::endl;
     for (auto el2:el.second) {
-      std::cout << "X: " << el2[0] << " Y: " << el2[1] << std::endl;
+      std::cout << "X: " << el2.x << " Y: " << el2.y << std::endl;
     }
   }
   
@@ -91,7 +91,7 @@ void processEventWithSeed(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vec
   traklet_finder.setSigmaPosition(0.2);
   traklet_finder.setSigmaAngle(0.2);
 
-  std::map<double, std::vector<TVectorD>> z_to_tracklets;
+  std::map<double, std::vector<Tracklet>> z_to_tracklets;
 
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
 
@@ -103,7 +103,7 @@ void processEventWithSeed(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vec
       auto minima = traklet_finder.findTracklets();
       double z_start = cluster_in_container.getZ();
       for (uint trk = 0; trk < minima.size(); trk++) {
-        if (minima[trk][4] < 1E-2) {
+        if (minima[trk].chi2 < 1E-2) {
           z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
         }
       }

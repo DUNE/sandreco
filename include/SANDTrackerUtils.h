@@ -136,6 +136,8 @@ namespace kf
 namespace utils 
 {
 
+using TrackletMap = std::map<double, std::vector<Tracklet>>;
+
 TVector2 getBFieldPerp(const TVector3& v);
 
 double getBFieldLong(const TVector3& v);

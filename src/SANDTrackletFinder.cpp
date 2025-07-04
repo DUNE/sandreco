@@ -156,9 +156,9 @@ void TrackletFinder::computeDriftTime()
 }
 
 // To Do: find a minimizier able to escape local minima
-std::vector<TVectorD> TrackletFinder::findTracklets()
+std::vector<Tracklet> TrackletFinder::findTracklets()
 {
-  std::vector<TVectorD> minima;
+  std::vector<Tracklet> minima;
 
   auto minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "");
   minimizer->SetMaxFunctionCalls(100000); 
@@ -224,17 +224,17 @@ std::vector<TVectorD> TrackletFinder::findTracklets()
 
     minimizer->Minimize();
     const double *xs = minimizer->X();
-    TVectorD min(9);
-    min[0] = xs[0];
-    min[1] = xs[1];
-    min[2] = xs[2];
-    min[3] = xs[3];
-    min[4] = minimizer->MinValue();
-    const double *err_xs = minimizer->Errors();
-    min[5] = err_xs[0];
-    min[6] = err_xs[1];
-    min[7] = err_xs[2];
-    min[8] = err_xs[3];
+    Tracklet min;
+    min.x = xs[0];
+    min.y = xs[1];
+    min.theta_xz = xs[2];
+    min.theta_yz = xs[3];
+    min.chi2 = minimizer->MinValue();
+    // const double *err_xs = minimizer->Errors();
+    // min[5] = err_xs[0];
+    // min[6] = err_xs[1];
+    // min[7] = err_xs[2];
+    // min[8] = err_xs[3];
     minima.push_back(min);
   }
   return minima;
