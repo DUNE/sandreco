@@ -172,7 +172,10 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
       measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
       measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
-
+      for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
+        auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
+        measurement_from_true_tracklet.digits.push_back(digit);
+      }
       // std::cout << true_pos.X() << std::endl;
 
       z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);

@@ -191,6 +191,7 @@ struct Tracklet {
   double theta_xz;
   double theta_yz;
   double chi2;
+  std::vector<dg_wire> digits;
 };
 
 struct track

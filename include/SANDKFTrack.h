@@ -116,6 +116,7 @@ class TrackStep {
     State filtered_;
     State smoothed_;
     std::vector<double> innovation_;
+    std::vector<dg_wire> digits_;
     double z_;
     double x_;
     double y_;
@@ -158,6 +159,8 @@ class TrackStep {
     double getX() const {return x_;};
     void setY(double y){y_ = y;};
     double getY() const {return y_;};
+    void addDigits(std::vector<dg_wire> digits ){digits_ = digits;};
+    std::vector<dg_wire> getDigits() const {return digits_;};
     
 
 };
@@ -174,6 +177,7 @@ class Track {
     void setZ(int index, double z){steps_.at(index).setZ(z); };
     void setX(int index, double x){steps_.at(index).setX(x); };
     void setY(int index, double y){steps_.at(index).setY(y); };
+    void addDigits(int index, std::vector<dg_wire> digits) {steps_.at(index).addDigits(digits);};
     void setClusterIDForState(int index, int cluster_id) { steps_.at(index).setClusterIDForThisState(cluster_id); };
     void removeLastStep() { steps_.erase(steps_.end()-1); };
     void Clear() {steps_.clear();}

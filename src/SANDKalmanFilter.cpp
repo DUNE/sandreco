@@ -865,6 +865,7 @@ void Manager::run()
       this_track_.setZ(current_step_, nextZ);
       this_track_.setX(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].x);
       this_track_.setY(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].y);
+      this_track_.addDigits(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].digits);
 
       filter(measurement, prediction);
 

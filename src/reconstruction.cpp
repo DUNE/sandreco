@@ -1590,6 +1590,8 @@ track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, S
   auto reco_track = manager.getTrack();
 
   track trk;
+  reset(trk);
+
   if (reco_track.getSteps().size() > 3) {
     auto step = reco_track.getSteps().back();
     auto reco_state =
@@ -1610,6 +1612,11 @@ track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, S
     trk.x0  = reco_state.x();
     trk.y0  = reco_state.y();
     trk.z0  = step.getZ();
+    for (const auto& s : reco_track.getSteps()) {
+      for (const auto& d : s.getDigits()) {
+        trk.clX.push_back(d);
+      }
+    }
   }
 
   return trk;
@@ -1663,7 +1670,10 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
       measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
       measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
-
+      for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
+        auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
+        measurement_from_true_tracklet.digits.push_back(digit);
+      }
       z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
     }
   }
