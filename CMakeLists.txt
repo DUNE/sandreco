@@ -157,7 +157,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
- install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF TestSeed TestVertexing SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils
+ install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF TestSeed TestVertexing SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils ProcessTracklets
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
