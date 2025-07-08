@@ -22,6 +22,7 @@
 #include "SANDTrackerDigitCollection.h"
 #include "SANDKalmanFilter.h"
 #include "utils.h"
+#include "BVH.h"
 
 #include "EDEPTree.h"
 
@@ -263,6 +264,18 @@ int main(int argc, char* argv[])
   } else if (geo->FindVolumeFast("SANDtracker_PV")) {
     geometry = "DRIFT";
   } 
+
+  BVH bvh;
+  std::cout << __LINE__ << std::endl;
+  std::vector<sand_geometry::tracker::CellID> cells;
+  for(const auto &plane: sand_geo.getPlanes()){
+    for(const auto &cell : plane.getIdToCellMap()){
+      cells.push_back(cell.first);
+    }
+  }
+  std::cout << __LINE__ << std::endl;
+  bvh.createTree(cells, &sand_geo);
+  std::cout << __LINE__ << std::endl;
   sand_geo.fillAdjacentCells(geometry);
 
   for (int i = 0; i < 20; i++) {
