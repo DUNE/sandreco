@@ -1611,6 +1611,9 @@ track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, S
     trk.b   = reco_state.tanLambda();
     trk.x0  = reco_state.x();
     trk.y0  = reco_state.y();
+
+    trk.ret_ln = 0;
+    trk.ret_cr = 0;
     trk.z0  = step.getZ();
     for (const auto& s : reco_track.getSteps()) {
       for (const auto& d : s.getDigits()) {
@@ -1755,7 +1758,10 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
   }
 
   for (int ip = 0; ip < nParticles; ip++) {
-    tracks.push_back(runKalmanFilterManager(z_to_tracklets, particleInfos[ip]));
+    auto reco_track = runKalmanFilterManager(z_to_tracklets, particleInfos[ip]);
+    if (reco_track.tid != -1) {
+      tracks.push_back(reco_track);
+    }
   }
 }
 

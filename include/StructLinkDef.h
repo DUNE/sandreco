@@ -14,7 +14,7 @@
 #pragma link C++ class std::vector < dg_wire > +;
 #pragma link C++ class std::vector < track > +;
 #pragma link C++ class std::vector < cluster > +;
-//#pragma link C++ class std::vector < particle> + ;
+#pragma link C++ class std::vector < particle> + ;
 #pragma link C++ class pe + ;
 #pragma link C++ class cluster_generator + ;
 #pragma link C++ class truecluster + ;
@@ -25,6 +25,6 @@
 // #pragma link C++ class incomplete_cell + ;
 #pragma link C++ class cluster + ;
 #pragma link C++ class track + ;
-// #pragma link C++ class particle + ;
+#pragma link C++ class particle + ;
 #pragma link C++ class event + ;
 #endif
