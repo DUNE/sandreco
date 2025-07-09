@@ -3,11 +3,11 @@
 
 
 
-AABB::AABB(const std::vector<sand_geometry::tracker::CellID>& cells, SANDGeoManager* geo){
+AABB::AABB(const sand_geometry::tracker::CellID& cellID, SANDGeoManager* geo){
     min_ = TVector3(1E9, 1E9, 1E9);
     max_ = TVector3(-1E9, -1E9, -1E9);
     // std::cout << __LINE__ << std::endl;
-    for(const auto& cellID : cells){
+    
         std::vector<TVector3> vertices;
         auto cell = geo->getCellInfo(cellID)->second;
         auto p = cell.getWire().getFirstPoint();
@@ -65,16 +65,116 @@ AABB::AABB(const std::vector<sand_geometry::tracker::CellID>& cells, SANDGeoMana
 
         }
 
-    }
+    
 // std::cout << __LINE__ << std::endl;
 }
 
+void AABB::expand(const AABB& second_aabb){
+    if(min_.X() > second_aabb.min_.X()){
+        min_.SetX(second_aabb.min_.X());
+    }
+    if(max_.X() < second_aabb.max_.X()){
+        max_.SetX(second_aabb.max_.X());
+    }
+
+    if(min_.Y() > second_aabb.min_.Y()){
+        min_.SetY(second_aabb.min_.Y());
+    }
+    if(max_.Y() < second_aabb.max_.Y()){
+        max_.SetY(second_aabb.max_.Y());
+    }
+   
+    if(min_.Z() > second_aabb.min_.Z()){
+        min_.SetZ(second_aabb.min_.Z());
+    }
+    if(max_.Z() < second_aabb.max_.Z()){
+        max_.SetZ(second_aabb.max_.Z());
+    }
+ }
+
+void BVH::fillCellAABBMap(std::vector<sand_geometry::tracker::CellID>& cells, SANDGeoManager* geo){
+    for(const auto &cell : cells){
+        cellAABBs_[cell] = AABB(cell, geo);
+    }
+}
+
+int c = 0;
+
+void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tracker::CellID>::iterator begin, std::vector<sand_geometry::tracker::CellID>::iterator end, SANDGeoManager* geo){
+
+    node->aabb_ = cellAABBs_[*begin];
+    for (auto it = begin + 1; it != end; ++it) {
+        node->aabb_.expand(cellAABBs_[*it]);
+    }
+    // node->aabb_.min_.Print();
+    // node->aabb_.max_.Print();
+
+    // node->indices_ = cells;
+
+    // std::cout << __LINE__ << std::endl;
+    if(std::distance(begin, end) == 1){
+        node->index_ = *begin;
+        std::cout << "ADDED CELL;, TOT: " << c << " " << (*begin)() << " ";
+        std::cout << std::endl;
+        c++;
+        return;
+    }
+    // std::cout << __LINE__ << std::endl;
+    int axis = 0;
+    double deltaX = node->aabb_.max_.X() - node->aabb_.min_.X();
+    double deltaY = node->aabb_.max_.Y() - node->aabb_.min_.Y();
+    double deltaZ = node->aabb_.max_.Z() - node->aabb_.min_.Z();
 
 
-void BVH::createTree(const std::vector<sand_geometry::tracker::CellID>& cells, SANDGeoManager* geo){
-    root_.aabb = AABB(cells, geo);
-    root_.aabb.min_.Print();
-    root_.aabb.max_.Print();
+    if(deltaY > deltaX){
+        axis = 1;
+    }
+    if(deltaZ > deltaY){
+        axis = 2;
+    } 
+    // std::cout << __LINE__ << std::endl;
 
+    auto sorting_function = [axis, geo](const sand_geometry::tracker::CellID& c1, const sand_geometry::tracker::CellID& c2){
+        auto center_1 = geo->getCellInfo(c1)->second.getWire().getCenter();
+        auto center_2 = geo->getCellInfo(c2)->second.getWire().getCenter();
+        
+        if(axis==0){
+            return center_1.X() < center_2.X();
+        }
+        if(axis==1){
+            return center_1.Y() < center_2.Y();
+        }
+        if(axis==2){
+            return center_1.Z() < center_2.Z();
+        }
+        return false;
+    };
+
+    // for (const auto& cell:cells) {
+    //     std::cout << cell() << " ";
+    // }
+    // std::cout << std::endl;
+    // for (const auto& cell:cells) {
+        //     std::cout << cell() << " ";
+        // }
+        // std::cout << std::endl;
+        
+        
+        int middle_point= std::distance(begin, end) / 2;
+        std::nth_element(begin, begin + middle_point, end, sorting_function);
+    
+    // std::cout << __LINE__ << std::endl;
+    
+    // std::vector<sand_geometry::tracker::CellID> left_cell_id(cells.begin(), cells.begin() + middle_point);
+    node->left_ = std::make_unique<Node>();
+    createTree(node->left_, begin, begin + middle_point, geo);
+    // std::cout << __LINE__ << " " << size << std::endl;
+    
+    // std::vector<sand_geometry::tracker::CellID> right_cell_id(begin + middle_point, end); 
+    // std::cout << __LINE__ << " " << size << std::endl;
+    node->right_ = std::make_unique<Node>();
+    createTree(node->right_, begin + middle_point, end, geo);
+ 
+    return;
 }
 

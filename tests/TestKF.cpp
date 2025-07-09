@@ -265,7 +265,6 @@ int main(int argc, char* argv[])
     geometry = "DRIFT";
   } 
 
-  BVH bvh;
   std::cout << __LINE__ << std::endl;
   std::vector<sand_geometry::tracker::CellID> cells;
   for(const auto &plane: sand_geo.getPlanes()){
@@ -273,12 +272,11 @@ int main(int argc, char* argv[])
       cells.push_back(cell.first);
     }
   }
-  std::cout << __LINE__ << std::endl;
-  bvh.createTree(cells, &sand_geo);
-  std::cout << __LINE__ << std::endl;
+  
+  BVH bvh(cells, &sand_geo);
   sand_geo.fillAdjacentCells(geometry);
-
-  for (int i = 0; i < 20; i++) {
+  
+  for (int i = 0; i < 1; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 
