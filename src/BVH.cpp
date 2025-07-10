@@ -6,26 +6,23 @@
 AABB::AABB(const sand_geometry::tracker::CellID& cellID, SANDGeoManager* geo){
     min_ = TVector3(1E9, 1E9, 1E9);
     max_ = TVector3(-1E9, -1E9, -1E9);
-    // std::cout << __LINE__ << std::endl;
-    
-        std::vector<TVector3> vertices;
+      std::vector<TVector3> vertices;
         auto cell = geo->getCellInfo(cellID)->second;
         auto p = cell.getWire().getFirstPoint();
-        // p.Print();
+     
         auto& plane = *geo->getPlaneInfo(cellID);
         auto p_rotated = geo->globalToRotated(TVector2(p.X(), p.Y()), plane);  
-        // p_rotated.Print();
+     
         auto h_2 = cell.getSize().h /2.;
         auto w_2 = cell.getSize().w /2.;
-// std::cout << __LINE__ << std::endl;
+
         TVector2 v1(p_rotated.X(), p_rotated.Y() + h_2);
         TVector2 v2(p_rotated.X(), p_rotated.Y() - h_2);
         
         auto p1 = geo->rotatedToGlobal(TVector2(v1.X(), v1.Y()), plane); 
-        // p1.Print();
-        // break;
+
         auto p2 = geo->rotatedToGlobal(TVector2(v2.X(), v2.Y()), plane);
-// std::cout << __LINE__ << std::endl;
+
         vertices.push_back(TVector3(p1.X(), p1.Y(), p.Z() + w_2));
         vertices.push_back(TVector3(p2.X(), p2.Y(), p.Z() + w_2));   
 
@@ -33,13 +30,13 @@ AABB::AABB(const sand_geometry::tracker::CellID& cellID, SANDGeoManager* geo){
         p_rotated = geo->globalToRotated(TVector2(p.X(), p.Y()), plane); 
         TVector2 v3(p_rotated.X(), p_rotated.Y() + h_2);
         TVector2 v4(p_rotated.X(), p_rotated.Y() - h_2);
-// std::cout << __LINE__ << std::endl;
+
         auto p3 = geo->rotatedToGlobal(TVector2(v3.X(), v3.Y()), plane); 
         auto p4 = geo->rotatedToGlobal(TVector2(v4.X(), v4.Y()), plane);
 
         vertices.push_back(TVector3(p3.X(), p3.Y(), p.Z() - w_2));
         vertices.push_back(TVector3(p4.X(), p4.Y(), p.Z() - w_2));
-// std::cout << __LINE__ << std::endl;
+
         for(const auto &v : vertices){
 
         if(min_.X() > v.X()){
@@ -65,8 +62,6 @@ AABB::AABB(const sand_geometry::tracker::CellID& cellID, SANDGeoManager* geo){
 
         }
 
-    
-// std::cout << __LINE__ << std::endl;
 }
 
 void AABB::expand(const AABB& second_aabb){
@@ -92,6 +87,16 @@ void AABB::expand(const AABB& second_aabb){
     }
  }
 
+bool AABB::isOverlapping(const AABB& second_aabb, double epsilon = 0){
+    if(max_.X() + epsilon >= second_aabb.min_.X() && min_.X() - epsilon <= second_aabb.max_.X() && 
+       max_.Y() + epsilon >= second_aabb.min_.Y() && min_.Y() - epsilon <= second_aabb.max_.Y() && 
+       max_.Z() + epsilon >= second_aabb.min_.Z() && min_.Z() - epsilon <= second_aabb.max_.Z()){
+        return true;
+    }
+
+    return false;
+}
+
 void BVH::fillCellAABBMap(std::vector<sand_geometry::tracker::CellID>& cells, SANDGeoManager* geo){
     for(const auto &cell : cells){
         cellAABBs_[cell] = AABB(cell, geo);
@@ -106,20 +111,17 @@ void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tra
     for (auto it = begin + 1; it != end; ++it) {
         node->aabb_.expand(cellAABBs_[*it]);
     }
-    // node->aabb_.min_.Print();
-    // node->aabb_.max_.Print();
 
     // node->indices_ = cells;
 
-    // std::cout << __LINE__ << std::endl;
+    
     if(std::distance(begin, end) == 1){
         node->index_ = *begin;
-        std::cout << "ADDED CELL;, TOT: " << c << " " << (*begin)() << " ";
-        std::cout << std::endl;
+        // std::cout << "ADDED CELL;, TOT: " << c << " " << (*begin)() << std::endl;
         c++;
         return;
     }
-    // std::cout << __LINE__ << std::endl;
+    
     int axis = 0;
     double deltaX = node->aabb_.max_.X() - node->aabb_.min_.X();
     double deltaY = node->aabb_.max_.Y() - node->aabb_.min_.Y();
@@ -132,7 +134,7 @@ void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tra
     if(deltaZ > deltaY){
         axis = 2;
     } 
-    // std::cout << __LINE__ << std::endl;
+    
 
     auto sorting_function = [axis, geo](const sand_geometry::tracker::CellID& c1, const sand_geometry::tracker::CellID& c2){
         auto center_1 = geo->getCellInfo(c1)->second.getWire().getCenter();
@@ -161,9 +163,10 @@ void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tra
         
         
         int middle_point= std::distance(begin, end) / 2;
-        std::nth_element(begin, begin + middle_point, end, sorting_function);
+        // std::nth_element(begin, begin + middle_point, end, sorting_function);
+        std::sort(begin, end, sorting_function);
     
-    // std::cout << __LINE__ << std::endl;
+    
     
     // std::vector<sand_geometry::tracker::CellID> left_cell_id(cells.begin(), cells.begin() + middle_point);
     node->left_ = std::make_unique<Node>();
@@ -178,3 +181,71 @@ void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tra
     return;
 }
 
+const std::map<sand_geometry::tracker::CellID,std::vector<sand_geometry::tracker::CellID>>& BVH::getAdjacentCells(SANDGeoManager* geo){
+    searchAdjacentCells(root_, root_, geo);
+
+    return cellID_to_adjacent_cells_;
+}
+
+void BVH::getAdjacentCells(std::unique_ptr<Node>& node, SANDGeoManager* geo){
+    // if(node->index_ != -1) {
+    //     std::vector<sand_geometry::tracker::CellID> adjacent_cells;
+    //     searchAdjacentCells(node,root_, adjacent_cells, geo);
+    //     // cellID_to_adjacent_cells_[node->index_] = adjacent_cells; 
+    // } else {
+    //     getAdjacentCells(node->left_, geo); 
+    //     getAdjacentCells(node->right_, geo); 
+    // }
+
+    // return;
+}
+
+void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>& other_node, SANDGeoManager* geo){
+    if(!node || !other_node) return;
+    // if(node->index_ == other_node->index_) {return;}
+    
+    if (node->index_ == 420000 || other_node->index_ == 420000 ) {
+        std::cout << "Checking " << node->index_() << " and " << other_node->index_() << std::endl;
+    }
+
+    if(!node->aabb_.isOverlapping(other_node->aabb_, 1)) return;
+
+    
+
+    if(other_node->index_ != -1 && node->index_ != -1) {
+        if(other_node->index_ == node->index_) {
+            return;
+        }
+        if (node->index_ < other_node->index_) {
+            return;
+        }
+        auto wire = geo->getCellInfo(node->index_)->second.getWire();
+        auto other_wire = geo->getCellInfo(other_node->index_)->second.getWire();
+
+        double distance = geo->getMinDistanceBetweenSegments(wire.getFirstPoint(),
+                                                            wire.getSecondPoint(),
+                                                            other_wire.getFirstPoint(),
+                                                            other_wire.getSecondPoint());
+        if(distance <10){
+            cellID_to_adjacent_cells_[node->index_].push_back(other_node->index_);
+            cellID_to_adjacent_cells_[other_node->index_].push_back(node->index_);
+            // std::cout << "DDED " << other_node->index_() << " TO " << node->index_() << " and the other way around" << std::endl;
+        }
+        return;
+    } 
+    
+    if (other_node->index_ == -1 && node->index_ == -1){
+        searchAdjacentCells(node->left_,  other_node->left_, geo);
+        searchAdjacentCells(node->left_,  other_node->right_, geo);
+        searchAdjacentCells(node->right_, other_node->right_, geo);
+        // if (other_node->index_ != node->index_) {
+            searchAdjacentCells(node->right_, other_node->left_, geo);
+        // }
+    } else if (node->index_ == -1) {
+        searchAdjacentCells(node->left_,  other_node, geo);
+        searchAdjacentCells(node->right_, other_node, geo);
+    } else if (other_node->index_ == -1) {
+        searchAdjacentCells(other_node->left_,  node, geo);
+        searchAdjacentCells(other_node->right_, node, geo);
+    }
+}

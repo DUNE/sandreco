@@ -159,7 +159,6 @@ class SANDGeoManager : public TObject
 
   bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector2& intersection);
   void setDriftPlaneInfo(sand_geometry::tracker::Plane& plane, double angle);
-  void printModulesInfo(int verbose = 1);
   void drawModulesInfo();
 
   // DRIFT CHAMBER
@@ -238,8 +237,7 @@ class SANDGeoManager : public TObject
                                                        const sand_geometry::tracker::Plane& plane);
   std::vector<TVector2> getGlobalLinePlaneIntersections(const TVector2& local_2d_position, 
                                                         const sand_geometry::tracker::Plane& plane);
-  double getMinDistanceBetweenSegments(TVector3 a, TVector3 b,
-                                       TVector3 c, TVector3 d);
+  
   // STT
   sand_geometry::tracker::ModuleID getSttModuleId(const TString& volume_path) const;
   bool isSttTube(const TString& volume_name) const;
@@ -274,6 +272,7 @@ class SANDGeoManager : public TObject
   {
   }
   void init(TGeoManager* const geo);
+  void printModulesInfo(int verbose = 1);
   void setGeoCurrentPoint(double x, double y, double z) const;
   void setGeoCurrentDirection(double x, double y, double z) const;
   void initVolume(volume& v) const;
@@ -281,6 +280,7 @@ class SANDGeoManager : public TObject
   {
     return cellmap_.at(ecal_cell_id);
   }
+  double getMinDistanceBetweenSegments(TVector3 a, TVector3 b, TVector3 c, TVector3 d);
   void fillAdjacentCells(std::string geometry);
   std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator getCellInfo(sand_geometry::tracker::CellID cell_id) const;
   sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::CellID cell_id) const;

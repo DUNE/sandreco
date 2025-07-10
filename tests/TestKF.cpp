@@ -7,6 +7,7 @@
 #include <TGraph.h>
 #include <TMultiGraph.h>
 
+#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -273,9 +274,29 @@ int main(int argc, char* argv[])
     }
   }
   
+  auto start = std::chrono::system_clock::now();
   BVH bvh(cells, &sand_geo);
+  auto end_build = std::chrono::system_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
+  std::cout << "Time to build BVH: " << elapsed.count() << " ms" << std::endl;
+  auto adjacent_cells = bvh.getAdjacentCells(&sand_geo);
+  auto end_search = std::chrono::system_clock::now();
+  elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_search - end_build);
+  std::cout << "Time to search BVH: " << elapsed.count() << " ms" << std::endl;
+  for (const auto& cell : adjacent_cells) {
+    std::cout << cell.first() << " ";
+    for (auto c : cell.second) {
+      std::cout << c() << " ";
+    }
+    std::cout << std::endl;
+  }
   sand_geo.fillAdjacentCells(geometry);
+  auto other_end = std::chrono::system_clock::now();
+  elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(other_end - end_search);
+  std::cout << "Time to do the N^2: " << elapsed.count() << " ms" << std::endl;
   
+  sand_geo.printModulesInfo(1);
+
   for (int i = 0; i < 1; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
