@@ -11,19 +11,19 @@ namespace sand_reco
 namespace tracker
 {
 // digit id -> dg_wire.did
-class DigitID : public SingleElStruct<unsigned long>
+class DigitID : public SingleElStruct<long>
 {
  public:
-  DigitID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  DigitID() : SingleElStruct<unsigned long>(){};
+  DigitID(long id) : SingleElStruct<long>(id){};
+  DigitID() : SingleElStruct<long>(){};
 };
 
 // digit index -> index inside Digit vector
-class DigitIndex : public SingleElStruct<unsigned long>
+class DigitIndex : public SingleElStruct<long>
 {
  public:
-  DigitIndex(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  DigitIndex() : SingleElStruct<unsigned long>(){};
+  DigitIndex(long id) : SingleElStruct<long>(id){};
+  DigitIndex() : SingleElStruct<long>(){};
 };
 
 // Digit
@@ -54,7 +54,7 @@ class DigitCollection
   {
     sand_fg_tracker_digits_ = *digits;
     for (auto i = 0u; i < sand_fg_tracker_digits_.size(); i++) {
-      fg_map_digit_[DigitID(static_cast<unsigned long>(
+      fg_map_digit_[DigitID(static_cast<long>(
           sand_fg_tracker_digits_.at(i).did))] = DigitIndex(i);
     }
   };

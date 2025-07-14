@@ -46,11 +46,11 @@ namespace sand_geometry
 namespace tracker
 {
 
-class WireID : public SingleElStruct<unsigned long>
+class WireID : public SingleElStruct<long>
 {
  public:
-  WireID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  WireID() : SingleElStruct<unsigned long>(){};
+  WireID(long id) : SingleElStruct<long>(id){};
+  WireID() : SingleElStruct<long>(){};
 };
 
 
