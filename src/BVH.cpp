@@ -115,11 +115,11 @@ void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tra
     int middle_point= std::distance(begin, end) / 2;
     const double w = (*begin)->second.getSize().w;
     if (w != deltaZ) {
-        std::sort(begin, end, sorting_by_z);
-        // std::nth_element(begin, begin + middle_point, end, sorting_by_z);
+        // std::sort(begin, end, sorting_by_z);
+        std::nth_element(begin, begin + middle_point, end, sorting_by_z);
     } else {
-        std::sort(begin, end, sorting_by_id);
-        // std::nth_element(begin, begin + middle_point, end, sorting_by_id);
+        // std::sort(begin, end, sorting_by_id);
+        std::nth_element(begin, begin + middle_point, end, sorting_by_id);
     }
     node->left_ = std::make_unique<Node>();
     createTree(node->left_, begin, begin + middle_point, geo);
@@ -137,9 +137,6 @@ void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>
     if(!node->aabb_.isOverlapping(other_node->aabb_, 1)) return;
 
     if(other_node->index_ != -1 && node->index_ != -1) {
-        if (node->index_ == 220006 || other_node->index_ == 220006) {
-            std::cout << "comparing " << node->index_() << " with " << other_node->index_() << std::endl;
-        }
         if(other_node->index_ == node->index_) {
             return;
         }
@@ -154,10 +151,7 @@ void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>
         wire.getSecondPoint(),
         other_wire.getFirstPoint(),
         other_wire.getSecondPoint());
-        if(distance <10){
-            if (node->index_ == 220006 || other_node->index_ == 220006) {
-                std::cout << "adding " << node->index_() << " with " << other_node->index_() << std::endl;
-            }
+        if(distance < 10){
             node->cell_iterator_->second.addAdjacentCell(&(other_node->cell_iterator_->second));
             other_node->cell_iterator_->second.addAdjacentCell(&(node->cell_iterator_->second));
         }

@@ -278,13 +278,8 @@ int main(int argc, char* argv[])
   BVH bvh(cells, &sand_geo);
   auto end_build = std::chrono::system_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
-  std::cout << "Time to build BVH: " << elapsed.count() << " ms" << std::endl;
-  auto end_search = std::chrono::system_clock::now();
-  elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_search - end_build);
-  std::cout << "Time to search BVH and fill: " << elapsed.count() << " ms" << std::endl;
+  std::cout << "Time to build, search, and fill adj_cells: " << elapsed.count() << " ms" << std::endl;
   
-  sand_geo.printModulesInfo(1);
-
   for (int i = 0; i < 1; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
