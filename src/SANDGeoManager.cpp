@@ -883,7 +883,7 @@ sand_geometry::tracker::plane_iterator SANDGeoManager::getPlaneInfo(sand_geometr
   return id_to_plane_.at(plane_global_id);
 }
 
-std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator SANDGeoManager::getCellInfo(sand_geometry::tracker::CellID cell_global_id) const
+const std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator SANDGeoManager::getCellInfo(sand_geometry::tracker::CellID cell_global_id) const
 {
   sand_geometry::tracker::ModuleID module_unique_id;
   sand_geometry::tracker::PlaneID  plane_global_id, plane_local_id, plane_type;

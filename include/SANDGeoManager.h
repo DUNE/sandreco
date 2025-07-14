@@ -24,6 +24,8 @@ const std::string name_internal_volume = "sand_inner_volume_PV";
 namespace tracker
 {
 
+using cell_map_iterator = std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::iterator;
+
 namespace chamber
 {
 const std::string wire_regex_string =
@@ -282,7 +284,7 @@ class SANDGeoManager : public TObject
   }
   double getMinDistanceBetweenSegments(TVector3 a, TVector3 b, TVector3 c, TVector3 d);
   void fillAdjacentCells(std::string geometry);
-  std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator getCellInfo(sand_geometry::tracker::CellID cell_id) const;
+  const std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator getCellInfo(sand_geometry::tracker::CellID cell_id) const;
   sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::CellID cell_id) const;
   sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::PlaneID unique_plane_id) const;
   const std::map<int,  sand_geometry::ecal::ECALCellInfo>& get_ecal_cell_info() const

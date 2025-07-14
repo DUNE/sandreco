@@ -267,10 +267,10 @@ int main(int argc, char* argv[])
   } 
 
   std::cout << __LINE__ << std::endl;
-  std::vector<sand_geometry::tracker::CellID> cells;
-  for(const auto &plane: sand_geo.getPlanes()){
-    for(const auto &cell : plane.getIdToCellMap()){
-      cells.push_back(cell.first);
+  std::vector<sand_geometry::tracker::cell_map_iterator> cells;
+  for(auto &plane: sand_geo.getPlanes()){
+    for(auto it = plane.getIdToCellMap().begin(); it != plane.getIdToCellMap().end(); ++it){
+      cells.push_back(it);
     }
   }
   
@@ -279,21 +279,9 @@ int main(int argc, char* argv[])
   auto end_build = std::chrono::system_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
   std::cout << "Time to build BVH: " << elapsed.count() << " ms" << std::endl;
-  auto adjacent_cells = bvh.getAdjacentCells(&sand_geo);
   auto end_search = std::chrono::system_clock::now();
   elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_search - end_build);
-  std::cout << "Time to search BVH: " << elapsed.count() << " ms" << std::endl;
-  for (const auto& cell : adjacent_cells) {
-    std::cout << cell.first() << " ";
-    for (auto c : cell.second) {
-      std::cout << c() << " ";
-    }
-    std::cout << std::endl;
-  }
-  sand_geo.fillAdjacentCells(geometry);
-  auto other_end = std::chrono::system_clock::now();
-  elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(other_end - end_search);
-  std::cout << "Time to do the N^2: " << elapsed.count() << " ms" << std::endl;
+  std::cout << "Time to search BVH and fill: " << elapsed.count() << " ms" << std::endl;
   
   sand_geo.printModulesInfo(1);
 
