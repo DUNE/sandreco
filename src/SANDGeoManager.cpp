@@ -1,9 +1,11 @@
 #include "SANDGeoManager.h"
 #include "SANDTrackerModuleConfig.h"
 #include "utils.h"
+#include "BVH.h"
 
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 #include <iomanip>
 
@@ -1460,6 +1462,34 @@ double SANDGeoManager::getMinDistanceBetweenSegments(TVector3 a, TVector3 b,
 
 }
 
+void SANDGeoManager::fillAdjacentCellsBVH(std::string geometry) {
+  double dz; 
+  double dy;
+  auto first_cell  = planes_.at(0).getIdToCellMap().begin();
+  auto cell_size = first_cell->second.getSize();
+  dy = cell_size.h;
+  dz = cell_size.w;
+  if (geometry == "STT") {
+    dz = dz * sqrt(3) / 2.;
+  }
+
+  double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
+  std::cout << "max_distance " << dy << " " << dz << " " << max_distance << std::endl;
+
+  std::vector<sand_geometry::tracker::cell_map_iterator> cells;
+  for(auto &plane: planes_){
+    for(auto it = plane.getIdToCellMap().begin(); it != plane.getIdToCellMap().end(); ++it){
+      cells.push_back(it);
+    }
+  }
+
+  auto start = std::chrono::system_clock::now();
+  BVH bvh(cells, this, max_distance);
+  auto end_build = std::chrono::system_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
+  std::cout << "Time to build, search, and fill adj_cells: " << elapsed.count() << " ms" << std::endl;
+
+}
 // To Do: I don't like geometry being a string.. maybe use an enum?
 // Notice: Currently a single dz and dy are considered. If planes will have 
 //        different thickness or different wire smaplings, this won't work
@@ -1478,6 +1508,7 @@ void SANDGeoManager::fillAdjacentCells(std::string geometry)
   double max_distance = sqrt(dy*dy + dz*dz) + 0.1;
   std::cout << "max_distance " << dy << " " << dz << " " << max_distance << std::endl;
 
+  auto start = std::chrono::system_clock::now();
   for(auto plane_it = planes_.begin(); plane_it != planes_.end(); plane_it++) {
     // std::cout << "Checking plane " << plane_it->uId()() << std::endl;
     int c = 0;
@@ -1486,8 +1517,7 @@ void SANDGeoManager::fillAdjacentCells(std::string geometry)
       c++;
       auto&      plane_it_cells =      plane_it->getIdToCellMap();
       auto& next_plane_it_cells = next_plane_it->getIdToCellMap();
-
-        
+     
       for(auto& plane_cell:plane_it_cells) {
         for(auto& next_plane_cell:next_plane_it_cells) {
           if(plane_cell.first == next_plane_cell.first) {
@@ -1495,9 +1525,9 @@ void SANDGeoManager::fillAdjacentCells(std::string geometry)
           }
 
           double distance = getMinDistanceBetweenSegments(plane_cell.second.getWire().getFirstPoint(),
-                                                          plane_cell.second.getWire().getSecondPoint(),
-                                                          next_plane_cell.second.getWire().getFirstPoint(),
-                                                          next_plane_cell.second.getWire().getSecondPoint());
+          plane_cell.second.getWire().getSecondPoint(),
+          next_plane_cell.second.getWire().getFirstPoint(),
+          next_plane_cell.second.getWire().getSecondPoint());
           // std::cout << c << " " << distance << " " << plane_cell.first() << " " << next_plane_cell.first() << std::endl;
           if (distance < max_distance) {
             plane_cell.second.addAdjacentCell(&(next_plane_cell.second));
@@ -1508,6 +1538,9 @@ void SANDGeoManager::fillAdjacentCells(std::string geometry)
     }
     // break;
   }
+  auto end_build = std::chrono::system_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
+  std::cout << "Time to fill adj_cells the N^2 way: " << elapsed.count() << " ms" << std::endl;
 }
 
 void SANDGeoManager::rearrangePlanes()

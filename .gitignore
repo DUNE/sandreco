@@ -24,3 +24,4 @@ build/*
 tests/*
 tests/python_tools/__pycache__/
 install/*
+install

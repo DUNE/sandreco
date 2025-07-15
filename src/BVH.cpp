@@ -1,4 +1,5 @@
 #include "BVH.h"
+#include "SANDGeoManager.h"
 #include <TVector2.h>
 
 
@@ -131,7 +132,7 @@ void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tra
 }
 
 
-void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>& other_node, SANDGeoManager* geo){
+void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>& other_node, SANDGeoManager* geo, double max_distance){
     if(!node || !other_node) return;
     
     if(!node->aabb_.isOverlapping(other_node->aabb_, 1)) return;
@@ -151,7 +152,7 @@ void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>
         wire.getSecondPoint(),
         other_wire.getFirstPoint(),
         other_wire.getSecondPoint());
-        if(distance < 10){
+        if(distance < max_distance){
             node->cell_iterator_->second.addAdjacentCell(&(other_node->cell_iterator_->second));
             other_node->cell_iterator_->second.addAdjacentCell(&(node->cell_iterator_->second));
         }
@@ -159,15 +160,15 @@ void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>
     } 
     
     if (other_node->index_ == -1 && node->index_ == -1){
-        searchAdjacentCells(node->left_,  other_node->left_, geo);
-        searchAdjacentCells(node->left_,  other_node->right_, geo);
-        searchAdjacentCells(node->right_, other_node->right_, geo);
-        searchAdjacentCells(node->right_, other_node->left_, geo);
+        searchAdjacentCells(node->left_,  other_node->left_, geo, max_distance);
+        searchAdjacentCells(node->left_,  other_node->right_, geo, max_distance);
+        searchAdjacentCells(node->right_, other_node->right_, geo, max_distance);
+        searchAdjacentCells(node->right_, other_node->left_, geo, max_distance);
     } else if (node->index_ == -1) {
-        searchAdjacentCells(node->left_,  other_node, geo);
-        searchAdjacentCells(node->right_, other_node, geo);
+        searchAdjacentCells(node->left_,  other_node, geo, max_distance);
+        searchAdjacentCells(node->right_, other_node, geo, max_distance);
     } else if (other_node->index_ == -1) {
-        searchAdjacentCells(node, other_node->left_, geo);
-        searchAdjacentCells(node, other_node->right_, geo);
+        searchAdjacentCells(node, other_node->left_, geo, max_distance);
+        searchAdjacentCells(node, other_node->right_, geo, max_distance);
     }
 }

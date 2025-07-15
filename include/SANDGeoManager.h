@@ -3,6 +3,7 @@
 #include "SANDWireInfo.h"
 #include "SANDTrackerModule.h"
 #include "struct.h"
+#include "BVH.h"
 
 #include <TGeoManager.h>
 #include <TPRegexp.h>
@@ -284,6 +285,7 @@ class SANDGeoManager : public TObject
   }
   double getMinDistanceBetweenSegments(TVector3 a, TVector3 b, TVector3 c, TVector3 d);
   void fillAdjacentCells(std::string geometry);
+  void fillAdjacentCellsBVH(std::string geometry);
   const std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator getCellInfo(sand_geometry::tracker::CellID cell_id) const;
   sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::CellID cell_id) const;
   sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::PlaneID unique_plane_id) const;

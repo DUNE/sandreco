@@ -38,9 +38,13 @@ target_include_directories(Struct PUBLIC
 target_link_libraries(Struct PUBLIC)
 ROOT_GENERATE_DICTIONARY(StructDict struct.h MODULE Struct LINKDEF include/StructLinkDef.h)
 
+# Creates a BVH shared library
+add_library(BVH SHARED src/BVH.cpp)
+target_link_libraries(BVH PUBLIC EDepSim::edepsim_io)
+
 # Create SANDGeoManager lib
 add_library(SANDGeoManager SHARED src/SANDGeoManager.cpp src/SANDWireInfo.cpp src/SANDECALCellInfo.cpp src/SANDTrackerModule.cpp src/SANDTrackerPlane.cpp src/SANDTrackerCell.cpp src/Line3D.cpp src/SANDENDCAPModInfo.cpp)
-target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io)
+target_link_libraries(SANDGeoManager PUBLIC EDepSim::edepsim_io BVH)
 ROOT_GENERATE_DICTIONARY(SANDGeoManagerDict SANDGeoManager.h SANDWireInfo.h SANDECALCellInfo.h SANDENDCAPModInfo.h MODULE SANDGeoManager LINKDEF include/SANDGeoManagerLinkDef.h)
 
 # Creates a libUtils shared library
@@ -113,12 +117,6 @@ ROOT_GENERATE_DICTIONARY(SANDKFTrackDict SANDKFTrack.h MODULE SANDKFTrack LINKDE
 # Creates a libStruct shared library with a generated dictionary.
 add_library(SANDKalmanFilter SHARED src/SANDKalmanFilter.cpp)
 target_link_libraries(SANDKalmanFilter PUBLIC SANDTrackerUtils SANDKFTrack)
-
-
-# Creates a BVH shared library
-add_library(BVH SHARED src/BVH.cpp)
-target_link_libraries(BVH PUBLIC SANDGeoManager)
-
 
 # Creates TestKF executable.
 add_executable(TestKF tests/TestKF.cpp)

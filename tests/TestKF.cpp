@@ -7,7 +7,6 @@
 #include <TGraph.h>
 #include <TMultiGraph.h>
 
-#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -23,7 +22,6 @@
 #include "SANDTrackerDigitCollection.h"
 #include "SANDKalmanFilter.h"
 #include "utils.h"
-#include "BVH.h"
 
 #include "EDEPTree.h"
 
@@ -265,21 +263,9 @@ int main(int argc, char* argv[])
   } else if (geo->FindVolumeFast("SANDtracker_PV")) {
     geometry = "DRIFT";
   } 
+      
+  sand_geo.fillAdjacentCellsBVH(geometry);
 
-  std::cout << __LINE__ << std::endl;
-  std::vector<sand_geometry::tracker::cell_map_iterator> cells;
-  for(auto &plane: sand_geo.getPlanes()){
-    for(auto it = plane.getIdToCellMap().begin(); it != plane.getIdToCellMap().end(); ++it){
-      cells.push_back(it);
-    }
-  }
-  
-  auto start = std::chrono::system_clock::now();
-  BVH bvh(cells, &sand_geo);
-  auto end_build = std::chrono::system_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
-  std::cout << "Time to build, search, and fill adj_cells: " << elapsed.count() << " ms" << std::endl;
-  
   for (int i = 0; i < 1; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
