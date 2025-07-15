@@ -1460,6 +1460,7 @@ void filterDigits(std::vector<dg_wire>& digits, TH1D& hdummy,
   }
 }
 
+// July-2025:
 void vtxfinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
                 int& VtxType, TH1D& hmeanX, TH1D& hmeanY, TH1D& hrmsX,
                 TH1D& hrmsY, TH1I& hnX, TH1I& hnY)
@@ -1467,21 +1468,87 @@ void vtxfinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
   int idx = 0;
   double rms = 10000.;
   double rmsX, rmsY;
+
+  int idx1 = 0;
+  int nspread = 0;
+  int nspread1 = 0;
+  int idxprev = 0, idxprev1 = 0;
+  double rms1 = 10000., rmsXY = 10000., rmsXY1 = 10000., rmsXYprev = 10000., rmsXYprev1 = 10000.;
+
   VtxType = -1;
+  int cntdwn = 1;
 
   for (int j = 0; j < hrmsX.GetNbinsX(); j++) {
+  
     if (hnX.GetBinContent(j + 1) >= 2 && hnY.GetBinContent(j + 1) >= 2) {
       rmsX = hrmsX.GetBinContent(j + 1);
       rmsY = hrmsY.GetBinContent(j + 1);
 
-      if (rmsX * rmsX + rmsY * rmsY < rms) {
-        rms = rmsX * rmsX + rmsY * rmsY;
-        idx = j + 1;
-        VtxType = 2;
+// probably 2 or more tracks:
+      //if (hnX.GetBinContent(j + 1) >= 3 && hnY.GetBinContent(j + 1) >= 3) {
+      if (hnX.GetBinContent(j + 1) >= 4 && hnY.GetBinContent(j + 1) >= 4) {
+
+        rmsXY = rmsX * rmsX + rmsY * rmsY;
+        if (rmsXY < rms) {
+          rms = rmsXY;
+          idx = j + 1;
+          //VtxType = 2;
+
+          VtxType = 3;
+	//  rmsXYprev = rmsXY;
+          nspread = 0;
+        }
+//
+	if (j + 1 - idxprev > 3) {
+	  nspread = 1;
+	  rms = rmsXY;
+          idx = j + 1;
+          VtxType = 3;
+	}
+	else {
+	  nspread++;
+        }
+	idxprev = j + 1;
+	rmsXYprev = rmsXY;
+	if (nspread == 3) break;
+      }
+      else { 					// probably single track:
+        
+        rmsXY1 = rmsX * rmsX + rmsY * rmsY;
+        if (rmsXY1 < rms1) {
+          rms1 = rmsXY1;
+          idx1 = j + 1;
+          VtxType = 2;
+          nspread1 = 0;
+        }
+//
+	if (j + 1 - idxprev1 > 3) {
+	  nspread1 = 1;
+	  rms1 = rmsXY1;
+          idx1 = j + 1;
+          VtxType = 2;
+	}
+	else {
+	  nspread1++;
+	}
+	idxprev1 = j + 1;
+	rmsXYprev1 = rmsXY1;
+  	//if (nspread1 == 5) break;        
       }
     }
   }
-
+//
+  if (VtxType != -1) {
+    if (nspread < 3 && nspread1 > 4) {
+      VtxType = 2;
+      idx = idx1;
+    }
+    else if (VtxType == 2 && nspread1 < 3 && nspread > 1) {
+      VtxType = 3;
+    }
+//
+  }
+//
   if (VtxType == -1) {
     for (int j = 0; j < hrmsX.GetNbinsX(); j++) {
       if (hnX.GetBinContent(j + 1) > 0 && hnY.GetBinContent(j + 1) > 0) {
@@ -1491,7 +1558,7 @@ void vtxfinding(double& xvtx_reco, double& yvtx_reco, double& zvtx_reco,
       }
     }
   }
-
+//
   if (VtxType != -1) {
     xvtx_reco = hmeanX.GetBinContent(idx);
     yvtx_reco = hmeanY.GetBinContent(idx);
@@ -1558,7 +1625,8 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
   for (int i = 0; i < v->GetNdaughters(); i++) {
     TString name = v->GetNode(i)->GetName();
 
-    if (name.Contains("TrMod") || name.Contains("C3H6Mod") ||
+    //if (name.Contains("TrMod") || name.Contains("C3H6Mod") || // July-2025
+    if (name.Contains("TrkMod") || name.Contains("C3H6Mod") ||
         name.Contains("CMod")) {
       TString path = path_prefix + name;
       g->cd(path.Data());
