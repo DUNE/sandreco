@@ -23,7 +23,13 @@ const char* const path_internal_volume =
     "volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
     "MagIntVol_volume_PV_0/sand_inner_volume_PV_0";
 const char* const name_internal_volume = "sand_inner_volume_PV";
+*/
 ////////////////////////////////////////////////////
+// July-2025:
+const char* const path_internal_volume =
+"volWorld_PV/rockBox_lv_PV_0/volDetEnclosure_PV_0/volSAND_PV_0/"
+"MagIntVol_volume_PV_0/sand_inner_volume_PV_0/STTtracker_PV_0/";
+const char* const name_internal_volume = "STTtracker_PV";
 
 extern double stt_center[3];
 const double stt_int_time = 400.;     // ns
