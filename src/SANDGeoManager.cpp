@@ -1016,16 +1016,13 @@ sand_geometry::tracker::ModuleID SANDGeoManager::getDriftSupermoduleId(const TSt
           ->GetString()
           .Atoi();
   int supermodule_id;
-  if (supermodule_name.Contains("X0")) {
-    supermodule_id = 8;
-  } else if (supermodule_name.Contains("X1")) {
-    supermodule_id = 7;
-  } else if (supermodule_name.Contains("C")) {
-    supermodule_id = supermodule_replica ? 1 : 6;
-  } else if (supermodule_name.Contains("B")) {
-    supermodule_id = supermodule_replica ? 2 : 5;
-  } else if (supermodule_name.Contains("A")) {
-    supermodule_id = supermodule_replica ? 3 : 4;
+  if (supermodule_name[1] == 'X') {
+    TString number_str = supermodule_name(2);
+    supermodule_id = 53 + number_str.Atoi();
+  } else if (supermodule_name.Length() != 1) {
+    // 65 is the ascii number of the uppecase A, this moves everything to start at 1
+    int letter_number = int(supermodule_name[1]) - 64;
+    supermodule_id = supermodule_replica ? letter_number : letter_number + 26;
   } else {
     supermodule_id = 0;
   }
