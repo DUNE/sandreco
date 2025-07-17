@@ -2347,55 +2347,54 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 void help_reco()
 {
   std::cout
-      << "usage: Reconstruct hit_file digit_file output_file stt_mode ecal_mode\n";
-  std::cout << "    - stt_mode: 'stt_mode::fast_only_primaries' \n";
+      << "usage: Reconstruct hit_file digit_file output_file [stt_mode] [ecal_mode]\n";
+  std::cout << "    - stt_mode: 'stt_mode::fast_only_primaries' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
   std::cout << "                'stt_mode::full' \n";
   std::cout << "                'stt_mode::primary_only_kf' \n";
   std::cout << "                'stt_mode::primary_only_kf' \n";
-  std::cout << "    - ecal_mode: 'ecal_mode::fast' \n";
+  std::cout << "    - ecal_mode: 'ecal_mode::fast'  (default)\n";
   std::cout << "                 'ecal_mode::full' \n";
 }
 
 int main(int argc, char* argv[])
 {
-  // boost::program_options wuold be great here....
-
-  if (argc < 5 || argc > 7) {
+  if (argc < 4) {
     help_reco();
     return -1;
   }
 
-  STT_Mode stt_mode;
-  if (argc > 4 && strcmp(argv[4], "stt_mode::full") == 0) {
-    stt_mode = STT_Mode::full;
-    std::cout << "STT_Mode: full\n";
-  } else if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
-    stt_mode = STT_Mode::fast;
-    std::cout << "STT_Mode: fast\n";
-  } else if (argc > 4 && strcmp(argv[4], "stt_mode::primary_only_kf") == 0) {
-    stt_mode = STT_Mode::primary_only_kf;
-    std::cout << "STT_Mode: kalman filter\n";
-  } else if (argc > 4 && strcmp(argv[4], "stt_mode::fast_only_primaries") == 0){
-    std::cout << "STT_Mode: fast_only_primaries\n";
-    stt_mode = STT_Mode::fast_only_primaries;
-  } else {
-    std::cerr << "No valid STT_MODE. Interrupting." << std::endl;
-    return 1;
+  // boost::program_options wuold be great here....
+  auto stt_mode = STT_Mode::fast_only_primaries;
+  auto ecal_mode = ECAL_Mode::fast;
+
+  for (int i = 0; i < argc; i++) {
+    if (strcmp(argv[i], "stt_mode") == 0) {
+      if (strcmp(argv[i], "stt_mode::full") == 0) {
+        stt_mode = STT_Mode::full;
+        std::cout << "STT_Mode: full\n";
+      } else if (strcmp(argv[i], "stt_mode::fast") == 0) {
+        stt_mode = STT_Mode::fast;
+        std::cout << "STT_Mode: fast\n";
+      } else if (strcmp(argv[i], "stt_mode::primary_only_kf") == 0) {
+        stt_mode = STT_Mode::primary_only_kf;
+        std::cout << "STT_Mode: kalman filter\n";
+      } else {
+        std::cout << "STT_Mode: fast_only_primaries\n";
+      }
+    }
+
+    if (strcmp(argv[i], "ecal_mode") == 0) {
+      if (strcmp(argv[i], "ecal_mode::full") == 0) {
+        ecal_mode = ECAL_Mode::full;
+        std::cout << "ECAL_Mode: full\n";
+      } else if (strcmp(argv[i], "ecal_mode::fast") == 0) {
+        ecal_mode = ECAL_Mode::fast;
+        std::cout << "ECAL_Mode: fast\n";
+      }
+    }
   }
 
-  ECAL_Mode ecal_mode;
-  if (argc > 5 && strcmp(argv[5], "ecal_mode::full") == 0) {
-    ecal_mode = ECAL_Mode::full;
-    std::cout << "ECAL_Mode: full\n";
-  } else if (argc > 5 && strcmp(argv[5], "ecal_mode::fast") == 0) {
-    ecal_mode = ECAL_Mode::fast;
-    std::cout << "ECAL_Mode: fast\n";
-  } else {
-    std::cerr << "No valid ECAL_MODE. Interrupting." << std::endl;
-    return 1;
-  }
-  
   Reconstruct(argv[1], argv[2], argv[3], stt_mode, ecal_mode);
   return 0;
 }
