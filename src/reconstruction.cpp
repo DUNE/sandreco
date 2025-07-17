@@ -2369,7 +2369,7 @@ int main(int argc, char* argv[])
   auto ecal_mode = ECAL_Mode::fast;
 
   for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "stt_mode") == 0) {
+    if (strstr(argv[i], "stt_mode") != nullptr) {
       if (strcmp(argv[i], "stt_mode::full") == 0) {
         stt_mode = STT_Mode::full;
         std::cout << "STT_Mode: full\n";
@@ -2384,7 +2384,7 @@ int main(int argc, char* argv[])
       }
     }
 
-    if (strcmp(argv[i], "ecal_mode") == 0) {
+    if (strstr(argv[i], "ecal_mode") != nullptr) {
       if (strcmp(argv[i], "ecal_mode::full") == 0) {
         ecal_mode = ECAL_Mode::full;
         std::cout << "ECAL_Mode: full\n";
