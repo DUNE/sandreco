@@ -406,7 +406,7 @@ int main(int argc, char* argv[])
   } else if (geo->FindVolumeFast("SANDtracker_PV")) {
     geometry = "DRIFT";
   } 
-  sand_geo.fillAdjacentCells(geometry);
+  sand_geo.fillAdjacentCellsBVH(geometry);
 
   int nev = t_h->GetEntries();
   for (int i = 0; i < 20; i++) {

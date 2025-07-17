@@ -1777,7 +1777,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   }
 
   if (stt_mode == STT_Mode::primary_only_kf) {
-    sand_geo.fillAdjacentCells(geometry);
+    sand_geo.fillAdjacentCellsBVH(geometry);
   }
 
   std::vector<double> sampling;
