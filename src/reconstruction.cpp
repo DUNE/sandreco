@@ -1998,60 +1998,60 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 void help_reco()
 {
   std::cout
-      << "usage: Reconstruct hit_file digit_file output_file [stt_mode] [dz] [impact parameter] [merging_radius]\n";
+      << "usage: Reconstruct hit_file digit_file output_file [stt_mode] dz [dz value] impact_parameter [impact_parameter value] merging_radius [merging_radius value]\n";
   std::cout << "    - stt_mode: 'stt_mode::fast_only_primaries' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
   std::cout << "                'stt_mode::full' \n";
   std::cout << "                'stt_mode::primary_only_kf' \n";
   std::cout << "                'stt_mode::mc_primaries' \n";
   std::cout << "    - dz: longitudinal track-vertex distance (default 15 mm)\n";
-  std::cout << "    - impact parameter: for 2-prongs vertices (default 15 mm)\n";
-  std::cout << "    - merging radius: radius for 2-prongs vertices clusterization (default 15 mm)\n";
+  std::cout << "    - impact_parameter: for 2-prongs vertices (default 15 mm)\n";
+  std::cout << "    - merging_radius: radius for 2-prongs vertices clusterization (default 15 mm)\n";
 }
 
 int main(int argc, char* argv[])
 {
-  // boost::program_options wuold be great here....
-
-  if (argc == 5) {
-    auto stt_mode = STT_Mode::fast_only_primaries;
-    if (argc > 4 && strcmp(argv[4], "stt_mode::full") == 0) {
-      stt_mode = STT_Mode::full;
-      std::cout << "STT_Mode: full\n";
-    } else if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
-      stt_mode = STT_Mode::fast;
-      std::cout << "STT_Mode: fast\n";
-    } else if (argc > 4 && strcmp(argv[4], "stt_mode::primary_only_kf") == 0) {
-      stt_mode = STT_Mode::primary_only_kf;
-      std::cout << "STT_Mode: kalman filter\n";
-    } else if (argc > 4 && strcmp(argv[4], "stt_mode::mc_primaries") == 0) {
-      stt_mode = STT_Mode::mc_primaries;
-      std::cout << "STT_Mode: mc primaries\n";
-    } else {
-      std::cout << "STT_Mode: fast_only_primaries\n";
-    }
-    Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast, 15, 15, 15);
-  } else if (argc == 8 ) {
-    auto stt_mode = STT_Mode::fast_only_primaries;
-    if (argc > 4 && strcmp(argv[4], "stt_mode::full") == 0) {
-      stt_mode = STT_Mode::full;
-      std::cout << "STT_Mode: full\n";
-    } else if (argc > 4 && strcmp(argv[4], "stt_mode::fast") == 0) {
-      stt_mode = STT_Mode::fast;
-      std::cout << "STT_Mode: fast\n";
-    } else if (argc > 4 && strcmp(argv[4], "stt_mode::primary_only_kf") == 0) {
-      stt_mode = STT_Mode::primary_only_kf;
-      std::cout << "STT_Mode: kalman filter\n";
-    } else if (argc > 4 && strcmp(argv[4], "stt_mode::mc_primaries") == 0) {
-      stt_mode = STT_Mode::mc_primaries;
-      std::cout << "STT_Mode: mc primaries\n";
-    } else {
-      std::cout << "STT_Mode: fast_only_primaries\n";
-    }
-    Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast, std::stod(argv[5]), std::stod(argv[6]), std::stod(argv[7]));
-  } else {
+  if (argc < 4) {
     help_reco();
     return -1;
   }
+
+  // boost::program_options wuold be great here....
+  auto stt_mode = STT_Mode::fast_only_primaries;
+  double dz = 15;
+  double impact_parameter = 15;
+  double merging_radius = 15;
+
+  for (int i = 0; i < argc; i++) {
+    if (strcmp(argv[i], "stt_mode") == 0) {
+      if (strcmp(argv[i], "stt_mode::full") == 0) {
+        stt_mode = STT_Mode::full;
+        std::cout << "STT_Mode: full\n";
+      } else if (strcmp(argv[i], "stt_mode::fast") == 0) {
+        stt_mode = STT_Mode::fast;
+        std::cout << "STT_Mode: fast\n";
+      } else if (strcmp(argv[i], "stt_mode::primary_only_kf") == 0) {
+        stt_mode = STT_Mode::primary_only_kf;
+        std::cout << "STT_Mode: kalman filter\n";
+      } else if (strcmp(argv[i], "stt_mode::mc_primaries") == 0) {
+        stt_mode = STT_Mode::mc_primaries;
+        std::cout << "STT_Mode: mc primaries\n";
+      } else {
+        std::cout << "STT_Mode: fast_only_primaries\n";
+      }
+    }
+
+    if (strcmp(argv[i], "dz") == 0) {
+      dz = std::stod(argv[i+1]);
+    }
+    if (strcmp(argv[i], "impact_parameter") == 0) {
+      impact_parameter = std::stod(argv[i+1]);
+    }
+    if (strcmp(argv[i], "merging_radius") == 0) {
+      merging_radius = std::stod(argv[i+1]);
+    }
+  }
+
+  Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast, dz, impact_parameter, merging_radius);
   return 0;
 }

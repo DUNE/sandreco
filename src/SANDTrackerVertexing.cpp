@@ -180,7 +180,7 @@ double pointTo3DlineDistance(double x0, double y0, double z0, Track tr) {
 int TrackerVertexing::mergeVertex() {
   int nVertex = static_cast<int>(vertices_list_.size());
   if (nVertex == 0) {
-    std::cout << "No vertex to merge" << std::endl;
+    // std::cout << "No vertex to merge" << std::endl;
     return 0;
   }
   for (int i = 0; i < nVertex; i++) {
@@ -340,7 +340,6 @@ void TrackerVertexing::setTracks(std::vector<track> tracks) {
 
      double m_yz = (t.y0 - t.yc) / (t.z0 - t.zc);
      converted_track.ty = m_yz;
-     std::cout << "Computed tan(phi) = " << converted_track.ty << std::endl;
 
     tracks_.push_back(converted_track);
   }
@@ -351,19 +350,19 @@ void TrackerVertexing::setParameters(double dz, double ip, double merging_radius
   ip_ = ip;
   merging_radius_ = merging_radius;
 
-  std::cout << tracks_.size() << " tracks read." << std::endl;
-  std::cout << "DZ: " << dz_ << "\nIP: " << ip_
-            << "\nMerging Radius: " << merging_radius << std::endl;
+  // std::cout << tracks_.size() << " tracks read." << std::endl;
+  // std::cout << "DZ: " << dz_ << "\nIP: " << ip_
+  //           << "\nMerging Radius: " << merging_radius << std::endl;
 }
 
 int TrackerVertexing::run() {
   int pairVertexes = doVertex();
-  dumpVertex("2-Prong.txt");
-  std::cout << "Start selecting neighboor vertexes (" << pairVertexes
-            << " - 2 Prong )" << std::endl;
+  // dumpVertex("2-Prong.txt");
+  // std::cout << "Start selecting neighboor vertexes (" << pairVertexes
+            // << " - 2 Prong )" << std::endl;
   while (static_cast<int>(vertices_.size()) > 0) selectVertex();
 
-  std::cout << "Start merging..." << std::endl;
+  // std::cout << "Start merging..." << std::endl;
   mergeVertex();
 
   refineVertexPosition();
@@ -377,14 +376,14 @@ int TrackerVertexing::run() {
     vertices_.push_back(vertices_2_prong_.at(j));
   }
 
-  std::cout << "Flag vertexes\n";
+  // std::cout << "Flag vertexes\n";
   flagVertex();
 
-  std::cout << "\n\n======== Results ========" << std::endl;
-  std::cout << "2-Prong: " << vertices_2_prong_.size() << std::endl;
-  std::cout << "Multi-Prong: " << vertices_multi_prong_.size() << std::endl;
-  std::cout << "=========================" << std::endl;
-  std::cout << "\nDump vertexes\n";
+  // std::cout << "\n\n======== Results ========" << std::endl;
+  // std::cout << "2-Prong: " << vertices_2_prong_.size() << std::endl;
+  // std::cout << "Multi-Prong: " << vertices_multi_prong_.size() << std::endl;
+  // std::cout << "=========================" << std::endl;
+  // std::cout << "\nDump vertexes\n";
   // dumpVertex("vertices.txt");
 
   return 0;
