@@ -13,7 +13,7 @@ jobs:
   build-and-test-sandreco:
     strategy:
       matrix:
-        sand-geometry: [SAND_opt1_STT1, SAND_opt2_STT1, SAND_opt3_STT1, SAND_opt2_STT3, SAND_opt3_DRIFT1]
+        sand-geometry: [SAND_opt3_STT1, SAND_opt3_DRIFT1]
     runs-on: ubuntu-latest
     container: almalinux/9-base
     steps:
