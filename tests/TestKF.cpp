@@ -341,7 +341,8 @@ int main(int argc, char* argv[])
 
   TFile* h_out = new TFile("h_out.root", "RECREATE");
 
-  for (int i = 0; i < 500; i++) {
+  int nev = t->GetEntries();
+  for (int i = 0; i < nev; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 
