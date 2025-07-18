@@ -92,18 +92,6 @@ void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tra
         
         return center_1.Z() < center_2.Z();
     };
-    auto sorting_by_y = [geo](const sand_geometry::tracker::cell_map_iterator c1, const sand_geometry::tracker::cell_map_iterator c2){
-        const auto& center_1 = c1->second.getWire().getCenter();
-        const auto& center_2 = c2->second.getWire().getCenter();
-        
-        return center_1.Y() < center_2.Y();
-    };
-    auto sorting_by_x = [geo](const sand_geometry::tracker::cell_map_iterator c1, const sand_geometry::tracker::cell_map_iterator c2){
-        const auto& center_1 = c1->second.getWire().getCenter();
-        const auto& center_2 = c2->second.getWire().getCenter();
-        
-        return center_1.X() < center_2.X();
-    };
     
     auto sorting_by_id = [geo](const sand_geometry::tracker::cell_map_iterator c1, const sand_geometry::tracker::cell_map_iterator c2){
         const auto& id1 = c1->second.getId();
@@ -149,9 +137,9 @@ void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>
         const auto& other_wire = geo->getCellInfo(other_node->index_)->second.getWire();
         
         double distance = geo->getMinDistanceBetweenSegments(wire.getFirstPoint(),
-        wire.getSecondPoint(),
-        other_wire.getFirstPoint(),
-        other_wire.getSecondPoint());
+                                                             wire.getSecondPoint(),
+                                                             other_wire.getFirstPoint(),
+                                                             other_wire.getSecondPoint());
         if(distance < max_distance){
             node->cell_iterator_->second.addAdjacentCell(&(other_node->cell_iterator_->second));
             other_node->cell_iterator_->second.addAdjacentCell(&(node->cell_iterator_->second));
