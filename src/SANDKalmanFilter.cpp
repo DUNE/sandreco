@@ -827,11 +827,19 @@ void Manager::run()
 
     // To Do: check all units
     auto dE = SANDTrackerUtils::getDE(
-                        nextZ, 
-                        1000 * filteredStateVector.x(), 1000 * filteredStateVector.y(), current_z_, 
-                        dir.X(), dir.Y(), dir.Z(),
-                        beta, particleInfo_.mass, particleInfo_.charge) / 1000;
+      nextZ, 
+      1000 * filteredStateVector.x(), 1000 * filteredStateVector.y(), current_z_, 
+      dir.X(), dir.Y(), dir.Z(),
+      beta, particleInfo_.mass, particleInfo_.charge) / 1000;
+    
+    if (dE > 50E-3) {
+      std::cout << "Energy loss in a single step is greater than 50 MeV. Somethins is wrong.." << std::endl;
+      std::cout << "Skipping this step" << std::endl;
 
+      stepLength++;
+      current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
+      continue;
+    }
     double dZ = (nextZ - current_z_) / 1000;
 
     propagate(dE, dZ, beta);

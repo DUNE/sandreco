@@ -1592,10 +1592,10 @@ track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, S
   track trk;
   reset(trk);
 
-  if (reco_track.getSteps().size() > 3) {
-    auto step = reco_track.getSteps().back();
+  if (reco_track.getSteps().size() > 0) { // was commented, with > 3
+    auto last_step = reco_track.getSteps().back(); //crash if empty due to the .back().
     auto reco_state =
-          step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+          last_step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
     auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
                                   reco_state.radius(), reco_state.tanLambda());
 
@@ -1614,7 +1614,7 @@ track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, S
 
     trk.ret_ln = 0;
     trk.ret_cr = 0;
-    trk.z0  = step.getZ();
+    trk.z0  = last_step.getZ();
     for (const auto& s : reco_track.getSteps()) {
       for (const auto& d : s.getDigits()) {
         trk.clX.push_back(d);
