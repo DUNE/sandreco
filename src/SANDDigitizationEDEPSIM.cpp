@@ -99,10 +99,10 @@ void CreateDigitsFromHits(const SANDGeoManager& geo,
   {
     long did = it->first();  // wire unique id
     const sand_geometry::tracker::WireInfo& wire_info = geo.getCellInfo(it->first())->second.getWire();
-    double wire_time = 999.;
-    double drift_time = 999.;
-    double signal_time = 999.;
-    double t_hit = 999.;
+    double wire_time = 10E9;
+    double drift_time = 10E9;
+    double signal_time = 10E9;
+    double t_hit = 10E9;
 
     dg_wire d;
     d.det = it->second[0].det;

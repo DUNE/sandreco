@@ -46,6 +46,7 @@ void tryCompleteManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParti
 
     std::cout << "Initial Momentum " << initial_mom << std::endl;
     std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
+    std::cout << "track.getSteps() " << track.getSteps().size() << std::endl;
     
     TGraph* yz_predicted = new TGraph(track.getSteps().size());
     TGraph* yz_filtered = new TGraph(track.getSteps().size());
@@ -394,8 +395,8 @@ int main(int argc, char* argv[])
             }
             
             for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
-              TEllipse* pt_yz = new TEllipse(point.GetPosition().Z(), point.GetPosition().Y(), 5);
-              TEllipse* pt_xz = new TEllipse(point.GetPosition().Z(), point.GetPosition().X(), 5);
+              TEllipse* pt_yz = new TEllipse(point.GetPosition().Z(), point.GetPosition().Y(), 1);
+              TEllipse* pt_xz = new TEllipse(point.GetPosition().Z(), point.GetPosition().X(), 1);
               pt_yz->SetFillStyle(0);
               pt_yz->SetLineWidth(1);
               pt_yz->SetLineColor(1);
