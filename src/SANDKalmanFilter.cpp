@@ -475,7 +475,7 @@ void Manager::EvaluateInnovation(const SANDKFMeasurement& measurement,
   for (int i = 0; i < innovation.GetNrows(); i++) {  
     double r = innovation[i][0];
     double C = Sk[i][i];
-    g[i] = r; // /sqrt(C);
+    g[i] = r/sqrt(C);
   }
   this_track_.setInnovation(current_step_, g);
 
@@ -833,7 +833,7 @@ void Manager::run()
       beta, particleInfo_.mass, particleInfo_.charge) / 1000;
     
     if (dE > 50E-3) {
-      std::cout << "Energy loss in a single step is greater than 50 MeV. Somethins is wrong.." << std::endl;
+      std::cout << "Energy loss in a single step is greater than 50 MeV. Something is wrong.." << std::endl;
       std::cout << "Skipping this step" << std::endl;
 
       stepLength++;

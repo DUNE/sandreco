@@ -1607,14 +1607,18 @@ track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, S
 
     trk.tid = particleInfo.id;
     trk.r   = reco_state.radius();
-    trk.h   = reco_state.charge();
+    trk.h   = -reco_state.charge();
     trk.b   = reco_state.tanLambda();
     trk.x0  = reco_state.x();
     trk.y0  = reco_state.y();
 
     trk.ret_ln = 0;
     trk.ret_cr = 0;
-    trk.z0  = last_step.getZ();
+    trk.z0  = last_step.getZ() / 1000.;
+
+    trk.yc = reco_state.y() - reco_state.radius() * sin(reco_state.phi());
+    trk.zc = trk.z0 - reco_state.radius() * cos(reco_state.phi());
+
     for (const auto& s : reco_track.getSteps()) {
       for (const auto& d : s.getDigits()) {
         trk.clX.push_back(d);

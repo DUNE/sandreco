@@ -318,8 +318,8 @@ int main(int argc, char* argv[])
 
   bool plots = false;
   TFile* innovation_test = new TFile("innovation_test.root", "RECREATE");
-  TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -0.01, 0.01);
-  TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -0.01, 0.01);
+  TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -3, 3);
+  TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -3, 3);
   TH1D* h_x_diff = new TH1D("h_x_diff", "h_x_diff", 1000, -3, 3);
   TH1D* h_y_diff = new TH1D("h_y_diff", "h_y_diff", 1000, -3, 3);
   TH1D* h_theta_x_diff = new TH1D("h_theta_x_diff", "h_theta_x_diff", 1000, -3, 3);
