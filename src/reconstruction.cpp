@@ -1629,7 +1629,7 @@ track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, S
   return trk;
 }
 
-void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits)
+void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, const bool run_all_trjs)
 {
   sand_reco::tracker::DigitCollection::fillMap(digits);
   auto digit_map =  sand_reco::tracker::DigitCollection::getDigits();
@@ -1692,9 +1692,9 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
   EDEPTree tree;
   tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
   
-  std::vector<EDEPTrajectory> primaryTrj;
-  tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
-    [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
+  std::vector<EDEPTrajectory> selectedTrjs;
+  tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(selectedTrjs), 
+    [run_all_trjs](const EDEPTrajectory& trj) { return trj.GetParentId() == -1 || run_all_trjs;} );
 
   TDatabasePDG pdg_db;
   std::vector<SParticleInfo> particleInfos;
@@ -1702,10 +1702,11 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
 
   double sigma_pos = 0;
   double sigma_mom = 0;
-  for (auto trj:primaryTrj) {
+  for (auto trj:selectedTrjs) {
 
-    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
-      continue;
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end() ||
+        trj.GetHitMap().at(string_to_component[tracker_name]).size() < 9) {
+      continue; // basic filter on a minimum number of hits for running the Kalman
     }
     
     if (trj.GetTrajectoryPoints().find(string_to_component[tracker_name]) == trj.GetTrajectoryPoints().end()) {
@@ -1773,7 +1774,8 @@ enum class STT_Mode {
   fast_only_primaries,
   fast,
   full,
-  primary_only_kf
+  primary_only_kf,
+  all_trajectories_kf
 };
 enum class ECAL_Mode {
   fast
@@ -1901,7 +1903,10 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
         TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
         break;
       case STT_Mode::primary_only_kf:
-        ProcessEventWithKF(vec_tr, &sand_geo, ev, vec_digi);
+        ProcessEventWithKF(vec_tr, &sand_geo, ev, vec_digi,false);
+        break;
+      case STT_Mode::all_trajectories_kf:
+        ProcessEventWithKF(vec_tr, &sand_geo, ev, vec_digi,true);
         break;
     }
 
@@ -1939,6 +1944,7 @@ void help_reco()
   std::cout << "                'stt_mode::fast' \n";
   std::cout << "                'stt_mode::full' \n";
   std::cout << "                'stt_mode::primary_only_kf' \n";
+  std::cout << "                'stt_mode::all_trajectories_kf' \n";
 }
 
 int main(int argc, char* argv[])
@@ -1960,6 +1966,9 @@ int main(int argc, char* argv[])
   } else if (argc > 4 && strcmp(argv[4], "stt_mode::primary_only_kf") == 0) {
     stt_mode = STT_Mode::primary_only_kf;
     std::cout << "STT_Mode: kalman filter\n";
+  } else if (argc > 4 && strcmp(argv[4], "stt_mode::all_trajectories_kf") == 0) {
+    stt_mode = STT_Mode::all_trajectories_kf;
+    std::cout << "STT_Mode: kalman filter (run all trjs)\n";
   } else {
     std::cout << "STT_Mode: fast_only_primaries\n";
   }
