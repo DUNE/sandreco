@@ -1830,7 +1830,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
     exit(-1);
   }
 
-  if (stt_mode == STT_Mode::primary_only_kf) {
+  if (stt_mode == STT_Mode::primary_only_kf || stt_mode == STT_Mode::all_trajectories_kf) {
     sand_geo.fillAdjacentCells(geometry);
   }
 
