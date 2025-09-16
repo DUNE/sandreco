@@ -1626,38 +1626,22 @@ void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
     [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
 
   TDatabasePDG pdg_db;
-  std::cout << "primaryTrj size: " << primaryTrj.size() << std::endl;
 
   for (auto trj:primaryTrj) {
-
-    std::cout << "trj.GetPDGCode(): " << trj.GetPDGCode() << std::endl;
-    std::cout << "trj.GetId(): " << trj.GetId() << std::endl;
 
     auto particle = pdg_db.GetParticle(trj.GetPDGCode());
 
     if (!particle) {
       continue;
     }
-    std::cout << "Found particle pdg" << std::endl;
-
     
     if (particle->Mass() == 0 || particle->Charge() == 0) {
       continue;
-    }
-    std::cout << "Particle in not neutral" << std::endl;
-    
-    // std::string log;
-    // trj.Print(log);
-
-    for (auto h:trj.GetHitMap()) {
-      std::cout << component_to_string[h.first] << std::endl;
     }
 
     if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
       continue;
     }
-    std::cout << "Found hits in tracker" << std::endl;
-
 
     for (const auto& vertex:mc_event->Primaries) {
       auto primary_trj_it = std::find_if(vertex.Particles.begin(), vertex.Particles.end(), [trj](TG4PrimaryParticle primary_trj){return primary_trj.GetTrackId() == trj.GetId();});
@@ -1666,8 +1650,6 @@ void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
         break;
       }
     }
-  
-
 
     auto trj_points = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
     auto state_vector = sand_reco::kf::utils::getStateVector(trj_points[0].GetMomentum(),
@@ -1743,30 +1725,21 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
     [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
 
   TDatabasePDG pdg_db;
-  std::cout << "primaryTrj size: " << primaryTrj.size() << std::endl;
 
   std::vector<SParticleInfo> particleInfos;
   for (auto trj:primaryTrj) {
-
-    std::cout << "Particle pdg " << trj.GetPDGCode() << std::endl;
     auto particle = pdg_db.GetParticle(trj.GetPDGCode());
     if (!particle) {
       continue;
     }
-    std::cout << "Found particle " << std::endl;
     
     if (particle->Mass() == 0 || particle->Charge() == 0) {
       continue;
     }
-    std::cout << "Particle in not neutral/massless" << std::endl;
     
-    for (auto h:trj.GetHitMap()) {
-      std::cout << component_to_string[h.first] << std::endl;
-    }
     if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
       continue;
     }
-    std::cout << "Found hits in tracker" << std::endl;
     
     SParticleInfo pi;
     pi.pdg_code = trj.GetPDGCode();
@@ -1801,7 +1774,6 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
   }
 
   for (int ip = 0; ip < nParticles; ip++) {
-    std::cout << "nParticle: " << ip << std::endl;
     tracks.push_back(runKalmanFilterManager(z_to_tracklets, particleInfos[ip]));
   }
 }
