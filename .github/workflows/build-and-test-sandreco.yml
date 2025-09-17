@@ -179,9 +179,9 @@ jobs:
       - name: Install gegede ${{env.gegede-version}}
         if: steps.cache-gegede.outputs.cache-hit != 'true'
         run: | 
-          python3 --version
-          pip install "pint<0.22"
+          python3.11 --version
           
+
           python3 -m venv ~/gegede/ggdvenv
           source ~/gegede/ggdvenv/bin/activate
           python3 -m pip install setuptools
