@@ -151,19 +151,7 @@ jobs:
           # An explicit key for restoring and saving the cache
           key: edepsim-event-with-dunendggd-${{steps.dunendggd_sha.outputs.sha}}-geo-${{matrix.sand-geometry}}
 
-      #############################################################################################################################
-      # Install CLHEP
-      #############################################################################################################################
-      - name: Install CLHEP ${{env.clhep-version}}
-        if: steps.cache-clhep.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/clhep
-          cd ~/clhep
-          git clone --depth 1 --branch ${{env.clhep-version}} https://gitlab.cern.ch/CLHEP/CLHEP.git source
-          mkdir build
-          cd build
-          cmake -DCMAKE_INSTALL_PREFIX=.. ../source
-          make -j8 install
+     
 
 
 
@@ -179,7 +167,8 @@ jobs:
       - name: Install gegede ${{env.gegede-version}}
         if: steps.cache-gegede.outputs.cache-hit != 'true'
         run: | 
-          python3.11 --version
+          dnf search python3.11
+
           
 
           python3 -m venv ~/gegede/ggdvenv
@@ -222,7 +211,19 @@ jobs:
 
 
 
-
+ #############################################################################################################################
+      # Install CLHEP
+      #############################################################################################################################
+      - name: Install CLHEP ${{env.clhep-version}}
+        if: steps.cache-clhep.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/clhep
+          cd ~/clhep
+          git clone --depth 1 --branch ${{env.clhep-version}} https://gitlab.cern.ch/CLHEP/CLHEP.git source
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX=.. ../source
+          make -j8 install
 
 
       #############################################################################################################################
