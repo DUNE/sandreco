@@ -165,6 +165,64 @@ jobs:
           cmake -DCMAKE_INSTALL_PREFIX=.. ../source
           make -j8 install
 
+
+
+
+
+
+
+
+
+      #############################################################################################################################
+      # Install gegede
+      #############################################################################################################################      
+      - name: Install gegede ${{env.gegede-version}}
+        if: steps.cache-gegede.outputs.cache-hit != 'true'
+        run: | 
+          python3 --version
+          python3 -m venv ~/gegede/ggdvenv
+          source ~/gegede/ggdvenv/bin/activate
+          python3 -m pip install setuptools
+          cd ~/gegede
+          git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
+          cd source/
+          python3 setup.py install
+          deactivate ~/gegede/ggdvenv
+  
+      #############################################################################################################################
+      # Install dunendggd
+      #############################################################################################################################      
+      - name: Install dunendggd
+        if: steps.cache-dunendggd.outputs.cache-hit != 'true'
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          git clone --depth 1 https://github.com/DUNE/dunendggd.git ~/dunendggd
+          cd ~/dunendggd/
+          pip install -e .
+  
+      #############################################################################################################################
+      # Build SAND geometry
+      #############################################################################################################################      
+      - name: Build SAND geometry
+        if: steps.cache-geometry.outputs.cache-hit != 'true'
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          cd ~/dunendggd
+          GEO=${{matrix.sand-geometry}}
+          make ${GEO}.gdml -j2
+          mkdir -p ~/geo 
+          mv ${GEO}.gdml ~/geo/.
+
+
+
+
+
+
+
+
+
+
+
       #############################################################################################################################
       # Install ROOT
       #############################################################################################################################
@@ -245,44 +303,7 @@ jobs:
           cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim;~/edep-reader" ../source
           make -j8 install
   
-      #############################################################################################################################
-      # Install gegede
-      #############################################################################################################################      
-      - name: Install gegede ${{env.gegede-version}}
-        if: steps.cache-gegede.outputs.cache-hit != 'true'
-        run: | 
-          python3 -m venv ~/gegede/ggdvenv
-          source ~/gegede/ggdvenv/bin/activate
-          python3 -m pip install setuptools
-          cd ~/gegede
-          git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
-          cd source/
-          python3 setup.py install
-          deactivate ~/gegede/ggdvenv
-  
-      #############################################################################################################################
-      # Install dunendggd
-      #############################################################################################################################      
-      - name: Install dunendggd
-        if: steps.cache-dunendggd.outputs.cache-hit != 'true'
-        run: | 
-          source ~/gegede/ggdvenv/bin/activate
-          git clone --depth 1 https://github.com/DUNE/dunendggd.git ~/dunendggd
-          cd ~/dunendggd/
-          pip install -e .
-  
-      #############################################################################################################################
-      # Build SAND geometry
-      #############################################################################################################################      
-      - name: Build SAND geometry
-        if: steps.cache-geometry.outputs.cache-hit != 'true'
-        run: | 
-          source ~/gegede/ggdvenv/bin/activate
-          cd ~/dunendggd
-          GEO=${{matrix.sand-geometry}}
-          make ${GEO}.gdml -j2
-          mkdir -p ~/geo 
-          mv ${GEO}.gdml ~/geo/.
+
 
       #############################################################################################################################
       # Run edepsim
