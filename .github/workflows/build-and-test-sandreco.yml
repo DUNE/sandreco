@@ -167,7 +167,7 @@ jobs:
       - name: Install gegede ${{env.gegede-version}}
         if: steps.cache-gegede.outputs.cache-hit != 'true'
         run: | 
-          dnf search python3.11
+          dnf install python3.11
 
           
 
