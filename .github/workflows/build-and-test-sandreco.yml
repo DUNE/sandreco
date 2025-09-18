@@ -17,11 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     container: almalinux/9-base
     steps:
+      
       #############################################################################################################################
       # Install epel repo
       #############################################################################################################################      
       - name: Install epel repo
         run: yum install -y epel-release
+      
+      #############################################################################################################################
+      # Install python3.11
+      #############################################################################################################################      
+      - name: Install python3.11
+        run: dnf install python3.11 -y
 
       #############################################################################################################################
       # Install ROOT dependencies
@@ -151,67 +158,7 @@ jobs:
           # An explicit key for restoring and saving the cache
           key: edepsim-event-with-dunendggd-${{steps.dunendggd_sha.outputs.sha}}-geo-${{matrix.sand-geometry}}
 
-     
-
-
-
-
-
-
-
-
-
       #############################################################################################################################
-      # Install gegede
-      #############################################################################################################################      
-      - name: Install gegede ${{env.gegede-version}}
-        if: steps.cache-gegede.outputs.cache-hit != 'true'
-        run: | 
-          dnf install python3.11 -y
-
-          
-
-          python3.11 -m venv ~/gegede/ggdvenv
-          source ~/gegede/ggdvenv/bin/activate
-          python3.11 -m pip install setuptools
-          cd ~/gegede
-          git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
-          cd source/
-          python3.11 setup.py install
-          deactivate ~/gegede/ggdvenv
-  
-      #############################################################################################################################
-      # Install dunendggd
-      #############################################################################################################################      
-      - name: Install dunendggd
-        if: steps.cache-dunendggd.outputs.cache-hit != 'true'
-        run: | 
-          source ~/gegede/ggdvenv/bin/activate
-          git clone --depth 1 https://github.com/DUNE/dunendggd.git ~/dunendggd
-          cd ~/dunendggd/
-          pip install -e .
-  
-      #############################################################################################################################
-      # Build SAND geometry
-      #############################################################################################################################      
-      - name: Build SAND geometry
-        if: steps.cache-geometry.outputs.cache-hit != 'true'
-        run: | 
-          source ~/gegede/ggdvenv/bin/activate
-          cd ~/dunendggd
-          GEO=${{matrix.sand-geometry}}
-          make ${GEO}.gdml -j2
-          mkdir -p ~/geo 
-          mv ${GEO}.gdml ~/geo/.
-
-
-
-
-
-
-
-
- #############################################################################################################################
       # Install CLHEP
       #############################################################################################################################
       - name: Install CLHEP ${{env.clhep-version}}
@@ -306,7 +253,44 @@ jobs:
           cmake -DCMAKE_INSTALL_PREFIX=.. -DCMAKE_PREFIX_PATH="~/geant4;~/root;~/edepsim;~/edep-reader" ../source
           make -j8 install
   
-
+      #############################################################################################################################
+      # Install gegede
+      #############################################################################################################################      
+      - name: Install gegede ${{env.gegede-version}}
+        if: steps.cache-gegede.outputs.cache-hit != 'true'
+        run: | 
+          python3.11 -m venv ~/gegede/ggdvenv
+          source ~/gegede/ggdvenv/bin/activate
+          python3.11 -m pip install setuptools
+          cd ~/gegede
+          git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
+          cd source/
+          python3.11 setup.py install
+          deactivate ~/gegede/ggdvenv
+  
+      #############################################################################################################################
+      # Install dunendggd
+      #############################################################################################################################      
+      - name: Install dunendggd
+        if: steps.cache-dunendggd.outputs.cache-hit != 'true'
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          git clone --depth 1 https://github.com/DUNE/dunendggd.git ~/dunendggd
+          cd ~/dunendggd/
+          pip install -e .
+  
+      #############################################################################################################################
+      # Build SAND geometry
+      #############################################################################################################################      
+      - name: Build SAND geometry
+        if: steps.cache-geometry.outputs.cache-hit != 'true'
+        run: | 
+          source ~/gegede/ggdvenv/bin/activate
+          cd ~/dunendggd
+          GEO=${{matrix.sand-geometry}}
+          make ${GEO}.gdml -j2
+          mkdir -p ~/geo 
+          mv ${GEO}.gdml ~/geo/.
 
       #############################################################################################################################
       # Run edepsim
