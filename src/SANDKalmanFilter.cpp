@@ -530,13 +530,29 @@ void Manager::smooth()
       currentState.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering);
   auto filteredStateVector = filteredState.getStateVector();
   auto filteredCovMatrix = filteredState.getStateCovMatrix();
-
+  auto step_measurement = this_track_.getStep(current_step_).getMeasurement();
+  Orientation step_orientation = this_track_.getStep(current_step_).getOrientation();
+  
   if (current_step_ == int(this_track_.getSteps().size()) - 1) {
     this_track_.setStage(current_step_,
-                        sand_reco::kf::TrackStep::TrackStateStage::kSmoothing,
-                        sand_reco::kf::State(filteredStateVector, filteredCovMatrix));
+      sand_reco::kf::TrackStep::TrackStateStage::kSmoothing,
+      sand_reco::kf::State(filteredStateVector, filteredCovMatrix));
+      
+      auto step_prediction = getPrediction(step_orientation, filteredStateVector);
+      auto projectionMatrix = getProjectionMatrix(step_orientation, filteredStateVector);
+      TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
+                                            projectionMatrix);
+      TMatrixD Sk = getMeasurementNoiseMatrix() + projectionMatrix * 
+                                                filteredCovMatrix *
+                                                projectionMatrixTransposed;
+
+      auto step_chi2 = evalChi2(step_measurement, step_prediction, Sk);
+      this_track_.setChi2(current_step_, step_chi2);
+
+
+    
   } else {
-    // previous state
+    // previous state;
     auto previousState = this_track_.getStep(current_step_ + 1);
 
     // previous smoothed
@@ -577,10 +593,23 @@ void Manager::smooth()
     // currentState.setStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing,
     // sand_reco::kf::State(smoothedStateVector, smoothedCovMatrix));
 
+    auto step_prediction = getPrediction(step_orientation, smoothedStateVector);
+    auto projectionMatrix = getProjectionMatrix(step_orientation, smoothedStateVector);
+    TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
+                                          projectionMatrix);
+    TMatrixD Sk = getMeasurementNoiseMatrix() + projectionMatrix * 
+                                                smoothedCovMatrix *
+                                                projectionMatrixTransposed;
+
+    auto step_chi2 = evalChi2(step_measurement, step_prediction, Sk);
+    this_track_.setChi2(current_step_, step_chi2);
+
   }
+
   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
   current_step_--;
 }
+
 
 void Manager::initFromMC(sand_reco::kf::utils::TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
 {
@@ -767,8 +796,8 @@ void Manager::initFromSeed(sand_reco::kf::utils::TrackletMap* three_tracklets, s
   
   this_track_.addStep(trackStep);
 
-  particleInfo_       = particleInfo;
-  z_to_tracklets_     = z_to_tracklets;
+  particleInfo_        = particleInfo;
+  z_to_tracklets_      = z_to_tracklets;
   current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
   current_step_        = 0u;
   current_z_           = xyz[2][2]; //Notice: UNITS!!  mm, why?
@@ -874,7 +903,8 @@ void Manager::run()
       this_track_.setX(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].x);
       this_track_.setY(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].y);
       this_track_.addDigits(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].digits);
-
+      this_track_.setMeasurement(current_step_, measurement);
+      this_track_.setOrientation(current_step_, current_orientation_);
       filter(measurement, prediction);
 
       current_z_ = nextZ;

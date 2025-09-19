@@ -127,7 +127,7 @@ class TrackStep {
     double y_;
     Measurement measurement_;
     double chi2_;
-
+    Orientation orientation_;
     // the propagation that bring the vector in this state
     TMatrixD propagator_matrix_; 
     // TMatrixD fProjectionMatrix; 
@@ -169,6 +169,8 @@ class TrackStep {
     const Measurement& getMeasurement() const {return measurement_;};
     void setChi2(double chi2) {chi2_ = chi2;};
     double getChi2() {return chi2_;};
+    void setOrientation(Orientation orientation){orientation_ = orientation;};
+    const Orientation& getOrientation() const {return orientation_;};
     void addDigits(std::vector<dg_wire> digits ){digits_ = digits;};
     std::vector<dg_wire> getDigits() const {return digits_;};
     
@@ -188,6 +190,7 @@ class Track {
     void setX(int index, double x){steps_.at(index).setX(x); };
     void setY(int index, double y){steps_.at(index).setY(y); };
     void setMeasurement(int index, Measurement measurement){steps_.at(index).setMeasurement(measurement); };
+    void setOrientation(int index, Orientation orientation){steps_.at(index).setOrientation(orientation); };
     void setChi2(int index, double chi2){steps_.at(index).setChi2(chi2); };
     void addDigits(int index, std::vector<dg_wire> digits) {steps_.at(index).addDigits(digits);};
     void setClusterIDForState(int index, int cluster_id) { steps_.at(index).setClusterIDForThisState(cluster_id); };
