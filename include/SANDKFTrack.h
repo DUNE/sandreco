@@ -15,6 +15,11 @@ namespace kf
 using StateCovarianceMatrix = TMatrixD;
 using Measurement = TMatrixD;
 
+enum class Orientation {
+  kVertical,
+  kHorizontal
+};
+
 class StateVector {
 
  private:

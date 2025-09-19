@@ -43,10 +43,6 @@ class Manager {
 
 
   public:
-    enum class Orientation {
-      kVertical,
-      kHorizontal
-    };
     Orientation getOrientation() {return current_orientation_;};
     TVector3 getDirectiveCosinesFromStateVector(const sand_reco::kf::StateVector& state_vector);
     double getPhiFromTheta(double theta, int charge) { return theta - charge * 0.5*TMath::Pi(); };
