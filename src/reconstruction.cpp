@@ -46,6 +46,7 @@ void reset(track& tr)
   tr.chi2_ln = 0.;
   tr.ret_cr = -1;
   tr.chi2_cr = 0.;
+  tr.n_points = 0.;
   tr.clX.clear();
   tr.clY.clear();
 }
@@ -1614,6 +1615,13 @@ track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, S
 
     trk.ret_ln = 0;
     trk.ret_cr = 0;
+    double chi2 = 0;
+    for (const auto& step:reco_track.getSteps()) {
+      chi2 += step.getChi2();
+    }
+    trk.chi2_cr = chi2;
+    trk.n_points = reco_track.getSteps().size();
+    
     trk.z0  = last_step.getZ() / 1000.;
 
     trk.yc = reco_state.y() - reco_state.radius() * sin(reco_state.phi());

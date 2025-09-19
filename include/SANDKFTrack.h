@@ -143,7 +143,7 @@ class TrackStep {
     int clusterid_;
 
   public:
-    TrackStep(): propagator_matrix_(5,5) {}; 
+    TrackStep(): measurement_(2, 1), propagator_matrix_(5,5) {}; 
     //                   fProjectionMatrix(2,5),
     //                   fProcessNoiseMatrix(5,5),
     //                   fMeasurementNoiseMatrix(2,2),
@@ -168,7 +168,7 @@ class TrackStep {
     void setMeasurement(Measurement measurement) {measurement_ = measurement;};
     const Measurement& getMeasurement() const {return measurement_;};
     void setChi2(double chi2) {chi2_ = chi2;};
-    double getChi2() {return chi2_;};
+    double getChi2() const {return chi2_;};
     void setOrientation(Orientation orientation){orientation_ = orientation;};
     const Orientation& getOrientation() const {return orientation_;};
     void addDigits(std::vector<dg_wire> digits ){digits_ = digits;};

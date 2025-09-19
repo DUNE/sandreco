@@ -27,7 +27,7 @@
 
 // #include "EDEPTree.h"
 
-void tryCompleteManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TH1D* x_res, TH1D* y_res, TH1D* theta_y_res, TH1D* theta_x_res, TH1D* mom_res, TMultiGraph* mg, TMultiGraph* mgx) {
+void tryCompleteManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParticleInfo particle, TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TH1D* x_res, TH1D* y_res, TH1D* theta_y_res, TH1D* theta_x_res, TH1D* mom_res, TMultiGraph* mg, TMultiGraph* mgx, TH1D* chi2) {
   sand_reco::kf::Manager manager;
   manager.initFromMC(&z_to_tracklets, particle);
   manager.run();
@@ -88,6 +88,8 @@ void tryCompleteManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParti
   
       h_gpos_distribution->Fill(innovation[0]);
       h_gang_distribution->Fill(innovation[1]);
+
+      chi2->Fill(step.getChi2());
     
     }
       
@@ -122,7 +124,8 @@ void tryCompleteManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParti
 }
 
 void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, TH1D* h_gpos_distribution,TH1D* h_gang_distribution,
-                        TH1D* h_x_diff, TH1D* h_y_diff, TH1D* h_theta_x_diff, TH1D* h_theta_y_diff, TH1D* x_res, TH1D* y_res, TH1D* theta_y_res, TH1D* theta_x_res, TH1D* mom_res)
+                        TH1D* h_x_diff, TH1D* h_y_diff, TH1D* h_theta_x_diff, TH1D* h_theta_y_diff, TH1D* x_res, TH1D* y_res, TH1D* theta_y_res, TH1D* theta_x_res, TH1D* mom_res,
+                        TH1D* chi2)
 {
   
   int p[9] = {100, -2000, 2000, 100, -4000, -0, 100, 22500, 26000};
@@ -280,7 +283,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     }
 
 
-    tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, x_res, y_res, theta_y_res, theta_x_res, mom_res, mg, mgx);
+    tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, x_res, y_res, theta_y_res, theta_x_res, mom_res, mg, mgx, chi2);
 
     std::string title = name_mg + "; z [mm]; y [mm]";
     mg->SetTitle(title.c_str());
@@ -329,6 +332,7 @@ int main(int argc, char* argv[])
   TH1D* theta_y_res = new TH1D("theta_y_res", "theta_y_res", 1000, -1, 1);
   TH1D* theta_x_res = new TH1D("theta_x_res", "theta_x_res", 1000, -1, 1);
   TH1D* mom_res = new TH1D("mom_res", "mom_res", 1000, -1000, 1000);
+  TH1D* chi2 = new TH1D("chi2", "chi2", 1000, 0, 50);
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
   
@@ -349,7 +353,7 @@ int main(int argc, char* argv[])
 
     if (!plots) {
       innovation_test->cd();
-      processEventWithKF(&sand_geo, ev, digits, h_gpos_distribution, h_gang_distribution, h_x_diff, h_y_diff, h_theta_x_diff, h_theta_y_diff,  x_res,  y_res,  theta_y_res,  theta_x_res,  mom_res);
+      processEventWithKF(&sand_geo, ev, digits, h_gpos_distribution, h_gang_distribution, h_x_diff, h_y_diff, h_theta_x_diff, h_theta_y_diff,  x_res,  y_res,  theta_y_res,  theta_x_res,  mom_res, chi2);
     }
 
     if (plots) {
@@ -583,6 +587,7 @@ int main(int argc, char* argv[])
     theta_y_res->Write();
     theta_x_res->Write();
     mom_res->Write();
+    chi2->Write();
     innovation_test->Close();
   }
 }

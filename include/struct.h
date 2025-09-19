@@ -212,6 +212,7 @@ struct track
   double chi2_ln = NAN;
   int ret_cr = -1;
   double chi2_cr = NAN;
+  int n_points = -1;
   std::vector<dg_wire> clX;
   std::vector<dg_wire> clY;
 };

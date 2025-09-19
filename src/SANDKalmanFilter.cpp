@@ -615,8 +615,8 @@ void Manager::initFromMC(sand_reco::kf::utils::TrackletMap* z_to_tracklets, cons
 {
 
   TMatrixD initial_cov_matrix(5, 5);
-  initial_cov_matrix[0][0] = 3*pow(200E-6, 2);
-  initial_cov_matrix[1][1] = 3*pow(200E-6, 2);
+  initial_cov_matrix[0][0] = 3*pow(200E-5, 2);
+  initial_cov_matrix[1][1] = 3*pow(200E-5, 2);
   initial_cov_matrix[2][2] = 3*pow(0.1, 2);
   initial_cov_matrix[3][3] = 3*pow(0.1, 2);
   initial_cov_matrix[4][4] = 3*pow(0.1, 2);
