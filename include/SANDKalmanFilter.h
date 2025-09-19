@@ -221,7 +221,7 @@ class Manager {
     double findClosestNonEmptyKey(const sand_reco::kf::utils::TrackletMap& myMap, double target);
     void run();
     const sand_reco::kf::Track& getTrack() {return this_track_; };
-    void EvaluateInnovation(const SANDKFMeasurement& measurement, const SANDKFMeasurement& prediction, const TMatrixD& Sk);
+    void EvaluateInnovation(const Measurement& measurement, const Measurement& prediction, const TMatrixD& Sk);
 };
 
 } // namespace kf

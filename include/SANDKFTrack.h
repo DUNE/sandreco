@@ -13,7 +13,7 @@ namespace kf
 {
 
 using StateCovarianceMatrix = TMatrixD;
-using SANDKFMeasurement = TMatrixD;
+using Measurement = TMatrixD;
 
 class StateVector {
 
@@ -120,7 +120,8 @@ class TrackStep {
     double z_;
     double x_;
     double y_;
-
+    Measurement measurement_;
+    double chi2_;
 
     // the propagation that bring the vector in this state
     TMatrixD propagator_matrix_; 
@@ -159,6 +160,10 @@ class TrackStep {
     double getX() const {return x_;};
     void setY(double y){y_ = y;};
     double getY() const {return y_;};
+    void setMeasurement(Measurement measurement) {measurement_ = measurement;};
+    const Measurement& getMeasurement() const {return measurement_;};
+    void setChi2(double chi2) {chi2_ = chi2;};
+    double getChi2() {return chi2_;};
     void addDigits(std::vector<dg_wire> digits ){digits_ = digits;};
     std::vector<dg_wire> getDigits() const {return digits_;};
     

@@ -465,8 +465,8 @@ void Manager::setNextOrientation()
   }
 }
 
-void Manager::EvaluateInnovation(const SANDKFMeasurement& measurement, 
-                                                                const SANDKFMeasurement& prediction,
+void Manager::EvaluateInnovation(const Measurement& measurement, 
+                                                                const Measurement& prediction,
                                                                 const TMatrixD&  Sk)
 {       
   auto innovation = measurement - prediction;
