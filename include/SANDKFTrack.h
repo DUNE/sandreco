@@ -182,6 +182,8 @@ class Track {
     void setZ(int index, double z){steps_.at(index).setZ(z); };
     void setX(int index, double x){steps_.at(index).setX(x); };
     void setY(int index, double y){steps_.at(index).setY(y); };
+    void setMeasurement(int index, Measurement measurement){steps_.at(index).setMeasurement(measurement); };
+    void setChi2(int index, double chi2){steps_.at(index).setChi2(chi2); };
     void addDigits(int index, std::vector<dg_wire> digits) {steps_.at(index).addDigits(digits);};
     void setClusterIDForState(int index, int cluster_id) { steps_.at(index).setClusterIDForThisState(cluster_id); };
     void removeLastStep() { steps_.erase(steps_.end()-1); };
