@@ -1616,8 +1616,8 @@ track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, S
     trk.ret_ln = 0;
     trk.ret_cr = 0;
     double chi2 = 0;
-    for (const auto& step:reco_track.getSteps()) {
-      chi2 += step.getChi2();
+    for (uint s = 2; s < reco_track.getSteps().size(); s++) {
+      chi2 += reco_track.getSteps()[s].getChi2();
     }
     trk.chi2_cr = chi2;
     trk.n_points = reco_track.getSteps().size();
@@ -1681,8 +1681,8 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
       if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
 
       Tracklet measurement_from_true_tracklet;
-      measurement_from_true_tracklet.x = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-      measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet.x = true_pos.X() + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet.y = true_pos.Y() + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
       measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {

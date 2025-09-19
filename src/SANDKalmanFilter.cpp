@@ -601,7 +601,8 @@ void Manager::smooth()
                                                 smoothedCovMatrix *
                                                 projectionMatrixTransposed;
 
-    auto step_chi2 = evalChi2(step_measurement, step_prediction, Sk);
+    // TODO: Understand what to use, Sk or noiseMatrix
+    auto step_chi2 = evalChi2(step_measurement, step_prediction, getMeasurementNoiseMatrix());
     this_track_.setChi2(current_step_, step_chi2);
 
   }
