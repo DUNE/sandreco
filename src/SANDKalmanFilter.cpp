@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "TVectorD.h"
+#include "TDecompChol.h"
 
 namespace sand_reco
 {
@@ -125,7 +126,7 @@ TMatrixD Manager::getProcessNoiseMatrix(
   auto dir = -1. * getDirectiveCosinesFromStateVector(stateVector);
   if (dir.Z() > 0) dir *= -1;
   auto pathLengthInX0 = dE!=0 ? SANDTrackerUtils::getPathLengthInX0(
-      (z + dZ)*1000, stateVector.x()*1000, stateVector.y()*1000, z*1000, dir.X(), dir.Y(), dir.Z()):0;
+      (z + dZ*1000), stateVector.x()*1000, stateVector.y()*1000, z, dir.X(), dir.Y(), dir.Z()):0;
 
   // MCS angle
   double radius = stateVector.radius();
@@ -219,9 +220,14 @@ TMatrixD Manager::getAMatrix(
 {
   TMatrixD covarianceMatrixNextPredictedInverted(TMatrixD::kInverted,
                                                  covarianceMatrixNextPredicted);
+
+  TDecompChol chol(covarianceMatrixNextPredicted);
+  chol.Invert();
+  TMatrixD covarianceMatrixNextPredictedInverted2(covarianceMatrixNextPredicted);
+
   TMatrixD propagatorMatrixTransposed(TMatrixD::kTransposed, propagatorMatrix);
   return covarianceMatrixFiltered * propagatorMatrixTransposed *
-         covarianceMatrixNextPredictedInverted;
+         covarianceMatrixNextPredictedInverted2;
 }
 
 double Manager::deltaRadius(
@@ -601,10 +607,8 @@ void Manager::smooth()
                                                 smoothedCovMatrix *
                                                 projectionMatrixTransposed;
 
-    // TODO: Understand what to use, Sk or noiseMatrix
-    auto step_chi2 = evalChi2(step_measurement, step_prediction, getMeasurementNoiseMatrix());
+    auto step_chi2 = evalChi2(step_measurement, step_prediction, Sk);
     this_track_.setChi2(current_step_, step_chi2);
-
   }
 
   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
@@ -616,8 +620,8 @@ void Manager::initFromMC(sand_reco::kf::utils::TrackletMap* z_to_tracklets, cons
 {
 
   TMatrixD initial_cov_matrix(5, 5);
-  initial_cov_matrix[0][0] = 3*pow(200E-5, 2);
-  initial_cov_matrix[1][1] = 3*pow(200E-5, 2);
+  initial_cov_matrix[0][0] = 3*pow(SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3, 2);
+  initial_cov_matrix[1][1] = 3*pow(SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3, 2);
   initial_cov_matrix[2][2] = 3*pow(0.1, 2);
   initial_cov_matrix[3][3] = 3*pow(0.1, 2);
   initial_cov_matrix[4][4] = 3*pow(0.1, 2);

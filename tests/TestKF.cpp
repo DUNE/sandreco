@@ -201,8 +201,8 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   std::vector<SParticleInfo> particleInfos;
   std::map<double, std::vector<TVectorD>> z_to_best_tracklet;
 
-  double sigma_pos = 0;
-  double sigma_mom = 0;
+  double sigma_pos = rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+  double sigma_mom = rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
   std::vector<int> indeces;
   int ii = -1;
   for (auto trj:primaryTrj) {

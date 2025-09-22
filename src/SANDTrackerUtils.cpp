@@ -7,7 +7,7 @@ const double SANDTrackerUtils::kEdepSimDensityToGCM3_ = 6.24E18;
 const double SANDTrackerUtils::k_ = 0.299792458;
 const double SANDTrackerUtils::c_ = SANDTrackerUtils::k_ * 1E3;  // mm/ns
 
-const double SANDTrackerUtils::sigma_pos_ = 200E-5;  // m
+const double SANDTrackerUtils::sigma_pos_ = 200E-6;  // m
 const double SANDTrackerUtils::sigma_ang_ = 0.02;     // rad
 
 void SANDTrackerUtils::clear()
@@ -88,6 +88,7 @@ double SANDTrackerUtils::getPathLengthInX0(double z,
   double pathLengthInX0 = 0.;
   int count = 0;
   while((lastPosition = geo_->GetCurrentPoint()) && lastPosition[2] > z) {
+    geo_->FindNextBoundary(1);
     auto Z = static_cast<int>(geo_->GetCurrentNode()->GetVolume()->GetMaterial()->GetZ());
     auto A = static_cast<int>(geo_->GetCurrentNode()->GetVolume()->GetMaterial()->GetA());
     auto name = static_cast<std::string>(geo_->GetCurrentNode()->GetVolume()->GetMaterial()->GetName());
@@ -96,7 +97,7 @@ double SANDTrackerUtils::getPathLengthInX0(double z,
     auto density = getDensityInGCM3();
     auto pathLength = getPathLengthInCM();
     pathLengthInX0 += pathLength * density / X0;
-    geo_->Step();
+    geo_->Step(true, true);
   }
   return pathLengthInX0;
 }
@@ -114,9 +115,10 @@ double SANDTrackerUtils::getPathLengthInCM(double z,
 
   double pathLengthInCM = 0.;
   while((lastPosition = geo_->GetCurrentPoint()) && lastPosition[2] > z) {
+    geo_->FindNextBoundary(1);
     auto pathLength = getPathLengthInCM();
     pathLengthInCM += pathLength;
-    geo_->Step();
+    geo_->Step(true, true);
   }
   return pathLengthInCM;
 }
