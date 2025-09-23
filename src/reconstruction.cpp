@@ -1584,19 +1584,19 @@ double Calculate_initial_momentum(EDEPTrajectory chosen_trajectory, cluster clu,
 void PidWithEdepReader(std::vector<cluster>& vec_cl, std::vector<truecluster>& vec_true_cl, EDEPTree* tree, const SANDGeoManager& sand_geo) {
   for (auto &clu : vec_cl) {
     std::vector<int> traj_id;
-    std::vector<double> energy_layer = {0, 0, 0, 0, 0}; // array is better
+    std::vector<double> energy_layer = {0, 0, 0, 0, 0}; 
     std::vector<int> cell_l = {0, 0, 0, 0, 0};
     std::vector<double> lay_maxE = {0, 0, 0, 0, 0};
     int ncelltot = 0;
     std::vector<int> cell_id_clus;
-    std::map<int, std::map<int, std::vector<double>>> cell_to_hit_times; // cell.id->map<cell multiplicity, hit_times>
-    std::map<int, int> cell_multiplicity_counter;                        // cell.id, how many times this cell is present in the cluster
+    std::map<int, std::map<int, std::vector<double>>> cell_to_hit_times;
+    std::map<int, int> cell_multiplicity_counter;                       
     std::map<int, std::map<int, int>> cell_to_h_index;
-    std::map<int, std::vector<std::pair<double, double>>> cell_id_min_max_time; //NEW. WHY? ISN'T EASIER TO JUST USE TWO DIFFERENT MAPS?
+    std::map<int, std::vector<std::pair<double, double>>> cell_id_min_max_time;
 
     for (auto &cell : clu.reco_cells) {
       cell_id_clus.push_back(cell.id);
-      if (cell_multiplicity_counter.find(cell.id) == cell_multiplicity_counter.end()) { // NEW
+      if (cell_multiplicity_counter.find(cell.id) == cell_multiplicity_counter.end()) {
         cell_multiplicity_counter[cell.id] = 0;
       }
       int multiplicity = cell_multiplicity_counter[cell.id]++;
@@ -1764,15 +1764,20 @@ void PidWithEdepReader(std::vector<cluster>& vec_cl, std::vector<truecluster>& v
 
     current_true_cluster.asymmetry = asymmetry;
 
-    std::vector<EDEPTrajectoryPoint> all_points_in_ecal = chosen_trajectory.GetTrajectoryPoints().at(component::ECAL);
+    if (chosen_trajectory.GetTrajectoryPoints().find(component::ECAL) != chosen_trajectory.GetTrajectoryPoints().end()) {
+      std::vector<EDEPTrajectoryPoint> all_points_in_ecal = chosen_trajectory.GetTrajectoryPoints().at(component::ECAL);
+      bool exception_time = false;
+      initial_momentum = Calculate_initial_momentum(chosen_trajectory, clu, exception_time);
+    } else {
+      std::cerr << "There are no points in ECAL!" << std::endl;
+      initial_momentum = -1;
+    }
 
-    bool exception_time = false;
-    initial_momentum = Calculate_initial_momentum(chosen_trajectory, clu, exception_time);
 
     current_true_cluster.Eoverp = clu.e / initial_momentum;
 
-    current_true_cluster.tid = chosen_generator.track_id; // NEW
-    clu.tid = chosen_generator.track_id;                  // NEW
+    current_true_cluster.tid = chosen_generator.track_id;
+    clu.tid = chosen_generator.track_id;                 
     
     std::sort(generators.begin(), generators.end(), [](cluster_generator g1, cluster_generator g2)
               { return g1.dep_energy > g2.dep_energy; });
@@ -2122,63 +2127,6 @@ void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
   }
 }
 
-void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, std::string tracker_name) 
-{
-
-  EDEPTree tree;
-  tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
-
-  std::vector<EDEPTrajectory> primaryTrj;
-  tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
-    [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
-
-  TDatabasePDG pdg_db;
-
-  for (auto trj:primaryTrj) {
-
-    auto particle = pdg_db.GetParticle(trj.GetPDGCode());
-
-    if (!particle) {
-      continue;
-    }
-    
-    if (particle->Mass() == 0 || particle->Charge() == 0) {
-      continue;
-    }
-
-    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
-      continue;
-    }
-
-    for (const auto& vertex:mc_event->Primaries) {
-      auto primary_trj_it = std::find_if(vertex.Particles.begin(), vertex.Particles.end(), [trj](TG4PrimaryParticle primary_trj){return primary_trj.GetTrackId() == trj.GetId();});
-      if (primary_trj_it != vertex.Particles.end()) {
-        vertex.GetPosition().Print();
-        break;
-      }
-    }
-
-    auto trj_points = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
-    auto state_vector = sand_reco::kf::utils::getStateVector(trj_points[0].GetMomentum(),
-                                                             trj_points[0].GetPosition().Vect(),
-                                                             particle->Charge());
-
-    track trk;
-    trk.tid = trj.GetId();
-    trk.r   = state_vector.radius();
-    trk.h   = state_vector.charge();
-    trk.b   = state_vector.tanLambda();
-    trk.x0  = state_vector.x();
-    trk.y0  = state_vector.y();
-
-    trk.z0 = trj_points[0].GetPosition().Z();
-    trk.yc = state_vector.y() - state_vector.radius() * sin(state_vector.phi());
-    trk.zc = trj_points[0].GetPosition().Z() - state_vector.radius() * cos(state_vector.phi());
-
-    tracks.push_back(trk);
-  }
-}
-
 void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, EDEPTree* tree, std::vector<dg_wire>* digits)
 {
   int p[9] = {100, -2000, 2000, 100, -4000, -1000, 100, 23800, 26000};
@@ -2465,7 +2413,6 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
         break;
       case ECAL_Mode::full:
         vec_cl = clusterize(&sand_geo, *vec_cell);
-        std::cout << "vec_cl.size() " << vec_cl.size() << std::endl;
         PidWithEdepReader(vec_cl, vec_true_cl, &tree, sand_geo);
         break;
       }
