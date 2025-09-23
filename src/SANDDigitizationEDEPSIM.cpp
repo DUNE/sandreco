@@ -3,6 +3,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <limits>
 
 #include <iomanip>
 
@@ -98,15 +99,21 @@ void CreateDigitsFromHits(const SANDGeoManager& geo,
        it != hits2cell.end(); ++it)  // run over wires
   {
     long did = it->first();  // wire unique id
-    const sand_geometry::tracker::WireInfo& wire_info = geo.getCellInfo(it->first())->second.getWire();
-    double wire_time = 999.;
-    double drift_time = 999.;
-    double signal_time = 999.;
-    double t_hit = 999.;
+    const auto& cell_info = geo.getCellInfo(it->first())->second;
+    const sand_geometry::tracker::WireInfo& wire_info = cell_info.getWire();
+    double wire_time = std::numeric_limits<double>::max();
+    double drift_time = std::numeric_limits<double>::max();
+    double signal_time = std::numeric_limits<double>::max();
+    double t_hit = std::numeric_limits<double>::max();
 
     dg_wire d;
     d.det = it->second[0].det;
     d.did = did;
+    if(!cell_info.getPlane()) {
+      std::cerr << "Plane not found. Skipping hit.." << std::endl;
+      continue;
+    }
+    d.hor = (cell_info.getPlane()->getRotation() == 0) ? true : false;
     d.de = 0;
     // To Do: what point do we want to save? 
     // Center or one of the attachment points?

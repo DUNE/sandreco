@@ -22,6 +22,12 @@ jobs:
       #############################################################################################################################      
       - name: Install epel repo
         run: yum install -y epel-release
+      
+      #############################################################################################################################
+      # Install python3.11
+      #############################################################################################################################      
+      - name: Install python3.11
+        run: dnf install python3.11 -y
 
       #############################################################################################################################
       # Install ROOT dependencies
@@ -251,13 +257,13 @@ jobs:
       - name: Install gegede ${{env.gegede-version}}
         if: steps.cache-gegede.outputs.cache-hit != 'true'
         run: | 
-          python3 -m venv ~/gegede/ggdvenv
+          python3.11 -m venv ~/gegede/ggdvenv
           source ~/gegede/ggdvenv/bin/activate
-          python3 -m pip install setuptools
+          python3.11 -m pip install setuptools
           cd ~/gegede
           git clone --depth 1 --branch ${{env.gegede-version}} https://github.com/brettviren/gegede.git source
           cd source/
-          python3 setup.py install
+          python3.11 setup.py install
           deactivate ~/gegede/ggdvenv
   
       #############################################################################################################################

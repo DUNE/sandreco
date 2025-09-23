@@ -20,6 +20,7 @@
 //added for kalman filter
 #include "SANDTrackletFinder.h"
 #include "SANDKalmanFilter.h"
+#include "SANDTrackerVertexing.h"
 
 #include <TDatabasePDG.h>
 
@@ -2054,10 +2055,128 @@ track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticl
     trk.b   = reco_state.tanLambda();
     trk.x0  = reco_state.x();
     trk.y0  = reco_state.y();
-    trk.z0  = reco_state.y();
+
+    trk.z0 = step.getZ();
+    trk.yc = reco_state.y() - reco_state.radius() * sin(reco_state.phi());
+    trk.zc = step.getZ() - reco_state.radius() * cos(reco_state.phi());
+    std::cout << "tan(Phi) from KF = " << tan(reco_state.phi()) << std::endl;
   }
 
   return trk;
+}
+
+void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, std::string tracker_name) 
+{
+
+  EDEPTree tree;
+  tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
+
+  std::vector<EDEPTrajectory> primaryTrj;
+  tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
+    [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
+
+  TDatabasePDG pdg_db;
+
+  for (auto trj:primaryTrj) {
+
+    auto particle = pdg_db.GetParticle(trj.GetPDGCode());
+
+    if (!particle) {
+      continue;
+    }
+    
+    if (particle->Mass() == 0 || particle->Charge() == 0) {
+      continue;
+    }
+
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
+      continue;
+    }
+
+    for (const auto& vertex:mc_event->Primaries) {
+      auto primary_trj_it = std::find_if(vertex.Particles.begin(), vertex.Particles.end(), [trj](TG4PrimaryParticle primary_trj){return primary_trj.GetTrackId() == trj.GetId();});
+      if (primary_trj_it != vertex.Particles.end()) {
+        vertex.GetPosition().Print();
+        break;
+      }
+    }
+
+    auto trj_points = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
+    auto state_vector = sand_reco::kf::utils::getStateVector(trj_points[0].GetMomentum(),
+                                                             trj_points[0].GetPosition().Vect(),
+                                                             particle->Charge());
+
+    track trk;
+    trk.tid = trj.GetId();
+    trk.r   = state_vector.radius();
+    trk.h   = state_vector.charge();
+    trk.b   = state_vector.tanLambda();
+    trk.x0  = state_vector.x();
+    trk.y0  = state_vector.y();
+
+    trk.z0 = trj_points[0].GetPosition().Z();
+    trk.yc = state_vector.y() - state_vector.radius() * sin(state_vector.phi());
+    trk.zc = trj_points[0].GetPosition().Z() - state_vector.radius() * cos(state_vector.phi());
+
+    tracks.push_back(trk);
+  }
+}
+
+void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, std::string tracker_name) 
+{
+
+  EDEPTree tree;
+  tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
+
+  std::vector<EDEPTrajectory> primaryTrj;
+  tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
+    [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
+
+  TDatabasePDG pdg_db;
+
+  for (auto trj:primaryTrj) {
+
+    auto particle = pdg_db.GetParticle(trj.GetPDGCode());
+
+    if (!particle) {
+      continue;
+    }
+    
+    if (particle->Mass() == 0 || particle->Charge() == 0) {
+      continue;
+    }
+
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
+      continue;
+    }
+
+    for (const auto& vertex:mc_event->Primaries) {
+      auto primary_trj_it = std::find_if(vertex.Particles.begin(), vertex.Particles.end(), [trj](TG4PrimaryParticle primary_trj){return primary_trj.GetTrackId() == trj.GetId();});
+      if (primary_trj_it != vertex.Particles.end()) {
+        vertex.GetPosition().Print();
+        break;
+      }
+    }
+
+    auto trj_points = trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
+    auto state_vector = sand_reco::kf::utils::getStateVector(trj_points[0].GetMomentum(),
+                                                             trj_points[0].GetPosition().Vect(),
+                                                             particle->Charge());
+
+    track trk;
+    trk.tid = trj.GetId();
+    trk.r   = state_vector.radius();
+    trk.h   = state_vector.charge();
+    trk.b   = state_vector.tanLambda();
+    trk.x0  = state_vector.x();
+    trk.y0  = state_vector.y();
+
+    trk.z0 = trj_points[0].GetPosition().Z();
+    trk.yc = state_vector.y() - state_vector.radius() * sin(state_vector.phi());
+    trk.zc = trj_points[0].GetPosition().Z() - state_vector.radius() * cos(state_vector.phi());
+
+    tracks.push_back(trk);
+  }
 }
 
 void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, EDEPTree* tree, std::vector<dg_wire>* digits)
@@ -2110,20 +2229,19 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, ED
     [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
 
   TDatabasePDG pdg_db;
+
   std::vector<SParticleInfo> particleInfos;
   for (auto trj:primaryTrj) {
-
-    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
-      continue;
-    }
-
     auto particle = pdg_db.GetParticle(trj.GetPDGCode());
-
     if (!particle) {
       continue;
     }
-
+    
     if (particle->Mass() == 0 || particle->Charge() == 0) {
+      continue;
+    }
+    
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
       continue;
     }
     
@@ -2168,7 +2286,8 @@ enum class STT_Mode {
   fast_only_primaries,
   fast,
   full,
-  primary_only_kf
+  primary_only_kf,
+  mc_primaries
 };
 enum class ECAL_Mode {
   fast,
@@ -2177,7 +2296,7 @@ enum class ECAL_Mode {
 
 void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
                  std::string const& fname_out, STT_Mode stt_mode,
-                 ECAL_Mode ecal_mode)
+                 ECAL_Mode ecal_mode, double dz, double ip, double mr)
 {
   std::cout << "Reconstruct\ninput hits: " << fname_hits
             << "\ninput digits: " << fname_digits
@@ -2248,11 +2367,13 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   std::vector<track> vec_tr;
   std::vector<cluster> vec_cl;
   std::vector<truecluster> vec_true_cl;
-    
+      std::vector<vertex> vec_vtx;
+
   TTree tout("tReco", "tReco");
   tout.Branch("track", "std::vector<track>", &vec_tr);
   tout.Branch("cluster", "std::vector<cluster>", &vec_cl);
   tout.Branch("truecluster", "std::vector<truecluster>", &vec_true_cl);
+  tout.Branch("vertex", "std::vector<vertex>", &vec_vtx);
 
   const int nev = t->GetEntries();
   const double epsilon = 0.5;
@@ -2278,6 +2399,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
     vec_tr.clear();
     vec_cl.clear();
     vec_true_cl.clear();
+    vec_vtx.clear();
 
     double xvtx_reco, yvtx_reco, zvtx_reco;
     int VtxType;
@@ -2309,7 +2431,29 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
       case STT_Mode::primary_only_kf:
         ProcessEventWithKF(vec_tr, &sand_geo, &tree, vec_digi);
         break;
+      case STT_Mode::mc_primaries:
+        ProcessEventWithMC(vec_tr, &sand_geo, ev, vec_digi, trackerType);
+        break;
     }
+    
+    TrackerVertexing vertex_finder;
+    vertex_finder.setTracks(vec_tr);
+    vertex_finder.setParameters(dz, ip, mr);
+    vertex_finder.run();
+    auto vertices = vertex_finder.getVertices();
+
+    for (const auto& v:vertices) {
+      vertex vtx;
+      vtx.id = v.id;
+      vtx.x = v.x;
+      vtx.y = v.y;
+      vtx.z = v.z;
+      for (int j = 0; j < static_cast<int>(v.indexTrack.size());j++) {
+        vtx.track_ids.push_back(vec_tr.at(v.indexTrack.at(j)).tid);
+      }
+      vec_vtx.push_back(vtx);
+    }
+
 
     switch (ecal_mode) {
       case ECAL_Mode::fast:
@@ -2332,6 +2476,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   vec_tr.clear();
   vec_cl.clear();
   vec_true_cl.clear();
+  vec_vtx.clear();
 
   vec_digi->clear();
   vec_cell->clear();
@@ -2347,7 +2492,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 void help_reco()
 {
   std::cout
-      << "usage: Reconstruct hit_file digit_file output_file [stt_mode] [ecal_mode]\n";
+      << "usage: Reconstruct hit_file digit_file output_file [stt_mode] [ecal_mode] dz [dz value] impact_parameter [impact_parameter value] merging_radius [merging_radius value]\n";
   std::cout << "    - stt_mode: 'stt_mode::fast_only_primaries' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
   std::cout << "                'stt_mode::full' \n";
@@ -2355,6 +2500,10 @@ void help_reco()
   std::cout << "                'stt_mode::primary_only_kf' \n";
   std::cout << "    - ecal_mode: 'ecal_mode::fast'  (default)\n";
   std::cout << "                 'ecal_mode::full' \n";
+  std::cout << "                'stt_mode::mc_primaries' \n";
+  std::cout << "    - dz: longitudinal track-vertex distance (default 15 mm)\n";
+  std::cout << "    - impact_parameter: for 2-prongs vertices (default 15 mm)\n";
+  std::cout << "    - merging_radius: radius for 2-prongs vertices clusterization (default 15 mm)\n";
 }
 
 int main(int argc, char* argv[])
@@ -2367,9 +2516,12 @@ int main(int argc, char* argv[])
   // boost::program_options wuold be great here....
   auto stt_mode = STT_Mode::fast_only_primaries;
   auto ecal_mode = ECAL_Mode::fast;
+  double dz = 15;
+  double impact_parameter = 15;
+  double merging_radius = 15;
 
   for (int i = 0; i < argc; i++) {
-    if (strstr(argv[i], "stt_mode") != nullptr) {
+    if (strcmp(argv[i], "stt_mode") == 0) {
       if (strcmp(argv[i], "stt_mode::full") == 0) {
         stt_mode = STT_Mode::full;
         std::cout << "STT_Mode: full\n";
@@ -2379,9 +2531,22 @@ int main(int argc, char* argv[])
       } else if (strcmp(argv[i], "stt_mode::primary_only_kf") == 0) {
         stt_mode = STT_Mode::primary_only_kf;
         std::cout << "STT_Mode: kalman filter\n";
+      } else if (strcmp(argv[i], "stt_mode::mc_primaries") == 0) {
+        stt_mode = STT_Mode::mc_primaries;
+        std::cout << "STT_Mode: mc primaries\n";
       } else {
         std::cout << "STT_Mode: fast_only_primaries\n";
       }
+    }
+
+    if (strcmp(argv[i], "dz") == 0) {
+      dz = std::stod(argv[i+1]);
+    }
+    if (strcmp(argv[i], "impact_parameter") == 0) {
+      impact_parameter = std::stod(argv[i+1]);
+    }
+    if (strcmp(argv[i], "merging_radius") == 0) {
+      merging_radius = std::stod(argv[i+1]);
     }
 
     if (strstr(argv[i], "ecal_mode") != nullptr) {
@@ -2395,6 +2560,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  Reconstruct(argv[1], argv[2], argv[3], stt_mode, ecal_mode);
+  Reconstruct(argv[1], argv[2], argv[3], stt_mode, ecal_mode, dz, impact_parameter, merging_radius);
   return 0;
 }
