@@ -201,8 +201,6 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   std::vector<SParticleInfo> particleInfos;
   std::map<double, std::vector<TVectorD>> z_to_best_tracklet;
 
-  double sigma_pos = rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-  double sigma_mom = rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
   std::vector<int> indeces;
   int ii = -1;
   for (auto trj:primaryTrj) {
@@ -244,6 +242,10 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     }
 
     if (!to_be_reconstructed) continue;
+
+    double sigma_pos = rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+    double sigma_mom = 0.05;
+
     double x_smeared = rand.Gaus(pi.pos.X(), sigma_pos);
     double y_smeared = rand.Gaus(pi.pos.Y(), sigma_pos);
     double px_smeared = pi.mom.X() * rand.Gaus(1, sigma_mom);
@@ -332,7 +334,7 @@ int main(int argc, char* argv[])
   TH1D* theta_y_res = new TH1D("theta_y_res", "theta_y_res", 1000, -1, 1);
   TH1D* theta_x_res = new TH1D("theta_x_res", "theta_x_res", 1000, -1, 1);
   TH1D* mom_res = new TH1D("mom_res", "mom_res", 1000, -1000, 1000);
-  TH1D* chi2 = new TH1D("chi2", "chi2", 1000, 0, 50);
+  TH1D* chi2 = new TH1D("chi2", "chi2", 1000, 0, 100000);
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
   

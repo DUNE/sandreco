@@ -221,13 +221,9 @@ TMatrixD Manager::getAMatrix(
   TMatrixD covarianceMatrixNextPredictedInverted(TMatrixD::kInverted,
                                                  covarianceMatrixNextPredicted);
 
-  TDecompChol chol(covarianceMatrixNextPredicted);
-  chol.Invert();
-  TMatrixD covarianceMatrixNextPredictedInverted2(covarianceMatrixNextPredicted);
-
   TMatrixD propagatorMatrixTransposed(TMatrixD::kTransposed, propagatorMatrix);
   return covarianceMatrixFiltered * propagatorMatrixTransposed *
-         covarianceMatrixNextPredictedInverted2;
+         covarianceMatrixNextPredictedInverted;
 }
 
 double Manager::deltaRadius(
