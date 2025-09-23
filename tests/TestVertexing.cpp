@@ -70,7 +70,8 @@ int main(int argc, char* argv[])
     std::cout << "Total tracks: " << tracks.size() << std::endl;
 
     TrackerVertexing vertex_finder;
-    vertex_finder.setParameters(std::stoi(argv[4]), std::stoi(argv[5]), std::stoi(argv[6]), tracks);
+    vertex_finder.setParameters(std::stoi(argv[4]), std::stoi(argv[5]), std::stoi(argv[6]));
+    vertex_finder.setTracks(tracks);
     vertex_finder.run();
 
   }

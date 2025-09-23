@@ -95,7 +95,7 @@ target_link_libraries(Digitize Struct SANDGeoManager Utils)
 
 # Creates Reconstruct executable.
 add_executable(Reconstruct src/reconstruction.cpp)
-target_link_libraries(Reconstruct PUBLIC Struct Utils SANDGeoManager SANDClustering EDEPTree TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils SANDKalmanFilter ROOT::EG)
+target_link_libraries(Reconstruct PUBLIC Struct Utils SANDGeoManager SANDClustering EDEPTree TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils SANDKalmanFilter SANDTrackerVertexing ROOT::EG)
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)
@@ -157,7 +157,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
- install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF TestSeed TestVertexing SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils BVH
+ install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF TestSeed TestVertexing SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils SANDTrackerVertexing BVH
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"

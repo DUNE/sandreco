@@ -596,16 +596,6 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
 
 
   trackStep.setPropagatorMatrix(initial_cov_matrix);
-  
-
-  TMatrixD vectorMC(5,1);
-  vectorMC[0][0] = initial_state_vector.x();
-  vectorMC[1][0] = initial_state_vector.y();
-  vectorMC[2][0] = initial_state_vector.signedInverseRadius();
-  vectorMC[3][0] = initial_state_vector.tanLambda();
-  vectorMC[4][0] = initial_state_vector.phi();
-
-  vectorMC.Print();
 
   particleInfo_       = particleInfo;
   z_to_tracklets_     = z_to_tracklets;

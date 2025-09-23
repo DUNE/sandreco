@@ -74,9 +74,14 @@ class Plane
   void addCell(const double transverse_coordinate, Cell c)
   {
     if(coord_to_id_map_.find(transverse_coordinate) == coord_to_id_map_.end()) {
-      c.setPlane(this);
       coord_to_id_map_.insert({transverse_coordinate, c.getId()});
       id_to_cell_map_.insert({c.getId(), c});
+      id_to_cell_map_[c.getId()].setPlane(this);
+    }
+  }
+  void updateCells() {
+    for (auto& c:id_to_cell_map_) {
+      c.second.setPlane(this);
     }
   }
         std::map<CellID, Cell>& getIdToCellMap()       {return id_to_cell_map_;};

@@ -51,8 +51,11 @@ class Vertex {
 class TrackerVertexing {
 
   public:
-    void setParameters(double dz, double ip, double merging_radius, std::vector<Track> tracks);
+    void setParameters(double dz = 15, double ip = 15, double merging_radius = 15);
+    void setTracks(std::vector<track> tracks);
+    void setTracks(std::vector<Track> tracks);
     int run();
+    const std::vector<Vertex>& getVertices() {return vertices_;};
 
   private:
 
@@ -65,7 +68,7 @@ class TrackerVertexing {
     int mergeVertex();
     void refineVertexPosition(double stepSize = 0.001, int nSteps = 50);
 
-    int id_vert_;
+    int id_vert_ = 0;
     double dz_;
     double ip_;
     double merging_radius_;

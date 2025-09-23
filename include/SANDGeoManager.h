@@ -30,16 +30,16 @@ using cell_map_iterator = std::map<sand_geometry::tracker::CellID, sand_geometry
 namespace chamber
 {
 const std::string wire_regex_string =
-    "(C|C3H6)DriftModule_([0-2]+)(_X0_|_X1_|_A_|_B_|_C_|_)(F|S)wire_PV_([0-9]+)"
+    "(C|C3H6)DriftModule_([0-2]+)(_X[0-9]_|_[A-Z]_|_)(F|S)wire_PV_([0-9]+)"
     "(/|)";
 const std::string drift_plane_regex_string =
-    "(C|C3H6)DriftModule_([0-2]+)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-9])(/|)";
+    "(C|C3H6)DriftModule_([0-2]+)(_X[0-9]_|_[A-Z]_|_)PV_([0-9])(/|)";
 const std::string drift_chamber_regex_string =
-    "(C|C3H6)DriftChamber(_X0_|_X1_|_A_|_B_|_C_|_)PV_0(/|)";
+    "(C|C3H6)DriftChamber(_X[0-9]_|_[A-Z]_|_)PV_0(/|)";
 const std::string module_regex_string =
-    "(C|C3H6)Mod(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-9]+)(/|)";
+    "(C|C3H6)Mod(_X[0-9]_|_[A-Z]_|_)PV_([0-9]+)(/|)";
 const std::string supermodule_regex_string =
-    "(Trk|SuperMod)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-1]+)(/|)";
+    "(Trk|SuperMod)(_X[0-9]_|_[A-Z]_|_)PV_([0-1]+)(/|)";
 }  // namespace chamber
 
 namespace stt
