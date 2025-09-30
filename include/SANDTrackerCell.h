@@ -10,11 +10,10 @@ namespace tracker
 
 class Plane;
 
-class CellID : public SingleElStruct<long>
+class CellID : public SingleElStruct<unsigned long>
 {
  public:
-  CellID(long id) : SingleElStruct<long>(id){};
-  CellID() : SingleElStruct<long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 class Cell

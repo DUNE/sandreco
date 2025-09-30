@@ -8,11 +8,10 @@ namespace sand_reco
 {
 namespace tracker
 {
-class ClustersContainerID : public SingleElStruct<long>
+class ClustersContainerID : public SingleElStruct<unsigned long>
 {
  public:
-  ClustersContainerID(long id) : SingleElStruct<long>(id){};
-  ClustersContainerID() : SingleElStruct<long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 class ClustersContainer 

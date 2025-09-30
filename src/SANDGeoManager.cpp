@@ -899,44 +899,44 @@ const std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::co
 
 sand_geometry::tracker::CellID SANDGeoManager::encodeCellId(sand_geometry::tracker::PlaneID plane_global_id, sand_geometry::tracker::CellID cell_local_id)
 {
-  return plane_global_id() * 10000 + cell_local_id();
+  return ((*plane_global_id())) * 10000 + (*cell_local_id());
 }
 
 void SANDGeoManager::decodeCellId(sand_geometry::tracker::CellID   cell_global_id, 
                                     sand_geometry::tracker::PlaneID& plane_global_id,
                                     sand_geometry::tracker::CellID&  cell_local_id)
 {
-  plane_global_id = cell_global_id() / 10000;  // global id
-  cell_local_id = cell_global_id() % 10000;
+  plane_global_id = (*cell_global_id()) / 10000;  // global id
+  cell_local_id = (*cell_global_id()) % 10000;
 }
 
 sand_geometry::tracker::PlaneID SANDGeoManager::encodePlaneId(sand_geometry::tracker::ModuleID unique_module_id,
                                      sand_geometry::tracker::PlaneID plane_replica_id, sand_geometry::tracker::PlaneID plane_type)
 {
-  return unique_module_id() + (2 * plane_replica_id() + plane_type()) * 10 + plane_type();
+  return (*unique_module_id()) + (2 * (*plane_replica_id()) + (*plane_type())) * 10 + (*plane_type());
 }
 
 void SANDGeoManager::decodePlaneId(sand_geometry::tracker::PlaneID plane_global_id, sand_geometry::tracker::ModuleID& unique_module_id, 
                                      sand_geometry::tracker::PlaneID& plane_replica_id, sand_geometry::tracker::PlaneID& plane_type)
 {
-  unique_module_id = plane_global_id() / 100 * 100;
-  sand_geometry::tracker::PlaneID local_plane_id = plane_global_id() - unique_module_id();
-  plane_type = local_plane_id() % 10;
-  plane_replica_id = ((local_plane_id() / 10) - plane_type()) / 2;
+  unique_module_id = (*plane_global_id()) / 100 * 100;
+  sand_geometry::tracker::PlaneID local_plane_id = (*plane_global_id()) - (*unique_module_id());
+  plane_type = (*local_plane_id()) % 10;
+  plane_replica_id = (((*local_plane_id()) / 10) - (*plane_type())) / 2;
 }
 
 sand_geometry::tracker::ModuleID SANDGeoManager::encodeModuleId(sand_geometry::tracker::ModuleID supermodule_id, sand_geometry::tracker::ModuleID module_id, sand_geometry::tracker::ModuleID module_replica_id)
 {
-  return supermodule_id() * 1E5 + (module_id() * 10 + module_replica_id()) * 100;
+  return (*supermodule_id()) * 1E5 + ((*module_id()) * 10 + (*module_replica_id())) * 100;
 }
 
 void SANDGeoManager::decodeModuleId(sand_geometry::tracker::ModuleID unique_module_id, sand_geometry::tracker::ModuleID& supermodule_id, 
                                       sand_geometry::tracker::ModuleID& module_id, sand_geometry::tracker::ModuleID& module_replica_id)
 {
-  supermodule_id = unique_module_id() / 1E5;
-  sand_geometry::tracker::ModuleID local_module_id = (unique_module_id() - supermodule_id() * 1E5) / 100;
-  module_id = local_module_id() / 10;
-  module_replica_id = local_module_id() % 10;
+  supermodule_id = (*unique_module_id()) / 1E5;
+  sand_geometry::tracker::ModuleID local_module_id = ((*unique_module_id()) - (*supermodule_id()) * 1E5) / 100;
+  module_id = (*local_module_id()) / 10;
+  module_replica_id = (*local_module_id()) % 10;
 }
 bool SANDGeoManager::isSttTube(const TString& volume_name) const
 {
@@ -1056,7 +1056,7 @@ sand_geometry::tracker::ModuleID SANDGeoManager::getDriftModuleId(const TString&
   sand_geometry::tracker::ModuleID supermodule_id(getDriftSupermoduleId(volume_path));
   sand_geometry::tracker::ModuleID module_id(0);
   sand_geometry::tracker::ModuleID module_replica_id(0);
-  if (supermodule_id() != 0) {
+  if ((*supermodule_id()) != 0) {
     module_replica_id = getDriftModuleReplicaId(volume_path);
   }
   return encodeModuleId(supermodule_id, module_id, module_replica_id);
@@ -1136,7 +1136,7 @@ void SANDGeoManager::setSttPlaneInfo(const TGeoNode* const node,
   id_to_plane_[planes_.back().uId()] = std::prev(planes_.end());
 
   auto& plane = planes_.back();
-  double angle = tracker_module_configuration::stt::id_to_angle[std::to_string(stt_plane_local_id())];
+  double angle = tracker_module_configuration::stt::id_to_angle[std::to_string(*stt_plane_local_id())];
 
   plane.setRotation(angle);
   
@@ -1186,7 +1186,7 @@ void SANDGeoManager::setSttWireInfo(sand_geometry::tracker::Plane& plane,
     delete tube_matches;
 
     sand_geometry::tracker::CellID cell_unique_id = encodeCellId(plane.uId(), sand_geometry::tracker::CellID(tube_id));
-    w.setId(sand_geometry::tracker::WireID(cell_unique_id()));
+    w.setId(sand_geometry::tracker::WireID(*cell_unique_id()));
     w.setType(sand_geometry::tracker::WireInfo::Type::kSignal);
 
     TGeoMatrix* tube_matrix = tube_node->GetMatrix();
@@ -1227,7 +1227,7 @@ void SANDGeoManager::setSttWireInfo(sand_geometry::tracker::Plane& plane,
     TVector2 rotated_2d_position = localToRotated(local_2d_position, plane);
     plane.addCell(rotated_2d_position.Y(), 
                   sand_geometry::tracker::Cell(cell_unique_id, w, 2. * tube_shape->GetRmax(), 2. * tube_shape->GetRmax(), 
-                  tracker_module_configuration::stt::id_to_velocity[std::to_string(plane.lId()())]));
+                  tracker_module_configuration::stt::id_to_velocity[std::to_string(*plane.lId()())]));
   }
 }
 
@@ -1305,7 +1305,7 @@ void SANDGeoManager::setDriftPlaneInfo(const TGeoNode* const node,
   id_to_plane_[planes_.back().uId()] = std::prev(planes_.end());
 
   auto& plane = planes_.back();
-  double angle = tracker_module_configuration::drift::id_to_angle[std::to_string(drift_plane_local_id())];
+  double angle = tracker_module_configuration::drift::id_to_angle[std::to_string(*drift_plane_local_id())];
 
   plane.setRotation(angle);
 
@@ -1343,13 +1343,13 @@ void SANDGeoManager::setDriftWireInfo(sand_geometry::tracker::Plane& plane)
   
   std::vector<TVector2> vertices = plane.getPlaneVertices();
 
-  double transverse_position = plane.getMaxTransverseCoord() - tracker_module_configuration::drift::id_to_offset[std::to_string(plane.lId()())];
+  double transverse_position = plane.getMaxTransverseCoord() - tracker_module_configuration::drift::id_to_offset[std::to_string(*plane.lId()())];
   long wire_id = 0;
   while (transverse_position > -plane.getMaxTransverseCoord()) {
     sand_geometry::tracker::WireInfo w;
 
     sand_geometry::tracker::CellID cell_unique_id = encodeCellId(plane.uId(), sand_geometry::tracker::CellID(wire_id));
-    w.setId(sand_geometry::tracker::WireID(cell_unique_id()));
+    w.setId(sand_geometry::tracker::WireID(*cell_unique_id()));
     w.setType(sand_geometry::tracker::WireInfo::Type::kSignal);
     TVector2 local_2d_position = rotatedToLocal(TVector2(0, transverse_position), plane);
     std::vector<TVector2> intersection_points = 
@@ -1376,15 +1376,15 @@ void SANDGeoManager::setDriftWireInfo(sand_geometry::tracker::Plane& plane)
       }
     }
 
-    if (w.getLength() > tracker_module_configuration::drift::id_to_length[std::to_string(plane.lId()())]) {
+    if (w.getLength() > tracker_module_configuration::drift::id_to_length[std::to_string(*plane.lId()())]) {
       plane.addCell(transverse_position, 
                     sand_geometry::tracker::Cell(cell_unique_id, w, 
-                    tracker_module_configuration::drift::id_to_offset[std::to_string(plane.lId()())],
+                    tracker_module_configuration::drift::id_to_offset[std::to_string(*plane.lId()())],
                     plane.getDimension().Z(),
-                    tracker_module_configuration::drift::id_to_velocity[std::to_string(plane.lId()())]));
+                    tracker_module_configuration::drift::id_to_velocity[std::to_string(*plane.lId()())]));
       wire_id++;
     }
-    transverse_position -= tracker_module_configuration::drift::id_to_spacing[std::to_string(plane.lId()())];
+    transverse_position -= tracker_module_configuration::drift::id_to_spacing[std::to_string(*plane.lId()())];
 
   }
 
@@ -1481,7 +1481,7 @@ void SANDGeoManager::fillAdjacentCellsBVH(std::string geometry) {
   }
 
   auto start = std::chrono::system_clock::now();
-  BVH bvh(cells, this, max_distance);
+  BVH bvh(cells, this, max_distance, sand_reco::stt::overlap_tolerance);
   auto end_build = std::chrono::system_clock::now();
   auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_build - start);
   std::cout << "Time to build, search, and fill adj_cells: " << elapsed.count() << " ms" << std::endl;
@@ -1577,7 +1577,7 @@ void SANDGeoManager::printModulesInfo(int verbose)
 {
   std::cout << "There are " << planes_.size() << " planes in the geometry:" << std::endl;
   for (const auto& p:planes_) {
-    std::cout << "  - Plane " << p.uId()() << std::endl;
+    std::cout << "  - Plane " << *p.uId()() << std::endl;
     std::cout << "    Wire rotation: " << p.getRotation() << std::endl;
     std::cout << "    Center position: " << p.getPosition().X() << " " 
                                          << p.getPosition().Y() << " " 
@@ -1588,7 +1588,7 @@ void SANDGeoManager::printModulesInfo(int verbose)
     std::cout << "    List of cells (" << p.nCells() << "):"  << std::endl;
     if (verbose >= 1) {
       for(const auto& c:p.getIdToCellMap()) {
-        std::cout << "      " << c.first() << std::endl;
+        std::cout << "      " << *c.first() << std::endl;
         std::cout << "        Center: " << c.second.getWire().getCenter().X() << " "
                                         << c.second.getWire().getCenter().Y() << " "
                                         << c.second.getWire().getCenter().Z() << std::endl;
@@ -1600,7 +1600,7 @@ void SANDGeoManager::printModulesInfo(int verbose)
                                         << c.second.getWire().getSecondPoint().Y() << " "
                                         << c.second.getWire().getSecondPoint().Z() << std::endl;
         std::cout << "        Adjacent ids: ";
-        for (const auto& adj:c.second.getAdjacentCell()) std::cout << adj->getId()() << " ";
+        for (const auto& adj:c.second.getAdjacentCell()) std::cout << *adj->getId()() << " ";
         std::cout << std::endl;
 
       }
@@ -1807,7 +1807,7 @@ sand_geometry::tracker::CellID SANDGeoManager::getSttTubeId(double x, double y, 
     return sand_geometry::tracker::CellID(-999);
   }
 
-  auto& plane = planes_.at(getPlaneIndex(stt_plane_unique_id)());
+  auto& plane = planes_.at(*getPlaneIndex(stt_plane_unique_id)());
 
   TVector3 hit_center(x, y, z);
   return getClosestCellToHit(hit_center, plane, true);
@@ -1837,7 +1837,7 @@ std::vector<sand_geometry::tracker::CellID> SANDGeoManager::getSegmentIds(const 
   sand_geometry::tracker::PlaneID drift_plane_unique_id = getDriftPlaneId(node_path);
 
   // To Do: use the map?
-  auto& plane = planes_.at(getPlaneIndex(drift_plane_unique_id)());
+  auto& plane = planes_.at(*getPlaneIndex(drift_plane_unique_id)());
 
   sand_geometry::tracker::CellID cell_id_start = getClosestCellToHit(hseg.Start.Vect(), plane);
   sand_geometry::tracker::CellID cell_id_stop  = getClosestCellToHit(hseg.Stop.Vect(),  plane);

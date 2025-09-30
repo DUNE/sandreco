@@ -11,19 +11,17 @@ namespace sand_reco
 namespace tracker
 {
 // digit id -> dg_wire.did
-class DigitID : public SingleElStruct<long>
+class DigitID : public SingleElStruct<unsigned long>
 {
  public:
-  DigitID(long id) : SingleElStruct<long>(id){};
-  DigitID() : SingleElStruct<long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 // digit index -> index inside Digit vector
-class DigitIndex : public SingleElStruct<long>
+class DigitIndex : public SingleElStruct<unsigned long>
 {
  public:
-  DigitIndex(long id) : SingleElStruct<long>(id){};
-  DigitIndex() : SingleElStruct<long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 // Digit
@@ -54,7 +52,7 @@ class DigitCollection
   {
     sand_fg_tracker_digits_ = *digits;
     for (auto i = 0u; i < sand_fg_tracker_digits_.size(); i++) {
-      fg_map_digit_[DigitID(static_cast<long>(
+      fg_map_digit_[DigitID(static_cast<unsigned long>(
           sand_fg_tracker_digits_.at(i).did))] = DigitIndex(i);
     }
   };
@@ -69,7 +67,7 @@ class DigitCollection
   static const Digit &getDigit(const DigitID &id)
   {
     // std::cout << "DIGIT COLLECTION: " << id() << " " << fg_map_digit_[id]() << std::endl;
-    return sand_fg_tracker_digits_.at(fg_map_digit_[id]());
+    return sand_fg_tracker_digits_.at(*fg_map_digit_[id]());
   };
 };
 } // namespace tracker

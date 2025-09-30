@@ -8,11 +8,10 @@ namespace sand_geometry
 namespace tracker
 {
  
-class ModuleID : public SingleElStruct<long>
+class ModuleID : public SingleElStruct<unsigned long>
 {
  public:
-  ModuleID(long id) : SingleElStruct<long>(id){};
-  ModuleID() : SingleElStruct<long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 class Module

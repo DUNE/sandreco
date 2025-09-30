@@ -56,7 +56,7 @@ void AABB::expand(const AABB& second_aabb){
     max_.SetZ(std::max(max_.Z(), second_aabb.max_.Z()));
 }
 
-bool AABB::isOverlapping(const AABB& second_aabb, double epsilon = 0){
+bool AABB::isOverlapping(const AABB& second_aabb, double epsilon) const {
     if(max_.X() + epsilon >= second_aabb.min_.X() && min_.X() - epsilon <= second_aabb.max_.X() && 
        max_.Y() + epsilon >= second_aabb.min_.Y() && min_.Y() - epsilon <= second_aabb.max_.Y() && 
        max_.Z() + epsilon >= second_aabb.min_.Z() && min_.Z() - epsilon <= second_aabb.max_.Z()){
@@ -65,7 +65,7 @@ bool AABB::isOverlapping(const AABB& second_aabb, double epsilon = 0){
     return false;
 }
 
-void BVH::fillCellAABBMap(std::vector<std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::iterator> cells, SANDGeoManager* geo){
+void BVH::fillCellAABBMap(const std::vector<std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::iterator>& cells, SANDGeoManager* geo){
     for(const auto &cell : cells){
         cellAABBs_[cell->first] = AABB(cell, geo);
     }
@@ -78,7 +78,7 @@ void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tra
         node->aabb_.expand(cellAABBs_[(*it)->first]);
     }
 
-    node->index_ = sand_geometry::tracker::CellID(-1);
+    node->index_ = sand_geometry::tracker::CellID(std::nullopt);
     
     if(std::distance(begin, end) == 1){
         node->index_ = (*begin)->first;
@@ -120,12 +120,12 @@ void BVH::createTree(std::unique_ptr<Node>& node, std::vector<sand_geometry::tra
 }
 
 
-void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>& other_node, SANDGeoManager* geo, double max_distance){
+void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>& other_node, SANDGeoManager* geo, double max_distance, double overlap_tolerance){
     if(!node || !other_node) return;
     
-    if(!node->aabb_.isOverlapping(other_node->aabb_, 1)) return;
+    if(!node->aabb_.isOverlapping(other_node->aabb_, overlap_tolerance)) return;
 
-    if(other_node->index_ != -1 && node->index_ != -1) {
+    if(other_node->index_() && node->index_()) {
         if(other_node->index_ == node->index_) {
             return;
         }
@@ -147,16 +147,16 @@ void BVH::searchAdjacentCells(std::unique_ptr<Node>& node, std::unique_ptr<Node>
         return;
     } 
     
-    if (other_node->index_ == -1 && node->index_ == -1){
-        searchAdjacentCells(node->left_,  other_node->left_, geo, max_distance);
-        searchAdjacentCells(node->left_,  other_node->right_, geo, max_distance);
-        searchAdjacentCells(node->right_, other_node->right_, geo, max_distance);
-        searchAdjacentCells(node->right_, other_node->left_, geo, max_distance);
-    } else if (node->index_ == -1) {
-        searchAdjacentCells(node->left_,  other_node, geo, max_distance);
-        searchAdjacentCells(node->right_, other_node, geo, max_distance);
-    } else if (other_node->index_ == -1) {
-        searchAdjacentCells(node, other_node->left_, geo, max_distance);
-        searchAdjacentCells(node, other_node->right_, geo, max_distance);
+    if (!other_node->index_() && !node->index_()){
+        searchAdjacentCells(node->left_,  other_node->left_, geo, max_distance, overlap_tolerance);
+        searchAdjacentCells(node->left_,  other_node->right_, geo, max_distance, overlap_tolerance);
+        searchAdjacentCells(node->right_, other_node->right_, geo, max_distance, overlap_tolerance);
+        searchAdjacentCells(node->right_, other_node->left_, geo, max_distance, overlap_tolerance);
+    } else if (!node->index_()) {
+        searchAdjacentCells(node->left_,  other_node, geo, max_distance, overlap_tolerance);
+        searchAdjacentCells(node->right_, other_node, geo, max_distance, overlap_tolerance);
+    } else if (!other_node->index_()) {
+        searchAdjacentCells(node, other_node->left_, geo, max_distance, overlap_tolerance);
+        searchAdjacentCells(node, other_node->right_, geo, max_distance, overlap_tolerance);
     }
 }

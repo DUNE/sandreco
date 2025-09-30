@@ -10,25 +10,22 @@ namespace tracker
   
 class Module;
 
-class PlaneID : public SingleElStruct<long>
+class PlaneID : public SingleElStruct<unsigned long>
 {
  public:
-  PlaneID(long id) : SingleElStruct<long>(id){};
-  PlaneID() : SingleElStruct<long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
-class PlaneIndex : public SingleElStruct<long>
+class PlaneIndex : public SingleElStruct<unsigned long>
 {
  public:
-  PlaneIndex(long id) : SingleElStruct<long>(id){};
-  PlaneIndex() : SingleElStruct<long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
-class PlaneLocalID : public SingleElStruct<long>
+class PlaneLocalID : public SingleElStruct<unsigned long>
 {
  public:
-  PlaneLocalID(long id) : SingleElStruct<long>(id){};
-  PlaneLocalID() : SingleElStruct<long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 // To Do: Use the local id
