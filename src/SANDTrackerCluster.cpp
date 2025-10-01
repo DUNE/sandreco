@@ -39,7 +39,7 @@ void Cluster::getExtendedCluster(int offset)
 {
 
   // To Do: add case for triplet clusters, not only plane ones
-  std::vector<ulong> ids;
+  std::vector<unsigned long> ids;
   for (auto i = 0u; i < digits_.size(); i++) {
     auto d = DigitCollection::getDigit(digits_.at(i));
     ids.push_back(d.did);
@@ -48,10 +48,10 @@ void Cluster::getExtendedCluster(int offset)
   std::sort(ids.begin(), ids.end());
  
   auto cells_in_plane = plane_->getIdToCellMap();
-  ulong const id_max = std::min(ids.back() + offset,  cells_in_plane.rbegin()->first());
-  ulong const id_min = std::max(ids.front() - offset, cells_in_plane.begin()->first());
+  long const id_max = std::min(ids.back() + offset,  *(cells_in_plane.rbegin()->first()));
+  long const id_min = std::max(ids.front() - offset, *(cells_in_plane.begin()->first()));
 
-  for (ulong this_id = id_min; this_id <= id_max; this_id++) {
+  for (long this_id = id_min; this_id <= id_max; this_id++) {
     if (std::find(ids.begin(), ids.end(), this_id) == ids.end()) {
       auto wire_info = sand_geo_->getCellInfo(this_id)->second.getWire();
 

@@ -11,8 +11,7 @@ namespace tracker
 class ClustersContainerID : public SingleElStruct<unsigned long>
 {
  public:
-  ClustersContainerID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  ClustersContainerID() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 class ClustersContainer 

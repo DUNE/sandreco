@@ -13,22 +13,19 @@ class Module;
 class PlaneID : public SingleElStruct<unsigned long>
 {
  public:
-  PlaneID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  PlaneID() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 class PlaneIndex : public SingleElStruct<unsigned long>
 {
  public:
-  PlaneIndex(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  PlaneIndex() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 class PlaneLocalID : public SingleElStruct<unsigned long>
 {
  public:
-  PlaneLocalID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  PlaneLocalID() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 // To Do: Use the local id
