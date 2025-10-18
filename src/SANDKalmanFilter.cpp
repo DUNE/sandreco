@@ -862,14 +862,14 @@ void Manager::run()
       dir.X(), dir.Y(), dir.Z(),
       beta, particleInfo_.mass, particleInfo_.charge) / 1000;
     
-    if (dE > 50E-3) {
-      std::cout << "Energy loss in a single step is greater than 50 MeV. Something is wrong.." << std::endl;
-      std::cout << "Skipping this step" << std::endl;
-
-      stepLength++;
-      current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
-      continue;
-    }
+    // if (dE > 50E-3) {
+    //   std::cout << "Energy loss in a single step is greater than 50 MeV. Something is wrong.. " << dE << std::endl;
+    //   std::cout << "Skipping this step" << std::endl;
+    //   std::cout << "Current z: " << current_z_ << ", next z: " << nextZ << " dirX: " << dir.X() << " dirY: " << dir.Y()<< " dirZ: " << dir.Z() << std::endl;
+    //   stepLength++;
+    //   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
+    //   continue;
+    // }
     double dZ = (nextZ - current_z_) / 1000;
 
     propagate(dE, dZ, beta);

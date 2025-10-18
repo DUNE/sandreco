@@ -139,6 +139,9 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
   
   std::map<double, std::vector<Tracklet>> z_to_tracklets;
+  for (const auto& plane : sand_geo->getPlanes()) {
+    z_to_tracklets[plane.getPosition().Z()] = {};
+  }
 
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
 
@@ -148,6 +151,8 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
       TVector3 first_point;
       TVector3 last_point;
+      TVector3 first_point_momentum;
+      TVector3 last_point_momentum;
       double min_z = 10e8;
       double max_z = -10e8;
       for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
@@ -156,10 +161,12 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
         if (digit.z > max_z) {
           max_z = digit.z;
           last_point = TVector3(digit.x, digit.y, digit.z);
+          last_point_momentum = TVector3(digit.px, digit.py, digit.pz);
         }
         if (digit.z < min_z) {
           min_z = digit.z;
           first_point = TVector3(digit.x, digit.y, digit.z);
+          first_point_momentum = TVector3(digit.px, digit.py, digit.pz);
         }
       }
 

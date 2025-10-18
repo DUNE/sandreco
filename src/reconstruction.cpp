@@ -1648,6 +1648,9 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
   sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
 
   sand_reco::kf::utils::TrackletMap z_to_tracklets;
+  for (const auto& plane : sand_geo->getPlanes()) {
+    z_to_tracklets[plane.getPosition().Z()] = {};
+  }
 
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
   

@@ -145,6 +145,9 @@ void CreateDigitsFromHits(const SANDGeoManager& geo,
         d.x = running_hit.x1;
         d.y = running_hit.y1;
         d.z = running_hit.z1;
+        d.px = running_hit.px1;
+        d.py = running_hit.py1;
+        d.pz = running_hit.pz1;
 
         wire_time = hit_smallest_time;
         t_hit = closest_point_hit_l.T();
@@ -211,6 +214,12 @@ void GroupHitsByTube(const TG4Event& ev, const SANDGeoManager& geo,
     h.y2 = hseg.Stop.Y();
     h.z2 = hseg.Stop.Z();
     h.t2 = hseg.Stop.T();
+    h.px1 = hseg.GetStartMomentum().X();
+    h.py1 = hseg.GetStartMomentum().Y();
+    h.pz1 = hseg.GetStartMomentum().Z();
+    h.px2 = hseg.GetStopMomentum().X();
+    h.py2 = hseg.GetStopMomentum().Y();
+    h.pz2 = hseg.GetStopMomentum().Z();
     h.de = hseg.EnergyDeposit;
     h.pid = hseg.PrimaryId;
     h.index = j;
@@ -303,6 +312,12 @@ void GroupHitsByCell(const TG4Event& ev, const SANDGeoManager& geo,
       h.y2 = hseg.Stop.Y();
       h.z2 = hseg.Stop.Z();
       h.t2 = hseg.Stop.T();
+      h.px1 = hseg.GetStartMomentum().X();
+      h.py1 = hseg.GetStartMomentum().Y();
+      h.pz1 = hseg.GetStartMomentum().Z();
+      h.px2 = hseg.GetStopMomentum().X();
+      h.py2 = hseg.GetStopMomentum().Y();
+      h.pz2 = hseg.GetStopMomentum().Z();
       h.de = hseg.EnergyDeposit;
       h.pid = hseg.PrimaryId;
       h.index = j;
