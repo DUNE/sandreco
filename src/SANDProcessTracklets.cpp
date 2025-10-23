@@ -8,21 +8,44 @@ double ComputeStd(const std::vector<double>& values, double mean) {
   return std::sqrt(squared_difference / values.size());
 }
 
-
-std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z){
-
+Truth getTrueTrackletOfCluster(TVector3 start_pos, TVector3 stop_pos,
+                               TVector3 start_mom, TVector3 stop_mom,
+                               double z)
+{
   // Interpolation of z coordinate
-  auto first_point = start;
-  auto second_point = stop;
+  auto first_point = start_pos;
+  auto second_point = stop_pos;
 
-  double z_diff = z - first_point.Z();
-  double alpha = z_diff / fabs(second_point.Z() - first_point.Z());
+   if (first_point.Z() > second_point.Z()) {
+    std::swap(first_point, second_point);
+    std::swap(start_mom, stop_mom);
+  }
 
-  TVector3 interpolated_pos = first_point * (1 - alpha) + second_point * alpha;
-  TVector3 interpolated_dir = (stop - start).Unit();
+  double dz = (second_point.Z() - z);
+  double alpha = dz / (second_point.Z() - first_point.Z());
 
-  return { interpolated_pos, interpolated_dir };
+  //Interpolation of position and momentum
+  TVector3 pos = first_point * (1.0 - alpha) + second_point * alpha;
+  TVector3 mom = start_mom * (1.0 - alpha) + stop_mom * alpha;
+  TVector3 dir = mom.Unit();
+
+  return Truth{pos, dir, mom};
 }
+
+// std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z){
+
+//   // Interpolation of z coordinate
+//   auto first_point = start;
+//   auto second_point = stop;
+
+//   double z_diff = z - first_point.Z();
+//   double alpha = z_diff / fabs(second_point.Z() - first_point.Z());
+
+//   TVector3 interpolated_pos = first_point * (1 - alpha) + second_point * alpha;
+//   TVector3 interpolated_dir = (stop - start).Unit();
+
+//   return { interpolated_pos, interpolated_dir };
+// }
 
 
 double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet){

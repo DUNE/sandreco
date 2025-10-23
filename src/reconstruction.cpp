@@ -1660,38 +1660,49 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
 
       TVector3 first_point;
       TVector3 last_point;
+      TVector3 first_point_momentum;
+      TVector3 last_point_momentum;
+
       double min_z = 10e8;
       double max_z = -10e8;
       for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
         auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
         
-        if (digit.z > max_z) {
+         if (digit.z > max_z) {
           max_z = digit.z;
           last_point = TVector3(digit.x, digit.y, digit.z);
+          last_point_momentum = TVector3(digit.px, digit.py, digit.pz);
         }
         if (digit.z < min_z) {
           min_z = digit.z;
           first_point = TVector3(digit.x, digit.y, digit.z);
+          first_point_momentum = TVector3(digit.px, digit.py, digit.pz);
         }
       }
 
-      auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, cluster_in_container.getZ());
-      
-      TVector3 true_pos = true_tracklet[0];
-      TVector3 true_dir = true_tracklet[1];     
+      auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, first_point_momentum, last_point_momentum, cluster_in_container.getZ());
+   
+      TVector3 true_pos = true_tracklet.pos_;
+      TVector3 true_dir = true_tracklet.dir_;
+      TVector3 true_mom = true_tracklet.mom_;    
       double true_theta_yz = atan(true_dir.Y() / true_dir.Z());
       double true_theta_xz = atan(true_dir.X() / true_dir.Z());
       if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
 
       Tracklet measurement_from_true_tracklet;
-      measurement_from_true_tracklet.x = true_pos.X() + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-      measurement_from_true_tracklet.y = true_pos.Y() + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet.x = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
       measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
         auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
         measurement_from_true_tracklet.digits.push_back(digit);
       }
+      // std::cout << true_pos.X() << std::endl;
+      measurement_from_true_tracklet.true_pos_ = true_pos;
+      measurement_from_true_tracklet.true_dir_ = true_dir;
+      measurement_from_true_tracklet.true_mom_ = true_mom;
+      
       z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
     }
   }

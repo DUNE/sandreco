@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <TString.h>
 #include <TGeoManager.h>
+#include <TVector3.h>
 
 #ifndef STRUCT_H
 #define STRUCT_H
@@ -201,6 +202,11 @@ struct Tracklet {
   double theta_yz;
   double chi2;
   std::vector<dg_wire> digits;
+
+  TVector3 true_pos_; 
+  TVector3 true_dir_;
+  TVector3 true_mom_;
+
 };
 
 struct track

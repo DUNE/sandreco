@@ -906,6 +906,10 @@ void Manager::run()
       this_track_.addDigits(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].digits);
       this_track_.setMeasurement(current_step_, measurement);
       this_track_.setOrientation(current_step_, current_orientation_);
+      this_track_.setTrueMomentum(current_step_,  z_to_tracklets_->at(nextZ)[tracklet_index].true_mom_);
+      this_track_.setTruePosition(current_step_,  z_to_tracklets_->at(nextZ)[tracklet_index].true_pos_);
+
+
       filter(measurement, prediction);
 
       current_z_ = nextZ;
