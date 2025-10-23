@@ -278,14 +278,24 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
 
     double max_z = 0;
     bool to_be_reconstructed = false;
-    for (auto& hit : trj.GetHitMap().at(string_to_component[tracker_name])) {
-      if (hit.GetStop().Z() > max_z && hit.GetStopMomentum().Z() > 100) {
-        max_z = hit.GetStop().Z();
-        pi.pos = hit.GetStop().Vect();
-        pi.mom = hit.GetStopMomentum();
+
+    for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
+      if (point.GetPosition().Z() > max_z && point.GetMomentum().Z() > 100) {
+        max_z = point.GetPosition().Z();
+        pi.pos = point.GetPosition().Vect();
+        pi.mom = point.GetMomentum();
         to_be_reconstructed = true;
       }
     }
+
+    // for (auto& hit : trj.GetHitMap().at(string_to_component[tracker_name])) {
+    //   if (hit.GetStop().Z() > max_z && hit.GetStopMomentum().Z() > 100) {
+    //     max_z = hit.GetStop().Z();
+    //     pi.pos = hit.GetStop().Vect();
+    //     pi.mom = hit.GetStopMomentum();
+    //     to_be_reconstructed = true;
+    //   }
+    // }
 
     if (!to_be_reconstructed) continue;
 
