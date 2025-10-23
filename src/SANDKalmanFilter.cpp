@@ -835,6 +835,12 @@ void Manager::run()
       break;
     }
     auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;   
+    double dZ = (nextZ - current_z_) / 1000;
+
+    if (fabs(dZ) > 0.16) {
+      std::cerr << "Single step along z larger than 16 cm. Stopping this track." << std::endl;
+      break;
+    }
 
     auto currentStep = this_track_.getStep(current_step_);
     auto filteredStateVector =
@@ -870,7 +876,6 @@ void Manager::run()
     //   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
     //   continue;
     // }
-    double dZ = (nextZ - current_z_) / 1000;
 
     propagate(dE, dZ, beta);
 

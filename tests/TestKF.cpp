@@ -174,9 +174,6 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
   sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
   
   std::map<double, std::vector<Tracklet>> z_to_tracklets;
-  for (const auto& plane : sand_geo->getPlanes()) {
-    z_to_tracklets[plane.getPosition().Z()] = {};
-  }
 
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
 
@@ -287,15 +284,6 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
         to_be_reconstructed = true;
       }
     }
-
-    // for (auto& hit : trj.GetHitMap().at(string_to_component[tracker_name])) {
-    //   if (hit.GetStop().Z() > max_z && hit.GetStopMomentum().Z() > 100) {
-    //     max_z = hit.GetStop().Z();
-    //     pi.pos = hit.GetStop().Vect();
-    //     pi.mom = hit.GetStopMomentum();
-    //     to_be_reconstructed = true;
-    //   }
-    // }
 
     if (!to_be_reconstructed) continue;
 
