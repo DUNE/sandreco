@@ -21,7 +21,7 @@ Truth getTrueTrackletOfCluster(TVector3 start_pos, TVector3 stop_pos,
     std::swap(start_mom, stop_mom);
   }
 
-  double dz = (second_point.Z() - z);
+  double dz = z - first_point.Z();
   double alpha = dz / (second_point.Z() - first_point.Z());
 
   //Interpolation of position and momentum
