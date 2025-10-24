@@ -25,51 +25,93 @@
 #include "SANDTrackerUtils.h"
 #include "utils.h"
 
-// #include "EDEPTree.h"
+static void printChecks(
+    int track_ID,
+    const sand_reco::kf::utils::TrackletMap& z_to_tracklets,
+    const sand_reco::kf::Track& track)
+{
+
+  //# Planes with at least one measurement
+  //# Total number of measurements per track 
+  size_t planes_with_meas = 0;
+  size_t total_meas = 0;
+  for (const auto& kv : z_to_tracklets) {
+    const auto& v = kv.second;
+    if (!v.empty()) {
+      planes_with_meas++;
+      total_meas += v.size();
+    }
+  }
+
+  //# Total steps
+  const size_t n_steps = track.getSteps().size();
+  //# True tracklet
+  size_t n_true_tracklet= 0;
+  //# Tracklet used as measurements
+  size_t n_measured_tracklet = 0;
+  
+  for (const auto& s : track.getSteps()) {
+    const TMatrixD& m = s.getMeasurement();
+    if (m.GetNrows() >= 2 && m.GetNcols() >= 1) {
+      ++n_measured_tracklet;
+    }
+
+    const TVector3& ptrue = s.getTrueMomentum();
+    const TVector3& xtrue = s.getTruePosition();
+    if (std::isfinite(ptrue.X()) && std::isfinite(ptrue.Y()) && std::isfinite(ptrue.Z()) &&
+        std::isfinite(xtrue.X()) && std::isfinite(xtrue.Y()) && std::isfinite(xtrue.Z())) {
+      ++n_true_tracklet;
+    }
+  }
+
+
+  std::cout
+    << "Traccia " << track_ID << ":\n"
+    << "  # piani con almeno una misura   = " << planes_with_meas << "\n"
+    << "  # misure totali (event)         = " << total_meas << "\n"
+    << "  # step (traccia)                = " << n_steps << "\n"
+    << "  # true tracklet (traccia)       = " << n_true_tracklet<< "\n"
+    << "  # measurement (traccia)         = " << n_measured_tracklet << "\n"
+    << std::flush;
+}
+
+
 
   void tryCompleteManager(sand_reco::kf::utils::TrackletMap z_to_tracklets,
                           SParticleInfo particle,
-                          TH1D* h_gpos_distribution, TH1D* h_gang_distribution,
-                          TMultiGraph* mg, TMultiGraph* mgx, TH1D* chi2
-                          /*TH1D* meas_x_res, TH1D* meas_y_res*/)
+                          TMultiGraph* mg, TMultiGraph* mgx, 
+                          TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TH1D* chi2,
+                          TH1D* meas_x_res,
+                          TH1D* meas_y_res,
+                          TH1D* smooth_x_res,
+                          TH1D* smooth_y_res,
+                          TH1D* x_pull_smooth,
+                          TH1D* y_pull_smooth,
+                          TH1D* p_res_step,
+                          TH2D* p_init_vs_reco_smooth)
   
   {
 
   sand_reco::kf::Manager manager;
   manager.initFromMC(&z_to_tracklets, particle);
-
-   {
-    size_t total_meas = 0;
-    size_t max_meas_per_z = 0;
-    double worst_z = 0;
-    for (const auto& kv : z_to_tracklets) {
-      total_meas += kv.second.size();
-      if (kv.second.size() > max_meas_per_z) {
-        max_meas_per_z = kv.second.size();
-        worst_z = kv.first;
-      }
-    }
-    std::cerr << "[DBG] total measurements = " << total_meas
-              << ", max per z = " << max_meas_per_z
-              << " at z = " << worst_z << std::endl;
-  }
-
   manager.run();
-
-  auto track = manager.getTrack();
-    std::cerr << "[DBG] track.getSteps().size() = "
-            << track.getSteps().size() << std::endl;
-
+  
+  const auto& track = manager.getTrack();
+  printChecks(particle.id, z_to_tracklets, track);
+  
   if (track.getSteps().size() > 0) { // was commented, with > 3
+    auto initial_state = sand_reco::kf::utils::getStateVector(particle.initial_mom * 1E-3, particle.initial_pos * 1E-3, particle.charge);
+    auto initial_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(initial_state.radius(), initial_state.tanLambda());
+
     auto last_step = track.getSteps().back(); //crash if empty due to the .back().
     auto reco_state =
           last_step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
     auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
                                   reco_state.radius(), reco_state.tanLambda());
 
-    auto initial_state = sand_reco::kf::utils::getStateVector(particle.initial_mom * 1E-3, particle.initial_pos * 1E-3, particle.charge);
-    auto initial_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(initial_state.radius(), initial_state.tanLambda());
- 
+    if (p_init_vs_reco_smooth && std::isfinite(initial_mom) && std::isfinite(reco_mom)) {
+        p_init_vs_reco_smooth->Fill(initial_mom, reco_mom);
+        }
 
     std::cout << "Initial Momentum " << initial_mom << std::endl;
     std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
@@ -84,11 +126,11 @@
     TGraph* xz_smoothed = new TGraph(track.getSteps().size());
     TGraph* xz_measured = new TGraph(track.getSteps().size());
 
- 
-
-    
     int i = 0;
     for (auto& step : track.getSteps()) {
+      // -------------------------------------------------------------------------------------
+      //Plots trajectories reconstructed and KF stages
+      // -------------------------------------------------------------------------------------
       auto prediction = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction).getStateVector();
       auto filtering = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateVector();
       auto smoothing =  step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
@@ -102,33 +144,82 @@
       xz_smoothed->SetPoint(i, step.getZ() , smoothing.x()*1000);
       xz_measured->SetPoint(i, step.getZ() , step.getX());
       i++;
+
+      // -------------------------------------------------------------------------------------
+      // Plots for pull-tests
+      // -------------------------------------------------------------------------------------
+      // Parameters from true tracklet
+      const TVector3& true_pos_from_trk = step.getTruePosition();   // mm
+      const TVector3& true_mom_from_trk = step.getTrueMomentum();
+      const double true_mom = true_mom_from_trk.Mag();   // MeV
       
+      //Parameters from measurement vector (which is the true with a smearing)
+      const auto& meas = step.getMeasurement();   // TMatrixD 2x1
+      const double meas_x = step.getX();
+      const double meas_y = step.getY();
+      const double meas_z = step.getZ();
+      //const double meas_mom = step.getMomentum(); ToDo :un metodo per estrarre il momento dalla misura
+
+      //Parameters from reconstructed trajectory of KF
+      const double reco_smooth_x = smoothing.x()*1000;
+      const double reco_smooth_y = smoothing.y()*1000;
+      const double reco_smooth_p = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
+                              smoothing.radius(), smoothing.tanLambda());
+
+      
+      //plot
+      //Position residuals
+       if (meas_x_res) meas_x_res->Fill(meas_x - true_pos_from_trk.X());  // mm
+      if (meas_y_res) meas_y_res->Fill(meas_y - true_pos_from_trk.Y());  // mm
+
+      const double res_smooth_x = reco_smooth_x - true_pos_from_trk.X();  // mm
+      const double res_smooth_y = reco_smooth_y - true_pos_from_trk.Y();  // mm
+      if (smooth_x_res) smooth_x_res->Fill(res_smooth_x);
+      if (smooth_y_res) smooth_y_res->Fill(res_smooth_y);
+
+      //Momentum residuals
+      const auto& smooth_cov_matrix = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateCovMatrix();
+      const double sigma_x = (smooth_cov_matrix.GetNrows() > 0 && smooth_cov_matrix.GetNcols() > 0) ? std::sqrt(smooth_cov_matrix(0,0)) * 1000.0 : 0.0;
+      const double sigma_y = (smooth_cov_matrix.GetNrows() > 1 && smooth_cov_matrix.GetNcols() > 1) ? std::sqrt(smooth_cov_matrix(1,1)) * 1000.0 : 0.0;
+
+      if (x_pull_smooth && sigma_x > 0.0 && std::isfinite(sigma_x))
+        x_pull_smooth->Fill(res_smooth_x / sigma_x);
+
+      if (y_pull_smooth && sigma_y > 0.0 && std::isfinite(sigma_y))
+        y_pull_smooth->Fill(res_smooth_y / sigma_y);
+
+      if (p_res_step && std::isfinite(reco_smooth_p) && std::isfinite(true_mom))
+        p_res_step->Fill(reco_smooth_p - true_mom);
+      
+      // Innovation test
       auto& innovation = step.getInnovation();
       if (innovation.empty()) {
         continue;
       }
-  
-      h_gpos_distribution->Fill(innovation[0]);
-      h_gang_distribution->Fill(innovation[1]);
-
-      chi2->Fill(step.getChi2());
-
-      // -------------------------------------------------------------------------------------
-      // Plot misura Tracklets
-      // -------------------------------------------------------------------------------------
-    
-    //  const TVector3& true_pos = step.getTruePosition();
-    //  const TVector3& true_mom = step.getTrueMomentum();
-    //  double meas_x = step.getX();
-    //  double meas_y = step.getY();
-
-    //   meas_x_res->Fill(meas_x - true_pos.X());
-    //   meas_y_res->Fill(meas_y - true_pos.Y());
+        
+        h_gpos_distribution->Fill(innovation[0]);
+        h_gang_distribution->Fill(innovation[1]);
+        
+        chi2->Fill(step.getChi2());
 
 
-      
-    }
-      
+          // if (meas.GetNrows() < 2 || meas.GetNcols() < 1) continue;
+          // const double meas_pos  = meas(0,0); 
+          // const double meas_ang  = meas(1,0); 
+          
+          // const auto& orientation = step.getOrientation();
+          // if (orientation == sand_reco::kf::Orientation::kVertical) {
+          //     // Piano x
+          //     const double res_x = true_pos.X() - meas_pos;
+          //     smeared_meas_x_res->Fill(res_x);
+          //   } else {
+          //     // Piano y
+          //     const double res_y = true_pos.Y() - meas_pos;
+          //     smeared_meas_y_res->Fill(res_y);
+          //   }
+          
+        }
+        
     yz_predicted->SetLineColor(3);
     yz_predicted->SetMarkerStyle(3);
     mg->Add(yz_predicted);
@@ -159,26 +250,52 @@
   return;
 }
 
-void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, TH1D* h_gpos_distribution,TH1D* h_gang_distribution,
-                        TH1D* chi2 /* TH1D* meas_x_res, TH1D* meas_y_res*/)
+void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits,
+                        TH1D* h_gpos_distribution,TH1D* h_gang_distribution, TH1D* chi2,
+                        TH1D* meas_x_res,
+                        TH1D* meas_y_res,
+                        TH1D* smooth_x_res,
+                        TH1D* smooth_y_res,
+                        TH1D* x_pull_smooth,
+                        TH1D* y_pull_smooth,
+                        TH1D* p_res_step,
+                        TH2D* p_init_vs_reco_smooth)
+
 {
-  
+  // unknown parameters
   int p[9] = {100, -2000, 2000, 100, -4000, -0, 100, 22500, 26000};
 
+  // fill ID vs index map of DigitCollection
   sand_reco::tracker::DigitCollection::fillMap(digits);
-  auto digit_map =  sand_reco::tracker::DigitCollection::getDigits();
-  if (sand_reco::tracker::DigitCollection::getDigits().empty()) {
+
+  // get the vector of digits
+  auto digit_vec =  sand_reco::tracker::DigitCollection::getDigits();
+
+  // check if the vector of digits is empty
+  if (digit_vec.empty()) {
     return;
   }
+
+  // get the name of the tracker
   std::string tracker_name = sand_reco::tracker::DigitCollection::getDigits().begin()->det;
-  sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
+
+  // build the clusters starting from digits and return them as a collection
+  sand_reco::tracker::ClusterCollection clusters(sand_geo, digit_vec, sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
   
+  // map
+  // key  : z of the module, 
+  // value: vector of tracklet reconstructed in the module
   std::map<double, std::vector<Tracklet>> z_to_tracklets;
 
+  // init the SAND Tracker Utils
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
 
+  // random number generator
   TRandom3 rand(0);
+
+  // loop over tracker modules
   for (const auto& container:clusters.getContainers()) {
+    // loop over clusters
     for (const auto& cluster_in_container:container->getClusters()) {
 
       TVector3 first_point;
@@ -187,9 +304,11 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
       TVector3 last_point_momentum;
       double min_z = 10e8;
       double max_z = -10e8;
+      // loop over digits in each clusters
       for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
         auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
         
+        // find digit with min and max z
         if (digit.z > max_z) {
           max_z = digit.z;
           last_point = TVector3(digit.x, digit.y, digit.z);
@@ -202,18 +321,21 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
         }
       }
 
+      // eval position, direction and momentum of the particle at the z of the module
       auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, first_point_momentum, last_point_momentum, cluster_in_container.getZ());
-   
       TVector3 true_pos = true_tracklet.pos_;
       TVector3 true_dir = true_tracklet.dir_;
-      TVector3 true_mom = true_tracklet.mom_;    
+      TVector3 true_mom = true_tracklet.mom_;
+
+      // eval yz nd xz angles
       double true_theta_yz = atan(true_dir.Y() / true_dir.Z());
       double true_theta_xz = atan(true_dir.X() / true_dir.Z());
       if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
 
+      // smear tracket to simulate the measurement
       Tracklet measurement_from_true_tracklet;
-      measurement_from_true_tracklet.x = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-      measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+      measurement_from_true_tracklet.x = true_pos.X()  + rand.Gaus() * SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
+      measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus() * SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
       measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
@@ -329,7 +451,12 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     }
 
 
-    tryCompleteManager(z_to_tracklets, particleInfos[ip], h_gpos_distribution, h_gang_distribution, mg, mgx, chi2/*meas_x_res, meas_y_res*/);
+    tryCompleteManager(z_to_tracklets, particleInfos[ip],mg, mgx,
+                        h_gpos_distribution, h_gang_distribution, chi2,
+                        meas_x_res, meas_y_res,
+                        smooth_x_res, smooth_y_res,
+                        x_pull_smooth, y_pull_smooth, p_res_step,
+                        p_init_vs_reco_smooth);
 
     std::string title = name_mg + "; z [mm]; y [mm]";
     mg->SetTitle(title.c_str());
@@ -366,19 +493,23 @@ int main(int argc, char* argv[])
   t->SetBranchAddress("dg_wire", &digits);
 
   bool plots = false;
-  TFile* innovation_test = new TFile("innovation_test.root", "RECREATE");
-  TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation", 100, -3, 3);
-  TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation", 100, -3, 3);
-  // TH1D* h_x_diff = new TH1D("h_x_diff", "h_x_diff", 1000, -3, 3);
-  // TH1D* h_y_diff = new TH1D("h_y_diff", "h_y_diff", 1000, -3, 3);
-  // TH1D* h_theta_x_diff = new TH1D("h_theta_x_diff", "h_theta_x_diff", 1000, -3, 3);
-  // TH1D* h_theta_y_diff = new TH1D("h_theta_y_diff", "h_theta_y_diff", 1000, -3, 3);
+  
+  TFile* pull_test = new TFile("pull_test.root", "RECREATE");
+  TH1D* meas_x_res     = new TH1D("meas_x_res",     "meas_x - true_x; mm; entries", 200, -2.0, 2.0);
+  TH1D* meas_y_res     = new TH1D("meas_y_res",     "meas_y - true_y; mm; entries", 200, -2.0, 2.0);
+  TH1D* smooth_x_res   = new TH1D("smooth_x_res",   "smoothed_x - true_x; mm; entries", 200, -2.0, 2.0);
+  TH1D* smooth_y_res   = new TH1D("smooth_y_res",   "smoothed_y - true_y; mm; entries", 200, -2.0, 2.0);
+  TH1D* x_pull_smooth  = new TH1D("x_pull_smooth",  "(smoothed_x - true_x)/#sigma_{x}; pull; entries", 200, -5.0, 5.0);
+  TH1D* y_pull_smooth  = new TH1D("y_pull_smooth",  "(smoothed_y - true_y)/#sigma_{y}; pull; entries", 200, -5.0, 5.0);
+  TH1D* p_res_step     = new TH1D("p_res_step",     "p_{smooth} - p_{true} per step; MeV; entries", 200, -500.0, 500.0);
+  TH2D* p_init_vs_reco_smooth = new TH2D(
+    "p_init_vs_reco_smooth",
+    "Initial true p vs last smoothed reco p; p_{true}^{init} [MeV]; p_{reco}^{smooth,last} [MeV]",200, 0, 5000, 200, 0, 5000);
+
+  TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation on position", 100, -3, 3);
+  TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation on direction", 100, -3, 3);
   TH1D* chi2 = new TH1D("chi2", "chi2", 1000, 0, 100000);
-
-  // TFile* meas_truth_file = new TFile("meas_truth_res.root", "RECREATE");
-  // TH1D* meas_x_res = new TH1D("meas_x_res", "meas_x_res; (x_{meas} - x_{true}) [mm]; Entries", 1000, -0.1, 0.1);
-  // TH1D* meas_y_res = new TH1D("meas_y_res", "meas_y_res; (y_{meas} - y_{true}) [mm]; Entries", 1000, -0.1, 0.1);
-
+  
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
   
@@ -398,8 +529,13 @@ int main(int argc, char* argv[])
     t->GetEntry(i);
 
     if (!plots) {
-      innovation_test->cd();
-      processEventWithKF(&sand_geo, ev, digits, h_gpos_distribution, h_gang_distribution, chi2 /*meas_x_res, meas_y_res*/);
+      pull_test->cd();
+      processEventWithKF(&sand_geo, ev, digits, 
+                        h_gpos_distribution, h_gang_distribution, chi2,
+                        meas_x_res, meas_y_res,
+                        smooth_x_res, smooth_y_res,
+                        x_pull_smooth, y_pull_smooth, p_res_step,
+                        p_init_vs_reco_smooth);
     }
 
     // if (plots) {
@@ -408,8 +544,8 @@ int main(int argc, char* argv[])
 
     //   sand_reco::tracker::DigitCollection::fillMap(digits);
     //   sand_reco::tracker::ClusterCollection clusters(&sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
-    //   auto digit_map =  sand_reco::tracker::DigitCollection::getDigits();
-    //   std::string tracker_name = digit_map.begin()->det;
+    //   auto digit_vec =  sand_reco::tracker::DigitCollection::getDigits();
+    //   std::string tracker_name = digit_vec.begin()->det;
 
     //   TCanvas* canvas_cluster = new TCanvas("canvas_cluster","canvas_cluster",2000,1000);
     //   canvas_cluster->Divide(2,1);
@@ -503,7 +639,7 @@ int main(int argc, char* argv[])
         
 
 
-    //       for (auto digit:digit_map) {
+    //       for (auto digit:digit_vec) {
     //         auto cell = sand_geo.getCellInfo(sand_geometry::tracker::CellID(digit.did));
     //         auto h = cell->second.getSize().h;
     //         auto w = cell->second.getSize().w;
@@ -621,14 +757,18 @@ int main(int argc, char* argv[])
   }
 
   if (!plots) {
-    innovation_test->cd();
+    pull_test->cd();
     h_gpos_distribution->Write();
     h_gang_distribution->Write();
     chi2->Write();
-    innovation_test->Close();
-    // meas_truth_file->cd();
-    // meas_x_res->Write();
-    // meas_y_res->Write();
-    // meas_truth_file->Close();
+    meas_x_res->Write();
+    meas_y_res->Write();
+    smooth_x_res->Write();
+    smooth_y_res->Write();
+    x_pull_smooth->Write();
+    y_pull_smooth->Write();
+    p_res_step->Write();
+    p_init_vs_reco_smooth->Write();
+    pull_test->Close();
   }
 }
