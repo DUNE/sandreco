@@ -232,6 +232,8 @@ static void printChecks(
 
       // Momentum residuals
       const auto& smooth_cov_matrix = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateCovMatrix();
+      const double sigma_x     = (smooth_cov_matrix.GetNrows() > 0 && smooth_cov_matrix.GetNcols() > 0) ? std::sqrt(smooth_cov_matrix(0,0)) * 1000 : 0.0;
+      const double sigma_y     = (smooth_cov_matrix.GetNrows() > 1 && smooth_cov_matrix.GetNcols() > 1) ? std::sqrt(smooth_cov_matrix(1,1)) * 1000 : 0.0;
       const double sigma_r_inv = (smooth_cov_matrix.GetNrows() > 2 && smooth_cov_matrix.GetNcols() > 2) ? std::sqrt(smooth_cov_matrix(2,2)) : 0.0;
       const double sigma_tan   = (smooth_cov_matrix.GetNrows() > 3 && smooth_cov_matrix.GetNcols() > 3) ? std::sqrt(smooth_cov_matrix(3,3)) : 0.0;
       const double sigma_phi   = (smooth_cov_matrix.GetNrows() > 4 && smooth_cov_matrix.GetNcols() > 4) ? std::sqrt(smooth_cov_matrix(4,4)) : 0.0;
