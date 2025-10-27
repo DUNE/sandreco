@@ -25,6 +25,53 @@
 #include "SANDTrackerUtils.h"
 #include "utils.h"
 
+struct PlotContainer {
+  TH1D meas_x_res;
+  TH1D meas_y_res;
+  TH1D smooth_x_res;
+  TH1D smooth_y_res;
+  TH1D smooth_p_res;
+  TH1D smooth_tan_res;
+  TH1D smooth_phi_res;
+  TH1D x_pull_smooth;
+  TH1D y_pull_smooth;
+  TH1D r_inv_pull_smooth;
+  TH1D tan_pull_smooth;
+  TH1D phi_pull_smooth;
+  TH1D p_res_step;
+  TH2D p_init_vs_reco_smooth;
+  TH2D p_first_vs_reco_smooth;
+  TH2D p_diff_vs_points;
+  TH1D h_gpos_distribution;
+  TH1D h_gang_distribution;
+  TH1D deltaP_over_P;
+  TH1D chi2;
+
+  PlotContainer()
+    : meas_x_res("meas_x_res", "meas_x_res; meas_x_res; (x_{meas} - x_{true}) [mm]; Entries", 200, -2.0, 2.0),
+      meas_y_res("meas_y_res", "meas_y_res; meas_y_res; (y_{meas} - y_{true}) [mm]; Entries", 200, -2.0, 2.0),
+      smooth_x_res("smooth_x_res", "smooth_x_res; (x_{smoothed} - x_{true}) [mm]; Entries", 200, -2.0, 2.0),
+      smooth_y_res("smooth_y_res", "smooth_y_res; (y_{smoothed} - y_{true}) [mm]; Entries", 200, -2.0, 2.0),
+      smooth_p_res("smooth_p_res", "smooth_p_res; (p_{smoothed} - p_{true}) [GeV]; Entries", 200, -200, 200),
+      smooth_tan_res("smooth_tan_res", "smooth_tan_res; (tan_{smoothed} - tan_{true}); Entries", 400, -0.2, 0.2),
+      smooth_phi_res("smooth_phi_res", "smooth_phi_res; (phi_{smoothed} - phi_{true}) [rad]; Entries", 400, -0.2, 0.2),
+      x_pull_smooth("x_pull_smooth", "(smoothed_x - true_x)/#sigma_{x}; (smoothed_x - true_x)/#sigma_{x}; Entries", 200, -5.0, 5.0),
+      y_pull_smooth("y_pull_smooth", "(smoothed_y - true_y)/#sigma_{y}; (smoothed_y - true_y)/#sigma_{y}; Entries", 200, -5.0, 5.0),
+      r_inv_pull_smooth("r_inv_pull_smooth", "(smoothed_r_inv - true_r_inv)/#sigma_{r_inv}; (smoothed_r_inv - true_r_inv)/#sigma_{r_inv}; Entries", 200, -5.0, 5.0),
+      tan_pull_smooth("tan_pull_smooth", "(smoothed_tan - true_tan)/#sigma_{tan}; (smoothed_tan - true_tan)/#sigma_{tan}; Entries", 200, -5.0, 5.0),
+      phi_pull_smooth("phi_pull_smooth", "(smoothed_phi - true_phi)/#sigma_{phi}; (smoothed_phi - true_phi)/#sigma_{phi}; Entries", 200, -5.0, 5.0),
+      p_res_step("p_res_step", "p_{smooth} - p_{true} per step; MeV; Entries", 200, -500.0, 500.0),
+      p_init_vs_reco_smooth("p_init_vs_reco_smooth", "Initial true p vs last smoothed reco p; p_{true}^{init} [MeV]; p_{reco}^{smooth,last} [MeV]", 200, 0, 5000, 200, 0, 5000),
+      p_first_vs_reco_smooth("p_first_vs_reco_smooth", "True p  at first hit vs last smoothed reco p; p_{true}^{init} [MeV]; p_{reco}^{smooth,last} [MeV]", 200, 0, 5000, 200, 0, 5000),
+      p_diff_vs_points("p_diff_vs_points", "DeltaP vs nPoints p; nPoints; (p_{true} - p{smoothed}) [MeV];", 200, 0, 200, 200, -200, 200),
+      h_gpos_distribution("h_gpos_distribution", "Innovation on position", 100, -3, 3),
+      h_gang_distribution("h_gang_distribution", "Innovation on direction", 100, -3, 3),
+      deltaP_over_P("deltaP_over_P", "DeltaP vs True P", 100, -1, 1),
+      chi2("chi2", "chi2", 1000, 0, 100000)
+  {}
+};
+
+
 static void printChecks(
     int track_ID,
     const sand_reco::kf::utils::TrackletMap& z_to_tracklets,
@@ -77,18 +124,8 @@ static void printChecks(
 
 
 
-  void tryCompleteManager(sand_reco::kf::utils::TrackletMap z_to_tracklets,
-                          SParticleInfo particle,
-                          TMultiGraph* mg, TMultiGraph* mgx, 
-                          TH1D* h_gpos_distribution, TH1D* h_gang_distribution, TH1D* chi2,
-                          TH1D* meas_x_res,
-                          TH1D* meas_y_res,
-                          TH1D* smooth_x_res,
-                          TH1D* smooth_y_res,
-                          TH1D* x_pull_smooth,
-                          TH1D* y_pull_smooth,
-                          TH1D* p_res_step,
-                          TH2D* p_init_vs_reco_smooth)
+  void tryCompleteManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParticleInfo particle, 
+                          TMultiGraph* mg, TMultiGraph* mgx, PlotContainer& plot_container)
   
   {
 
@@ -104,17 +141,23 @@ static void printChecks(
     auto initial_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(initial_state.radius(), initial_state.tanLambda());
 
     auto last_step = track.getSteps().back(); //crash if empty due to the .back().
-    auto reco_state =
-          last_step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
-    auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
-                                  reco_state.radius(), reco_state.tanLambda());
+    auto smoothed_state = last_step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+    auto smoothed_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(smoothed_state.radius(), smoothed_state.tanLambda());
+    auto true_state = sand_reco::kf::utils::getStateVector(last_step.getTrueMomentum(), last_step.getTruePosition(), particle.charge);
+    auto true_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(true_state.radius(), true_state.tanLambda());
 
-    if (p_init_vs_reco_smooth && std::isfinite(initial_mom) && std::isfinite(reco_mom)) {
-        p_init_vs_reco_smooth->Fill(initial_mom, reco_mom);
-        }
+    if (std::isfinite(initial_mom) && std::isfinite(smoothed_mom)) {
+      plot_container.p_init_vs_reco_smooth.Fill(initial_mom, smoothed_mom);
+    }
+    if (std::isfinite(true_mom) && std::isfinite(smoothed_mom)) {
+      plot_container.p_first_vs_reco_smooth.Fill(true_mom, smoothed_mom);
+    }
+
+    plot_container.p_diff_vs_points.Fill( track.getSteps().size(), smoothed_mom - true_mom);
 
     std::cout << "Initial Momentum " << initial_mom << std::endl;
-    std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
+    std::cout << "Smoothed Momentum " << smoothed_mom << std::endl;
+    std::cout << "True Momentum " << true_mom << std::endl;
     std::cout << "track.getSteps() " << track.getSteps().size() << std::endl;
     
     TGraph* yz_predicted = new TGraph(track.getSteps().size());
@@ -126,14 +169,15 @@ static void printChecks(
     TGraph* xz_smoothed = new TGraph(track.getSteps().size());
     TGraph* xz_measured = new TGraph(track.getSteps().size());
 
-    int i = 0;
-    for (auto& step : track.getSteps()) {
+    for (uint i = 0; i < track.getSteps().size(); i++) {
+      auto step = track.getSteps()[i];
+
       // -------------------------------------------------------------------------------------
-      //Plots trajectories reconstructed and KF stages
+      // Plots trajectories reconstructed and KF stages
       // -------------------------------------------------------------------------------------
       auto prediction = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kPrediction).getStateVector();
-      auto filtering = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateVector();
-      auto smoothing =  step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+      auto filtering  = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering).getStateVector();
+      auto smoothing  = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
       
       yz_predicted->SetPoint(i, step.getZ(), prediction.y()*1000 );
       yz_filtered->SetPoint(i, step.getZ() , filtering.y()*1000);
@@ -143,7 +187,7 @@ static void printChecks(
       xz_filtered->SetPoint(i, step.getZ() , filtering.x()*1000);
       xz_smoothed->SetPoint(i, step.getZ() , smoothing.x()*1000);
       xz_measured->SetPoint(i, step.getZ() , step.getX());
-      i++;
+      
 
       // -------------------------------------------------------------------------------------
       // Plots for pull-tests
@@ -151,45 +195,64 @@ static void printChecks(
       // Parameters from true tracklet
       const TVector3& true_pos_from_trk = step.getTruePosition();   // mm
       const TVector3& true_mom_from_trk = step.getTrueMomentum();
-      const double true_mom = true_mom_from_trk.Mag();   // MeV
+      auto true_step_state = sand_reco::kf::utils::getStateVector(true_mom_from_trk, true_pos_from_trk, particle.charge);
+      auto true_step_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
+                                                  true_step_state.radius(), true_step_state.tanLambda());
       
-      //Parameters from measurement vector (which is the true with a smearing)
+      // Parameters from measurement vector (which is the true with a smearing)
       const auto& meas = step.getMeasurement();   // TMatrixD 2x1
       const double meas_x = step.getX();
       const double meas_y = step.getY();
-      const double meas_z = step.getZ();
-      //const double meas_mom = step.getMomentum(); ToDo :un metodo per estrarre il momento dalla misura
 
-      //Parameters from reconstructed trajectory of KF
-      const double reco_smooth_x = smoothing.x()*1000;
-      const double reco_smooth_y = smoothing.y()*1000;
-      const double reco_smooth_p = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
-                              smoothing.radius(), smoothing.tanLambda());
+      // Parameters from reconstructed trajectory of KF
+      const double smooth_x = smoothing.x();
+      const double smooth_y = smoothing.y();
+      const double smooth_p = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
+                                                  smoothing.radius(), smoothing.tanLambda());
 
       
-      //plot
-      //Position residuals
-       if (meas_x_res) meas_x_res->Fill(meas_x - true_pos_from_trk.X());  // mm
-      if (meas_y_res) meas_y_res->Fill(meas_y - true_pos_from_trk.Y());  // mm
+      // plot
+      // Position residuals
+      plot_container.meas_x_res.Fill(meas_x - true_pos_from_trk.X());  // mm
+      plot_container.meas_y_res.Fill(meas_y - true_pos_from_trk.Y());  // mm
 
-      const double res_smooth_x = reco_smooth_x - true_pos_from_trk.X();  // mm
-      const double res_smooth_y = reco_smooth_y - true_pos_from_trk.Y();  // mm
-      if (smooth_x_res) smooth_x_res->Fill(res_smooth_x);
-      if (smooth_y_res) smooth_y_res->Fill(res_smooth_y);
+      const double res_smooth_x = smooth_x - true_pos_from_trk.X();  // mm
+      const double res_smooth_y = smooth_y - true_pos_from_trk.Y();  // mm
+      const double res_smooth_p = (smooth_p - true_step_mom);  // GeV
+      const double res_smooth_r_inv = (smoothing.signedInverseRadius() - true_step_state.signedInverseRadius());  // 1 / m
+      const double res_smooth_tan = smoothing.tanLambda() - true_step_state.tanLambda();  // 
+      const double res_smooth_phi = smoothing.phi() - true_step_state.phi();  // rad
+      plot_container.smooth_x_res.Fill(res_smooth_x);
+      plot_container.smooth_y_res.Fill(res_smooth_y);
+      plot_container.smooth_p_res.Fill(res_smooth_p);
+      plot_container.smooth_tan_res.Fill(res_smooth_tan);
+      plot_container.smooth_phi_res.Fill(res_smooth_phi);
+      
+      plot_container.deltaP_over_P.Fill((smooth_p - true_step_mom) / true_step_mom );
 
-      //Momentum residuals
+      // Momentum residuals
       const auto& smooth_cov_matrix = step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateCovMatrix();
       const double sigma_x = (smooth_cov_matrix.GetNrows() > 0 && smooth_cov_matrix.GetNcols() > 0) ? std::sqrt(smooth_cov_matrix(0,0)) * 1000.0 : 0.0;
       const double sigma_y = (smooth_cov_matrix.GetNrows() > 1 && smooth_cov_matrix.GetNcols() > 1) ? std::sqrt(smooth_cov_matrix(1,1)) * 1000.0 : 0.0;
 
       if (x_pull_smooth && sigma_x > 0.0 && std::isfinite(sigma_x))
         x_pull_smooth->Fill(res_smooth_x / sigma_x);
+      const double sigma_phi   = (smooth_cov_matrix.GetNrows() > 4 && smooth_cov_matrix.GetNcols() > 4) ? std::sqrt(smooth_cov_matrix(4,4)) : 0.0;
 
-      if (y_pull_smooth && sigma_y > 0.0 && std::isfinite(sigma_y))
-        y_pull_smooth->Fill(res_smooth_y / sigma_y);
+      if (sigma_x > 0.0 && std::isfinite(sigma_x))
+        plot_container.x_pull_smooth.Fill(res_smooth_x / sigma_x);
 
-      if (p_res_step && std::isfinite(reco_smooth_p) && std::isfinite(true_mom))
-        p_res_step->Fill(reco_smooth_p - true_mom);
+      if (sigma_y > 0.0 && std::isfinite(sigma_y))
+       plot_container.y_pull_smooth.Fill(res_smooth_y / sigma_y);
+
+      if (sigma_r_inv > 0.0 && std::isfinite(sigma_r_inv))
+       plot_container.r_inv_pull_smooth.Fill(res_smooth_r_inv / sigma_r_inv);
+
+      if (sigma_tan > 0.0 && std::isfinite(sigma_tan))
+       plot_container.tan_pull_smooth.Fill(res_smooth_tan / sigma_tan);
+
+      if (sigma_phi > 0.0 && std::isfinite(sigma_phi))
+       plot_container.phi_pull_smooth.Fill(res_smooth_phi / sigma_phi);
       
       // Innovation test
       auto& innovation = step.getInnovation();
@@ -197,10 +260,10 @@ static void printChecks(
         continue;
       }
         
-        h_gpos_distribution->Fill(innovation[0]);
-        h_gang_distribution->Fill(innovation[1]);
+        plot_container.h_gpos_distribution.Fill(innovation[0]);
+        plot_container.h_gang_distribution.Fill(innovation[1]);
         
-        chi2->Fill(step.getChi2());
+        plot_container.chi2.Fill(step.getChi2());
 
 
           // if (meas.GetNrows() < 2 || meas.GetNcols() < 1) continue;
@@ -250,16 +313,7 @@ static void printChecks(
   return;
 }
 
-void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits,
-                        TH1D* h_gpos_distribution,TH1D* h_gang_distribution, TH1D* chi2,
-                        TH1D* meas_x_res,
-                        TH1D* meas_y_res,
-                        TH1D* smooth_x_res,
-                        TH1D* smooth_y_res,
-                        TH1D* x_pull_smooth,
-                        TH1D* y_pull_smooth,
-                        TH1D* p_res_step,
-                        TH2D* p_init_vs_reco_smooth)
+void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits, PlotContainer& plot_container)
 
 {
   // unknown parameters
@@ -451,12 +505,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event, std::vecto
     }
 
 
-    tryCompleteManager(z_to_tracklets, particleInfos[ip],mg, mgx,
-                        h_gpos_distribution, h_gang_distribution, chi2,
-                        meas_x_res, meas_y_res,
-                        smooth_x_res, smooth_y_res,
-                        x_pull_smooth, y_pull_smooth, p_res_step,
-                        p_init_vs_reco_smooth);
+    tryCompleteManager(z_to_tracklets, particleInfos[ip], mg, mgx, plot_container);
 
     std::string title = name_mg + "; z [mm]; y [mm]";
     mg->SetTitle(title.c_str());
@@ -495,20 +544,7 @@ int main(int argc, char* argv[])
   bool plots = false;
   
   TFile* pull_test = new TFile("pull_test.root", "RECREATE");
-  TH1D* meas_x_res     = new TH1D("meas_x_res",     "meas_x - true_x; mm; entries", 200, -2.0, 2.0);
-  TH1D* meas_y_res     = new TH1D("meas_y_res",     "meas_y - true_y; mm; entries", 200, -2.0, 2.0);
-  TH1D* smooth_x_res   = new TH1D("smooth_x_res",   "smoothed_x - true_x; mm; entries", 200, -2.0, 2.0);
-  TH1D* smooth_y_res   = new TH1D("smooth_y_res",   "smoothed_y - true_y; mm; entries", 200, -2.0, 2.0);
-  TH1D* x_pull_smooth  = new TH1D("x_pull_smooth",  "(smoothed_x - true_x)/#sigma_{x}; pull; entries", 200, -5.0, 5.0);
-  TH1D* y_pull_smooth  = new TH1D("y_pull_smooth",  "(smoothed_y - true_y)/#sigma_{y}; pull; entries", 200, -5.0, 5.0);
-  TH1D* p_res_step     = new TH1D("p_res_step",     "p_{smooth} - p_{true} per step; MeV; entries", 200, -500.0, 500.0);
-  TH2D* p_init_vs_reco_smooth = new TH2D(
-    "p_init_vs_reco_smooth",
-    "Initial true p vs last smoothed reco p; p_{true}^{init} [MeV]; p_{reco}^{smooth,last} [MeV]",200, 0, 5000, 200, 0, 5000);
-
-  TH1D* h_gpos_distribution = new TH1D("h_gpos_distribution", "Innovation on position", 100, -3, 3);
-  TH1D* h_gang_distribution = new TH1D("h_gang_distribution", "Innovation on direction", 100, -3, 3);
-  TH1D* chi2 = new TH1D("chi2", "chi2", 1000, 0, 100000);
+  PlotContainer plot_container;
   
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
@@ -530,12 +566,7 @@ int main(int argc, char* argv[])
 
     if (!plots) {
       pull_test->cd();
-      processEventWithKF(&sand_geo, ev, digits, 
-                        h_gpos_distribution, h_gang_distribution, chi2,
-                        meas_x_res, meas_y_res,
-                        smooth_x_res, smooth_y_res,
-                        x_pull_smooth, y_pull_smooth, p_res_step,
-                        p_init_vs_reco_smooth);
+      processEventWithKF(&sand_geo, ev, digits, plot_container);
     }
 
     // if (plots) {
@@ -758,17 +789,26 @@ int main(int argc, char* argv[])
 
   if (!plots) {
     pull_test->cd();
-    h_gpos_distribution->Write();
-    h_gang_distribution->Write();
-    chi2->Write();
-    meas_x_res->Write();
-    meas_y_res->Write();
-    smooth_x_res->Write();
-    smooth_y_res->Write();
-    x_pull_smooth->Write();
-    y_pull_smooth->Write();
-    p_res_step->Write();
-    p_init_vs_reco_smooth->Write();
+    plot_container.meas_x_res.Write();
+    plot_container.meas_y_res.Write();
+    plot_container.smooth_x_res.Write();
+    plot_container.smooth_y_res.Write();
+    plot_container.smooth_p_res.Write();
+    plot_container.smooth_tan_res.Write();
+    plot_container.smooth_phi_res.Write();
+    plot_container.x_pull_smooth.Write();
+    plot_container.y_pull_smooth.Write();
+    plot_container.r_inv_pull_smooth.Write();
+    plot_container.tan_pull_smooth.Write();
+    plot_container.phi_pull_smooth.Write();
+    plot_container.p_res_step.Write();
+    plot_container.p_init_vs_reco_smooth.Write();
+    plot_container.p_first_vs_reco_smooth.Write();
+    plot_container.p_diff_vs_points.Write();
+    plot_container.h_gpos_distribution.Write();
+    plot_container.h_gang_distribution.Write();
+    plot_container.chi2.Write();
+    plot_container.deltaP_over_P.Write();
     pull_test->Close();
   }
 }
