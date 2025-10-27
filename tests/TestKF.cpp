@@ -52,7 +52,7 @@ struct PlotContainer {
       meas_y_res("meas_y_res", "meas_y_res; meas_y_res; (y_{meas} - y_{true}) [mm]; Entries", 200, -2.0, 2.0),
       smooth_x_res("smooth_x_res", "smooth_x_res; (x_{smoothed} - x_{true}) [mm]; Entries", 200, -2.0, 2.0),
       smooth_y_res("smooth_y_res", "smooth_y_res; (y_{smoothed} - y_{true}) [mm]; Entries", 200, -2.0, 2.0),
-      smooth_p_res("smooth_p_res", "smooth_p_res; (p_{smoothed} - p_{true}) [GeV]; Entries", 200, -200, 200),
+      smooth_p_res("smooth_p_res", "smooth_p_res; (p_{smoothed} - p_{true}) [GeV]; Entries", 200, -0.2, 0.2),
       smooth_tan_res("smooth_tan_res", "smooth_tan_res; (tan_{smoothed} - tan_{true}); Entries", 400, -0.2, 0.2),
       smooth_phi_res("smooth_phi_res", "smooth_phi_res; (phi_{smoothed} - phi_{true}) [rad]; Entries", 400, -0.2, 0.2),
       x_pull_smooth("x_pull_smooth", "(smoothed_x - true_x)/#sigma_{x}; (smoothed_x - true_x)/#sigma_{x}; Entries", 200, -5.0, 5.0),
@@ -143,7 +143,7 @@ static void printChecks(
     auto last_step = track.getSteps().back(); //crash if empty due to the .back().
     auto smoothed_state = last_step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
     auto smoothed_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(smoothed_state.radius(), smoothed_state.tanLambda());
-    auto true_state = sand_reco::kf::utils::getStateVector(last_step.getTrueMomentum(), last_step.getTruePosition(), particle.charge);
+    auto true_state = sand_reco::kf::utils::getStateVector(last_step.getTrueMomentum() * 1E-3, last_step.getTruePosition() * 1E-3, particle.charge);
     auto true_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(true_state.radius(), true_state.tanLambda());
 
     if (std::isfinite(initial_mom) && std::isfinite(smoothed_mom)) {
@@ -195,7 +195,7 @@ static void printChecks(
       // Parameters from true tracklet
       const TVector3& true_pos_from_trk = step.getTruePosition();   // mm
       const TVector3& true_mom_from_trk = step.getTrueMomentum();
-      auto true_step_state = sand_reco::kf::utils::getStateVector(true_mom_from_trk, true_pos_from_trk, particle.charge);
+      auto true_step_state = sand_reco::kf::utils::getStateVector(true_mom_from_trk * 1E-3, true_pos_from_trk * 1E-3, particle.charge);
       auto true_step_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
                                                   true_step_state.radius(), true_step_state.tanLambda());
       
@@ -205,8 +205,8 @@ static void printChecks(
       const double meas_y = step.getY();
 
       // Parameters from reconstructed trajectory of KF
-      const double smooth_x = smoothing.x();
-      const double smooth_y = smoothing.y();
+      const double smooth_x = smoothing.x() * 1000;
+      const double smooth_y = smoothing.y() * 1000;
       const double smooth_p = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
                                                   smoothing.radius(), smoothing.tanLambda());
 
@@ -218,7 +218,7 @@ static void printChecks(
 
       const double res_smooth_x = smooth_x - true_pos_from_trk.X();  // mm
       const double res_smooth_y = smooth_y - true_pos_from_trk.Y();  // mm
-      const double res_smooth_p = (smooth_p - true_step_mom);  // GeV
+      const double res_smooth_p = (smooth_p - true_step_mom) * 1E-3;  // GeV
       const double res_smooth_r_inv = (smoothing.signedInverseRadius() - true_step_state.signedInverseRadius());  // 1 / m
       const double res_smooth_tan = smoothing.tanLambda() - true_step_state.tanLambda();  // 
       const double res_smooth_phi = smoothing.phi() - true_step_state.phi();  // rad
