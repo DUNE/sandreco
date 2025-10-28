@@ -118,10 +118,24 @@ target_link_libraries(SANDKalmanFilter PUBLIC SANDTrackerUtils SANDKFTrack)
 add_library(ProcessTracklets SHARED src/SANDProcessTracklets.cpp)
 target_link_libraries(ProcessTracklets PUBLIC Utils EDEPTree)
 
+# Creates a libTryCompleteManager
+add_library(TryCompleteManager STATIC tests/TryCompleteManager.cpp)
+target_link_libraries(TryCompleteManager PUBLIC
+  SANDKalmanFilter
+  SANDTrackerUtils
+  ProcessTracklets
+  ROOT::RIO ROOT::Tree
+)
 
 # Creates TestKF executable.
 add_executable(TestKF tests/TestKF.cpp)
-target_link_libraries(TestKF PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter ProcessTracklets)
+target_link_libraries(TestKF PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter ProcessTracklets TryCompleteManager)
+
+# Creates PlotKF executabl.
+add_executable(PlotKF tests/PlotKF.cpp)
+target_link_libraries(PlotKF PUBLIC
+  TryCompleteManager ROOT::RIO ROOT::Tree ROOT::Hist ROOT::Graf ROOT::Gpad ROOT::MathCore
+)
 
 # Creates TestSeed executable.
 add_executable(TestSeed tests/TestSeed.cpp)
