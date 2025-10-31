@@ -30,17 +30,18 @@ struct PointInfos{
  // ---------------- plot TRACCE (reco/smooth/filt/meas) ------------------------
 static void makeTrackGraph(TTree* steps, TDirectory* outDir) {
 
-  Int_t track_id=0;
-  step_idx=0 /*orientation=0*/;
+  Int_t run=0, event=0, track_id=0, step_idx=0;
+  steps->SetBranchAddress("run",&run);
+  steps->SetBranchAddress("event",&event);
+  steps->SetBranchAddress("track_id",&track_id);
+  steps->SetBranchAddress("step_idx",&step_idx);
+
   Double_t z=0;
   Double_t x_meas=0, y_meas=0;
   Double_t x_pred=0, y_pred=0;
   Double_t x_filt=0, y_filt=0;
   Double_t x_smooth=0, y_smooth=0;
 
-  steps->SetBranchAddress("track_id", &track_id);
-  steps->SetBranchAddress("step_idx", &step_idx);
-  //steps->SetBranchAddress("orientation", &orientation);
   steps->SetBranchAddress("z", &z);
 
   steps->SetBranchAddress("x_meas", &x_meas);
@@ -175,94 +176,136 @@ int makePlot(const std::string& input_root,
   TTree* tracks = (TTree*)fin.Get("tracks");
   if (!steps || !tracks) { std::cerr<<"Missing 'steps' or 'tracks' trees\n"; return 2; }
 
-  Double_t x_true=0, y_true=0;
-  Double_t x_meas=0, y_meas=0;
-  Double_t x_smooth=0, y_smooth=0;
-  Double_t p_true=0, p_smooth=0;
-  Double_t var_x=NAN, var_y=NAN;
-  Double_t innov_pos=0, innov_ang=0, chi2=0;
+    Int_t run=0, event=0, track_id=0, step_idx=0;
+    Double_t z=0.0;
+    steps->SetBranchAddress("run",&run);
+    steps->SetBranchAddress("event",&event);
+    steps->SetBranchAddress("track_id",&track_id);
+    steps->SetBranchAddress("step_idx",&step_idx);
+      steps->SetBranchAddress("z", &z);
 
-  steps->SetBranchAddress("x_true", &x_true);
-  steps->SetBranchAddress("y_true", &y_true);
-  steps->SetBranchAddress("x_meas", &x_meas);
-  steps->SetBranchAddress("y_meas", &y_meas);
-  steps->SetBranchAddress("x_smooth", &x_smooth);
-  steps->SetBranchAddress("y_smooth", &y_smooth);
-  steps->SetBranchAddress("p_true", &p_true);
-  steps->SetBranchAddress("p_smooth",&p_smooth);
-  if (steps->GetBranch("var_x"))     steps->SetBranchAddress("var_x",&var_x);
-  if (steps->GetBranch("var_y"))     steps->SetBranchAddress("var_y",&var_y);
-  if (steps->GetBranch("innov_pos")) steps->SetBranchAddress("innov_pos",&innov_pos);
-  if (steps->GetBranch("innov_ang")) steps->SetBranchAddress("innov_ang",&innov_ang);
-  if (steps->GetBranch("chi2"))      steps->SetBranchAddress("chi2",&chi2);
+    //---true---
+    Double_t x_true=0.0;
+    Double_t y_true=0.0;
+    Double_t invR_true=0.0;
+    Double_t tanL_true=0.0;
+    Double_t phi_true=0.0;
+    steps->SetBranchAddress("x_true",   &x_true);
+    steps->SetBranchAddress("y_true",   &y_true);
+    steps->SetBranchAddress("invR_true",   &invR_true);
+    steps->SetBranchAddress("tanL_true",   &tanL_true);
+    steps->SetBranchAddress("phi_true",    &phi_true);
 
-  TH1D meas_x_res("(x_meas - x_true)","(x_{meas}-x_{true}) [mm];mm;Entries",200,-2,2);
-  TH1D meas_y_res("(y_meas - y_true)","(y_{meas}-y_{true}) [mm];mm;Entries",200,-2,2);
+    //---smooth---
+    Double_t x_smooth=0.0;
+    Double_t y_smooth=0.0;
+    Double_t invR_smooth=0.0;
+    Double_t tanL_smooth=0.0;
+    Double_t phi_smooth=0.0;
+    steps->SetBranchAddress("x_smooth", &x_smooth);
+    steps->SetBranchAddress("y_smooth", &y_smooth);
+    steps->SetBranchAddress("invR_smooth", &invR_smooth);
+    steps->SetBranchAddress("tanL_smooth", &tanL_smooth);
+    steps->SetBranchAddress("phi_smooth",  &phi_smooth);
+
+    //sigma smoothed
+    Double_t sigma_x_smooth=0.0;
+    Double_t sigma_y_smooth=0.0;
+    Double_t sigma_invR_smooth=0.0;
+    Double_t sigma_tanL_smooth=0.0;
+    Double_t sigma_phi_smooth=0.0;
+    if (steps->GetBranch("sigma_x_smooth"))    steps->SetBranchAddress("sigma_x_smooth",&sigma_x_smooth);
+    if (steps->GetBranch("sigma_y_smooth"))    steps->SetBranchAddress("sigma_y_smooth",&sigma_y_smooth);
+    if (steps->GetBranch("sigma_invR_smooth")) steps->SetBranchAddress("sigma_invR_smooth",&sigma_invR_smooth);
+    if (steps->GetBranch("sigma_tanL_smooth")) steps->SetBranchAddress("sigma_tanL_smooth",&sigma_tanL_smooth);
+    if (steps->GetBranch("sigma_phi_smooth"))  steps->SetBranchAddress("sigma_phi_smooth",&sigma_phi_smooth);
+
+    Double_t x_meas=0.0, y_meas=0.0;
+    Double_t x_pred=0.0, y_pred=0.0; 
+    Double_t x_filt=0.0, y_filt=0.0;
+    steps->SetBranchAddress("x_meas", &x_meas);
+    steps->SetBranchAddress("y_meas", &y_meas);
+    steps->SetBranchAddress("x_pred", &x_pred);
+    steps->SetBranchAddress("y_pred", &y_pred);
+    steps->SetBranchAddress("x_filt", &x_filt);
+    steps->SetBranchAddress("y_filt", &y_filt);
+
+    Double_t p_true=0.0; //MeV
+    Double_t p_smooth=0.0; //MeV
+    Double_t innov_pos=0.0, innov_ang=0.0, chi2=0.0;
+    steps->SetBranchAddress("p_true", &p_true);
+    steps->SetBranchAddress("p_smooth", &p_smooth);
+    if (steps->GetBranch("innov_pos")) steps->SetBranchAddress("innov_pos",&innov_pos);
+    if (steps->GetBranch("innov_ang")) steps->SetBranchAddress("innov_ang",&innov_ang);
+    if (steps->GetBranch("chi2"))      steps->SetBranchAddress("chi2",&chi2);
+
+  //---smoooth - true ---
+  TH1D x_res_step("(x_smooth - x_true)","(x_{smooth}-x_{true}) [mm];mm;Entries",200,-2,2);
+  TH1D y_res_step("(y_smooth - y_true)","(y_{smooth}-y_{true}) [mm];mm;Entries",200,-2,2);
+  TH1D invR_res_step("(invR_smooth - invR_true)","invR_{smooth}-invR_{true};;Entries",200,-1e-2,1e-2);
+  TH1D tanL_res_step ("(tanL_smooth - tanL_true)","tan#lambda_{smooth}-tan#lambda_{true};;Entries",200,-0.1,0.1);
+  TH1D phi_res_step  ("(phi_smooth - phi_true)","#phi_{smooth}-#phi_{true} [rad];rad;Entries",200,-0.1,0.1);
   TH1D smooth_x_res("(x_smooth - x_true)","(x_{smooth}-x_{true}) [mm];mm;Entries",200,-2,2);
   TH1D smooth_y_res("(y_smooth - y_true)","(y_{smooth}-y_{true}) [mm];mm;Entries",200,-2,2);
 
+  TH1D x_pull_step  ("x_pull_step","(x_s-x_true)/#sigma_{x};;Entries",200,-5,5);
+  TH1D y_pull_step  ("y_pull_step","(y_s-y_true)/#sigma_{y};;Entries",200,-5,5);
+  TH1D invR_pull_step("invR_pull_step","(invR_s-invR_t)/#sigma_{invR};;Entries",200,-5,5);
+  TH1D tanL_pull_step("tanL_pull_step","(tanL_s-tanL_t)/#sigma_{tanL};;Entries",200,-5,5);
+  TH1D phi_pull_step ("phi_pull_step","(phi_s-phi_t)/#sigma_{phi};;Entries",200,-5,5);
+
+  //--- misura - true ---
+  TH1D measx_res_step("(x_meas - x_true)","(x_{meas}-x_{true}) [mm];mm;Entries",200,-2,2);
+  TH1D measy_res_step("(y_meas - y_true)","(y_{meas}-y_{true}) [mm];mm;Entries",200,-2,2);
+
+  // --- momentum---
   TH1D p_res_step("p_res_step","p_{smooth} - p_{true} [MeV];MeV;Entries",200,-500,500);
+  TH1D p_rel_res_step("(p_smooth - p_true)/p_true","(p_{s}-p_{t})/p_{t};;Entries",200,-1,1);
+  
   TH2D p_true_vs_p_smooth_step("p_true_vs_p_smooth_step","True p vs smoothed p; p_{true}[MeV]; p_{reco}[MeV]",200,0,5000,200,0,5000);
+  TH2D dp_vs_ptrue_step("dp_vs_ptrue_step","#Delta p vs p_{true};p_{true} [MeV];#Delta p [MeV]",200,0,5000,200,-500,500);
+  TH2D dprel_vs_ptrue_step("dprel_vs_ptrue_step","#Delta p/p vs p_{true};p_{true} [MeV];(p_{s}-p_{t})/p_{t}",200,0,5000,200,-1,1);
+
 
   TH1D h_gpos("innovation_pos","Innovation (pos);;Entries",100,-3,3);
   TH1D h_gang("innovation_ang","Innovation (ang);;Entries",100,-3,3);
-  TH1D x_pull("x_pull_smooth","(x_s-x_true)/#sigma_x;;Entries",200,-5,5);
-  TH1D y_pull("y_pull_smooth","(y_s-y_true)/#sigma_y;;Entries",200,-5,5);
   TH1D chi2_h("chi2","chi2;;Entries",1000,0,1e5);
-  TH1D h_pull_x_first("x_pull_first", "(x_s - x_true)/#sigma_{x} at first step; pull_{x}; entries", 100, -5, 5);
-  TH1D h_pull_y_first("y_pull_first", "(y_s - y_true)/#sigma_{y} at first step; pull_{y}; entries", 100, -5, 5);
   
-//--------PULL SEED------------
-std::unordered_map<int, Long64_t> firstEntry;  
-std::unordered_map<int, int>      firstStep; 
-
-const Long64_t nSteps = steps->GetEntries();
-for (Long64_t ie = 0; ie < nSteps; ++ie) {
-  steps->GetEntry(ie);
-  auto it = firstStep.find(trk);
-  if (it == firstStep.end() || step < it->second) {
-    firstStep[trk]  = step;
-    firstEntry[trk] = ie;
-  }
-}
-
-for (const auto& kv : firstEntry) {
-  steps->GetEntry(kv.second);
-
-  const double sigma_pos = 200E-6;
-  
-  if (std::isfinite(sigma_pos) && sigma_pos > 0) {
-    const double pull_x = (x_smoothed - x_true) / sigma_pos;
-    if (std::isfinite(pull_x)) h_pull_x_first.Fill(pull_x);
-  }
-  if (std::isfinite(sigma_pos) && sigma_pos > 0) {
-    const double pull_y = (y_smoothed - y_true) / sigma_pos;
-    if (std::isfinite(pull_y)) h_pull_y_first.Fill(pull_y);
-  }
-}
-
-h_pull_x_first.Write();
-h_pull_y_first.Write();
-
-
 
   // ---------------- plot per STEP ------------------------
   const Long64_t ns = steps->GetEntries(); //numero step
   for (Long64_t i=0;i<ns;++i){
     steps->GetEntry(i);
 
-    // measured vs. truth (per ora solo smearing di differenza)
-    meas_x_res.Fill(x_meas - x_true);
-    meas_y_res.Fill(y_meas - y_true);
-
     // smoothed vs. true
-    smooth_x_res.Fill(x_smooth - x_true);
-    smooth_y_res.Fill(y_smooth - y_true);
+    x_res_step.Fill(x_smooth - x_true);
+    y_res_step.Fill(y_smooth - y_true);
+    invR_res_step.Fill(invR_smooth - invR_true);
+    tanL_res_step.Fill (tanL_smooth - tanL_true);
+    phi_res_step.Fill  (phi_smooth  - phi_true);
+
+    if (std::isfinite(sigma_x_smooth) && sigma_x_smooth>0) x_pull_step.Fill((x_smooth - x_true)/sigma_x_smooth);
+    if (std::isfinite(sigma_y_smooth) && sigma_y_smooth>0) y_pull_step.Fill((y_smooth - y_true)/sigma_y_smooth);
+    if (std::isfinite(sigma_invR_smooth) && sigma_invR_smooth>0) invR_pull_step.Fill((invR_smooth - invR_true)/sigma_invR_smooth);
+    if (std::isfinite(sigma_tanL_smooth) && sigma_tanL_smooth>0) tanL_pull_step.Fill((tanL_smooth - tanL_true)/sigma_tanL_smooth);
+    if (std::isfinite(sigma_phi_smooth)  && sigma_phi_smooth>0)  phi_pull_step.Fill((phi_smooth - phi_true)/sigma_phi_smooth);
+
+    // measured vs. truth (per ora solo smearing di differenza)
+    measx_res_step.Fill(x_meas - x_true);
+    measy_res_step.Fill(y_meas - y_true);
+
 
     // momentum per step
     if (std::isfinite(p_true) && std::isfinite(p_smooth)) {
       p_res_step.Fill(p_smooth - p_true);
       p_true_vs_p_smooth_step.Fill(p_true, p_smooth);
+    }
+    
+    if (std::isfinite(p_true) && p_true>0 && std::isfinite(p_smooth)) {
+      const double dp = p_smooth - p_true;
+      p_rel_res_step.Fill(dp / p_true);
+      dp_vs_ptrue_step.Fill(p_true, dp);
+      dprel_vs_ptrue_step.Fill(p_true, dp / p_true);
     }
 
     // innovation e chi2
@@ -270,53 +313,138 @@ h_pull_y_first.Write();
     if (std::isfinite(innov_ang)) h_gang.Fill(innov_ang);
     chi2_h.Fill(chi2);
 
-    // pulls: var_x/var_y in m^2, pos in mm → dividere per 1e3??
-    if (std::isfinite(var_x) && var_x>0) x_pull.Fill((x_smooth - x_true)/(std::sqrt(var_x)*1e3));
-    if (std::isfinite(var_y) && var_y>0) y_pull.Fill((y_smooth - y_true)/(std::sqrt(var_y)*1e3));
   }
+
+
+// ------ SEED CHECKS------
+
+std::map<std::tuple<int,int,int>, std::pair<int, Long64_t>> lastEntry;
+for (Long64_t ie=0; ie<ns; ++ie) {
+  steps->GetEntry(ie);
+  auto key = std::make_tuple(run, event, track_id);
+  auto it = lastEntry.find(key);
+  if (it==lastEntry.end() || step_idx > it->second.first) {
+    lastEntry[key] = { step_idx, ie };
+  }
+}
+
+TH1D seed_dx   ("seed_dx","Seed: x_{s}-x_{t} [mm];mm;Entries",200,-2,2);
+TH1D seed_dy   ("seed_dy","Seed: y_{s}-y_{t} [mm];mm;Entries",200,-2,2);
+TH1D seed_dinvR("seed_dinvR","Seed: invR_{s}-invR_{t};;Entries",200,-1e-2,1e-2);
+TH1D seed_dtanL("seed_dtanL","Seed: tan#lambda_{s}-tan#lambda_{t};;Entries",200,-0.1,0.1);
+TH1D seed_dphi ("seed_dphi","Seed: #phi_{s}-#phi_{t} [rad];rad;Entries",200,-0.1,0.1);
+
+TH1D seed_pullx("seed_pullx","Seed: (x_{s}-x_{t})/#sigma_{x};pull_{x};Entries",100,-5,5);
+TH1D seed_pully("seed_pully","Seed: (y_{s}-y_{t})/#sigma_{y};pull_{y};Entries",100,-5,5);
+TH1D seed_invR_pull("seed_invR_pull","Seed: (invR_{s}-invR_{t})/#sigma_{invR};;Entries",100,-5,5);
+TH1D seed_tanL_pull("seed_tanL_pull","Seed: (tan#lambda_{s}-tan#lambda_{t})/#sigma_{tanL};;Entries",100,-5,5);
+TH1D seed_phi_pull ("seed_phi_pull","Seed: (#phi_{s}-#phi_{t})/#sigma_{phi};;Entries",100,-5,5);
+
+TH1D seed_dp("seed_dp","p_{s}^{last} - p_{t}^{first} [MeV];MeV;Entries",200,-1000,1000);
+TH1D seed_dprel("seed_dprel","(p_{s}^{last}-p_{t}^{first})/p_{t}^{first};;Entries",200,-1,1);
+TH1D seed_ratio_ps_over_pfirst("seed_ratio_ps_over_pfirst","p_{s}^{last}/p_{t}^{first};;Entries",200,0,2);
+
+Int_t tr_run=0, tr_event=0, tr_tid=0, n_steps=0;
+Double_t p_true_first=0, p_true_last=0, p_smooth_last=0;
+tracks->SetBranchAddress("run",&tr_run);
+tracks->SetBranchAddress("event",&tr_event);
+tracks->SetBranchAddress("track_id",&tr_tid);
+tracks->SetBranchAddress("n_steps",&n_steps);
+tracks->SetBranchAddress("p_true_first",&p_true_first);
+
+tracks->SetBranchAddress("p_true_last",&p_true_last);
+tracks->SetBranchAddress("p_smooth_last",&p_smooth_last);
+
+
+std::map<std::tuple<int,int,int>, double> pfirst_by_key;
+const Long64_t nt = tracks->GetEntries();
+for (Long64_t it=0; it<nt; ++it) {
+  tracks->GetEntry(it);
+  pfirst_by_key[ std::make_tuple(tr_run,tr_event,tr_tid) ] = p_true_first;
+}
+
+for (const auto& kv : lastEntry) {
+  const auto key = kv.first;
+  const Long64_t ie = kv.second.second;
+  steps->GetEntry(ie);
+
+  const double dx = x_smooth - x_true;
+  const double dy = y_smooth - y_true;
+  seed_dx.Fill(dx);
+  seed_dy.Fill(dy);
+  seed_dinvR.Fill(invR_smooth - invR_true);
+  seed_dtanL.Fill (tanL_smooth - tanL_true);
+  seed_dphi.Fill  (phi_smooth  - phi_true);
+
+  if (std::isfinite(sigma_x_smooth) && sigma_x_smooth>0) seed_pullx.Fill(dx / sigma_x_smooth);
+  if (std::isfinite(sigma_y_smooth) && sigma_y_smooth>0) seed_pully.Fill(dy / sigma_y_smooth);
+  if (std::isfinite(sigma_invR_smooth) && sigma_invR_smooth>0) seed_invR_pull.Fill((invR_smooth - invR_true)/sigma_invR_smooth);
+  if (std::isfinite(sigma_tanL_smooth) && sigma_tanL_smooth>0) seed_tanL_pull.Fill((tanL_smooth - tanL_true)/sigma_tanL_smooth);
+  if (std::isfinite(sigma_phi_smooth)  && sigma_phi_smooth>0)  seed_phi_pull.Fill((phi_smooth - phi_true)/sigma_phi_smooth);
+
+
+  const auto itp = pfirst_by_key.find(key);
+  if (itp != pfirst_by_key.end() && std::isfinite(itp->second) && itp->second>0 && std::isfinite(p_smooth)) {
+    const double p_first = itp->second;
+    const double dp_first = p_smooth - p_first;
+    seed_dp.Fill(dp_first);
+    seed_dprel.Fill(dp_first / p_first);
+    seed_ratio_ps_over_pfirst.Fill(p_smooth / p_first);
+  }
+}
+
 
 
   TFile fout(output_root.c_str(),"RECREATE");
   if (fout.IsZombie()) { std::cerr<<"Cannot create "<<output_root<<"\n"; return 3; }
 
-  meas_x_res.Write(); 
-  meas_y_res.Write();
-  smooth_x_res.Write(); 
-  smooth_y_res.Write();
-  p_res_step.Write();  
+    x_res_step.Write();
+    y_res_step.Write();
+    invR_res_step.Write();
+    tanL_res_step.Write();
+    phi_res_step.Write();
+
+    measx_res_step.Write();
+    measy_res_step.Write();
+
+  p_res_step.Write();
   p_true_vs_p_smooth_step.Write();
-  h_gpos.Write(); 
+
+  p_rel_res_step.Write();
+  dp_vs_ptrue_step.Write();
+  dprel_vs_ptrue_step.Write();
+
+  h_gpos.Write();
   h_gang.Write();
-  x_pull.Write(); 
-  y_pull.Write();
   chi2_h.Write();
+
+  seed_dx.Write();
+  seed_dy.Write();
+  seed_dinvR.Write();
+  seed_dtanL.Write();
+  seed_dphi.Write();
+  seed_pullx.Write();
+  seed_pully.Write();
+  seed_invR_pull.Write();
+  seed_tanL_pull.Write();
+  seed_phi_pull.Write();
+
+  seed_dp.Write();
+  seed_dprel.Write();
+  seed_ratio_ps_over_pfirst.Write();
 
   TDirectory* dGraphs = fout.mkdir("graphs");
   makeTrackGraph(steps, dGraphs);
 
   // ---- Istogrammi per track  ----
-  Int_t tr_track_id=0, tr_run=0, tr_event=0, n_steps=0;
-  Double_t p_init_true=0;
-  Double_t p_true_last=0;
-  Double_t p_smooth_last=0;
-
-  tracks->SetBranchAddress("track_id",&tr_track_id);
-  tracks->SetBranchAddress("run",&tr_run);
-  tracks->SetBranchAddress("event",&tr_event);
-  tracks->SetBranchAddress("n_steps",&n_steps);
-  tracks->SetBranchAddress("p_init_true",&p_init_true);
-  tracks->SetBranchAddress("p_true_last",&p_true_last);
-  tracks->SetBranchAddress("p_smooth_last",&p_smooth_last);
-
   TH2D p_init_vs_reco_smooth("p_init_vs_reco_smooth","Initial true p vs last smoothed reco p; p_{true}^{init} [MeV]; p_{reco}^{smooth,last} [MeV]",200,0,5000,200,0,5000);//???
   TH2D p_true_vs_reco_smooth("p_true_vs_reco_smooth","True p at last step vs last smoothed reco p; p_{true}^{last} [MeV]; p_{reco}^{smooth,last} [MeV]",200,0,5000,200,0,5000);
   TH2D p_diff_vs_points("p_diff_vs_points","DeltaP vs nPoints; nPoints; (p_{reco}^{last} - p_{true}^{last}) [MeV]",200,0,200,200,-500,500);
 
-  const Long64_t nt = tracks->GetEntries();
   for (Long64_t i=0;i<nt;++i){
     tracks->GetEntry(i);
-    if (std::isfinite(p_init_true) && std::isfinite(p_smooth_last))
-      p_init_vs_reco_smooth.Fill(p_init_true, p_smooth_last);
+    if (std::isfinite(p_true_first) && std::isfinite(p_smooth_last))
+      p_init_vs_reco_smooth.Fill(p_true_first, p_smooth_last);
       
     if (std::isfinite(p_true_last) && std::isfinite(p_smooth_last)) {
       //p_first_vs_reco_smooth.Fill(p_true_last, p_smooth_last);
