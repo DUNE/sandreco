@@ -5,6 +5,7 @@
 #include <TH2D.h>
 #include <TGraph.h>
 #include <TDirectory.h>
+#include <TProfile.h>
 
 #include <map>
 #include <vector>
@@ -207,8 +208,7 @@ int makePlot(const std::string& input_root,
     steps->SetBranchAddress("invR_smooth", &invR_smooth);
     steps->SetBranchAddress("tanL_smooth", &tanL_smooth);
     steps->SetBranchAddress("phi_smooth",  &phi_smooth);
-
-    //sigma smoothed
+    //---sigma smoothed----
     Double_t sigma_x_smooth=0.0;
     Double_t sigma_y_smooth=0.0;
     Double_t sigma_invR_smooth=0.0;
@@ -219,7 +219,7 @@ int makePlot(const std::string& input_root,
     if (steps->GetBranch("sigma_invR_smooth")) steps->SetBranchAddress("sigma_invR_smooth",&sigma_invR_smooth);
     if (steps->GetBranch("sigma_tanL_smooth")) steps->SetBranchAddress("sigma_tanL_smooth",&sigma_tanL_smooth);
     if (steps->GetBranch("sigma_phi_smooth"))  steps->SetBranchAddress("sigma_phi_smooth",&sigma_phi_smooth);
-
+    //---measurements---
     Double_t x_meas=0.0, y_meas=0.0;
     Double_t x_pred=0.0, y_pred=0.0; 
     Double_t x_filt=0.0, y_filt=0.0;
@@ -239,38 +239,45 @@ int makePlot(const std::string& input_root,
     if (steps->GetBranch("innov_ang")) steps->SetBranchAddress("innov_ang",&innov_ang);
     if (steps->GetBranch("chi2"))      steps->SetBranchAddress("chi2",&chi2);
 
-  //---smoooth - true ---
-  TH1D x_res_step("(x_smooth - x_true)","(x_{smooth}-x_{true}) [mm];mm;Entries",200,-2,2);
-  TH1D y_res_step("(y_smooth - y_true)","(y_{smooth}-y_{true}) [mm];mm;Entries",200,-2,2);
-  TH1D invR_res_step("(invR_smooth - invR_true)","invR_{smooth}-invR_{true};;Entries",200,-1e-2,1e-2);
-  TH1D tanL_res_step ("(tanL_smooth - tanL_true)","tan#lambda_{smooth}-tan#lambda_{true};;Entries",200,-0.1,0.1);
-  TH1D phi_res_step  ("(phi_smooth - phi_true)","#phi_{smooth}-#phi_{true} [rad];rad;Entries",200,-0.1,0.1);
-  TH1D smooth_x_res("(x_smooth - x_true)","(x_{smooth}-x_{true}) [mm];mm;Entries",200,-2,2);
-  TH1D smooth_y_res("(y_smooth - y_true)","(y_{smooth}-y_{true}) [mm];mm;Entries",200,-2,2);
+    //---smoooth vs. true ---
+    TH1D x_res_step   ("(x_smooth - x_true)",       "Residuals of reconstructed x;(x_{smooth}-x_{true}) [mm];Entries",500,-1,1);
+    TH1D y_res_step   ("(y_smooth - y_true)",       "Residuals of reconstruced y;(y_{smooth}-y_{true}) [mm];Entries",500,-1,1);
+    TH1D invR_res_step("(invR_smooth - invR_true)", "Residuals of reconstructed (1/R)_{smooth}-(1/R)_{true};Entries",500,-0.1,0.1);
+    TH1D tanL_res_step("(tanL_smooth - tanL_true)", "Residuals of reconstructed tan#lambda;tan#lambda_{smooth}-tan#lambda_{true};Entries",500,-20,20);
+    TH1D phi_res_step ("(phi_smooth - phi_true)",   "Residuals of reconstructed #Phi;#phi_{smooth}-#phi_{true} [mrad];Entries",500,-20,20);
+  //--- pull test on smooth ---
+    TH1D x_smooth_pull  ("x_smooth_pull",     "Pull test on reco x; #it{g(x)_{smooth}}; Entries", 500,-10,10);
+    TH1D y_smooth_pull  ("y_smooth_pull",     "Pull test on reco y; #it{g(y)_{smooth}}; Entries", 500,-10,10);
+    TH1D invR_smooth_pull("invR_smooth_pull", "Pull test on reco 1/R; #it{g(1/R)_{smooth}};Entries",500,-10,10);
+    TH1D tanL_smooth_pull("tanL_smooth_pull", "Pull test on reco tan#lambda; #it{g(tan#lambda)_{smooth}}; Entries", 500,-5,5);
+    TH1D phi_smooth_pull ("phi_smooth_pull",  "Pull test on reco #Phi; #it{g(#Phi)_{smooth}}; Entries", 500,-5,5);
+    //--- misura vs. true ---
+    TH1D measx_res_step("(x_meas - x_true)","Residuals of measured x; (x_{meas}-x_{true}) [mm]; Entries",500,-2,2);
+    TH1D measy_res_step("(y_meas - y_true)","Residuals of measured y; (y_{meas}-y_{true}) [mm]; Entries",500,-2,2);
+    //--- pull tests on measurements ---
+    TH1D pos_meas_pull("innovation_pos", "Pull test on measured position; #it{g(pos)_{k}}; Entries",100,-3,3);
+    TH1D ang_meas_pull("innovation_ang", "Pull test on measured direction; #it{g(#theta)_{k}}; Entries",100,-3,3);
+    //DA AGGIUNGERE: residui sugli altri parametri di stato dalla misura e pull misura su altri parametri stato
+    
+    TH1D chi2_h("chi2","chi2;;Entries",1000,0,1e5);
 
-  TH1D x_pull_step  ("x_pull_step","(x_s-x_true)/#sigma_{x};;Entries",200,-5,5);
-  TH1D y_pull_step  ("y_pull_step","(y_s-y_true)/#sigma_{y};;Entries",200,-5,5);
-  TH1D invR_pull_step("invR_pull_step","(invR_s-invR_t)/#sigma_{invR};;Entries",200,-5,5);
-  TH1D tanL_pull_step("tanL_pull_step","(tanL_s-tanL_t)/#sigma_{tanL};;Entries",200,-5,5);
-  TH1D phi_pull_step ("phi_pull_step","(phi_s-phi_t)/#sigma_{phi};;Entries",200,-5,5);
+    // --- momentum---
+    TH1D p_res_step("p_res_step", "Residuals of reconstructed momentum; p_{reco}-p_{true}/p_{true}; Entries", 500,-0.5,0.5);
+    TH2D h2_p_reco_vs_p_true("h2_p_reco_vs_p_true","p_{reco} vs p_{true};p_{true} [MeV];p_{reco} [MeV]",200,0,3000,200,0,3000);
+    TH2D dp_vs_ptrue_step("dp_vs_ptrue_step","#Delta p vs p_{true};p_{true} [MeV];#Delta p [MeV]",200,0,3000,200,-1500,1500);
 
-  //--- misura - true ---
-  TH1D measx_res_step("(x_meas - x_true)","(x_{meas}-x_{true}) [mm];mm;Entries",200,-2,2);
-  TH1D measy_res_step("(y_meas - y_true)","(y_{meas}-y_{true}) [mm];mm;Entries",200,-2,2);
-
-  // --- momentum---
-  TH1D p_res_step("p_res_step","p_{smooth} - p_{true} [MeV];MeV;Entries",200,-500,500);
-  TH1D p_rel_res_step("(p_smooth - p_true)/p_true","(p_{s}-p_{t})/p_{t};;Entries",200,-1,1);
-  
-  TH2D p_true_vs_p_smooth_step("p_true_vs_p_smooth_step","True p vs smoothed p; p_{true}[MeV]; p_{reco}[MeV]",200,0,5000,200,0,5000);
-  TH2D dp_vs_ptrue_step("dp_vs_ptrue_step","#Delta p vs p_{true};p_{true} [MeV];#Delta p [MeV]",200,0,5000,200,-500,500);
-  TH2D dprel_vs_ptrue_step("dprel_vs_ptrue_step","#Delta p/p vs p_{true};p_{true} [MeV];(p_{s}-p_{t})/p_{t}",200,0,5000,200,-1,1);
+    //--- sigma distribution ---
+    TH1D h_sigma_x_smooth("sigma_x_smooth","#sigma_{x}^{smooth};#sigma_{x}^{smooth} [mm];Entries",500,0,0.5);
+    TH1D h_sigma_y_smooth("sigma_y_smooth","#sigma_{y}^{smooth};#sigma_{y}^{smooth} [mm];Entries",500,0,0.5);
+    TH1D h_sigma_invR_smooth("sigma_invR_smooth","#sigma_{1/R}^{smooth};#sigma_{1/R}^{smooth} [1/m];Entries",500,0,20); //1/[0.5, 0.5]
+    TH1D h_sigma_tanL_smooth("sigma_tanL_smooth","#sigma_{tan#lambda}^{smooth};#sigma_{tan#lambda}^{smooth};Entries",500,0,0.01);
+    TH1D h_sigma_phi_smooth("sigma_phi_smooth","#sigma_{#phi}^{smooth};#sigma_{#phi}^{smooth} [rad];Entries",500,0,0.05);
+    
 
 
-  TH1D h_gpos("innovation_pos","Innovation (pos);;Entries",100,-3,3);
-  TH1D h_gang("innovation_ang","Innovation (ang);;Entries",100,-3,3);
-  TH1D chi2_h("chi2","chi2;;Entries",1000,0,1e5);
-  
+
+
+
 
   // ---------------- plot per STEP ------------------------
   const Long64_t ns = steps->GetEntries(); //numero step
@@ -281,116 +288,114 @@ int makePlot(const std::string& input_root,
     x_res_step.Fill(x_smooth - x_true);
     y_res_step.Fill(y_smooth - y_true);
     invR_res_step.Fill(invR_smooth - invR_true);
-    tanL_res_step.Fill (tanL_smooth - tanL_true);
-    phi_res_step.Fill  (phi_smooth  - phi_true);
-
-    if (std::isfinite(sigma_x_smooth) && sigma_x_smooth>0) x_pull_step.Fill((x_smooth - x_true)/sigma_x_smooth);
-    if (std::isfinite(sigma_y_smooth) && sigma_y_smooth>0) y_pull_step.Fill((y_smooth - y_true)/sigma_y_smooth);
-    if (std::isfinite(sigma_invR_smooth) && sigma_invR_smooth>0) invR_pull_step.Fill((invR_smooth - invR_true)/sigma_invR_smooth);
-    if (std::isfinite(sigma_tanL_smooth) && sigma_tanL_smooth>0) tanL_pull_step.Fill((tanL_smooth - tanL_true)/sigma_tanL_smooth);
-    if (std::isfinite(sigma_phi_smooth)  && sigma_phi_smooth>0)  phi_pull_step.Fill((phi_smooth - phi_true)/sigma_phi_smooth);
-
+    tanL_res_step.Fill ((tanL_smooth - tanL_true)*1000);
+    phi_res_step.Fill((phi_smooth - phi_true)*1000);
+    //pull on smooth
+    if (std::isfinite(sigma_x_smooth) && sigma_x_smooth>0) x_smooth_pull.Fill((x_smooth - x_true)/(sigma_x_smooth));
+    if (std::isfinite(sigma_y_smooth) && sigma_y_smooth>0) y_smooth_pull.Fill((y_smooth - y_true)/(sigma_y_smooth));
+    if (std::isfinite(sigma_invR_smooth) && sigma_invR_smooth>0) invR_smooth_pull.Fill((invR_smooth - invR_true)/(sigma_invR_smooth));
+    if (std::isfinite(sigma_tanL_smooth) && sigma_tanL_smooth>0) tanL_smooth_pull.Fill((tanL_smooth - tanL_true)/(sigma_tanL_smooth));
+    if (std::isfinite(sigma_phi_smooth)  && sigma_phi_smooth>0)  phi_smooth_pull.Fill((phi_smooth - phi_true)/(sigma_phi_smooth));
     // measured vs. truth (per ora solo smearing di differenza)
     measx_res_step.Fill(x_meas - x_true);
     measy_res_step.Fill(y_meas - y_true);
+    //pull on measurements
+    if (std::isfinite(innov_pos)) pos_meas_pull.Fill(innov_pos);
+    if (std::isfinite(innov_ang)) ang_meas_pull.Fill(innov_ang);
 
+    chi2_h.Fill(chi2);
 
     // momentum per step
     if (std::isfinite(p_true) && std::isfinite(p_smooth)) {
-      p_res_step.Fill(p_smooth - p_true);
-      p_true_vs_p_smooth_step.Fill(p_true, p_smooth);
+      p_res_step.Fill((p_smooth - p_true)/p_true);
+      h2_p_reco_vs_p_true.Fill(p_true, p_smooth);
     }
     
     if (std::isfinite(p_true) && p_true>0 && std::isfinite(p_smooth)) {
       const double dp = p_smooth - p_true;
-      p_rel_res_step.Fill(dp / p_true);
       dp_vs_ptrue_step.Fill(p_true, dp);
-      dprel_vs_ptrue_step.Fill(p_true, dp / p_true);
     }
 
-    // innovation e chi2
-    if (std::isfinite(innov_pos)) h_gpos.Fill(innov_pos);
-    if (std::isfinite(innov_ang)) h_gang.Fill(innov_ang);
-    chi2_h.Fill(chi2);
+    //--- sigma ---
+    if (std::isfinite(sigma_x_smooth) && sigma_x_smooth>0) h_sigma_x_smooth.Fill(sigma_x_smooth);
+    if (std::isfinite(sigma_y_smooth) && sigma_y_smooth>0) h_sigma_y_smooth.Fill(sigma_y_smooth);
+    if (std::isfinite(sigma_invR_smooth) && sigma_invR_smooth>0) h_sigma_invR_smooth.Fill((sigma_invR_smooth)*1000);
+    if (std::isfinite(sigma_tanL_smooth) && sigma_tanL_smooth>0) h_sigma_tanL_smooth.Fill((sigma_tanL_smooth));
+    if (std::isfinite(sigma_phi_smooth) && sigma_phi_smooth>0) h_sigma_phi_smooth.Fill((sigma_phi_smooth)); 
 
   }
 
 
-// ------ SEED CHECKS------
-
-std::map<std::tuple<int,int,int>, std::pair<int, Long64_t>> lastEntry;
-for (Long64_t ie=0; ie<ns; ++ie) {
-  steps->GetEntry(ie);
-  auto key = std::make_tuple(run, event, track_id);
-  auto it = lastEntry.find(key);
-  if (it==lastEntry.end() || step_idx > it->second.first) {
-    lastEntry[key] = { step_idx, ie };
+  // ---SEED----
+  std::map<std::tuple<int,int,int>, std::pair<int, Long64_t>> lastEntry;
+  for (Long64_t ie=0; ie<ns; ++ie) {
+    steps->GetEntry(ie);
+    auto key = std::make_tuple(run, event, track_id);
+    auto it = lastEntry.find(key);
+    if (it==lastEntry.end() || step_idx > it->second.first) {
+      lastEntry[key] = { step_idx, ie };
+    }
   }
-}
 
-TH1D seed_dx   ("seed_dx","Seed: x_{s}-x_{t} [mm];mm;Entries",200,-2,2);
-TH1D seed_dy   ("seed_dy","Seed: y_{s}-y_{t} [mm];mm;Entries",200,-2,2);
-TH1D seed_dinvR("seed_dinvR","Seed: invR_{s}-invR_{t};;Entries",200,-1e-2,1e-2);
-TH1D seed_dtanL("seed_dtanL","Seed: tan#lambda_{s}-tan#lambda_{t};;Entries",200,-0.1,0.1);
-TH1D seed_dphi ("seed_dphi","Seed: #phi_{s}-#phi_{t} [rad];rad;Entries",200,-0.1,0.1);
+  TH1D seed_dx   ("seed_dx",    "Residuals of x at seed;x_{smooth}-x_{true} [mm];Entries",200,-2,2);
+  TH1D seed_dy   ("seed_dy",    "Residuals of y at seed;y_{smooth}-y_{true} [mm];Entries",200,-2,2);
+  TH1D seed_dinvR("seed_dinvR", "Residuals of 1/R at seed;1/R_{smooth}-1/R_{true};Entries",200,-0.2,0.2);
+  TH1D seed_dtanL("seed_dtanL", "Residuals of tan#lambda at seed;tan#lambda_{smooth}-tan#lambda_{true};Entries",200,-0.02,0.02);
+  TH1D seed_dphi ("seed_dphi",  "Residuals of #Phi at seed;#phi_{smooth}-#phi_{true} [rad];Entries",200,-0.04,0.04);
 
-TH1D seed_pullx("seed_pullx","Seed: (x_{s}-x_{t})/#sigma_{x};pull_{x};Entries",100,-5,5);
-TH1D seed_pully("seed_pully","Seed: (y_{s}-y_{t})/#sigma_{y};pull_{y};Entries",100,-5,5);
-TH1D seed_invR_pull("seed_invR_pull","Seed: (invR_{s}-invR_{t})/#sigma_{invR};;Entries",100,-5,5);
-TH1D seed_tanL_pull("seed_tanL_pull","Seed: (tan#lambda_{s}-tan#lambda_{t})/#sigma_{tanL};;Entries",100,-5,5);
-TH1D seed_phi_pull ("seed_phi_pull","Seed: (#phi_{s}-#phi_{t})/#sigma_{phi};;Entries",100,-5,5);
-
-TH1D seed_dp("seed_dp","p_{s}^{last} - p_{t}^{first} [MeV];MeV;Entries",200,-1000,1000);
-TH1D seed_dprel("seed_dprel","(p_{s}^{last}-p_{t}^{first})/p_{t}^{first};;Entries",200,-1,1);
-TH1D seed_ratio_ps_over_pfirst("seed_ratio_ps_over_pfirst","p_{s}^{last}/p_{t}^{first};;Entries",200,0,2);
-
-Int_t tr_run=0, tr_event=0, tr_tid=0, n_steps=0;
-Double_t p_true_first=0, p_true_last=0, p_smooth_last=0;
-tracks->SetBranchAddress("run",&tr_run);
-tracks->SetBranchAddress("event",&tr_event);
-tracks->SetBranchAddress("track_id",&tr_tid);
-tracks->SetBranchAddress("n_steps",&n_steps);
-tracks->SetBranchAddress("p_true_first",&p_true_first);
-
-tracks->SetBranchAddress("p_true_last",&p_true_last);
-tracks->SetBranchAddress("p_smooth_last",&p_smooth_last);
+  TH1D x_seed_pull  ("x_seed_pull",     "Pull test on reco x at seeding point ; #it{g(x)_{seed}}; Entries", 500,-10,10);
+  TH1D y_seed_pull  ("y_seed_pull",     "Pull test on reco y at seeding point ; #it{g(y)_{seed}}; Entries", 500,-10,10);
+  TH1D invR_seed_pull("invR_seed_pull", "Pull test on reco 1/R at seeding point ; #it{g(1/R)_{seed}};Entries",500,-10,10);
+  TH1D tanL_seed_pull("tanL_seed_pull", "Pull test on reco tan#lambda at seeding point ; #it{g(tan#lambda)_{seed}}; Entries", 500,-10,10);
+  TH1D phi_seed_pull ("phi_seed_pull",  "Pull test on reco #Phi at seeding point ; #it{g(#Phi)_{seed}}; Entries", 500,-10,10);
 
 
-std::map<std::tuple<int,int,int>, double> pfirst_by_key;
-const Long64_t nt = tracks->GetEntries();
-for (Long64_t it=0; it<nt; ++it) {
-  tracks->GetEntry(it);
-  pfirst_by_key[ std::make_tuple(tr_run,tr_event,tr_tid) ] = p_true_first;
-}
-
-for (const auto& kv : lastEntry) {
-  const auto key = kv.first;
-  const Long64_t ie = kv.second.second;
-  steps->GetEntry(ie);
-
-  const double dx = x_smooth - x_true;
-  const double dy = y_smooth - y_true;
-  seed_dx.Fill(dx);
-  seed_dy.Fill(dy);
-  seed_dinvR.Fill(invR_smooth - invR_true);
-  seed_dtanL.Fill (tanL_smooth - tanL_true);
-  seed_dphi.Fill  (phi_smooth  - phi_true);
-
-  if (std::isfinite(sigma_x_smooth) && sigma_x_smooth>0) seed_pullx.Fill(dx / sigma_x_smooth);
-  if (std::isfinite(sigma_y_smooth) && sigma_y_smooth>0) seed_pully.Fill(dy / sigma_y_smooth);
-  if (std::isfinite(sigma_invR_smooth) && sigma_invR_smooth>0) seed_invR_pull.Fill((invR_smooth - invR_true)/sigma_invR_smooth);
-  if (std::isfinite(sigma_tanL_smooth) && sigma_tanL_smooth>0) seed_tanL_pull.Fill((tanL_smooth - tanL_true)/sigma_tanL_smooth);
-  if (std::isfinite(sigma_phi_smooth)  && sigma_phi_smooth>0)  seed_phi_pull.Fill((phi_smooth - phi_true)/sigma_phi_smooth);
+  //---TRACK---
+  Int_t tr_run=0, tr_event=0, tr_tid=0, n_steps=0;
+  Double_t p_true_first=0, p_true_last=0, p_smooth_last=0;
+  tracks->SetBranchAddress("run",&tr_run);
+  tracks->SetBranchAddress("event",&tr_event);
+  tracks->SetBranchAddress("track_id",&tr_tid);
+  tracks->SetBranchAddress("n_steps",&n_steps);
+  tracks->SetBranchAddress("p_true_first",&p_true_first);
+  tracks->SetBranchAddress("p_true_last",&p_true_last);
+  tracks->SetBranchAddress("p_smooth_last",&p_smooth_last);
 
 
-  const auto itp = pfirst_by_key.find(key);
-  if (itp != pfirst_by_key.end() && std::isfinite(itp->second) && itp->second>0 && std::isfinite(p_smooth)) {
-    const double p_first = itp->second;
-    const double dp_first = p_smooth - p_first;
-    seed_dp.Fill(dp_first);
-    seed_dprel.Fill(dp_first / p_first);
-    seed_ratio_ps_over_pfirst.Fill(p_smooth / p_first);
+  std::map<std::tuple<int,int,int>, double> pfirst_by_key;
+  const Long64_t nt = tracks->GetEntries();
+  for (Long64_t it=0; it<nt; ++it) {
+    tracks->GetEntry(it);
+    pfirst_by_key[ std::make_tuple(tr_run,tr_event,tr_tid) ] = p_true_first;
   }
+
+  for (const auto& kv : lastEntry) {
+    const auto key = kv.first;
+    const Long64_t ie = kv.second.second;
+    steps->GetEntry(ie);
+
+    const double dx = x_smooth - x_true;
+    const double dy = y_smooth - y_true;
+    seed_dx.Fill(dx);
+    seed_dy.Fill(dy);
+    seed_dinvR.Fill(invR_smooth - invR_true);
+    seed_dtanL.Fill(tanL_smooth - tanL_true);
+    seed_dphi.Fill(phi_smooth  - phi_true);
+    
+    if (std::isfinite(sigma_x_smooth) && sigma_x_smooth>0)       x_seed_pull.Fill((x_smooth - x_true)/(sigma_x_smooth));
+    if (std::isfinite(sigma_y_smooth) && sigma_y_smooth>0)       y_seed_pull.Fill((y_smooth - y_true)/(sigma_y_smooth));
+    if (std::isfinite(sigma_invR_smooth) && sigma_invR_smooth>0) invR_seed_pull.Fill((invR_smooth - invR_true)/(sigma_invR_smooth));
+    if (std::isfinite(sigma_tanL_smooth) && sigma_tanL_smooth>0) tanL_seed_pull.Fill((tanL_smooth - tanL_true)/(sigma_tanL_smooth));
+    if (std::isfinite(sigma_phi_smooth)  && sigma_phi_smooth>0)  phi_seed_pull.Fill((phi_smooth - phi_true)/(sigma_phi_smooth));
+
+    // const auto itp = pfirst_by_key_pull.find(key);
+    // if (itp != pfirst_by_key.end() && std::isfinite(itp->second) && itp->second>0 && std::isfinite(p_smooth)) {
+    //   const double p_first = itp->second;
+    //   const double dp_first = p_smooth - p_first;
+    //   seed_dp.Fill(dp_first);
+    //   seed_dprel.Fill(dp_first / p_first);
+    //   seed_ratio_ps_over_pfirst.Fill(p_smooth / p_first);
+    // }
 }
 
 
@@ -403,42 +408,52 @@ for (const auto& kv : lastEntry) {
     invR_res_step.Write();
     tanL_res_step.Write();
     phi_res_step.Write();
+    
+    x_smooth_pull.Write();  
+    y_smooth_pull.Write();
+    invR_smooth_pull.Write();
+    tanL_smooth_pull.Write();
+    phi_smooth_pull.Write();
 
     measx_res_step.Write();
     measy_res_step.Write();
 
-  p_res_step.Write();
-  p_true_vs_p_smooth_step.Write();
+    pos_meas_pull.Write();
+    ang_meas_pull.Write();
+    chi2_h.Write();
 
-  p_rel_res_step.Write();
-  dp_vs_ptrue_step.Write();
-  dprel_vs_ptrue_step.Write();
+    p_res_step.Write();
+    h2_p_reco_vs_p_true.Write();
+    dp_vs_ptrue_step.Write();
 
-  h_gpos.Write();
-  h_gang.Write();
-  chi2_h.Write();
+    h_sigma_x_smooth.Write();
+    h_sigma_y_smooth.Write();
+    h_sigma_invR_smooth.Write();
+    h_sigma_tanL_smooth.Write();
+    h_sigma_phi_smooth.Write();
 
-  seed_dx.Write();
-  seed_dy.Write();
-  seed_dinvR.Write();
-  seed_dtanL.Write();
-  seed_dphi.Write();
-  seed_pullx.Write();
-  seed_pully.Write();
-  seed_invR_pull.Write();
-  seed_tanL_pull.Write();
-  seed_phi_pull.Write();
+    seed_dx.Write();
+    seed_dy.Write();
+    seed_dinvR.Write();
+    seed_dtanL.Write();
+    seed_dphi.Write();
+      
+    x_seed_pull.Write();
+    y_seed_pull.Write();
+    invR_seed_pull.Write();
+    tanL_seed_pull.Write();
+    phi_seed_pull.Write();
 
-  seed_dp.Write();
-  seed_dprel.Write();
-  seed_ratio_ps_over_pfirst.Write();
+    // seed_dp.Write();
+    // seed_dprel.Write();
+    // seed_ratio_ps_over_pfirst.Write();
 
   TDirectory* dGraphs = fout.mkdir("graphs");
-  makeTrackGraph(steps, dGraphs);
+  // makeTrackGraph(steps, dGraphs);
 
-  // ---- Istogrammi per track  ----
-  TH2D p_init_vs_reco_smooth("p_init_vs_reco_smooth","Initial true p vs last smoothed reco p; p_{true}^{init} [MeV]; p_{reco}^{smooth,last} [MeV]",200,0,5000,200,0,5000);//???
-  TH2D p_true_vs_reco_smooth("p_true_vs_reco_smooth","True p at last step vs last smoothed reco p; p_{true}^{last} [MeV]; p_{reco}^{smooth,last} [MeV]",200,0,5000,200,0,5000);
+  // ---- plot per TRACK  ----
+  TH2D p_init_vs_reco_smooth("p_init_vs_reco_smooth","Initial true p vs last smoothed reco p; p_{true}^{init} [MeV]; p_{reco}^{smooth,last} [MeV]",200,0,3000,200,0,3000);//???
+  TH2D p_res_last("p_res_last","True p at last step vs last smoothed reco p; p_{true}^{last} [MeV]; p_{reco}^{smooth,last} [MeV]",200,0,3000,200,0,3000);
   TH2D p_diff_vs_points("p_diff_vs_points","DeltaP vs nPoints; nPoints; (p_{reco}^{last} - p_{true}^{last}) [MeV]",200,0,200,200,-500,500);
 
   for (Long64_t i=0;i<nt;++i){
@@ -447,13 +462,13 @@ for (const auto& kv : lastEntry) {
       p_init_vs_reco_smooth.Fill(p_true_first, p_smooth_last);
       
     if (std::isfinite(p_true_last) && std::isfinite(p_smooth_last)) {
-      //p_first_vs_reco_smooth.Fill(p_true_last, p_smooth_last);
+      p_res_last.Fill(p_true_last, p_smooth_last);
       p_diff_vs_points.Fill(n_steps, p_smooth_last - p_true_last);
     }
   }
 
   p_init_vs_reco_smooth.Write();
-  //p_first_vs_reco_smooth.Write();
+  p_res_last.Write();
   p_diff_vs_points.Write();
 
   fout.Close();

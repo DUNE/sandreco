@@ -148,6 +148,7 @@ void tryCompleteManager(
     infos.y_smooth = smoothing.y()*1000.0 ;
     infos.invR_smooth = smoothing.signedInverseRadius();
     infos.tanL_smooth = smoothing.tanLambda();
+    infos.phi_smooth = smoothing.phi();
 
     const auto& smooth_cov_matrix = st.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateCovMatrix();
     infos.sigma_x_smooth     = (smooth_cov_matrix.GetNrows() > 0 && smooth_cov_matrix.GetNcols() > 0) ? std::sqrt(smooth_cov_matrix(0,0)) * 1000 : NAN;
@@ -155,7 +156,6 @@ void tryCompleteManager(
     infos.sigma_invR_smooth  = (smooth_cov_matrix.GetNrows() > 2 && smooth_cov_matrix.GetNcols() > 2) ? std::sqrt(smooth_cov_matrix(2,2)) : NAN;
     infos.sigma_tanL_smooth   = (smooth_cov_matrix.GetNrows()> 3 && smooth_cov_matrix.GetNcols() > 3) ? std::sqrt(smooth_cov_matrix(3,3)) : NAN;
     infos.sigma_phi_smooth   = (smooth_cov_matrix.GetNrows() > 4 && smooth_cov_matrix.GetNcols() > 4) ? std::sqrt(smooth_cov_matrix(4,4)) : NAN;
-    infos.phi_smooth = smoothing.phi();
 
     //---measurement--- (truth from trk + smearing)    
     infos.x_meas = st.getX();

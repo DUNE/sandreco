@@ -43,24 +43,10 @@ Truth getTrueTrackletOfCluster(
     TVector3 start_pos, TVector3 stop_pos,
     TVector3 start_mom, TVector3 stop_mom,
     double z);
-    
-// double getScore(const TVectorD& tracklet, const Truth& truth);
 
-// //Now it should returns both position and momentum 
-// std::map<double, Truth> getInterpolatedZTruth(
-//     const std::vector<EDEPTrajectoryPoint>& trj_points,
-//     const sand_reco::kf::utils::TrackletMap& z_to_tracklets);
+Truth getTrueTrackletFromTrajectoryPoint(const std::vector<EDEPTrajectoryPoint>& points, double z);
 
-// std::vector<double> computeZDistance(
-//     const std::vector<EDEPTrajectoryPoint>& trj_points,
-//     const sand_reco::kf::utils::TrackletMap& z_to_tracklets);
-
-// sand_reco::kf::utils::TrackletMap findBestTracklet(
-//     const sand_reco::kf::utils::TrackletMap& z_to_tracklets,
-//     const std::map<double, Truth>& z_to_truth);
-
-
-
+double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet);
 std::map<double, std::vector<TVector3>> getInterpolatedZ(const std::vector<EDEPTrajectoryPoint>& trj_points,
                                                          const sand_reco::kf::utils::TrackletMap& z_to_tracklets);
 
@@ -72,4 +58,3 @@ sand_reco::kf::utils::TrackletMap findBestTracklet(const sand_reco::kf::utils::T
 
 // std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z);
 
-double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet);

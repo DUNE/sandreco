@@ -101,10 +101,10 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
 
       // smear tracket to simulate the measurement
       Tracklet measurement_from_true_tracklet;
-      measurement_from_true_tracklet.x = true_pos.X()  + rand.Gaus() * SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
-      measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus() * SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
-      measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
-      measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+      measurement_from_true_tracklet.x = true_pos.X()  ;//+ rand.Gaus() * SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
+      measurement_from_true_tracklet.y = true_pos.Y()  ;//+ rand.Gaus() * SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
+      measurement_from_true_tracklet.theta_xz = true_theta_xz ;//+ rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+      measurement_from_true_tracklet.theta_yz = true_theta_yz ;//+ rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
         auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
         measurement_from_true_tracklet.digits.push_back(digit);
@@ -176,8 +176,8 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
 
     if (!to_be_reconstructed) continue;
 
-    double sigma_pos = rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-    double sigma_mom = 0.05;
+    double sigma_pos = 0.0 ;//rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
+    double sigma_mom = 0.0;//0.05;
 
     double x_smeared = rand.Gaus(pi.pos.X(), sigma_pos);
     double y_smeared = rand.Gaus(pi.pos.Y(), sigma_pos);

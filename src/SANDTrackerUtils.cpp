@@ -194,14 +194,6 @@ double SANDTrackerUtils::getDE(double z,
 
 
 
-
-
-
-
-
-
-
-
 namespace sand_reco
 {
 
@@ -410,7 +402,7 @@ Double_t makeYC(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3,Do
 //_____________________________________________________________________________
 Double_t makeTgln(Double_t z1,Double_t y1, Double_t z2,Double_t y2,Double_t x1,Double_t x2,Double_t c){
   //-----------------------------------------------------------------
-  // Initial approzimation of the tangent of the track dip angle
+  // Initial approximation of the tangent of the track dip angle
   //-----------------------------------------------------------------
   Double_t d  =  TMath::Sqrt((z1-z2)*(z1-z2)+(y1-y2)*(y1-y2));
   if (TMath::Abs(d*c*0.5)>1) return 0;

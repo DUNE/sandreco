@@ -32,21 +32,25 @@ Truth getTrueTrackletOfCluster(TVector3 start_pos, TVector3 stop_pos,
   return Truth{pos, dir, mom};
 }
 
-// std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z){
 
-//   // Interpolation of z coordinate
-//   auto first_point = start;
-//   auto second_point = stop;
 
-//   double z_diff = z - first_point.Z();
-//   double alpha = z_diff / fabs(second_point.Z() - first_point.Z());
+// Truth getTrueTrackletFromTrajectoryPoint(const std::vector<EDEPTrajectoryPoint>& points double z){
+//   const EDEPTrajectoryPoint* best_point = &points.front();
+//   double best_z = std::abs(points.front().GetPosition().Z() - z_plane_mm);
 
-//   TVector3 interpolated_pos = first_point * (1 - alpha) + second_point * alpha;
-//   TVector3 interpolated_dir = (stop - start).Unit();
+//   for (const auto& tp : points) {
+//     double dz = std::abs(tp.GetPosition().Z() - z);
+//     if (dz < best_z) {
+//       best_z = dz;
+//       best_point = &tp;
+//     }
+//   }
+//   TVector3 true_pos = best_point->GetPosition().Vect();
+//   TVector3 true_dir = best_point->GetMomentum().Vect().Unit();
+//   TVector3 true_mom = best_point->GetMomentum().Vect();
 
-//   return { interpolated_pos, interpolated_dir };
-// }
-
+//   return Truth{true_pos, true_dir, true_mom};
+//}
 
 double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet){
 
