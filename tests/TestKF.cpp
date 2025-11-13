@@ -1,33 +1,52 @@
-#include <TVector3.h>
-#include <TTree.h>
-#include <TFile.h>
 #include <TDatabasePDG.h>
+#include <TFile.h>
+#include <TTree.h>
+#include <TVector3.h>
 
 #include <cmath>
 #include <fstream>
 #include <iostream>
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <random>
 #include <limits>
+#include <map>
+#include <random>
+#include <unordered_map>
+#include <vector>
 
 #include "SANDGeoManager.h"
-#include "SANDTrackletFinder.h"
+#include "SANDKalmanFilter.h"
 #include "SANDProcessTracklets.h"
 #include "SANDTrackerClusterCollection.h"
 #include "SANDTrackerDigitCollection.h"
-#include "SANDKalmanFilter.h"
 #include "SANDTrackerUtils.h"
+#include "SANDTrackletFinder.h"
 #include "TryCompleteManager.h"
 #include "utils.h"
 
+static inline Tracklet makeMeasurementTrackletFromTruth(const Truth& t,
+                                                        TRandom3& rand)
+{
+  Tracklet meas;
+  const double sigma_pos =
+      SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;              // mm
+  const double sigma_ang = SANDTrackerUtils::getSigmaAngleMeasurement();  // rad
+  const double theta_xz = std::atan2(t.dir_.X(), t.dir_.Z());
+  const double theta_yz = std::atan2(t.dir_.Y(), t.dir_.Z());
+
+  meas.x = t.pos_.X() + rand.Gaus(0.0, sigma_pos);
+  meas.y = t.pos_.Y() + rand.Gaus(0.0, sigma_pos);
+  meas.theta_xz = theta_xz + rand.Gaus(0.0, sigma_ang);
+  meas.theta_yz = theta_yz + rand.Gaus(0.0, sigma_ang);
+
+  meas.true_pos_ = t.pos_;
+  meas.true_dir_ = t.dir_;
+  meas.true_mom_ = t.mom_;
+
+  return meas;
+}
 
 void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
-                        std::vector<dg_wire>* digits,
-                        StepsTree* steps, TracksTree* tracks,
-                        int run_number, int event_number)
-
+                        std::vector<dg_wire>* digits, StepsTree* steps,
+                        TracksTree* tracks, int run_number, int event_number)
 {
   // unknown parameters
   int p[9] = {100, -2000, 2000, 100, -4000, -0, 100, 22500, 26000};
@@ -36,7 +55,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
   sand_reco::tracker::DigitCollection::fillMap(digits);
 
   // get the vector of digits
-  auto digit_vec =  sand_reco::tracker::DigitCollection::getDigits();
+  auto digit_vec = sand_reco::tracker::DigitCollection::getDigits();
 
   // check if the vector of digits is empty
   if (digit_vec.empty()) {
@@ -44,13 +63,16 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
   }
 
   // get the name of the tracker
-  std::string tracker_name = sand_reco::tracker::DigitCollection::getDigits().begin()->det;
+  std::string tracker_name =
+      sand_reco::tracker::DigitCollection::getDigits().begin()->det;
 
   // build the clusters starting from digits and return them as a collection
-  sand_reco::tracker::ClusterCollection clusters(sand_geo, digit_vec, sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
-  
+  sand_reco::tracker::ClusterCollection clusters(
+      sand_geo, digit_vec,
+      sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
+
   // map
-  // key  : z of the module, 
+  // key  : z of the module,
   // value: vector of tracklet reconstructed in the module
   std::map<double, std::vector<Tracklet>> z_to_tracklets;
 
@@ -60,89 +82,105 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
   // random number generator
   TRandom3 rand(0);
 
-  // loop over tracker modules
-  for (const auto& container:clusters.getContainers()) {
-    // loop over clusters
-    for (const auto& cluster_in_container:container->getClusters()) {
+  //---------------------------------------------------------------------------
+  //  DetectorSegments option: Uncomment this to obtain the measurements as the
+  //  smearing of true tracklets associated to each cluster. The z is then
+  //  associated to the cluster from which the true tracklet was computed.
+  //---------------------------------------------------------------------------
+  // // loop over tracker modules
+  // for (const auto& container : clusters.getContainers()) {
+  //   // loop over clusters
+  //   for (const auto& cluster_in_container : container->getClusters()) {
 
-      TVector3 first_point;
-      TVector3 last_point;
-      TVector3 first_point_momentum;
-      TVector3 last_point_momentum;
-      double min_z = 10e8;
-      double max_z = -10e8;
-      // loop over digits in each clusters
-      for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
-        auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
-        
-        // find digit with min and max z
-        if (digit.z > max_z) {
-          max_z = digit.z;
-          last_point = TVector3(digit.x, digit.y, digit.z);
-          last_point_momentum = TVector3(digit.px, digit.py, digit.pz);
-        }
-        if (digit.z < min_z) {
-          min_z = digit.z;
-          first_point = TVector3(digit.x, digit.y, digit.z);
-          first_point_momentum = TVector3(digit.px, digit.py, digit.pz);
-        }
-      }
+  //     TVector3 first_point;
+  //     TVector3 last_point;
+  //     TVector3 first_point_momentum;
+  //     TVector3 last_point_momentum;
+  //     double min_z = 10e8;
+  //     double max_z = -10e8;
+  //     // loop over digits in each clusters
+  //     for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
+  //       auto digit = sand_reco::tracker::DigitCollection::getDigit(
+  //           cluster_in_container.getDigits()[d]);
 
-      // eval position, direction and momentum of the particle at the z of the module
-      auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, first_point_momentum, last_point_momentum, cluster_in_container.getZ());
-      TVector3 true_pos = true_tracklet.pos_;
-      TVector3 true_dir = true_tracklet.dir_;
-      TVector3 true_mom = true_tracklet.mom_;
+  //       // find digit with min and max z
+  //       if (digit.z > max_z) {
+  //         max_z = digit.z;
+  //         last_point = TVector3(digit.x, digit.y, digit.z);
+  //         last_point_momentum = TVector3(digit.px, digit.py, digit.pz);
+  //       }
+  //       if (digit.z < min_z) {
+  //         min_z = digit.z;
+  //         first_point = TVector3(digit.x, digit.y, digit.z);
+  //         first_point_momentum = TVector3(digit.px, digit.py, digit.pz);
+  //       }
+  //     }
 
-      // eval yz nd xz angles
-      double true_theta_yz = atan(true_dir.Y() / true_dir.Z());
-      double true_theta_xz = atan(true_dir.X() / true_dir.Z());
-      if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
+  //     // eval position, direction and momentum of the particle at the z of
+  //     the module auto true_tracklet = getTrueTrackletOfCluster(
+  //         first_point, last_point, first_point_momentum, last_point_momentum,
+  //         cluster_in_container.getZ());
+  //     TVector3 true_pos = true_tracklet.pos_;
+  //     TVector3 true_dir = true_tracklet.dir_;
+  //     TVector3 true_mom = true_tracklet.mom_;
 
-      // smear tracket to simulate the measurement
-      Tracklet measurement_from_true_tracklet;
-      measurement_from_true_tracklet.x = true_pos.X()  ;//+ rand.Gaus() * SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
-      measurement_from_true_tracklet.y = true_pos.Y()  ;//+ rand.Gaus() * SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
-      measurement_from_true_tracklet.theta_xz = true_theta_xz ;//+ rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
-      measurement_from_true_tracklet.theta_yz = true_theta_yz ;//+ rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
-      for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
-        auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
-        measurement_from_true_tracklet.digits.push_back(digit);
-      }
-      // std::cout << true_pos.X() << std::endl;
-      measurement_from_true_tracklet.true_pos_ = true_pos;
-      measurement_from_true_tracklet.true_dir_ = true_dir;
-      measurement_from_true_tracklet.true_mom_ = true_mom;
-      
-      z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
-    }
-  }
-  
-  if (z_to_tracklets.empty()) {
-    return;
-  }
+  //     // eval yz nd xz angles
+  //     double true_theta_yz = atan(true_dir.Y() / true_dir.Z());
+  //     double true_theta_xz = atan(true_dir.X() / true_dir.Z());
+  //     if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
+
+  //     // smear tracket to simulate the measurement
+  //     Tracklet measurement_from_true_tracklet;
+  //     measurement_from_true_tracklet.x = true_pos.X();  //+ rand.Gaus() *
+  //     SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
+  //     measurement_from_true_tracklet.y = true_pos.Y();  //+ rand.Gaus() *
+  //     SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
+  //     measurement_from_true_tracklet.theta_xz = true_theta_xz;  //+
+  //     rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+  //     measurement_from_true_tracklet.theta_yz = true_theta_yz;  //+
+  //     rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+  //     for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
+  //       auto digit = sand_reco::tracker::DigitCollection::getDigit(
+  //           cluster_in_container.getDigits()[d]);
+  //       measurement_from_true_tracklet.digits.push_back(digit);
+  //     }
+  //     // std::cout << true_pos.X() << std::endl;
+  //     measurement_from_true_tracklet.true_pos_ = true_pos;
+  //     measurement_from_true_tracklet.true_dir_ = true_dir;
+  //     measurement_from_true_tracklet.true_mom_ = true_mom;
+
+  //     z_to_tracklets[cluster_in_container.getZ()].push_back(
+  //         measurement_from_true_tracklet);
+  //   }
+  // }
+
+  // if (z_to_tracklets.empty()) {
+  //   return;
+  // }
 
   EDEPTree tree;
   tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
-  
+
   std::vector<EDEPTrajectory> primaryTrj;
-  tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
-    [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
+  tree.Filter(
+      std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj),
+      [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1; });
 
   TDatabasePDG pdg_db;
   std::vector<SParticleInfo> particleInfos;
-  std::map<double, std::vector<TVectorD>> z_to_best_tracklet;
 
   std::vector<int> indeces;
   int ii = -1;
-  for (auto trj:primaryTrj) {
+  for (auto trj : primaryTrj) {
     ii++;
 
-    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) ==
+        trj.GetHitMap().end()) {
       continue;
     }
-    
-    if (trj.GetTrajectoryPoints().find(string_to_component[tracker_name]) == trj.GetTrajectoryPoints().end()) {
+
+    if (trj.GetTrajectoryPoints().find(string_to_component[tracker_name]) ==
+        trj.GetTrajectoryPoints().end()) {
       continue;
     }
 
@@ -158,14 +196,15 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
 
     SParticleInfo pi;
     pi.pdg_code = trj.GetPDGCode();
-    pi.id       = trj.GetId();
-    pi.mass     = particle->Mass();
-    pi.charge   = particle->Charge() / 3;
+    pi.id = trj.GetId();
+    pi.mass = particle->Mass();
+    pi.charge = particle->Charge() / 3;
 
     double max_z = 0;
     bool to_be_reconstructed = false;
 
-    for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
+    for (auto& point :
+         trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
       if (point.GetPosition().Z() > max_z && point.GetMomentum().Z() > 100) {
         max_z = point.GetPosition().Z();
         pi.pos = point.GetPosition().Vect();
@@ -176,8 +215,8 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
 
     if (!to_be_reconstructed) continue;
 
-    double sigma_pos = 0.0 ;//rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-    double sigma_mom = 0.0;//0.05;
+    double sigma_pos = SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
+    double sigma_mom = 0.05;
 
     double x_smeared = rand.Gaus(pi.pos.X(), sigma_pos);
     double y_smeared = rand.Gaus(pi.pos.Y(), sigma_pos);
@@ -187,16 +226,38 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
 
     pi.pos = TVector3(x_smeared, y_smeared, pi.pos.Z());
     pi.mom = TVector3(px_smeared, py_smeared, pz_smeared);
-    pi.initial_pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetPosition().Vect();
-    pi.initial_mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetMomentum();
+    pi.initial_pos = trj.GetTrajectoryPoints()
+                         .at(string_to_component[tracker_name])[0]
+                         .GetPosition()
+                         .Vect();
+    pi.initial_mom = trj.GetTrajectoryPoints()
+                         .at(string_to_component[tracker_name])[0]
+                         .GetMomentum();
     particleInfos.push_back(pi);
     indeces.push_back(ii);
+
+    //---------------------------------------------------------------------------
+    //  TrajectoryPoints option: Uncomment this to obtain the measurements as
+    //  the smearing of the true tracklet computed from trajectory points at
+    //  defined steps.There is no clustering here, the z is ssociated directly
+    //  to the closest avalaible MC-trajectory point.
+    //---------------------------------------------------------------------------
+    auto points =
+        trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
+    const double step = 1.0;
+    auto z_truth = z_to_truth(points, step);
+
+    for (const auto& kv : z_truth) {
+      const double z = kv.first;
+      const Truth& t = kv.second;
+      Tracklet measurements = makeMeasurementTrackletFromTruth(t, rand);
+      z_to_tracklets[z].push_back(measurements);
+    }
+    if (z_to_tracklets.empty()) continue;
   }
 
-   
-  
   int nParticles = particleInfos.size();
-  
+
   if (nParticles == 0) {
     std::cerr << "no particles to be reconstructed...process aborted"
               << std::endl;
@@ -205,16 +266,15 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
 
   for (int ip = 0; ip < (int)indeces.size(); ++ip) {
     tryCompleteManager(z_to_tracklets, particleInfos[ip],
-                       /*mg*/nullptr, /*mgx*/nullptr,
-                       steps, tracks,
-                       run_number, event_number);}
+                       /*mg*/ nullptr, /*mgx*/ nullptr, steps, tracks,
+                       run_number, event_number);
+  }
 }
 
 //----------------------------------------MAIN----------------------------------
-
 int main(int argc, char* argv[])
 {
-  gStyle->SetOptStat(0);  
+  gStyle->SetOptStat(0);
 
   TFile f(argv[1], "READ");
   TGeoManager* geo = 0;
@@ -224,7 +284,7 @@ int main(int argc, char* argv[])
   TTree* t_h = (TTree*)f.Get("EDepSimEvents");
   TG4Event* ev = new TG4Event;
   t_h->SetBranchAddress("Event", &ev);
-  
+
   TFile f_d(argv[2], "READ");
   TTree* t = (TTree*)f_d.Get("tDigit");
 
@@ -232,41 +292,33 @@ int main(int argc, char* argv[])
   t->SetBranchAddress("dg_wire", &digits);
 
   bool plots = false;
-  
-  // TFile* pull_test = new TFile("pull_test.root", "RECREATE");
-  // PlotContainer plot_container;
-  
+
   SANDGeoManager sand_geo;
   sand_geo.init(geo);
-  
+
   std::string geometry;
   if (geo->FindVolumeFast("STTtracker_PV")) {
     geometry = "STT";
   } else if (geo->FindVolumeFast("SANDtracker_PV")) {
     geometry = "DRIFT";
-  } 
+  }
   sand_geo.fillAdjacentCells(geometry);
 
-  // TFile* h_out = new TFile("h_out.root", "RECREATE");
-
-
-  //loop eventi
   StepsTree steps;
   TracksTree tracks;
   create_kf_trees("kf_steps.root", steps, tracks);
-  
+
   int nev = t->GetEntries();
   for (int i = 0; i < nev; i++) {
     t_h->GetEntry(i);
     t->GetEntry(i);
 
-    int run_number = 0; 
-    int event_number = i;   
-    
-    processEventWithKF(&sand_geo, ev, digits, &steps, &tracks, run_number, event_number);
+    int run_number = 0;
+    int event_number = i;
 
+    processEventWithKF(&sand_geo, ev, digits, &steps, &tracks, run_number,
+                       event_number);
   }
 
   close_kf_trees(steps, tracks);
-
 }

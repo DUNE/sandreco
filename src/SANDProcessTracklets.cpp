@@ -34,23 +34,48 @@ Truth getTrueTrackletOfCluster(TVector3 start_pos, TVector3 stop_pos,
 
 
 
-// Truth getTrueTrackletFromTrajectoryPoint(const std::vector<EDEPTrajectoryPoint>& points double z){
-//   const EDEPTrajectoryPoint* best_point = &points.front();
-//   double best_z = std::abs(points.front().GetPosition().Z() - z_plane_mm);
+Truth getTrueTrackletFromTrajectoryPoint(const std::vector<EDEPTrajectoryPoint>& points, double z){
+  const EDEPTrajectoryPoint* best_point = &points.front();
+  double best_z = std::abs(points.front().GetPosition().Z() - z);
 
-//   for (const auto& tp : points) {
-//     double dz = std::abs(tp.GetPosition().Z() - z);
-//     if (dz < best_z) {
-//       best_z = dz;
-//       best_point = &tp;
-//     }
-//   }
-//   TVector3 true_pos = best_point->GetPosition().Vect();
-//   TVector3 true_dir = best_point->GetMomentum().Vect().Unit();
-//   TVector3 true_mom = best_point->GetMomentum().Vect();
+  for (const auto& tp : points) {
+    double dz = std::abs(tp.GetPosition().Z() - z);
+    if (dz < best_z) {
+      best_z = dz;
+      best_point = &tp;
+    }
+  }
+  TVector3 true_pos = best_point->GetPosition().Vect();
+  TVector3 true_dir = best_point->GetMomentum().Unit();
+  TVector3 true_mom = best_point->GetMomentum();
 
-//   return Truth{true_pos, true_dir, true_mom};
-//}
+  return Truth{true_pos, true_dir, true_mom};
+}
+
+std::map<double, Truth> z_to_truth(const std::vector<EDEPTrajectoryPoint>& points, double step){
+  std::map<double, Truth> z_to_trajectory_point;
+  if (points.empty()) return z_to_trajectory_point;
+
+  double z_min = points[0].GetPosition().Z();
+  double z_max = z_min;
+  for (std::size_t i = 1; i < points.size(); ++i) {
+    const double z = points[i].GetPosition().Z();
+    if (z < z_min) z_min = z;
+    if (z > z_max) z_max = z;
+  }
+
+  double z = z_min;
+  while (z <= z_max) {
+    z_to_trajectory_point[z] = getTrueTrackletFromTrajectoryPoint(points, z);
+    z += step;
+  }
+  if (z_to_trajectory_point.find(z_max) == z_to_trajectory_point.end()) {
+    z_to_trajectory_point[z_max] = getTrueTrackletFromTrajectoryPoint(points, z_max);
+  }
+  return z_to_trajectory_point;
+}
+
+
 
 double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet){
 
@@ -95,8 +120,6 @@ double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_trac
 
   return score;
 }
-
-
 
 
 std::map<double, std::vector<TVector3>> getInterpolatedZ(const std::vector<EDEPTrajectoryPoint>& trj_points,

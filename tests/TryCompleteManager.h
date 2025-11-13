@@ -12,7 +12,7 @@
 //--- TTree STEP---
 // Unità DA CONTROLLARE  E RISCRIVERE: z,x,y in mm; p in MeV; angoli in rad; var_x/var_y in m^2
 struct StepInfos {
-  Int_t   run{}, event{}, track_id{}, step_idx{}; /*orientation{}*/; // 0=Vertical (meas X), 1=Horizontal (meas Y)
+  Int_t   run{}, event{}, track_id{}, step_idx{}; /*orientation{}*/ // 0=Vertical (meas X), 1=Horizontal (meas Y)
   Double_t z{}; //mm
   //---true---
   Double_t x_true{};
