@@ -244,7 +244,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
     //---------------------------------------------------------------------------
     auto points =
         trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
-    const double step = 1.0;
+    const double step = 0.5;
     auto z_truth = z_to_truth(points, step);
 
     for (const auto& kv : z_truth) {
