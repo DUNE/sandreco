@@ -23,7 +23,7 @@ void SANDTrackerUtils::clear()
 bool SANDTrackerUtils::areAdjacent(const sand_geometry::tracker::CellID &tub1, const sand_geometry::tracker::CellID &tub2)
 {
   // To Do: this doesn't work for staggered stt tubes
-  return (abs(long(tub1()) - long(tub2())) <= 1);
+  return (abs(long(*tub1()) - long(*tub2())) <= 1);
 }
 
 

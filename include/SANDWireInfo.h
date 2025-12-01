@@ -1,25 +1,31 @@
 #include <TObject.h>
 #include "TVector3.h"
 
+#include <optional>
+
 #ifndef SANDWireInfo_H
 #define SANDWireInfo_H
 
 template <typename T>
 struct SingleElStruct {
  protected:
-  T el;
+  std::optional<T> el;
 
  public:
   SingleElStruct() = default;
-  SingleElStruct(T val) { el = val; };
+  SingleElStruct(T val) : el(val) {}
+  SingleElStruct(std::optional<T> val) : el(val) {};
+  SingleElStruct(std::nullopt_t) : el(std::nullopt) {};
   SingleElStruct(const SingleElStruct &other) { el = other.el; };
-  inline T operator()() const { return el; };
+  inline std::optional<T> operator()() const { return el; };
   inline bool operator<(const SingleElStruct &other) const
   {
+    if (!el || !other.el) return false;
     return el < other.el;
   };
   inline bool operator>(const SingleElStruct &other) const
-  {
+ {
+    if (!el || !other.el) return false;
     return el > other.el;
   };
   inline bool operator==(const SingleElStruct &other) const
@@ -30,13 +36,15 @@ struct SingleElStruct {
   {
     return el != other.el;
   };
-  inline int operator-(const SingleElStruct &other) const
+  inline std::optional<int> operator-(const SingleElStruct &other) const
   {
-    return el - other.el;
+    if (!el || !other.el) return std::nullopt;
+    return *el - *other.el;
   }
-  inline T operator++(int)
+  inline std::optional<T> operator++(int)
   {
-    return el++;
+    if (!el) return std::nullopt;
+    return (*el)++;
   }
 };
 
@@ -49,8 +57,7 @@ namespace tracker
 class WireID : public SingleElStruct<unsigned long>
 {
  public:
-  WireID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  WireID() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 

@@ -13,8 +13,7 @@ class Plane;
 class CellID : public SingleElStruct<unsigned long>
 {
  public:
-  CellID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  CellID() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 class Cell

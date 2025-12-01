@@ -98,8 +98,8 @@ void CreateDigitsFromHits(const SANDGeoManager& geo,
   for (std::map<sand_geometry::tracker::CellID, std::vector<hit> >::const_iterator it = hits2cell.begin();
        it != hits2cell.end(); ++it)  // run over wires
   {
-    long did = it->first();  // wire unique id
-    const auto& cell_info = geo.getCellInfo(it->first())->second;
+    long did = *it->first();  // wire unique id
+    const auto& cell_info = geo.getCellInfo(did)->second;
     const sand_geometry::tracker::WireInfo& wire_info = cell_info.getWire();
     double wire_time = std::numeric_limits<double>::max();
     double drift_time = std::numeric_limits<double>::max();
@@ -188,7 +188,7 @@ void GroupHitsByTube(const TG4Event& ev, const SANDGeoManager& geo,
 
     sand_geometry::tracker::CellID stid = geo.getSttTubeId(x, y, z);
 
-    if (stid == -999) {
+    if (!stid()) {
       skipped_hit++;
       continue;
     };
@@ -203,7 +203,7 @@ void GroupHitsByTube(const TG4Event& ev, const SANDGeoManager& geo,
 
     hit h;
     h.det = "Straw";
-    h.did = stid();
+    h.did = *stid();
     h.x1 = hseg.Start.X();
     h.y1 = hseg.Start.Y();
     h.z1 = hseg.Start.Z();
@@ -273,6 +273,10 @@ void GroupHitsByCell(const TG4Event& ev, const SANDGeoManager& geo,
     geo.decodeCellId(id1, plane_global_id1, cell_local_id1);
     geo.decodeCellId(id2, plane_global_id2, cell_local_id2);
 
+    if (!id1() || !id2()) {
+      std::cout << "At least one hit id is invalid" << std::endl;
+      break;
+    }
     // std::cout << id1() << " "  << id2() << " " << std::endl;
     // std::cout << plane_global_id1() << " " << plane_global_id2() << std::endl;
     // std::cout << cell_local_id1() << " " << cell_local_id2() << std::endl;
@@ -286,16 +290,16 @@ void GroupHitsByCell(const TG4Event& ev, const SANDGeoManager& geo,
     long start_id = 999;
     long stop_id = 999;
     if (id2 > id1) {
-      start_id = id1();
-      stop_id = id2();
+      start_id = *id1();
+      stop_id = *id2();
     } else if (id2 < id1) {
-      start_id = id2();
-      stop_id = id1();
+      start_id = *id2();
+      stop_id = *id1();
     } else  // hit in 1 cell
     {
       hit h;
       h.det = "DriftVolume";
-      h.did = id1();
+      h.did = *id1();
       h.x1 = hseg.Start.X();
       h.y1 = hseg.Start.Y();
       h.z1 = hseg.Start.Z();
@@ -382,7 +386,7 @@ void GroupHitsByCell(const TG4Event& ev, const SANDGeoManager& geo,
 
       hit h;
       h.det = "DriftVolume";
-      h.did = cell_id();
+      h.did = *cell_id();
       h.x1 = start.X();
       h.y1 = start.Y();
       h.z1 = start.Z();

@@ -12,8 +12,7 @@ namespace tracker
 class ClusterID : public SingleElStruct<unsigned long>
 {
  public:
-  ClusterID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  ClusterID() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 class Cluster

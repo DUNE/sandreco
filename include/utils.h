@@ -32,6 +32,7 @@ const double wire_radius = 0.02;      // mm
 const double v_drift = 0.05;          // mm/ns
 const double v_signal_inwire = 200.;  // mm/ns
 const double tm_stt_smearing = 3.5;   // ns
+const double overlap_tolerance = 1;   // mm
 
 double getT(double y1, double y2, double y, double z1, double z2, double z);
 bool isDigBefore(dg_wire d1, dg_wire d2);
