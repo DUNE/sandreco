@@ -23,7 +23,9 @@
 
 #include "EDEPTree.h"
 #include "SANDTrackerUtils.h"
-
+#include "TrackBuilder.h"
+#include "SANDGeoManager.h"
+#include "struct.h"
 // ------------------------------------------------------------------------------
 // New type introduced as the truth at each z of the cluster, note that "truth"
 // does not referr to a unique trajectory point from MC info but to the computed
@@ -51,6 +53,7 @@ std::map<double, Truth> z_to_truth(
 
 double getScore(const TVectorD& tracklet,
                 const std::vector<TVector3>& true_tracklet);
+
 std::map<double, std::vector<TVector3>> getInterpolatedZ(
     const std::vector<EDEPTrajectoryPoint>& trj_points,
     const sand_reco::kf::utils::TrackletMap& z_to_tracklets);
@@ -62,3 +65,7 @@ std::vector<double> computeZDistance(
 sand_reco::kf::utils::TrackletMap findBestTracklet(
     const sand_reco::kf::utils::TrackletMap& z_to_tracklets,
     const std::map<double, std::vector<TVector3>>& z_to_interpolated_tracklets);
+
+std::map<double, std::vector<Tracklet>> findBestTrackletPerModule(
+    const std::map<double, std::vector<TVectorD>>& z_to_tracklets,
+    const SANDGeoManager* sand_geo);

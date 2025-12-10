@@ -77,50 +77,68 @@ std::map<double, Truth> z_to_truth(const std::vector<EDEPTrajectoryPoint>& point
 
 
 
-double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet){
+// double getScore(const TVectorD& tracklet, const std::vector<TVector3>& true_tracklet){
 
-  //Select the best traklet based on position and direction
-  TVector3 best_trj_point = true_tracklet.at(0);
-  TVector3 p_trj_dir = true_tracklet.at(1).Unit();
+//   //Select the best traklet based on position and direction
+//   TVector3 true_pos = true_tracklet.at(0);
+//   TVector3 true_dir = true_tracklet.at(1).Unit();
 
-  // double true_theta_yz = atan(p_trj_dir.Y() / p_trj_dir.Z());
-  // double true_theta_xz = atan(p_trj_dir.Z() / p_trj_dir.X());
+//   // double true_theta_yz = atan(true_dir.Y() / true_dir.Z());
+//   // double true_theta_xz = atan(true_dir.Z() / true_dir.X());
 
-  double true_theta_yz = atan(p_trj_dir.Y() / p_trj_dir.Z());
-  double true_theta_xz = atan(p_trj_dir.Z() / p_trj_dir.X());
-  if (true_theta_xz < 0) {
-    true_theta_xz = M_PI + true_theta_xz;
-  } 
+//   double true_theta_yz = atan(true_dir.Y() / true_dir.Z());
+//   double true_theta_xz = atan(true_dir.Z() / true_dir.X());
+//   if (true_theta_xz < 0) {
+//     true_theta_xz = M_PI + true_theta_xz;
+//   } 
 
-  double x_trk = tracklet[0];
-  double y_trk = tracklet[1];
-  double theta_xz = tracklet[2];
-  double theta_yz = tracklet[3];
+//   double x_trk = tracklet[0];
+//   double y_trk = tracklet[1];
+//   double theta_xz = tracklet[2];
+//   double theta_yz = tracklet[3];
 
-  //Find the closest (x,y)
-  double position_distance = sqrt(pow(x_trk - best_trj_point.X(), 2) + pow(y_trk - best_trj_point.Y(), 2));
-  double anglular_distance_xz = fabs(true_theta_xz - theta_xz);
-  double anglular_distance_yz = fabs(true_theta_yz - theta_yz);
+//   //Find the closest (x,y)
+//   double position_distance = sqrt(pow(x_trk - true_pos.X(), 2) + pow(y_trk - true_pos.Y(), 2));
+//   double anglular_distance_xz = fabs(true_theta_xz - theta_xz);
+//   double anglular_distance_yz = fabs(true_theta_yz - theta_yz);
 
-  //Find the best direction
-  // double px_trk = cos(theta_xz);
-  // double py_trk = sin(theta_yz);
-  // double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
+//   //Find the best direction
+//   // double px_trk = cos(theta_xz);
+//   // double py_trk = sin(theta_yz);
+//   // double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
 
-  // TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
+//   // TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
 
-  //to be precise this is the cos of the angle between the trajectory and the traklet    
-  // p_trk_dir.Print();
-  // p_trj_dir.Print();
-  // double direction = p_trk_dir.Dot(p_trj_dir); 
+//   //to be precise this is the cos of the angle between the trajectory and the traklet    
+//   // p_trk_dir.Print();
+//   // true_dir.Print();
+//   // double direction = p_trk_dir.Dot(true_dir); 
 
-  double score = position_distance / (SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3)  // mm
-               + anglular_distance_xz / SANDTrackerUtils::getSigmaAngleMeasurement()          // rad
-               + anglular_distance_yz / SANDTrackerUtils::getSigmaAngleMeasurement();         // rad
+//   double score = position_distance / (SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3)  // mm
+//                + anglular_distance_xz / SANDTrackerUtils::getSigmaAngleMeasurement()          // rad
+//                + anglular_distance_yz / SANDTrackerUtils::getSigmaAngleMeasurement();         // rad
 
-  return score;
+//   return score;
+// }
+
+
+double getScore(const Tracklet& tracklet, double stereo_angle){
+
+    double x =        tracklet.x ;
+    double y =        tracklet.y ;
+    double theta_xz = tracklet.theta_xz ;
+    double theta_yz = tracklet.theta_yz ;
+
+    double U = y*cos(stereo_angle) - x*sin(stereo_angle);
+    double V = y*cos(stereo_angle) + x*sin(stereo_angle);
+    double Y = y;
+
+    const double D = U + V - 2.0*Y*cos(stereo_angle);
+    double score = fabs(D);
+
+    return score;
+
 }
-
 
 std::map<double, std::vector<TVector3>> getInterpolatedZ(const std::vector<EDEPTrajectoryPoint>& trj_points,
                                                          const std::map<double, std::vector<TVectorD>>& z_to_tracklets){
@@ -258,67 +276,122 @@ return z_distance_vec;
 
 
 
-std::map<double, std::vector<TVectorD>> findBestTracklet(const std::map<double, std::vector<TVectorD>>& z_to_tracklets,
-                                       const std::map<double, std::vector<TVector3>>& z_to_interpolated_tracklets){
+// std::map<double, std::vector<TVectorD>> findBestTracklet(const std::map<double, std::vector<TVectorD>>& z_to_tracklets,
+//                                        const std::map<double, std::vector<TVector3>>& z_to_interpolated_tracklets){
 
-  std::map<double, std::vector<TVectorD>> z_to_best_tracklets;
+//   std::map<double, std::vector<TVectorD>> z_to_best_tracklets;
 
-  for (auto& current_z:z_to_interpolated_tracklets) {
-    const auto& tracklets_at_current_z = z_to_tracklets.at(current_z.first);
+//   for (auto& current_z:z_to_interpolated_tracklets) {
+//     const auto& tracklets_at_current_z = z_to_tracklets.at(current_z.first);
 
 
-    //Select the best traklet based on position and direction
-    TVector3 best_trj_point = current_z.second.at(0);
-    TVectorD best_tracklet(tracklets_at_current_z.at(0).GetNrows());
-    TVector3 p_trj_dir = current_z.second.at(1).Unit();
+//     //Select the best traklet based on position and direction
+//     TVector3 true_pos = current_z.second.at(0);
+//     TVectorD best_tracklet(tracklets_at_current_z.at(0).GetNrows());
+//     TVector3 true_dir = current_z.second.at(1).Unit();
 
-    std::vector<double> position_errors, direction_errors;
+//     std::vector<double> position_errors, direction_errors;
     
-    double best_score = 1e8;
-    for (const auto& tracklet : tracklets_at_current_z) {
-      double x_trk = tracklet[0];
-      double y_trk = tracklet[1];
-      double theta_xz = tracklet[2];
-      double theta_yz = tracklet[3];
+//     double best_score = 1e8;
+//     for (const auto& tracklet : tracklets_at_current_z) {
+//       double x_trk = tracklet[0];
+//       double y_trk = tracklet[1];
+//       double theta_xz = tracklet[2];
+//       double theta_yz = tracklet[3];
 
-      //Find the closest (x,y)
-      double position_distance = sqrt(pow(x_trk - best_trj_point.X(), 2) + pow(y_trk - best_trj_point.Y(), 2));
+//       //Find the closest (x,y)
+//       double position_distance = sqrt(pow(x_trk - true_pos.X(), 2) + pow(y_trk - true_pos.Y(), 2));
       
-      //Find the best direction
-      double px_trk = cos(theta_xz);
-      double py_trk = sin(theta_yz);
-      double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
+//       //Find the best direction
+//       double px_trk = cos(theta_xz);
+//       double py_trk = sin(theta_yz);
+//       double pz_trk = sqrt(1 - px_trk * px_trk - py_trk * py_trk);
 
-      TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
+//       TVector3 p_trk_dir(px_trk, py_trk, pz_trk);    
       
-      //to be precise this is the cos of the angle between the trajectory and the traklet              
-      double direction = p_trk_dir.Dot(p_trj_dir); 
+//       //to be precise this is the cos of the angle between the trajectory and the traklet              
+//       double direction = p_trk_dir.Dot(true_dir); 
 
-      position_errors.push_back(position_distance);
-      direction_errors.push_back(direction);
+//       position_errors.push_back(position_distance);
+//       direction_errors.push_back(direction);
 
-      double score = position_distance / 200E-3 + acos(direction) / 0.02;
+//       double score = position_distance / 200E-3 + acos(direction) / 0.02;
 
-      // std::cout << "z: " << current_z.first<< " position distance  "  
-      //             << position_distance 
-      //             << " angular distance  "  
-      //             << direction
-      //             << " SCORE " 
-      //             << score
-      //             << " x distance: " << x_trk - best_trj_point.X()
-      //             << " y distance: " << y_trk - best_trj_point.Y()
-      //             << std::endl;
-      if (score < best_score) {
-        best_score = score;
-        best_tracklet = tracklet;
-        // std::cout << "BEST SCORE " 
-        //           << best_score
-        //           << std::endl;
-      }
+//       // std::cout << "z: " << current_z.first<< " position distance  "  
+//       //             << position_distance 
+//       //             << " angular distance  "  
+//       //             << direction
+//       //             << " SCORE " 
+//       //             << score
+//       //             << " x distance: " << x_trk - true_pos.X()
+//       //             << " y distance: " << y_trk - true_pos.Y()
+//       //             << std::endl;
+//       if (score < best_score) {
+//         best_score = score;
+//         best_tracklet = tracklet;
+//         // std::cout << "BEST SCORE " 
+//         //           << best_score
+//         //           << std::endl;
+//       }
+//     }
+
+//     z_to_best_tracklets[current_z.first].push_back(best_tracklet);
+//   }
+//   return z_to_best_tracklets;
+// }
+
+std::map<double, std::vector<Tracklet>> findBestTrackletPerModule(const std::map<double, std::vector<TVectorD>>& z_to_tracklets, const SANDGeoManager* sand_geo){
+
+  std::map<int, std::map<PlaneOrientation, std::vector<Tracklet>>> module_view_tracklets;
+  for (const auto& [z, tracklets] : z_to_tracklets) {
+    for (const auto& trk : tracklets) {
+      if (trk.digits.empty()) continue;
+      int moduleID = trk.digits.front().getModuleID();
+      int planeID  = trk.digits.front().getPlaneID();
+      PlaneOrientation orientation = sand_geo->getPlaneOrientation(moduleID, planeID);
+      module_view_tracklets[moduleID][orientation].push_back(trk);
     }
-
-    z_to_best_tracklets[current_z.first].push_back(best_tracklet);
   }
-  return z_to_best_tracklets;
-}
+    std::map<double, std::vector<Tracklet>> z_to_best_tracklets;
+    for(const auto& [modID, view_map] :  module_view_tracklets){
+      if (view_map.count(PlaneOrientation::kU) == 0) continue;
+      if (view_map.count(PlaneOrientation::kV) == 0) continue;
+      if (view_map.count(PlaneOrientation::kY) == 0) continue;
 
+      auto& U_orientation = view_map.at(PlaneOrientation::kU);
+      auto& V_orientation = view_map.at(PlaneOrientation::kV);
+      auto& Y_orientation = view_map.at(PlaneOrientation::kY);
+
+      double streo_angle = 5.0*M_PI/180.0;;
+      double best_score = 1e30;
+      Tracklet best_tracklet;
+
+      for(const auto& u_trk : U_orientation){
+        for(const auto& v_trk : V_orientation){
+          for(const auto& y_trk : Y_orientation){
+
+            double U = u_trk.y * cos(stereo_angle) - u_trk.x*sin(streo_angle);
+            double V = v_trk.y * cos(stereo_angle) + v_trk.x*sin(stereo_angle);
+            double Y = y_trk.y;
+            
+            double D = U + V - 2.0*Y*cos(streo_angle);
+             double sore = std::fabs(D);
+
+             if(score < best_score){
+              best_score = score;
+              best_tracklet = y_trk;
+          
+             }
+          }//Y
+        }//V
+      }//U
+
+      if(!best_tracklet.digits.empty()){
+        double z = best_tracklet.digits.front().getZ();
+        z_to_best_tracklets[z].push_back(best_tracklet);
+      }
+
+    }// modules
+
+    return z_to_best_tracklets
+}

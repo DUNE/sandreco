@@ -116,7 +116,7 @@ target_link_libraries(SANDKalmanFilter PUBLIC SANDTrackerUtils SANDKFTrack)
 
 # Creates a libProcessTracklets shared library with a generated dictionary.
 add_library(ProcessTracklets SHARED src/SANDProcessTracklets.cpp)
-target_link_libraries(ProcessTracklets PUBLIC Utils EDEPTree)
+target_link_libraries(ProcessTracklets TrackBuilder PUBLIC SANDGeoManager Struct Utils EDEPTree)
 
 # Creates a libTryCompleteManager
 add_library(TryCompleteManager STATIC tests/TryCompleteManager.cpp)
@@ -131,19 +131,18 @@ target_link_libraries(TryCompleteManager PUBLIC
 add_executable(TestKF tests/TestKF.cpp)
 target_link_libraries(TestKF PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter ProcessTracklets TryCompleteManager)
 
-# Creates PlotKF executabl.
+# Creates PlotKF executable.
 add_executable(PlotKF tests/PlotKF.cpp)
-target_link_libraries(PlotKF PUBLIC
-  TryCompleteManager ROOT::RIO ROOT::Tree ROOT::Hist ROOT::Graf ROOT::Gpad ROOT::MathCore
-)
+target_link_libraries(PlotKF PUBLIC TryCompleteManager ROOT::RIO ROOT::Tree ROOT::Hist ROOT::Graf ROOT::Gpad ROOT::MathCore)
+
+# Creates PlotTriplets executable.
+add_executable(PlotTriplets src/PlotTriplets.cpp)
+target_link_libraries(PlotTriplets PUBLIC ROOT::RIO ROOT::Tree ROOT::Hist ROOT::Graf ROOT::Gpad)
+
 
 # Creates TestSeed executable.
 add_executable(TestSeed tests/TestSeed.cpp)
 target_link_libraries(TestSeed PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter)
-
-# Creates NoiseMatrixComputation executable.
-add_executable(NoiseMatrixComputation tools/NoiseMatrixComputation.cpp)
-target_link_libraries(NoiseMatrixComputation PUBLIC SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree)
 
 # Creates a libSANDEventDisplay shared library
 add_library(SANDEventDisplay SHARED src/SANDEventDisplay.cpp src/SANDDisplayUtils.cpp SANDEventDisplayDict.cxx)
@@ -161,9 +160,14 @@ target_link_libraries(eventDisplay PUBLIC Utils SANDEventDisplay "-lEG -lGui")
 add_executable(SANDECALClustering src/SANDECALClustering.cpp)
 target_link_libraries(SANDECALClustering PUBLIC Struct Utils SANDClustering)
 
-# Creates MeasurementBuilder executable.
+# Creates TestVertexing executable.
 add_executable(TestVertexing tests/TestVertexing.cpp)
 target_link_libraries(TestVertexing PUBLIC Utils Struct SANDTrackerVertexing ROOT::EG)
+
+# Creates TrackBuilder executable.
+add_executable(TrackBuilder src/TrackBuilder.cpp)
+target_link_libraries(TrackBuilder PUBLIC SANDGeoManager SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ProcessTracklets Utils Struct ROOT::EG EDEPTree)
+
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "default install path" FORCE )
@@ -172,7 +176,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
- install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay TestKF TestSeed TestVertexing SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils ProcessTracklets
+ install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay TestKF TestSeed TestVertexing SANDClustering SANDECALClustering TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils ProcessTracklets TrackBuilder
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
