@@ -1328,7 +1328,8 @@ bool value_comparer(std::map<int, int>::value_type& i1,
   return i1.second < i2.second;
 }
 
-void PidBasedClustering(TG4Event* ev, std::vector<cluster>& vec_cl){std::map<int, int> hit_pid;for (unsigned int i = 0; i < vec_cl.size(); i++) {
+void PidBasedClustering(TG4Event* ev, std::vector<cluster>& vec_cl){
+  std::map<int, int> hit_pid;for (unsigned int i = 0; i < vec_cl.size(); i++) {
   // find particle corresponding to more p.e.
   hit_pid.clear();
   for (const auto& cell : vec_cl.at(i).reco_cells) {
@@ -1342,6 +1343,460 @@ void PidBasedClustering(TG4Event* ev, std::vector<cluster>& vec_cl){std::map<int
     }
     vec_cl.at(i).tid = std::max_element(hit_pid.begin(), hit_pid.end(), value_comparer)->first;
   }
+}
+
+struct min_max_time
+{
+    bool valid = false;
+    double min = 0.0;
+    double max = 0.0;
+};
+
+min_max_time compute_min_max_time(const std::vector<double>& times)
+{
+    min_max_time result;
+
+    if (times.empty()) {
+        return result;
+    }
+
+    auto [min_it, max_it] = std::minmax_element(times.begin(), times.end());
+    result.min = *min_it;
+    result.max = *max_it;
+    result.valid = true;
+
+    return result;
+}
+
+void Check_isentering(EDEPTrajectory& traject, std::vector<int>& generator_ids, std::vector<int>& cell_ids, std::map<int, std::vector<std::pair<double, double>>>& cell_id_min_max_time, std::vector<int>& checked, const SANDGeoManager& sand_geo, int& child_id, std::map<int, TLorentzVector>& init_true_point)
+{
+  std::vector<EDEPTrajectoryPoint> all_points = traject.GetTrajectoryPointsVect();
+  std::sort(all_points.begin(), all_points.end(), [](EDEPTrajectoryPoint a, EDEPTrajectoryPoint b)
+            { return a.GetPosition().T() < b.GetPosition().T(); });
+
+  int n_point_traj = 0;
+  for (auto point_iter = all_points.begin(); point_iter != all_points.end(); ++point_iter) {
+    EDEPTrajectoryPoint point = *point_iter;
+    TLorentzVector point_position = point.GetPosition();
+
+    double point_x = point_position.X();
+    double point_y = point_position.Y();
+    double point_z = point_position.Z();
+
+    int this_cell_id = sand_geo.get_ecal_cell_id(point_x, point_y, point_z, true);
+
+    if (point_iter == all_points.begin()) {
+      TLorentzVector point_position_end = (all_points.back()).GetPosition();
+    }
+    auto cell_iter = std::find(cell_ids.begin(), cell_ids.end(), this_cell_id);
+
+    if (point_iter == all_points.begin() && cell_iter != cell_ids.end()) {
+      EDEPTrajectory traj = *traject.GetParent();
+      if (std::find(checked.begin(), checked.end(), traj.GetId()) != checked.end()) {
+        break;
+      }
+      child_id = traject.GetId();
+      checked.push_back(traj.GetId());
+      if(traj.GetId() == -1){
+        generator_ids.push_back(traject.GetId());
+        return;
+      }
+
+      Check_isentering(traj, generator_ids, cell_ids, cell_id_min_max_time, checked, sand_geo, child_id, init_true_point);
+      return;
+    }
+
+    if (cell_iter == cell_ids.end()) {
+      if (std::next(point_iter) == all_points.end()) {
+        // Notice: this should not exist! There is sometimes a gap
+        // in edepsim between parent and children
+        // trajectory points that requires this temporary fix
+
+        std::vector<EDEPTrajectory> children = traject.GetChildrenTrajectories();
+        std::vector<EDEPTrajectory>::iterator children_it = find_if(children.begin(), children.end(), [&](EDEPTrajectory& this_trj)
+                                                                    { return this_trj.GetId() == child_id; });
+
+        if (children_it == children.end()) {
+          break;
+        }
+
+        EDEPTrajectory generator_children = *children_it;
+
+        generator_ids.push_back(generator_children.GetId());
+        checked.push_back(generator_children.GetId());
+        std::vector<EDEPTrajectoryPoint> all_points_this_children = generator_children.GetTrajectoryPointsVect();
+        std::sort(all_points_this_children.begin(), all_points_this_children.end(), [](EDEPTrajectoryPoint a, EDEPTrajectoryPoint b)
+                  { return a.GetPosition().T() < b.GetPosition().T(); });
+        auto children_p_iter = all_points_this_children.begin();
+        EDEPTrajectoryPoint children_point = *children_p_iter;
+
+        init_true_point[generator_children.GetId()].SetXYZT(children_point.GetPosition().X(), children_point.GetPosition().Y(), children_point.GetPosition().Z(), children_point.GetPosition().T());
+
+        auto it = std::find_if(checked.begin(), checked.end(), [id = traject.GetId()](int v)
+                                        { return v == id; });
+
+        checked.erase(it, it == checked.end() ? it : std::next(it));
+
+        break;
+      }
+
+      auto next_point_iter = std::next(point_iter);
+      EDEPTrajectoryPoint next_point = *next_point_iter;
+      TLorentzVector next_point_position = next_point.GetPosition();
+
+      int next_cell_id = sand_geo.get_ecal_cell_id(next_point_position.X(), next_point_position.Y(), next_point_position.Z(), true);
+      auto next_cell_iter = std::find(cell_ids.begin(), cell_ids.end(), next_cell_id);
+
+      if (next_cell_iter != cell_ids.end()) {
+
+        std::vector<EDEPTrajectoryPoint> this_traj_points_in_ecal = traject.GetTrajectoryPoints().at(component::ECAL);
+
+        generator_ids.push_back(traject.GetId());
+        checked.push_back(traject.GetId());
+        init_true_point[traject.GetId()].SetXYZT(next_point.GetPosition().X(),next_point.GetPosition().Y(), next_point.GetPosition().Z(), next_point.GetPosition().T()) ;
+        break;
+      }
+    }
+    n_point_traj++;
+  }
+}
+
+std::vector<int> Search_generators(std::vector<EDEPTrajectory>& traj_in_cluster, std::vector<int>& cell_ids, std::map<int, std::vector<std::pair<double, double>>>& cell_id_min_max_time, const SANDGeoManager& sand_geo, std::map<int, TLorentzVector>& init_true_point)
+{
+    std::vector<int> generator_ids;
+    std::vector<int> checked;
+    int n = 0;
+    int child_id;
+
+    for (auto& trj : traj_in_cluster)
+    {
+        if (std::find(checked.begin(), checked.end(), trj.GetId()) != checked.end())
+        {
+            continue;
+        }
+        child_id = trj.GetId();
+        checked.push_back(trj.GetId());
+        Check_isentering(trj, generator_ids, cell_ids, cell_id_min_max_time, checked, sand_geo, child_id, init_true_point);
+        n++;
+    }
+    return generator_ids;
+}
+
+void Calculate_dep_energy_in_cluster(EDEPTrajectory& child, double& gen_energy, double& vis_energy, std::vector<int>& all_generators_id, std::map<int, std::map<int, int>>& cell_to_h_index, const SANDGeoManager& sand_geo, std::map<int, double>& cell_to_energy, double cluster_time)
+{
+  auto hit_map = child.GetHitMap();
+  std::vector<EDEPHit> hits_in_ecal = hit_map[component::ECAL];
+
+  int n_hits_tr = 0;
+  for (auto& hit : hits_in_ecal) {
+    TLorentzVector hit_start_point_lorentz = hit.GetStart();
+    TVector3 hit_start_point = hit_start_point_lorentz.Vect();
+
+    TLorentzVector hit_stop_point_lorentz = hit.GetStop();
+    TVector3 hit_stop_point = hit_stop_point_lorentz.Vect();
+
+    double hit_lenght = (hit_stop_point - hit_start_point).Mag();
+    int this_hit_start_cell_id = sand_geo.get_ecal_cell_id(hit_start_point.X(), hit_start_point.Y(), hit_start_point.Z(), true);
+    int this_hit_stop_cell_id = sand_geo.get_ecal_cell_id(hit_stop_point.X(), hit_stop_point.Y(), hit_stop_point.Z(), true);
+    auto middle_point = (hit_start_point + hit_stop_point) * 0.5;
+    int this_hit_middle_cell_id = sand_geo.get_ecal_cell_id(middle_point.X(), middle_point.Y(), middle_point.Z(), true);
+
+    int cell_global_id;
+    if (this_hit_middle_cell_id != -999 && this_hit_middle_cell_id != 999) {
+      cell_global_id = this_hit_middle_cell_id;
+    } else if (this_hit_start_cell_id != -999 && this_hit_start_cell_id != 999) {
+      cell_global_id = this_hit_start_cell_id;
+    } else if (this_hit_stop_cell_id != -999 && this_hit_stop_cell_id != 999) {
+      cell_global_id = this_hit_stop_cell_id;
+    }
+
+    if (cell_to_h_index.find(cell_global_id) != cell_to_h_index.end() && 
+    fabs(hit.GetStart().T() - cluster_time) < 30) {
+      gen_energy += hit.GetEnergyDeposit();
+      if (cell_to_energy.find(cell_global_id) == cell_to_energy.end()) {
+        cell_to_energy[cell_global_id] = 0;
+        cell_to_energy[cell_global_id] += hit.GetEnergyDeposit();
+      } else {
+        cell_to_energy[cell_global_id] += hit.GetEnergyDeposit();
+      }
+
+      for (auto &h_index : cell_to_h_index[cell_global_id]) {
+        if (hit.GetId() == h_index.first) {
+          int pe = (int)(h_index.second);
+          vis_energy += pe;
+        }
+      }
+    }
+    n_hits_tr++;
+  }
+
+  std::vector<EDEPTrajectory> nephews = child.GetChildrenTrajectories();
+  for (auto nephew : nephews) {
+    if (std::find(all_generators_id.begin(), all_generators_id.end(), nephew.GetId()) == all_generators_id.end()) {
+      Calculate_dep_energy_in_cluster(nephew, gen_energy, vis_energy, all_generators_id, cell_to_h_index, sand_geo, cell_to_energy, cluster_time);
+    }
+  }
+}
+
+// NEW. WHY NOT USING THE ONE ABOVE DIRECTLY?
+double Calculate_generator_energy_in_cluster(EDEPTrajectory& generator, std::vector<int>& all_generators_id, std::map<int, std::map<int, int>>& cell_to_h_index, const SANDGeoManager& sand_geo, std::map<int, double>& cell_to_energy, double& vis_energy, double cluster_time)
+{
+    double gen_energy = 0;
+    Calculate_dep_energy_in_cluster(generator, gen_energy, vis_energy, all_generators_id, cell_to_h_index, sand_geo, cell_to_energy, cluster_time);
+    return gen_energy;
+}
+
+EDEPTrajectoryPoint Find_first_point_in_ECal(std::vector<EDEPTrajectoryPoint> points_in_ecal, cluster clu)
+{
+  double Tdistmin = std::numeric_limits<double>::max();
+  std::vector<EDEPTrajectoryPoint>::iterator chosen_point_it;
+
+  int i = 0;
+  for (auto it = points_in_ecal.begin(); it != points_in_ecal.end(); it++) {
+    if (std::fabs((*it).GetPosition().T() - clu.t) < Tdistmin) //&& (*it).GetPosition().T() < clu.t) 
+    {
+      chosen_point_it = it;
+      Tdistmin = std::fabs((*it).GetPosition().T() - clu.t);
+    } else {
+      i++;
+    }
+  }
+  return *chosen_point_it;
+}
+
+double Calculate_initial_momentum(EDEPTrajectory chosen_trajectory, cluster clu, bool& exception_time)
+{
+  double initial_momentum = -1;
+  std::vector<EDEPTrajectoryPoint> first_points_in_ecal = chosen_trajectory.GetFirstPointsInDetector(component::ECAL);
+
+  if (!first_points_in_ecal.empty()) {
+    EDEPTrajectoryPoint first_point_in_ecal = Find_first_point_in_ECal(first_points_in_ecal, clu);
+    if (clu.t < first_point_in_ecal.GetPosition().T()) {
+      exception_time = true;
+    }
+    initial_momentum = first_point_in_ecal.GetMomentum().Mag();
+  } else {
+    std::cerr << "There is no first point in ECAL!" << std::endl;
+  }
+  return initial_momentum;
+}
+
+void PidWithEdepReader(std::vector<cluster>& vec_cl, std::vector<truecluster>& vec_true_cl, EDEPTree* tree, const SANDGeoManager& sand_geo) {
+  for (auto &clu : vec_cl) {
+    std::vector<int> traj_id;
+    std::vector<double> energy_layer = {0, 0, 0, 0, 0}; 
+    std::vector<int> cell_l = {0, 0, 0, 0, 0};
+    std::vector<double> lay_maxE = {0, 0, 0, 0, 0};
+    int ncelltot = 0;
+    std::vector<int> cell_id_clus;
+    std::map<int, std::map<int, std::vector<double>>> cell_to_hit_times;
+    std::map<int, int> cell_multiplicity_counter;                       
+    std::map<int, std::map<int, int>> cell_to_h_index;
+    std::map<int, std::vector<std::pair<double, double>>> cell_id_min_max_time;
+
+    for (auto &cell : clu.reco_cells) {
+      cell_id_clus.push_back(cell.id);
+      if (cell_multiplicity_counter.find(cell.id) == cell_multiplicity_counter.end()) {
+        cell_multiplicity_counter[cell.id] = 0;
+      }
+      int multiplicity = cell_multiplicity_counter[cell.id]++;
+            
+      cell_l[cell.lay]++; 
+      energy_layer[cell.lay] += cell.e;
+
+      if (cell.e > lay_maxE[cell.lay]) {
+        lay_maxE[cell.lay] = cell.e;
+      }
+      int npe1 = 0;
+      int npe2 = 0;
+      for (auto &pe : cell.ps1.photo_el) {
+        traj_id.push_back(tree->GetTrajectoryWithHitIdInDetector(pe.h_index, component::ECAL)->GetId());
+        npe1++;
+        auto traj_hit_map = tree->GetTrajectoryWithHitIdInDetector(pe.h_index, component::ECAL)->GetHitMap();
+        std::vector<EDEPHit> hits_in_ecal = traj_hit_map[component::ECAL];
+
+        if (auto it = std::find_if(hits_in_ecal.begin(), hits_in_ecal.end(), [&pe](const EDEPHit &hit)
+                                    { return hit.GetId() == pe.h_index; }); it != hits_in_ecal.end()) {
+          cell_to_hit_times[cell.id][multiplicity].push_back(it->GetStart().T());
+          cell_to_hit_times[cell.id][multiplicity].push_back(it->GetStop().T());
+        }
+
+        if (cell_to_h_index.find(cell.id) == cell_to_h_index.end()) {
+          cell_to_h_index[cell.id][pe.h_index] = 1;
+        } else {
+          if (cell_to_h_index[cell.id].find(pe.h_index) == cell_to_h_index[cell.id].end()) {
+            cell_to_h_index[cell.id][pe.h_index] = 1;
+          } else {
+            cell_to_h_index[cell.id][pe.h_index]++;
+          }
+        }
+      }
+
+      for (auto &pe : cell.ps2.photo_el) {
+        traj_id.push_back(tree->GetTrajectoryWithHitIdInDetector(pe.h_index, component::ECAL)->GetId());
+        npe2++;
+        auto traj_hit_map = tree->GetTrajectoryWithHitIdInDetector(pe.h_index, component::ECAL)->GetHitMap();
+        std::vector<EDEPHit> hits_in_ecal = traj_hit_map[component::ECAL];
+
+        if (auto it = std::find_if(hits_in_ecal.begin(), hits_in_ecal.end(), [&pe](const EDEPHit &hit) { 
+          return hit.GetId() == pe.h_index;}); it != hits_in_ecal.end()) {
+          cell_to_hit_times[cell.id][multiplicity].push_back(it->GetStart().T());
+          cell_to_hit_times[cell.id][multiplicity].push_back(it->GetStop().T());
+        }
+        if (cell_to_h_index.find(cell.id) == cell_to_h_index.end()) {
+          cell_to_h_index[cell.id][pe.h_index] = 1;
+        } else {
+          if (cell_to_h_index[cell.id].find(pe.h_index) == cell_to_h_index[cell.id].end()) {
+            cell_to_h_index[cell.id][pe.h_index] = 1;
+          } else {
+            cell_to_h_index[cell.id][pe.h_index]++;
+          }
+        }
+      }
+      ncelltot++;
+      min_max_time max_min_time_result = compute_min_max_time(cell_to_hit_times[cell.id][multiplicity]);
+      
+      if (max_min_time_result.valid) {
+        cell_id_min_max_time[cell.id].emplace_back(max_min_time_result.min, max_min_time_result.max);
+      } else {
+        std::cerr << "pe vectors empty" << std::endl;
+      }
+    } // END LOOP ON RECO CELLS
+
+    std::map<int, double> cell_to_energy;
+
+    std::sort(traj_id.begin(), traj_id.end());
+    traj_id.erase(unique(traj_id.begin(), traj_id.end()), traj_id.end());
+
+    std::vector<EDEPTrajectory> traj_clus;
+    for (auto &ids : traj_id) {
+      traj_clus.push_back(*(tree->GetTrajectory(ids)));
+    }
+    std::map<int, TLorentzVector> init_true_point; 
+    std::vector<int> generator_ids = Search_generators(traj_clus, cell_id_clus, cell_id_min_max_time, sand_geo, init_true_point);
+    std::vector<EDEPTrajectory> cluster_generators;
+    for (auto &gen_ids : generator_ids) {
+      cluster_generators.push_back(*(tree->GetTrajectory(gen_ids)));
+    }
+
+    std::sort(cluster_generators.begin(), cluster_generators.end(), [](EDEPTrajectory a, EDEPTrajectory b)
+                          { return a.GetId() < b.GetId(); });
+    cluster_generators.erase(unique(cluster_generators.begin(), cluster_generators.end()), cluster_generators.end());
+
+    std::vector<cluster_generator> generators;
+    double max_energy_in_gen = 0;
+    double chosen_initial_momentum = 0;
+    int chosen_pdg = 0;
+    EDEPTrajectory chosen_trajectory;
+    cluster_generator chosen_generator;
+    double true_cluster_energy = 0;
+    double true_vis_energy = 0;
+    double initial_momentum = 0;
+    cell_to_energy.clear();
+    for (auto &gen : cluster_generators) {
+      cluster_generator current_generator;
+
+      EDEPTrajectory current_parent;
+
+      current_generator.pdg_code = gen.GetPDGCode();
+
+      current_generator.track_id = gen.GetId();
+      current_generator.initial_x = init_true_point[gen.GetId()].X();
+      current_generator.initial_y = init_true_point[gen.GetId()].Y();
+      current_generator.initial_z = init_true_point[gen.GetId()].Z();
+      current_generator.parent_track_id = gen.GetParentId();
+      current_parent = *(gen.GetParent());
+      current_generator.parent_pdg_code = current_parent.GetPDGCode();
+
+      current_generator.initial_momentum = gen.GetInitialMomentum().Vect().Mag();
+      current_generator.initial_energy = gen.GetInitialMomentum().E();
+
+      double dep_en = Calculate_generator_energy_in_cluster(gen, generator_ids, cell_to_h_index, sand_geo, cell_to_energy, true_vis_energy, clu.t);
+      current_generator.dep_energy = dep_en;
+      true_cluster_energy += dep_en;
+
+      if (dep_en > max_energy_in_gen) {
+        // std::cout << current_generator.track_id << " generator energy > other gen energies "<< std::endl;
+        max_energy_in_gen = dep_en;
+        chosen_trajectory = gen;
+        chosen_generator = current_generator;
+        // std::cout << "chosen_generator = " <<current_generator.track_id << ", " << gen.GetId() << std::endl;
+        //   chosen_pdg = current_generator.pdg_code;
+      }
+      //workaround to manage case in which there is only one generator and it fabs(hit.GetStart().T() - cluster_time) > 30 
+      if(cluster_generators.size() == 1 && dep_en ==0){
+        chosen_trajectory = gen;
+        chosen_generator = current_generator; 
+      }
+      generators.push_back(current_generator);
+    } // END OF THE GENERATOR LOOP
+
+    // ##FILLING THE TTREE VARIABLES
+    double layer_with_MaxE = *std::max_element(energy_layer.begin(), energy_layer.end());
+    double layer_with_MinE = *std::min_element(energy_layer.begin(), energy_layer.end());
+    
+    double asymmetry = (layer_with_MaxE - layer_with_MinE) / (layer_with_MaxE + layer_with_MinE);
+    
+    truecluster current_true_cluster;
+    int num_trajectories = traj_clus.size();
+
+    current_true_cluster.n_traj = num_trajectories;
+    current_true_cluster.e = true_cluster_energy;
+    current_true_cluster.vis_e = true_vis_energy;
+    current_true_cluster.ntot_cell = ncelltot;
+    current_true_cluster.cell_l0 = cell_l[0];
+    current_true_cluster.cell_l1 = cell_l[1];
+    current_true_cluster.cell_l2 = cell_l[2];
+    current_true_cluster.cell_l3 = cell_l[3];
+    current_true_cluster.cell_l4 = cell_l[4];
+
+    current_true_cluster.energy_l0 = energy_layer[0];
+    current_true_cluster.energy_l1 = energy_layer[1];
+    current_true_cluster.energy_l2 = energy_layer[2];
+    current_true_cluster.energy_l3 = energy_layer[3];
+    current_true_cluster.energy_l4 = energy_layer[4];
+
+    current_true_cluster.lay0_maxE = lay_maxE[0];
+    current_true_cluster.lay1_maxE = lay_maxE[1];
+    current_true_cluster.lay2_maxE = lay_maxE[2];
+    current_true_cluster.lay3_maxE = lay_maxE[3];
+    current_true_cluster.lay4_maxE = lay_maxE[4];
+
+    current_true_cluster.asymmetry = asymmetry;
+
+    if (chosen_trajectory.GetTrajectoryPoints().find(component::ECAL) != chosen_trajectory.GetTrajectoryPoints().end()) {
+      std::vector<EDEPTrajectoryPoint> all_points_in_ecal = chosen_trajectory.GetTrajectoryPoints().at(component::ECAL);
+      bool exception_time = false;
+      initial_momentum = Calculate_initial_momentum(chosen_trajectory, clu, exception_time);
+    } else {
+      std::cerr << "There are no points in ECAL!" << std::endl;
+      initial_momentum = -1;
+    }
+
+
+    current_true_cluster.Eoverp = clu.e / initial_momentum;
+
+    current_true_cluster.tid = chosen_generator.track_id;
+    clu.tid = chosen_generator.track_id;                 
+    
+    std::sort(generators.begin(), generators.end(), [](cluster_generator g1, cluster_generator g2)
+              { return g1.dep_energy > g2.dep_energy; });
+
+    if (generators.empty()) {
+      std::cerr << "GENERATOR vector empty" << std::endl;
+    }
+
+
+    current_true_cluster.vec_generator = generators;
+    vec_true_cl.push_back(current_true_cluster);
+
+    cell_to_h_index.clear();
+    cell_id_clus.clear();
+    traj_id.clear();
+    traj_clus.clear();
+  } // END CLUSTER LOOP
+
+
 }
 
 void MeanAndRMS(std::vector<dg_wire>& digits, TH1D& hmeanX, TH1D& hrmsX,
@@ -1672,7 +2127,7 @@ void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
   }
 }
 
-void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG4Event* mc_event, std::vector<dg_wire>* digits)
+void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, EDEPTree* tree, std::vector<dg_wire>* digits)
 {
   int p[9] = {100, -2000, 2000, 100, -4000, -1000, 100, 23800, 26000};
 
@@ -1717,11 +2172,8 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
     return;
   }
 
-  EDEPTree tree;
-  tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
-
   std::vector<EDEPTrajectory> primaryTrj;
-  tree.Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
+  tree->Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
     [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
 
   TDatabasePDG pdg_db;
@@ -1786,7 +2238,8 @@ enum class STT_Mode {
   mc_primaries
 };
 enum class ECAL_Mode {
-  fast
+  fast,
+  full
 };
 
 void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
@@ -1861,11 +2314,13 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 
   std::vector<track> vec_tr;
   std::vector<cluster> vec_cl;
-  std::vector<vertex> vec_vtx;
+  std::vector<truecluster> vec_true_cl;
+      std::vector<vertex> vec_vtx;
 
   TTree tout("tReco", "tReco");
   tout.Branch("track", "std::vector<track>", &vec_tr);
   tout.Branch("cluster", "std::vector<cluster>", &vec_cl);
+  tout.Branch("truecluster", "std::vector<truecluster>", &vec_true_cl);
   tout.Branch("vertex", "std::vector<vertex>", &vec_vtx);
 
   const int nev = t->GetEntries();
@@ -1880,6 +2335,9 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
   std::cout << "Events: " << nev << " [";
   std::cout << std::setw(3) << int(0) << "%]" << std::flush;
 
+  
+  EDEPTree tree;
+
   for (int i = 0; i < nev; i++) {
     t->GetEntry(i);
 
@@ -1888,6 +2346,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 
     vec_tr.clear();
     vec_cl.clear();
+    vec_true_cl.clear();
     vec_vtx.clear();
 
     double xvtx_reco, yvtx_reco, zvtx_reco;
@@ -1895,6 +2354,10 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 
     std::vector<dg_wire> clustersY;
     std::vector<dg_wire> clustersX;
+
+    if (stt_mode == STT_Mode::primary_only_kf || ecal_mode == ECAL_Mode::full) {
+      tree.InizializeFromEdep(*ev, sand_geo.getTGeoManager());
+    }
 
     switch (stt_mode) {
       case STT_Mode::fast_only_primaries:
@@ -1914,7 +2377,7 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
         TrackFit(vec_tr, sampling, xvtx_reco, yvtx_reco, zvtx_reco);
         break;
       case STT_Mode::primary_only_kf:
-        ProcessEventWithKF(vec_tr, &sand_geo, ev, vec_digi);
+        ProcessEventWithKF(vec_tr, &sand_geo, &tree, vec_digi);
         break;
       case STT_Mode::mc_primaries:
         ProcessEventWithMC(vec_tr, &sand_geo, ev, vec_digi, trackerType);
@@ -1948,12 +2411,18 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
         vec_cl = clusterize(&sand_geo, *vec_cell);
         PidBasedClustering(ev, vec_cl);
         break;
-    }
+      case ECAL_Mode::full:
+        vec_cl = clusterize(&sand_geo, *vec_cell);
+        PidWithEdepReader(vec_cl, vec_true_cl, &tree, sand_geo);
+        break;
+      }
+    
     tout.Fill();
   }
 
   vec_tr.clear();
   vec_cl.clear();
+  vec_true_cl.clear();
   vec_vtx.clear();
 
   vec_digi->clear();
@@ -1970,11 +2439,14 @@ void Reconstruct(std::string const& fname_hits, std::string const& fname_digits,
 void help_reco()
 {
   std::cout
-      << "usage: Reconstruct hit_file digit_file output_file [stt_mode] dz [dz value] impact_parameter [impact_parameter value] merging_radius [merging_radius value]\n";
+      << "usage: Reconstruct hit_file digit_file output_file [stt_mode] [ecal_mode] dz [dz value] impact_parameter [impact_parameter value] merging_radius [merging_radius value]\n";
   std::cout << "    - stt_mode: 'stt_mode::fast_only_primaries' (default) \n";
   std::cout << "                'stt_mode::fast' \n";
   std::cout << "                'stt_mode::full' \n";
   std::cout << "                'stt_mode::primary_only_kf' \n";
+  std::cout << "                'stt_mode::primary_only_kf' \n";
+  std::cout << "    - ecal_mode: 'ecal_mode::fast'  (default)\n";
+  std::cout << "                 'ecal_mode::full' \n";
   std::cout << "                'stt_mode::mc_primaries' \n";
   std::cout << "    - dz: longitudinal track-vertex distance (default 15 mm)\n";
   std::cout << "    - impact_parameter: for 2-prongs vertices (default 15 mm)\n";
@@ -1990,6 +2462,7 @@ int main(int argc, char* argv[])
 
   // boost::program_options wuold be great here....
   auto stt_mode = STT_Mode::fast_only_primaries;
+  auto ecal_mode = ECAL_Mode::fast;
   double dz = 15;
   double impact_parameter = 15;
   double merging_radius = 15;
@@ -2022,8 +2495,18 @@ int main(int argc, char* argv[])
     if (strcmp(argv[i], "merging_radius") == 0) {
       merging_radius = std::stod(argv[i+1]);
     }
+
+    if (strstr(argv[i], "ecal_mode") != nullptr) {
+      if (strcmp(argv[i], "ecal_mode::full") == 0) {
+        ecal_mode = ECAL_Mode::full;
+        std::cout << "ECAL_Mode: full\n";
+      } else if (strcmp(argv[i], "ecal_mode::fast") == 0) {
+        ecal_mode = ECAL_Mode::fast;
+        std::cout << "ECAL_Mode: fast\n";
+      }
+    }
   }
 
-  Reconstruct(argv[1], argv[2], argv[3], stt_mode, ECAL_Mode::fast, dz, impact_parameter, merging_radius);
+  Reconstruct(argv[1], argv[2], argv[3], stt_mode, ecal_mode, dz, impact_parameter, merging_radius);
   return 0;
 }
