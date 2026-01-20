@@ -8,31 +8,21 @@ double ComputeStd(const std::vector<double>& values, double mean) {
   return std::sqrt(squared_difference / values.size());
 }
 
-Truth getTrueTrackletOfCluster(TVector3 start_pos, TVector3 stop_pos,
-                               TVector3 start_mom, TVector3 stop_mom,
-                               double z)
-{
+Truth getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z){
+
   // Interpolation of z coordinate
-  auto first_point = start_pos;
-  auto second_point = stop_pos;
+  auto first_point = start;
+  auto second_point = stop;
 
-   if (first_point.Z() > second_point.Z()) {
-    std::swap(first_point, second_point);
-    std::swap(start_mom, stop_mom);
-  }
+  double z_diff = z - first_point.Z();
+  double alpha = z_diff / fabs(second_point.Z() - first_point.Z());
 
-  double dz = z - first_point.Z();
-  double alpha = dz / (second_point.Z() - first_point.Z());
-
-  //Interpolation of position and momentum
-  TVector3 pos = first_point * (1.0 - alpha) + second_point * alpha;
-  TVector3 mom = start_mom * (1.0 - alpha) + stop_mom * alpha;
-  TVector3 dir = mom.Unit();
+  TVector3 pos = first_point * (1 - alpha) + second_point * alpha;
+  TVector3 dir = (stop - start).Unit();
+  TVector3 mom = dir;
 
   return Truth{pos, dir, mom};
 }
-
-
 
 Truth getTrueTrackletFromTrajectoryPoint(const std::vector<EDEPTrajectoryPoint>& points, double z){
   const EDEPTrajectoryPoint* best_point = &points.front();
@@ -45,11 +35,11 @@ Truth getTrueTrackletFromTrajectoryPoint(const std::vector<EDEPTrajectoryPoint>&
       best_point = &tp;
     }
   }
-  TVector3 true_pos = best_point->GetPosition().Vect();
-  TVector3 true_dir = best_point->GetMomentum().Unit();
-  TVector3 true_mom = best_point->GetMomentum();
+  TVector3 pos = best_point->GetPosition().Vect();
+  TVector3 dir = best_point->GetMomentum().Unit();
+  TVector3 mom = best_point->GetMomentum();
 
-  return Truth{true_pos, true_dir, true_mom};
+  return Truth{pos, dir, mom};
 }
 
 std::map<double, Truth> z_to_truth(const std::vector<EDEPTrajectoryPoint>& points, double step){
@@ -296,21 +286,10 @@ std::map<double, std::vector<TVectorD>> findBestTracklet(const std::map<double, 
 
       double score = position_distance / 200E-3 + acos(direction) / 0.02;
 
-      // std::cout << "z: " << current_z.first<< " position distance  "  
-      //             << position_distance 
-      //             << " angular distance  "  
-      //             << direction
-      //             << " SCORE " 
-      //             << score
-      //             << " x distance: " << x_trk - best_trj_point.X()
-      //             << " y distance: " << y_trk - best_trj_point.Y()
-      //             << std::endl;
       if (score < best_score) {
         best_score = score;
         best_tracklet = tracklet;
-        // std::cout << "BEST SCORE " 
-        //           << best_score
-        //           << std::endl;
+  
       }
     }
 

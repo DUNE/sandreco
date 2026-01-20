@@ -40,17 +40,17 @@ struct Truth {
 
 double ComputeStd(const std::vector<double>& values, double mean);
 
-Truth getTrueTrackletOfCluster(TVector3 start_pos, TVector3 stop_pos,
-                               TVector3 start_mom, TVector3 stop_mom, double z);
-
 Truth getTrueTrackletFromTrajectoryPoint(
     const std::vector<EDEPTrajectoryPoint>& points, double z);
+
+Truth getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z);  
 
 std::map<double, Truth> z_to_truth(
     const std::vector<EDEPTrajectoryPoint>& points, double step);
 
 double getScore(const TVectorD& tracklet,
                 const std::vector<TVector3>& true_tracklet);
+
 std::map<double, std::vector<TVector3>> getInterpolatedZ(
     const std::vector<EDEPTrajectoryPoint>& trj_points,
     const sand_reco::kf::utils::TrackletMap& z_to_tracklets);

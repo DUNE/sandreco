@@ -1657,8 +1657,6 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
 
       TVector3 first_point;
       TVector3 last_point;
-      TVector3 first_point_momentum;
-      TVector3 last_point_momentum;
 
       double min_z = 10e8;
       double max_z = -10e8;
@@ -1676,14 +1674,22 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
           first_point_momentum = TVector3(digit.px, digit.py, digit.pz);
         }
       }
-
-      auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, first_point_momentum, last_point_momentum, cluster_in_container.getZ());
-   
-      TVector3 true_pos = true_tracklet.pos_;
-      TVector3 true_dir = true_tracklet.dir_;
-      TVector3 true_mom = true_tracklet.mom_;    
-      double true_theta_yz = atan(true_dir.Y() / true_dir.Z());
-      double true_theta_xz = atan(true_dir.X() / true_dir.Z());
+      
+    //-------------------------------------------------------------------------
+    //  DetectorSegments option:  Given the 3D enpoints of cluster segment 
+    //  (start,stop) and z of the cluster the function returns a tracklet
+    //  associated to that cluster with :
+    //   - position = linear interpolation aloch the hit direction at plane z.
+    //   - direction = unit direction vector.
+    //   - momentum = derived the unit momentum from the returned direction as 
+    //  is not set from edepsim.
+    //-------------------------------------------------------------------------
+      auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, cluster_in_container.getZ());
+  
+      TVector3 true_pos     = true_tracklet[0];
+      TVector3 true_dir     = true_tracklet[1];     
+      double true_theta_yz  = atan(true_dir.Y() / true_dir.Z());
+      double true_theta_xz  = atan(true_dir.X() / true_dir.Z());
       if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
 
       Tracklet measurement_from_true_tracklet;
@@ -1691,22 +1697,21 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
       measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
       measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
       measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
+      measurement_from_true_tracklet.true_pos_ = true_pos;
+      measurement_from_true_tracklet.true_dir_ = true_dir;
+      measurement_from_true_tracklet.true_mom_ = true_dir.Unit();
+      
       for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
         auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
         measurement_from_true_tracklet.digits.push_back(digit);
+        }
+          z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
+        }
       }
-      // std::cout << true_pos.X() << std::endl;
-      measurement_from_true_tracklet.true_pos_ = true_pos;
-      measurement_from_true_tracklet.true_dir_ = true_dir;
-      measurement_from_true_tracklet.true_mom_ = true_mom;
-      
-      z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
-    }
-  }
 
-  if (z_to_tracklets.empty()) {
-    return;
-  }
+      if (z_to_tracklets.empty()) {
+        return;
+      }
 
   EDEPTree tree;
   tree.InizializeFromEdep(*mc_event, sand_geo->getTGeoManager());
@@ -1770,7 +1775,33 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
     pi.initial_pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetPosition().Vect();
     pi.initial_mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetMomentum();
     particleInfos.push_back(pi);
-  }
+
+
+    //---------------------------------------------------------------------------
+    //  TrajectoryPoints option: obtains the measurements as
+    //  the smearing of the true tracklet computed from trajectory points at
+    //  user defined steps.There is no clustering here, the z is associated directly
+    //  to the closest avalaible MC-trajectory point.
+    //---------------------------------------------------------------------------
+        // auto points =
+        //     trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
+        // const double step = 0.5;
+        // auto z_truth = z_to_truth(points, step);
+
+        // for (const auto& kv : z_truth) {
+        //   const double z = kv.first;
+        //   const Truth& t = kv.second;
+        
+        //   Tracklet measurement_from_true_tracklet;
+        
+        
+        //   z_to_tracklets[z].push_back(measurement_from_true_tracklet);
+        // }
+        // if (z_to_tracklets.empty()) continue;
+      // -------------------------------------------------------------------------------
+
+
+  }//loop trajectory
   
   int nParticles = particleInfos.size();
 
