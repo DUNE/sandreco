@@ -23,6 +23,7 @@
 
 #include "EDEPTree.h"
 #include "SANDTrackerUtils.h"
+//final
 
 // ------------------------------------------------------------------------------
 // New type introduced as the truth at each z of the cluster, note that "truth"
@@ -43,7 +44,7 @@ double ComputeStd(const std::vector<double>& values, double mean);
 Truth getTrueTrackletFromTrajectoryPoint(
     const std::vector<EDEPTrajectoryPoint>& points, double z);
 
-Truth getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z);  
+std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z);  
 
 std::map<double, Truth> z_to_truth(
     const std::vector<EDEPTrajectoryPoint>& points, double step);

@@ -14,6 +14,8 @@
 #include <map>
 #include <vector>
 
+//final
+
 int makePlot(const std::string& input_root = "kf_trees.root",
              const std::string& output_root = "kf_plots.root");
 
@@ -23,10 +25,12 @@ struct PointInfos {
   double x_pred{}, y_pred{};      // predicted
   double x_filt{}, y_filt{};      // filtered
   double x_smooth{}, y_smooth{};  // smoothed
-  double x_meas{}, y_meas{};      // measured (orientation??)
+  double x_meas{}, y_meas{};      // measured
 };
 
-// ---------------- plot TRACCE (reco/smooth/filt/meas) ------------------------
+// ----------------------------------------------------------------------------
+//                 Plots for every Tracks (reco/smooth/filt/meas)
+// ----------------------------------------------------------------------------
 static void makeTrackGraph(TTree* steps, TDirectory* outDir)
 {
 
@@ -217,6 +221,7 @@ int makePlot(const std::string& input_root, const std::string& output_root)
   steps->SetBranchAddress("invR_smooth", &invR_smooth);
   steps->SetBranchAddress("tanL_smooth", &tanL_smooth);
   steps->SetBranchAddress("phi_smooth", &phi_smooth);
+
   //---sigma smoothed----
   Double_t sigma_x_smooth = 0.0;
   Double_t sigma_y_smooth = 0.0;
@@ -233,6 +238,7 @@ int makePlot(const std::string& input_root, const std::string& output_root)
     steps->SetBranchAddress("sigma_tanL_smooth", &sigma_tanL_smooth);
   if (steps->GetBranch("sigma_phi_smooth"))
     steps->SetBranchAddress("sigma_phi_smooth", &sigma_phi_smooth);
+
   //---measurements---
   Double_t x_meas = 0.0, y_meas = 0.0;
   Double_t x_pred = 0.0, y_pred = 0.0;
@@ -276,6 +282,7 @@ int makePlot(const std::string& input_root, const std::string& output_root)
                     "Residuals of reconstructed #Phi;#phi_{smooth}-#phi_{true} "
                     "[mrad];Entries",
                     500, -20, 20);
+
   //--- pull test on smooth ---
   TH1D x_smooth_pull("x_smooth_pull",
                      "Pull test on reco x; #it{g(x)_{smooth}}; Entries", 500,
@@ -293,13 +300,15 @@ int makePlot(const std::string& input_root, const std::string& output_root)
   TH1D phi_smooth_pull("phi_smooth_pull",
                        "Pull test on reco #Phi; #it{g(#Phi)_{smooth}}; Entries",
                        500, -5, 5);
-  //--- misura vs. true ---
+
+  //--- measured vs. true ---
   TH1D measx_res_step(
       "(x_meas - x_true)",
       "Residuals of measured x; (x_{meas}-x_{true}) [mm]; Entries", 500, -2, 2);
   TH1D measy_res_step(
       "(y_meas - y_true)",
       "Residuals of measured y; (y_{meas}-y_{true}) [mm]; Entries", 500, -2, 2);
+
   //--- pull tests on measurements ---
   TH1D pos_meas_pull("innovation_pos",
                      "Pull test on measured position; #it{g(pos)_{k}}; Entries",
@@ -308,8 +317,6 @@ int makePlot(const std::string& input_root, const std::string& output_root)
       "innovation_ang",
       "Pull test on measured direction; #it{g(#theta)_{k}}; Entries", 100, -3,
       3);
-  // DA AGGIUNGERE: residui sugli altri parametri di stato dalla misura e pull
-  // misura su altri parametri stato
 
   TH1D chi2_h("chi2", "chi2;;Entries", 1000, 0, 1e5);
 
@@ -345,8 +352,11 @@ int makePlot(const std::string& input_root, const std::string& output_root)
       "#sigma_{#phi}^{smooth};#sigma_{#phi}^{smooth} [rad];Entries", 500, 0,
       0.05);
 
-  // ---------------- plot per STEP ------------------------
-  const Long64_t ns = steps->GetEntries();  // numero step
+  
+// ----------------------------------------------------------------------------
+//                 Plots for every step (reco/smooth/filt/meas)
+// ----------------------------------------------------------------------------
+  const Long64_t ns = steps->GetEntries();
   for (Long64_t i = 0; i < ns; ++i) {
     steps->GetEntry(i);
 
@@ -356,6 +366,7 @@ int makePlot(const std::string& input_root, const std::string& output_root)
     invR_res_step.Fill(invR_smooth - invR_true);
     tanL_res_step.Fill((tanL_smooth - tanL_true) * 1000);
     phi_res_step.Fill((phi_smooth - phi_true) * 1000);
+
     // pull on smooth
     if (std::isfinite(sigma_x_smooth) && sigma_x_smooth > 0)
       x_smooth_pull.Fill((x_smooth - x_true) / (sigma_x_smooth));
@@ -367,9 +378,11 @@ int makePlot(const std::string& input_root, const std::string& output_root)
       tanL_smooth_pull.Fill((tanL_smooth - tanL_true) / (sigma_tanL_smooth));
     if (std::isfinite(sigma_phi_smooth) && sigma_phi_smooth > 0)
       phi_smooth_pull.Fill((phi_smooth - phi_true) / (sigma_phi_smooth));
-    // measured vs. truth (per ora solo smearing di differenza)
+
+    // measured vs. truth
     measx_res_step.Fill(x_meas - x_true);
     measy_res_step.Fill(y_meas - y_true);
+
     // pull on measurements
     if (std::isfinite(innov_pos)) pos_meas_pull.Fill(innov_pos);
     if (std::isfinite(innov_ang)) ang_meas_pull.Fill(innov_ang);
@@ -400,7 +413,9 @@ int makePlot(const std::string& input_root, const std::string& output_root)
       h_sigma_phi_smooth.Fill((sigma_phi_smooth));
   }
 
-  // ---SEED----
+// ----------------------------------------------------------------------------
+//                   Distributions at seeding point
+// ----------------------------------------------------------------------------
   std::map<std::tuple<int, int, int>, std::pair<int, Long64_t>> lastEntry;
   for (Long64_t ie = 0; ie < ns; ++ie) {
     steps->GetEntry(ie);
@@ -450,7 +465,10 @@ int makePlot(const std::string& input_root, const std::string& output_root)
       "Pull test on reco #Phi at seeding point ; #it{g(#Phi)_{seed}}; Entries",
       500, -10, 10);
 
-  //---TRACK---
+ 
+ // ----------------------------------------------------------------------------
+//                                Plots over all tracks
+// ----------------------------------------------------------------------------
   Int_t tr_run = 0, tr_event = 0, tr_tid = 0, n_steps = 0;
   Double_t p_true_first = 0, p_true_last = 0, p_smooth_last = 0;
   tracks->SetBranchAddress("run", &tr_run);
@@ -492,15 +510,6 @@ int makePlot(const std::string& input_root, const std::string& output_root)
     if (std::isfinite(sigma_phi_smooth) && sigma_phi_smooth > 0)
       phi_seed_pull.Fill((phi_smooth - phi_true) / (sigma_phi_smooth));
 
-    // const auto itp = pfirst_by_key_pull.find(key);
-    // if (itp != pfirst_by_key.end() && std::isfinite(itp->second) &&
-    // itp->second>0 && std::isfinite(p_smooth)) {
-    //   const double p_first = itp->second;
-    //   const double dp_first = p_smooth - p_first;
-    //   seed_dp.Fill(dp_first);
-    //   seed_dprel.Fill(dp_first / p_first);
-    //   seed_ratio_ps_over_pfirst.Fill(p_smooth / p_first);
-    // }
   }
 
   TFile fout(output_root.c_str(), "RECREATE");
@@ -550,19 +559,16 @@ int makePlot(const std::string& input_root, const std::string& output_root)
   tanL_seed_pull.Write();
   phi_seed_pull.Write();
 
-  // seed_dp.Write();
-  // seed_dprel.Write();
-  // seed_ratio_ps_over_pfirst.Write();
 
   TDirectory* dGraphs = fout.mkdir("graphs");
   // makeTrackGraph(steps, dGraphs);
 
-  // ---- plot per TRACK  ----
+
   TH2D p_init_vs_reco_smooth(
       "p_init_vs_reco_smooth",
       "Initial true p vs last smoothed reco p; p_{true}^{init} [MeV]; "
       "p_{reco}^{smooth,last} [MeV]",
-      200, 0, 3000, 200, 0, 3000);  //???
+      200, 0, 3000, 200, 0, 3000);
   TH2D p_res_last("p_res_last",
                   "True p at last step vs last smoothed reco p; "
                   "p_{true}^{last} [MeV]; p_{reco}^{smooth,last} [MeV]",

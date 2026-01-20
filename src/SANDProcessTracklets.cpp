@@ -1,5 +1,6 @@
 #include "SANDProcessTracklets.h"
 
+//final
 double ComputeStd(const std::vector<double>& values, double mean) {
   double squared_difference = 0.0;
   for (double v : values) {
@@ -8,7 +9,7 @@ double ComputeStd(const std::vector<double>& values, double mean) {
   return std::sqrt(squared_difference / values.size());
 }
 
-Truth getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z){
+std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z){
 
   // Interpolation of z coordinate
   auto first_point = start;
@@ -17,12 +18,12 @@ Truth getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z){
   double z_diff = z - first_point.Z();
   double alpha = z_diff / fabs(second_point.Z() - first_point.Z());
 
-  TVector3 pos = first_point * (1 - alpha) + second_point * alpha;
-  TVector3 dir = (stop - start).Unit();
-  TVector3 mom = dir;
+  TVector3 interpolated_pos = first_point * (1 - alpha) + second_point * alpha;
+  TVector3 interpolated_dir = (stop - start).Unit();
 
-  return Truth{pos, dir, mom};
+  return { interpolated_pos, interpolated_dir };
 }
+
 
 Truth getTrueTrackletFromTrajectoryPoint(const std::vector<EDEPTrajectoryPoint>& points, double z){
   const EDEPTrajectoryPoint* best_point = &points.front();

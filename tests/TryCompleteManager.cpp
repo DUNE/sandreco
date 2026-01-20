@@ -2,6 +2,8 @@
 #include <cmath>
 #include <stdexcept>
 
+//final
+
 using namespace sand_reco::kf;
 
 void create_kf_trees(const std::string& filename, StepsTree& steps, TracksTree& tracks) {
@@ -137,13 +139,13 @@ void tryCompleteManager(
     const auto& filtering = st.getStage(TrackStep::TrackStateStage::kFiltering).getStateVector();
     const auto& smoothing = st.getStage(TrackStep::TrackStateStage::kSmoothing).getStateVector();
     
-    //---truth (from trk)--- 
+    // truth 
     infos.x_true = st.getTruePosition().X();
     infos.y_true = st.getTruePosition().Y();
     infos.invR_true = true_state.signedInverseRadius();
     infos.tanL_true = true_state.tanLambda();
     infos.phi_true = true_state.phi();
-    //---smooth---
+    // smooth
     infos.x_smooth = smoothing.x()*1000.0 ;
     infos.y_smooth = smoothing.y()*1000.0 ;
     infos.invR_smooth = smoothing.signedInverseRadius();
@@ -157,7 +159,7 @@ void tryCompleteManager(
     infos.sigma_tanL_smooth   = (smooth_cov_matrix.GetNrows()> 3 && smooth_cov_matrix.GetNcols() > 3) ? std::sqrt(smooth_cov_matrix(3,3)) : NAN;
     infos.sigma_phi_smooth   = (smooth_cov_matrix.GetNrows() > 4 && smooth_cov_matrix.GetNcols() > 4) ? std::sqrt(smooth_cov_matrix(4,4)) : NAN;
 
-    //---measurement--- (truth from trk + smearing)    
+    //measurements 
     infos.x_meas = st.getX();
     infos.y_meas = st.getY();
 

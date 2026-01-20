@@ -11,6 +11,8 @@
 
 #include "utils.h"
 
+//final
+
 using namespace sand_reco;
 using namespace sand_geometry;
 
@@ -214,12 +216,6 @@ void GroupHitsByTube(const TG4Event& ev, const SANDGeoManager& geo,
     h.y2 = hseg.Stop.Y();
     h.z2 = hseg.Stop.Z();
     h.t2 = hseg.Stop.T();
-    h.px1 = hseg.GetStartMomentum().X();
-    h.py1 = hseg.GetStartMomentum().Y();
-    h.pz1 = hseg.GetStartMomentum().Z();
-    h.px2 = hseg.GetStopMomentum().X();
-    h.py2 = hseg.GetStopMomentum().Y();
-    h.pz2 = hseg.GetStopMomentum().Z();
     h.de = hseg.EnergyDeposit;
     h.pid = hseg.PrimaryId;
     h.index = j;
@@ -312,12 +308,6 @@ void GroupHitsByCell(const TG4Event& ev, const SANDGeoManager& geo,
       h.y2 = hseg.Stop.Y();
       h.z2 = hseg.Stop.Z();
       h.t2 = hseg.Stop.T();
-      h.px1 = hseg.GetStartMomentum().X();
-      h.py1 = hseg.GetStartMomentum().Y();
-      h.pz1 = hseg.GetStartMomentum().Z();
-      h.px2 = hseg.GetStopMomentum().X();
-      h.py2 = hseg.GetStopMomentum().Y();
-      h.pz2 = hseg.GetStopMomentum().Z();
       h.de = hseg.EnergyDeposit;
       h.pid = hseg.PrimaryId;
       h.index = j;
