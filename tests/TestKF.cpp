@@ -215,7 +215,7 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
     std::map<double, std::vector<Tracklet>> z_to_tracklets;
     auto points =
         trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
-    const double step = 0.5;
+    const double step = 1.5;
     auto z_truth = z_to_truth(points, step);
 
     for (const auto& kv : z_truth) {
@@ -236,8 +236,8 @@ void processEventWithKF(SANDGeoManager* sand_geo, TG4Event* mc_event,
     //   }
     // }
 
-
     if (z_to_tracklets.empty()) continue;
+    
     for (int ip = 0; ip < (int)indeces.size(); ++ip) {
       tryCompleteManager(z_to_tracklets, particleInfos[ip],
                          /*mg*/ nullptr, /*mgx*/ nullptr, steps, tracks,
