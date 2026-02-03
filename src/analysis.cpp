@@ -175,7 +175,7 @@ void RecoFromTrack(particle& p)
     double r0z = p.tr.z0 - p.tr.zc;
     double r0y = p.tr.y0 - p.tr.yc;
 
-    double mom_yz = constant::k * p.tr.r * ecal::Bfield::B;
+    double mom_yz = constant::k * p.tr.r * ecal::Bfield::B * conversion::GeV_to_MeV;
     double ang_yz = TMath::ATan2(r0z, -r0y);
     double ang_x = 0.5 * TMath::Pi() - TMath::ATan(1. / p.tr.b);
 
