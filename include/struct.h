@@ -73,12 +73,6 @@ struct hit {
   double y2;
   double z2;
   double t2;
-  double px1;
-  double py1;
-  double pz1;
-  double px2;
-  double py2;
-  double pz2;
   double de;
   int pid;
   int index;
@@ -143,9 +137,6 @@ struct dg_wire
   double x;
   double y;
   double z;
-  double px;
-  double py;
-  double pz;
   double t0;
   double de;
   double adc;

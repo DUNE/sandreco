@@ -5,6 +5,7 @@
 #include <TGeoManager.h>
 #include <TH1D.h>
 #include <TRandom3.h>
+#include<limits>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
@@ -23,8 +24,6 @@
 #include "SANDKalmanFilter.h"
 
 #include <TDatabasePDG.h>
-
-// #include "EDEPTree.h"
 
 using namespace sand_reco;
 
@@ -1658,31 +1657,31 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
       TVector3 first_point;
       TVector3 last_point;
 
-      double min_z = 10e8;
-      double max_z = -10e8;
-      for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
-        auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
-        
-         if (digit.z > max_z) {
-          max_z = digit.z;
-          last_point = TVector3(digit.x, digit.y, digit.z);
-        }
-        if (digit.z < min_z) {
-          min_z = digit.z;
-          first_point = TVector3(digit.x, digit.y, digit.z);
-        }
-      }
+    if (cluster_in_container.getDigits().empty()) return;
 
-    //final
-      
+    double min_z = std::numeric_limits<double>::infinity();
+    double max_z = -std::numeric_limits<double>::infinity();
+
+    for (size_t d = 0; d < cluster_in_container.getDigits().size(); ++d) {
+      auto digit = sand_reco::tracker::DigitCollection::getDigit(
+          cluster_in_container.getDigits()[d]);
+
+      if (digit.z > max_z) {
+        max_z = digit.z;
+        last_point = TVector3(digit.x, digit.y, digit.z);
+      }
+      if (digit.z < min_z) {
+        min_z = digit.z;
+        first_point = TVector3(digit.x, digit.y, digit.z);
+      }
+    }
+
     //-------------------------------------------------------------------------
     //  DetectorSegments option:  Given the 3D enpoints of cluster segment 
     //  (start,stop) and z of the cluster the function returns a tracklet
     //  associated to that cluster with :
     //   - position = linear interpolation aloch the hit direction at plane z.
     //   - direction = unit direction vector.
-    //   - momentum = derived the unit momentum from the returned direction as 
-    //  is not set from edepsim.
     //-------------------------------------------------------------------------
       auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, cluster_in_container.getZ());
   
@@ -1719,8 +1718,7 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
 
   TDatabasePDG pdg_db;
   std::vector<SParticleInfo> particleInfos;
-  std::map<double, std::vector<TVectorD>> z_to_best_tracklet;
-
+  
   double sigma_pos = 0;
   double sigma_mom = 0;
   for (auto trj:primaryTrj) {

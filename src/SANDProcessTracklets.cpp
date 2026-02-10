@@ -1,6 +1,5 @@
 #include "SANDProcessTracklets.h"
 
-//final
 double ComputeStd(const std::vector<double>& values, double mean) {
   double squared_difference = 0.0;
   for (double v : values) {

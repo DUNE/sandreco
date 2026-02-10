@@ -3,6 +3,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include<limits>
 
 #include <iomanip>
 
@@ -10,8 +11,6 @@
 #include "TTree.h"
 
 #include "utils.h"
-
-//final
 
 using namespace sand_reco;
 using namespace sand_geometry;
@@ -101,10 +100,10 @@ void CreateDigitsFromHits(const SANDGeoManager& geo,
   {
     long did = it->first();  // wire unique id
     const sand_geometry::tracker::WireInfo& wire_info = geo.getCellInfo(it->first())->second.getWire();
-    double wire_time = 10E9;
-    double drift_time = 10E9;
-    double signal_time = 10E9;
-    double t_hit = 10E9;
+    double wire_time = std::numeric_limits<double>::max();
+    double drift_time = std::numeric_limits<double>::max();
+    double signal_time = std::numeric_limits<double>::max();
+    double t_hit = std::numeric_limits<double>::max();
 
     dg_wire d;
     d.det = it->second[0].det;
@@ -141,15 +140,6 @@ void CreateDigitsFromHits(const SANDGeoManager& geo,
         d.x = closest_point_hit_l.Vect().X();
         d.y = closest_point_hit_l.Vect().Y();
         d.z = closest_point_hit_l.Vect().Z();
-
-        // Notice: this is also temporary. Used to plot something useful.
-        //         Must be removed when plots are not needed anymore
-        d.x = running_hit.x1;
-        d.y = running_hit.y1;
-        d.z = running_hit.z1;
-        d.px = running_hit.px1;
-        d.py = running_hit.py1;
-        d.pz = running_hit.pz1;
 
         wire_time = hit_smallest_time;
         t_hit = closest_point_hit_l.T();

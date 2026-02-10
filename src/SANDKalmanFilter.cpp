@@ -401,9 +401,6 @@ double Manager::evalChi2(
     const TMatrixD& measurementNoiseMatrix)
 {
   auto residualVector = observation - prediction;
-  // residualVector.Print();
-  // observation.Print();
-  // prediction.Print();
   TMatrixD residualVectorTransposed(TMatrixD::kTransposed, residualVector);
   TMatrixD measurementNoiseMatrixInverted(TMatrixD::kInverted,
     measurementNoiseMatrix);
@@ -435,23 +432,17 @@ int Manager::findBestMatch(double& nextZ, const sand_reco::kf::Measurement& pred
   double best_chi = 1E9;
   auto& next_tracklets = z_to_tracklets_->at(nextZ);
   auto best_tracklet_index = -1;
-
-  // std::cout << "next_tracklets.size(): " << next_tracklets.size() << std::endl;
-  
+ 
   for (int i = 0; i < (int)next_tracklets.size(); i++) {
     sand_reco::kf::Measurement measurement = getMeasurementFromTracklet(next_tracklets[i]);
     
     auto chi2 = evalChi2(measurement, prediction, Sk);
-    // measurement.Print();
-    // prediction.Print();
-    // std::cout << "chi2: " << chi2 << std::endl;
     if (chi2 < best_chi) {
       best_chi = chi2;
       best_tracklet_index = i;
     }
   }
   if (best_chi < 10) {
-    // std::cout << "best_chi: " << best_chi << std::endl;
     return best_tracklet_index;
   } else {
     return -1;
@@ -643,8 +634,6 @@ void Manager::initFromMC(sand_reco::kf::utils::TrackletMap* z_to_tracklets, cons
   vectorMC[3][0] = initial_state_vector.tanLambda();
   vectorMC[4][0] = initial_state_vector.phi();
 
-  // vectorMC.Print();
-
   particleInfo_        = particleInfo;
   z_to_tracklets_      = z_to_tracklets;
   current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
@@ -698,18 +687,11 @@ sand_reco::kf::utils::TrackletMap Manager::FindSeedPoints_MCstart(sand_reco::kf:
   sand_reco::kf::utils::TrackletMap tracklet_map; // Output tracklet map
   
   closest_key = findClosestNonEmptyKey(*z_to_tracklets, particloInfo.pos.Z());
-  
-  // std::cout << "Closest key in z: " << closest_key << std::endl;
-  // std::cout << "Number of traclets in closest key: " << z_to_tracklets->at(closest_key).size() << std::endl;
-
 
   // Add the last tracklet to the map
   std::vector<Tracklet> last_traclet;
   last_traclet.push_back(z_to_tracklets->at(closest_key)[0]);
   tracklet_map[closest_key] = last_traclet;
-  // std::cout << "First tracklet found (x,y,z) : (" << z_to_tracklets->at(closest_key)[0][0] << " , "; 
-  // std::cout << z_to_tracklets->at(closest_key)[0][1] << " , "<<closest_key<<" )" << std::endl;
-
 
   // Find tracklet maxStep steps below or as close as possible without an empty vector
   auto trl = z_to_tracklets->find(closest_key);
@@ -728,8 +710,6 @@ sand_reco::kf::utils::TrackletMap Manager::FindSeedPoints_MCstart(sand_reco::kf:
   auto finalStep = realStep;
   for (int step = 0; step < realStep; ++step) {
     if (!trl->second.empty()) {
-        // std::cout << "Found valid far key: " << trl->first << " for now choosing first value (x,y,z): (";
-        // std::cout << trl->second[0][0] << " , " << trl->second[0][1] << " , " << trl->first << " )" << std::endl;
         std::vector<Tracklet> first_tracklet;
         first_tracklet.push_back(trl->second[0]);
         tracklet_map[trl->first] = first_tracklet;
@@ -860,8 +840,7 @@ void Manager::run()
     double gamma = sqrt(current_mom * current_mom + particleInfo_.mass * particleInfo_.mass) /
                     particleInfo_.mass;
     double beta = sqrt(1 - pow(1 / gamma, 2));
-
-    // To Do: check all units
+    
     auto dE = SANDTrackerUtils::getDE(
       nextZ, 
       1000 * filteredStateVector.x(), 1000 * filteredStateVector.y(), current_z_, 
