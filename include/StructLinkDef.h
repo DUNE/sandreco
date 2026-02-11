@@ -10,6 +10,7 @@
 #pragma link C++ class std::vector < dg_ps> + ;
 #pragma link C++ class std::vector < dg_cell> + ;
 #pragma link C++ class std::vector < reco_cell > +;
+#pragma link C++ class std::vector < vertex > +;
 //#pragma link C++ class std::map < std::string, std::vector < hit>> + ;
 #pragma link C++ class std::vector < dg_wire > +;
 #pragma link C++ class std::vector < track > +;
@@ -27,4 +28,5 @@
 #pragma link C++ class track + ;
 #pragma link C++ class particle + ;
 #pragma link C++ class event + ;
+#pragma link C++ class vertex + ;
 #endif

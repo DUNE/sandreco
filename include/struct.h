@@ -16,48 +16,48 @@ struct pe
   int h_index;
 };
 struct cluster_generator{
-  int pdg_code; 
-  int parent_pdg_code;
-  int track_id;
-  int parent_track_id; 
-  double dep_energy;
-  double initial_energy;
-  double initial_momentum; 
-  double initial_x; 
-  double initial_y;
-  double initial_z;  
+  int pdg_code = -1; 
+  int parent_pdg_code = -1;
+  int track_id = -1;
+  int parent_track_id = -1; 
+  double dep_energy = NAN;
+  double initial_energy = NAN;
+  double initial_momentum = NAN; 
+  double initial_x = NAN; 
+  double initial_y = NAN;
+  double initial_z = NAN;  
 };
 
 struct truecluster{
-    int tid;
-    double x;
-    double y;
-    double z;
-    double t; 
-    double e;
-    double vis_e;
-    int n_traj;
-    double sx;
-    double sy;
-    double sz;
-    int ntot_cell;
-    int cell_l0;
-    int cell_l1; 
-    int cell_l2;
-    int cell_l3;
-    int cell_l4;
-    double energy_l0;
-    double energy_l1;
-    double energy_l2;
-    double energy_l3;
-    double energy_l4;
-    double lay0_maxE;
-    double lay1_maxE;
-    double lay2_maxE;
-    double lay3_maxE;
-    double lay4_maxE;
-    double asymmetry; 
-    double Eoverp;
+    int tid = -1;
+    double x = NAN;
+    double y = NAN;
+    double z = NAN;
+    double t = NAN; 
+    double e = NAN;
+    double vis_e = NAN;
+    int n_traj = -1;
+    double sx = NAN;
+    double sy = NAN;
+    double sz = NAN;
+    int ntot_cell = -1;
+    int cell_l0 = -1;
+    int cell_l1 = -1; 
+    int cell_l2 = -1;
+    int cell_l3 = -1;
+    int cell_l4 = -1;
+    double energy_l0 = NAN;
+    double energy_l1 = NAN;
+    double energy_l2 = NAN;
+    double energy_l3 = NAN;
+    double energy_l4 = NAN;
+    double lay0_maxE = NAN;
+    double lay1_maxE = NAN;
+    double lay2_maxE = NAN;
+    double lay3_maxE = NAN;
+    double lay4_maxE = NAN;
+    double asymmetry = NAN; 
+    double Eoverp = NAN;
     bool moregens= false;
     std::vector<cluster_generator> vec_generator;
 };
@@ -258,6 +258,15 @@ struct particle
 
   bool has_daughter;
   std::vector<particle> daughters;
+};
+
+struct vertex 
+{
+  int id;
+  double x;
+  double y;
+  double z;
+  std::vector<int> track_ids;
 };
 
 struct event

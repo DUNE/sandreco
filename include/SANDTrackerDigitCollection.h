@@ -14,16 +14,14 @@ namespace tracker
 class DigitID : public SingleElStruct<unsigned long>
 {
  public:
-  DigitID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  DigitID() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 // digit index -> index inside Digit vector
 class DigitIndex : public SingleElStruct<unsigned long>
 {
  public:
-  DigitIndex(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  DigitIndex() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 // Digit
@@ -69,7 +67,7 @@ class DigitCollection
   static const Digit &getDigit(const DigitID &id)
   {
     // std::cout << "DIGIT COLLECTION: " << id() << " " << fg_map_digit_[id]() << std::endl;
-    return sand_fg_tracker_digits_.at(fg_map_digit_[id]());
+    return sand_fg_tracker_digits_.at(*fg_map_digit_[id]());
   };
 };
 } // namespace tracker

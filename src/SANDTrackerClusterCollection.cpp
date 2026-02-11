@@ -39,7 +39,7 @@ void ClusterCollection::ClusterCellAdjacency(const std::vector<sand_reco::tracke
     sand_geo_->decodePlaneId(plane_global_id, unique_module_id, plane_replica_id, plane_type);
     sand_geo_->decodeModuleId(unique_module_id, supermodule_id, module_id, module_replica_id);
     fMapDigits[unique_module_id].push_back(sand_reco::tracker::DigitID(dg.did));
-    // std::cout << unique_module_id() << " " << sand_geo_->get_planes().at(sand_geo_->GetPlaneIndex(plane_global_id)()).getPosition().Z() << std::endl;
+    // std::cout << *unique_module_id() << " " << sand_geo_->getPlanes().at(*(sand_geo_->getPlaneIndex(plane_global_id)())).getPosition().Z() << std::endl;
   }
 
   for (auto& p:fMapDigits) {

@@ -3,6 +3,7 @@
 #include "SANDWireInfo.h"
 #include "SANDTrackerModule.h"
 #include "struct.h"
+#include "BVH.h"
 
 #include <TGeoManager.h>
 #include <TPRegexp.h>
@@ -24,19 +25,21 @@ const std::string name_internal_volume = "sand_inner_volume_PV";
 namespace tracker
 {
 
+using cell_map_iterator = std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::iterator;
+
 namespace chamber
 {
 const std::string wire_regex_string =
-    "(C|C3H6)DriftModule_([0-2]+)(_X0_|_X1_|_A_|_B_|_C_|_)(F|S)wire_PV_([0-9]+)"
+    "(C|C3H6)DriftModule_([0-2]+)(_X[0-9]_|_[A-Z]_|_)(F|S)wire_PV_([0-9]+)"
     "(/|)";
 const std::string drift_plane_regex_string =
-    "(C|C3H6)DriftModule_([0-2]+)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-9])(/|)";
+    "(C|C3H6)DriftModule_([0-2]+)(_X[0-9]_|_[A-Z]_|_)PV_([0-9])(/|)";
 const std::string drift_chamber_regex_string =
-    "(C|C3H6)DriftChamber(_X0_|_X1_|_A_|_B_|_C_|_)PV_0(/|)";
+    "(C|C3H6)DriftChamber(_X[0-9]_|_[A-Z]_|_)PV_0(/|)";
 const std::string module_regex_string =
-    "(C|C3H6)Mod(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-9]+)(/|)";
+    "(C|C3H6)Mod(_X[0-9]_|_[A-Z]_|_)PV_([0-9]+)(/|)";
 const std::string supermodule_regex_string =
-    "(Trk|SuperMod)(_X0_|_X1_|_A_|_B_|_C_|_)PV_([0-1]+)(/|)";
+    "(Trk|SuperMod)(_X[0-9]_|_[A-Z]_|_)PV_([0-1]+)(/|)";
 }  // namespace chamber
 
 namespace stt
@@ -159,7 +162,6 @@ class SANDGeoManager : public TObject
 
   bool getLineSegmentIntersection(TVector2 p, TVector2 dir, TVector2 A, TVector2 B, TVector2& intersection);
   void setDriftPlaneInfo(sand_geometry::tracker::Plane& plane, double angle);
-  void printModulesInfo(int verbose = 1);
   void drawModulesInfo();
 
   // DRIFT CHAMBER
@@ -238,8 +240,7 @@ class SANDGeoManager : public TObject
                                                        const sand_geometry::tracker::Plane& plane);
   std::vector<TVector2> getGlobalLinePlaneIntersections(const TVector2& local_2d_position, 
                                                         const sand_geometry::tracker::Plane& plane);
-  double getMinDistanceBetweenSegments(TVector3 a, TVector3 b,
-                                       TVector3 c, TVector3 d);
+  
   // STT
   sand_geometry::tracker::ModuleID getSttModuleId(const TString& volume_path) const;
   bool isSttTube(const TString& volume_name) const;
@@ -274,6 +275,7 @@ class SANDGeoManager : public TObject
   {
   }
   void init(TGeoManager* const geo);
+  void printModulesInfo(int verbose = 1);
   void setGeoCurrentPoint(double x, double y, double z) const;
   void setGeoCurrentDirection(double x, double y, double z) const;
   void initVolume(volume& v) const;
@@ -281,8 +283,10 @@ class SANDGeoManager : public TObject
   {
     return cellmap_.at(ecal_cell_id);
   }
+  double getMinDistanceBetweenSegments(TVector3 a, TVector3 b, TVector3 c, TVector3 d);
   void fillAdjacentCells(std::string geometry);
-  std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator getCellInfo(sand_geometry::tracker::CellID cell_id) const;
+  void fillAdjacentCellsBVH(std::string geometry);
+  const std::map<sand_geometry::tracker::CellID, sand_geometry::tracker::Cell>::const_iterator getCellInfo(sand_geometry::tracker::CellID cell_id) const;
   sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::CellID cell_id) const;
   sand_geometry::tracker::plane_iterator getPlaneInfo(sand_geometry::tracker::PlaneID unique_plane_id) const;
   const std::map<int,  sand_geometry::ecal::ECALCellInfo>& get_ecal_cell_info() const

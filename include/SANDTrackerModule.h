@@ -11,8 +11,7 @@ namespace tracker
 class ModuleID : public SingleElStruct<unsigned long>
 {
  public:
-  ModuleID(unsigned long id) : SingleElStruct<unsigned long>(id){};
-  ModuleID() : SingleElStruct<unsigned long>(){};
+  using SingleElStruct<unsigned long>::SingleElStruct;
 };
 
 class Module
