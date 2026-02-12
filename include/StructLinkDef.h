@@ -15,7 +15,8 @@
 #pragma link C++ class std::vector < dg_wire > +;
 #pragma link C++ class std::vector < track > +;
 #pragma link C++ class std::vector < cluster > +;
-//#pragma link C++ class std::vector < particle> + ;
+#pragma link C++ class particle+;
+#pragma link C++ class std::vector < particle> + ;
 #pragma link C++ class pe + ;
 #pragma link C++ class cluster_generator + ;
 #pragma link C++ class truecluster + ;
@@ -29,4 +30,14 @@
 // #pragma link C++ class particle + ;
 #pragma link C++ class event + ;
 #pragma link C++ class vertex + ;
+
+// NEW --SILVIA     
+#pragma link C++ class grain_event + ;
+#pragma link C++ class lar_track + ;
+#pragma link C++ class lar_point + ;
+#pragma link C++ class track_grain_lens + ;
+#pragma link C++ class vertex_grain_lens + ;
+#pragma link C++ class std::vector<track_grain_lens>+;
+#pragma link C++ class std::vector<vertex_grain_lens>+;
+
 #endif

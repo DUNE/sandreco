@@ -207,10 +207,24 @@ struct track
   std::vector<dg_wire> clY;
 };
 
+struct track_grain_lens {
+  double xstart, ystart, zstart;
+  double xend, yend, zend;
+  int track_ids;
+  int PDG_reco;
+	double energy_reco;
+};
+
+struct vertex_grain_lens {
+  double xvtx, yvtx, zvtx;
+};
+
 struct particle
 {
   int primary;
   int pdg;
+  int pdg_true;
+  int pdg_reco;
   int tid;
   int parent_tid;
   double charge;
@@ -242,6 +256,15 @@ struct particle
 
   bool has_daughter;
   std::vector<particle> daughters;
+
+  //track_grain_lens trackReco; // traccia ricostruita dal TTree
+
+  double xend= 0;
+  double yend = 0;
+  double zend = 0; 
+  bool filled = false;
+  bool isinGRAIN = false;
+
 };
 
 struct vertex 
@@ -358,6 +381,52 @@ struct cluster_grain
     float cx;
     float cy;
     float cz;
+};
+
+struct lar_point {
+  double x;
+  double y;
+  double z;
+  double time;
+  double energy;
+  double xsize;
+  double ysize;
+  double zsize;
+};
+
+struct lar_track {
+  int tid;
+  std::string method;
+  int visibility; 
+
+  double xstart, ystart, zstart;
+  double xmcstart, ymcstart, zmcstart;
+
+  double xend, yend, zend;
+  double xmcend, ymcend, zmcend;
+ 
+  double recoE, trueE;
+  double time;
+ 
+  double xdir_zx, ydir_zx, zdir_zx;
+  double xdir_zy, ydir_zy, zdir_zy;
+ 
+  bool hasSTTdigits;
+  int contained;
+  int STTmatch, STTmatch2;
+  
+  std::vector<lar_point> points;
+};
+
+struct grain_event {
+  int evnum;
+  double xvtx, yvtx, zvtx;
+  double xmcvtx, ymcvtx, zmcvtx;
+  int n_ttrack;
+  int n_rtrack;
+  double layer;
+  double tolerance;
+  std::vector<lar_track> tracks;
 };
 
 #endif

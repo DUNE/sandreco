@@ -13,6 +13,8 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include "TRandom.h"
+#include "TMath.h"
 
 using namespace sand_reco;
 
@@ -22,6 +24,8 @@ void reset(particle& p)
 {
   p.primary = false;
   p.pdg = 0;
+  p.pdg_true = 0;
+  p.pdg_reco = 0;
   p.tid = 0;
   p.mass = 0.;
   p.charge = 0.;
@@ -55,38 +59,159 @@ bool IsPrimary(TG4Event* ev, int tid)
   return false;
 }
 
-void FillParticleInfo(TG4Event* ev, std::map<int, particle>& map_part)
+bool isInGRAIN(double x, double y, double z)
 {
-  for (unsigned int j = 0; j < ev->Trajectories.size(); j++) {
-    particle p;
-    reset(p);
+    return (x >= -750. && x <= 750.) &&
+           ((std::pow(y / 739., 2) + std::pow(z / 243.5, 2)) <= 1.0);
+}
 
-    p.tid = ev->Trajectories.at(j).TrackId;
-    p.pdg = ev->Trajectories.at(j).PDGCode;
-    p.parent_tid = ev->Trajectories.at(j).ParentId;
-    p.kalman_ok = false;
+TVector3 GetMuonEndpointInGRAIN(const TG4Trajectory& traj, const TVector3& vtx) {
+    const auto& points = traj.Points;
+    if (points.size() < 2) return vtx; // pochi punti → endpoint = vertice
 
-    TParticlePDG* part = db.GetParticle(p.pdg);
-    if (part != 0) {
-      p.mass = part->Mass() * conversion::GeV_to_MeV;
-      p.charge = part->Charge() / 3.;
+    // Spostamento rispetto al vertice (come in GetTrajectoryLengthInGRAIN)
+    const double deltax = points[0].Position.X() - vtx.X();
+    const double deltay = points[0].Position.Y() - vtx.Y();
+    const double deltaz = points[0].Position.Z() - vtx.Z();
+
+    // Ultimo punto dentro GRAIN
+    double x0=0, y0=0, z0=0;
+    double x1=0, y1=0, z1=0;
+
+    for (size_t i = 1; i < points.size(); ++i) {
+        x0 = points[i-1].Position.X() - deltax;
+        y0 = points[i-1].Position.Y() - deltay;
+        z0 = points[i-1].Position.Z() - deltaz;
+
+        x1 = points[i].Position.X() - deltax;
+        y1 = points[i].Position.Y() - deltay;
+        z1 = points[i].Position.Z() - deltaz;
+
+        bool in0 = isInGRAIN(x0, y0, z0);
+        bool in1 = isInGRAIN(x1, y1, z1);
+
+        if (in0 && !in1) {
+            // Il segmento esce → calcolo intersezione
+            double tx = 1.0;
+            bool found = false;
+
+            // Intersezione con piani X
+            if (x1 != x0) {
+                if (x1 > 750 && x0 < 750) { tx = (750. - x0) / (x1 - x0); found = true; }
+                else if (x1 < -750 && x0 > -750) { tx = (-750. - x0) / (x1 - x0); found = true; }
+            }
+
+            // Intersezione con ellisse YZ
+            double a = (y1 - y0) / 739.;
+            double b = (z1 - z0) / 243.5;
+            double A = a*a + b*b;
+            double B = 2.*((y0/739.)*a + (z0/243.5)*b);
+            double C = (y0/739.)*(y0/739.) + (z0/243.5)*(z0/243.5) - 1.0;
+            double disc = B*B - 4*A*C;
+
+            if (disc >= 0 && A > 0) {
+                double sqrt_disc = std::sqrt(disc);
+                double t_ell = (-B + sqrt_disc)/(2*A);
+                if (t_ell >= 0 && t_ell <= 1 && (!found || t_ell < tx)) {
+                    tx = t_ell;
+                    found = true;
+                }
+            }
+
+            if (found) {
+                double xi = x0 + tx*(x1 - x0);
+                double yi = y0 + tx*(y1 - y0);
+                double zi = z0 + tx*(z1 - z0);
+                // Riporto nel sistema globale
+                return TVector3(xi + deltax, yi + deltay, zi + deltaz);
+            }
+        }
+        else if (!in0 && in1) {
+            // entra da fuori → ignora
+            continue;
+        }
+        else if (in0 && in1) {
+            // entrambi dentro → continua
+            continue;
+        }
+        else {
+            // entrambi fuori → ignora
+            continue;
+        }
     }
 
-    p.primary = IsPrimary(ev, p.tid) == true ? 1 : 0;
-
-    p.pxtrue = ev->Trajectories.at(j).InitialMomentum.X();
-    p.pytrue = ev->Trajectories.at(j).InitialMomentum.Y();
-    p.pztrue = ev->Trajectories.at(j).InitialMomentum.Z();
-    p.Etrue = ev->Trajectories.at(j).InitialMomentum.T();
-
-    p.xtrue = ev->Trajectories.at(j).Points.at(0).Position.X();
-    p.ytrue = ev->Trajectories.at(j).Points.at(0).Position.Y();
-    p.ztrue = ev->Trajectories.at(j).Points.at(0).Position.Z();
-    p.ttrue = ev->Trajectories.at(j).Points.at(0).Position.T();
-
-    map_part[p.tid] = p;
-  }
+    // Se non esce → l’ultimo punto dentro GRAIN è x0,y0,z0
+    return TVector3(x0 + deltax, y0 + deltay, z0 + deltaz);
 }
+
+
+void FillParticleInfo(TG4Event* ev,
+                      std::map<int, particle>& map_part,
+                      const track_grain_lens& trLens)
+{
+    if (map_part.empty()) {
+
+        for (const auto& traj : ev->Trajectories) {
+
+            particle p{};
+            reset(p);   // se serve davvero, ok
+
+            p.tid        = traj.TrackId;
+            p.pdg_true   = traj.PDGCode;
+            p.parent_tid = traj.ParentId;
+            p.kalman_ok  = false;
+            p.primary    = IsPrimary(ev, p.tid) ? 1 : 0;
+
+            if (auto* part = db.GetParticle(p.pdg_true)) {
+                p.mass   = part->Mass() * conversion::GeV_to_MeV;
+                p.charge = part->Charge() / 3.;
+            }
+
+            p.pxtrue = traj.InitialMomentum.X();
+            p.pytrue = traj.InitialMomentum.Y();
+            p.pztrue = traj.InitialMomentum.Z();
+            p.Etrue  = traj.InitialMomentum.T();
+
+            const auto& vtx = traj.Points.front().Position;
+            p.xtrue = vtx.X();
+            p.ytrue = vtx.Y();
+            p.ztrue = vtx.Z();
+            p.ttrue = vtx.T();
+
+            map_part.emplace(p.tid, std::move(p));
+        }
+    }
+
+    auto it = map_part.find(trLens.track_ids);
+    if (it == map_part.end())
+        return;
+
+    particle& p = it->second;
+
+    if (std::abs(p.pdg_true) != 13)
+        return;
+
+    p.xreco = trLens.xstart;
+    p.yreco = trLens.ystart;
+    p.zreco = trLens.zstart;
+
+    p.xend  = trLens.xend;
+    p.yend  = trLens.yend;
+    p.zend  = trLens.zend;
+
+    const double ptrue =
+        std::sqrt(p.pxtrue*p.pxtrue +
+                  p.pytrue*p.pytrue +
+                  p.pztrue*p.pztrue);
+
+    const double sigmap = 0.03 * ptrue;
+    const double preco  = gRandom->Gaus(ptrue, sigmap);
+
+    p.Ereco = std::sqrt(preco*preco + p.mass*p.mass);
+}
+
+
+
 
 /*
 void FillTrackInfo(track& tr, particle& p)
@@ -297,7 +422,7 @@ void RecoGamma(particle& p)
 void RecoPi0(particle& p)
 {
   for (unsigned int i = 0; i < p.daughters.size(); i++) {
-    if (p.daughters.at(i).pdg == 22 && p.daughters.at(i).has_daughter == 1) {
+    if (p.daughters.at(i).pdg_true == 22 && p.daughters.at(i).has_daughter == 1) {
       RecoGamma(p.daughters.at(i));
     }
   }
@@ -318,7 +443,7 @@ void FindGammaConversion(event& ev, particle& p)
 void FindPriGammaConversion(event& ev)
 {
   for (unsigned int i = 0; i < ev.particles.size(); i++) {
-    if (ev.particles.at(i).primary == 1 && ev.particles.at(i).pdg == 22) {
+    if (ev.particles.at(i).primary == 1 && ev.particles.at(i).pdg_true == 22) {
       FindGammaConversion(ev, ev.particles.at(i));
     }
   }
@@ -328,7 +453,7 @@ void FindPi0Decay(event& ev, particle& p)
 {
   for (unsigned int j = 0; j < ev.particles.size(); j++) {
     if (ev.particles.at(j).parent_tid == p.tid) {
-      if (ev.particles.at(j).pdg == 22) {
+      if (ev.particles.at(j).pdg_true == 22) {
         FindGammaConversion(ev, ev.particles.at(j));
 
         p.has_daughter = 1;
@@ -341,86 +466,65 @@ void FindPi0Decay(event& ev, particle& p)
 void FindPriPi0Decay(event& ev)
 {
   for (unsigned int i = 0; i < ev.particles.size(); i++) {
-    if (ev.particles.at(i).primary == 1 && ev.particles.at(i).pdg == 111) {
+    if (ev.particles.at(i).primary == 1 && ev.particles.at(i).pdg_true == 111) {
       FindPi0Decay(ev, ev.particles.at(i));
     }
   }
 }
 
-void ProcessParticle(event& evt, int index)
-{
-  particle& p = evt.particles.at(index);
+bool DEBUG_GRAIN = true;
 
-  switch (p.pdg) {
-    case -2212:  // antiproton
-    case 2212:   // proton
+void ProcessParticle(event& evt, int index, const track_grain_lens& trLens, bool debug = false)
+{
+    particle& p = evt.particles.at(index);
+    // Riempimento vertice
+    p.xreco = trLens.xstart;
+    p.yreco = trLens.ystart;
+    p.zreco = trLens.zstart;
+
+    // Riempimento endpoint
+    p.xend = trLens.xend;
+    p.yend = trLens.yend;
+    p.zend = trLens.zend;
+
+    // Energia e PDG ricostruiti
+    p.Ereco = trLens.energy_reco;
+    p.pdg_reco = trLens.PDG_reco;
+    p.filled = true;
+    p.isinGRAIN = isInGRAIN(p.xend, p.yend, p.zend);
+
+    // Debug opzionale
+    if (debug)
     {
-      if (p.has_track == 1 && p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
-        RecoFromTrack(p);
-      else if (p.has_cluster == 1)
-        RecoFromBeta(p, evt.x, evt.y, evt.z, evt.t);
-      break;
+      std::cout << "[DEBUG] "
+          << "PDG_true: " << p.pdg_true
+          << " PDG_reco: " << p.pdg_reco
+          << " Track ID: " << trLens.track_ids
+          << " Vertex: (" << p.xreco << ", "
+                          << p.yreco << ", "
+                          << p.zreco << ")"
+          << " Endpoint: (" << p.xend << ", "
+                            << p.yend << ", "
+                            << p.zend << ")"
+          << " Energy: " << p.Ereco
+          << " isinGRAIN: " << p.isinGRAIN
+          << std::endl;
     }
-    case -211:  // antipion
-    case 211:   // pion
-    {
-      if (p.has_track == 1 && p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
-        RecoFromTrack(p);
-      else if (p.has_cluster == 1)
-        RecoFromHadShower(p);
-      break;
-    }
-    case 11:   // electron
-    case -11:  // positron
-    {
-      if (p.has_track == 1 && p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
-        RecoFromTrack(p);
-      else if (p.has_cluster == 1)
-        RecoFromEMShower(p);
-      break;
-    }
-    case 2112:   // neutron
-    case -2112:  // antineutron
-    {
-      if (p.has_cluster == 1) RecoFromBeta(p, evt.x, evt.y, evt.z, evt.t);
-      break;
-    }
-    case 22:  // gamma
-    {
-      if (p.primary == 1) {
-        FindGammaConversion(evt, p);
-      }
-      RecoGamma(p);
-      break;
-    }
-    case 111:  // pi zero
-    {
-      if (p.primary == 1) {
-        FindPi0Decay(evt, p);
-      }
-      RecoPi0(p);
-      break;
-    }
-    default:  // other (assuming hadron)
-    {
-      if (p.has_track == 1 && p.tr.ret_ln == 0 && p.tr.ret_cr == 0)
-        RecoFromTrack(p);
-      else if (p.has_cluster == 1)
-        RecoFromHadShower(p);
-      break;
-    }
-  }
 }
 
-void ProcessParticles(event& evt)
+
+void ProcessParticles(event& evt,
+                      const std::vector<track_grain_lens>& tracks)
 {
-  for (unsigned int i = 0; i < evt.particles.size(); i++) {
-    ProcessParticle(evt, i);
-  }
+    for (unsigned int i = 0; 
+         i < evt.particles.size() && i < tracks.size(); 
+         i++) 
+    {
+        ProcessParticle(evt, i, tracks[i], DEBUG_GRAIN);
+    }
 }
 
-/*
-void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
+/*void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
 {
   p.has_cluster = true;
 
@@ -740,124 +844,138 @@ void EvalNuEnergy(event& ev)
 
 void Analyze(const char* fMc, const char* fIn)
 {
-  TFile ftrue(fMc, "READ");
-  TFile f(fIn, "UPDATE");
-  TTree* tReco = (TTree*)f.Get("tReco");
-  TTree* tTrueMC = (TTree*)ftrue.Get("EDepSimEvents");
-  TTree* gRooTracker = (TTree*)ftrue.Get("DetSimPassThru/gRooTracker");
-  TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
-
-  tReco->AddFriend(tTrueMC);
-  tReco->AddFriend(gRooTracker);
-
-  TTree* t = tReco;
-
-  std::vector<track>* vec_tr = new std::vector<track>;
-  std::vector<cluster>* vec_cl = new std::vector<cluster>;
-
-  const int kMaxStdHepN = 200;
-
-  double part_mom[kMaxStdHepN][4];
-  int part_pdg[kMaxStdHepN];
-
-  TG4Event* ev = new TG4Event;
-  t->SetBranchAddress("Event", &ev);
-  t->SetBranchAddress("track", &vec_tr);
-  t->SetBranchAddress("cluster", &vec_cl);
-  t->SetBranchAddress("StdHepP4", part_mom);
-  t->SetBranchAddress("StdHepPdg", part_pdg);
-
-  std::map<int, particle> map_part;
-
-  event evt;
-
-  TTree tout("tEvent", "tEvent");
-  tout.Branch("event", "event", &evt);
-
-  const int nev = t->GetEntries();
-
-  std::cout << "Events: " << nev << " [";
-  std::cout << std::setw(3) << int(0) << "%]" << std::flush;
-
-  for (int i = 0; i < nev; i++) {
-    std::cout << "\b\b\b\b\b" << std::setw(3) << int(double(i) / nev * 100)
-              << "%]" << std::flush;
-
-    t->GetEntry(i);
-    map_part.clear();
-    evt.particles.clear();
-
-    evt.x = ev->Primaries.at(0).Position.X();
-    evt.y = ev->Primaries.at(0).Position.Y();
-    evt.z = ev->Primaries.at(0).Position.Z();
-    evt.t = ev->Primaries.at(0).Position.T();
-
-    evt.pxnu = part_mom[0][0] * conversion::GeV_to_MeV;
-    evt.pynu = part_mom[0][1] * conversion::GeV_to_MeV;
-    evt.pznu = part_mom[0][2] * conversion::GeV_to_MeV;
-    evt.Enu = part_mom[0][3] * conversion::GeV_to_MeV;
-
-    // std::string volname = geo->FindNode(evt.x, evt.y, evt.z)->GetName();
-    // strcpy(evt.vol, geo->FindNode(evt.x, evt.y, evt.z)->GetName());
-    // strcpy(evt.intType, ev->Primaries.at(0).Reaction.c_str());
-    // evt.vol = volname;
-    // evt.pdgnu = 1;//part_pdg[0];
-    // evt.isCC = false;
-    // evt.intType = ev->Primaries.at(0).Reaction;
-    // evt.isCC = (strstr(evt.intType,"CC") != 0);
-
-    // std::cout << evt.vol << " " << evt.intType << std::endl;
-
-    FillParticleInfo(ev, map_part);
-
-    for (unsigned int j = 0; j < vec_tr->size(); j++) {
-      std::map<int, particle>::iterator it = map_part.find(vec_tr->at(j).tid);
-      // FillTrackInfo(vec_tr->at(j), it->second);
-      it->second.has_track = true;
-      it->second.tr = vec_tr->at(j);
+    TFile ftrue(fMc, "READ");
+    if (ftrue.IsZombie()) {
+        std::cerr << "ERROR: cannot open MC file: " << fMc << std::endl;
+        return;
     }
 
-    for (unsigned int j = 0; j < vec_cl->size(); j++) {
-      auto it = map_part.find(vec_cl->at(j).tid);
-      if (it != map_part.end()) {
-          // FillClusterInfo(ev, vec_cl->at(j), it->second);
-          it->second.has_cluster = true;
-          it->second.cl = vec_cl->at(j);
-          std::cout << i << ": cluster id = traj_id: " << vec_cl->at(j).tid << ", " << map_part.at(vec_cl->at(j).tid).tid << std::endl; 
-      } else {
-          std::cout << "Error: tid " << vec_cl->at(j).tid << " not found in map_part!" << std::endl;
-      }
+    TFile f(fIn, "UPDATE");
+    if (f.IsZombie()) {
+        std::cerr << "ERROR: cannot open input file: " << fIn << std::endl;
+        return;
     }
 
-    for (std::map<int, particle>::iterator it = map_part.begin();
-         it != map_part.end(); ++it) {
-      evt.particles.push_back(it->second);
+    TTree* tReco       = (TTree*)f.Get("tReco");
+    TTree* tTrueMC     = (TTree*)ftrue.Get("EDepSimEvents");
+    TTree* gRooTracker = (TTree*)ftrue.Get("DetSimPassThru/gRooTracker");
+
+    if (!tReco || !tTrueMC) {
+        std::cerr << "ERROR: missing required trees." << std::endl;
+        return;
     }
 
-    std::sort(evt.particles.begin(), evt.particles.end(), sand_reco::isAfter);
+    tReco->AddFriend(tTrueMC);
+    if (gRooTracker) tReco->AddFriend(gRooTracker);
 
-    // FindPriGammaConversion(evt);
-    // FindPriPi0Decay(evt);
+    std::vector<track_grain_lens>* trackLens = nullptr;
+    tReco->SetBranchAddress("track_grain_lens", &trackLens);
 
-    ProcessParticles(evt);
+    const int kMaxStdHepN = 200;
+    double part_mom[kMaxStdHepN][4];
+    int part_pdg[kMaxStdHepN];
 
-    EvalNuEnergy(evt);
+    TG4Event* ev = new TG4Event;
+    tReco->SetBranchAddress("Event",     &ev);
+    tReco->SetBranchAddress("StdHepP4",  part_mom);
+    tReco->SetBranchAddress("StdHepPdg", part_pdg);
 
-    tout.Fill();
+    std::map<int, particle> map_part;
+    event evt;
+    TTree tout("tEvent", "tEvent");
+    tout.Branch("event", "event", &evt);
+
+    Long64_t nev = tReco->GetEntries();
+    std::cout << "Events: " << nev << " [0%]" << std::flush;
+
+    for (Long64_t i = 0; i < nev; ++i) {
+        std::cout << "\b\b\b\b\b" << std::setw(3)
+                  << int(double(i)/nev*100) << "%]" << std::flush;
+
+        tReco->GetEntry(i);
+        map_part.clear();
+        evt.particles.clear();
+
+        if (!ev || ev->Primaries.empty()) continue;
+
+        if (!trackLens) continue;
+        if (!trackLens->empty()) {
+        evt.x = trackLens->at(0).xstart;  
+        evt.y = trackLens->at(0).ystart;
+        evt.z = trackLens->at(0).zstart;
+        evt.t = 0.;
+    }
+
+        std::cout << "[Event " << i << "] Vertice evento RECO: ("
+              << evt.x << ", " << evt.y << ", " << evt.z << ")\n";
+
+    
+        for (size_t j = 0; j < trackLens->size(); ++j) {
+        const auto& tr = trackLens->at(j);
+        std::cout << "   Track " << j
+                  << " vertex = (" << tr.xstart << ", "
+                  << tr.ystart << ", " << tr.zstart << ")\n";
+    }
+
+        evt.pxnu = part_mom[0][0] * conversion::GeV_to_MeV;
+        evt.pynu = part_mom[0][1] * conversion::GeV_to_MeV;
+        evt.pznu = part_mom[0][2] * conversion::GeV_to_MeV;
+        evt.Enu  = part_mom[0][3] * conversion::GeV_to_MeV;
+
+        for (size_t j = 0; j < trackLens->size(); ++j) {
+          const auto& tr = trackLens->at(j);  
+          FillParticleInfo(ev, map_part, tr);
+
+        }
+
+        for (auto& kv : map_part)
+            evt.particles.push_back(kv.second);
+
+        ProcessParticles(evt, *trackLens); 
+        int nTotal = evt.particles.size();
+        int nPrimary = 0;
+        int nFilled = 0;
+
+        for (const auto& p : evt.particles) {
+
+            if (p.primary == 1)
+                nPrimary++;
+
+            if (p.filled)
+                nFilled++;
+        }
+
+        std::cout << "----------------------------------" << std::endl;
+        std::cout << "Total particles: " << nTotal << std::endl;
+        std::cout << "Primary particles: " << nPrimary << std::endl;
+        std::cout << "Particles matched to GRAIN (filled): " << nFilled << std::endl;
+        std::cout << "Number of track_grain_lens: " << trackLens->size() << std::endl;
+        std::cout << "----------------------------------" << std::endl;
+
+        int nPrimaryInGRAIN = 0;
+        for (const auto& p : evt.particles) {
+            if (p.primary == 1 && p.filled) nPrimaryInGRAIN++;
+        }
+        std::cout << "Primary particles with GRAIN track: " << nPrimaryInGRAIN << std::endl;
+        std::sort(evt.particles.begin(), evt.particles.end(),
+                  sand_reco::isAfter);
+
+        EvalNuEnergy(evt);
+       
+        tout.Fill();
+
   }
-  std::cout << "\b\b\b\b\b" << std::setw(3) << 100 << "%]" << std::flush;
-  std::cout << std::endl;
 
-  f.cd();
-  tout.Write("", TObject::kOverwrite);
-  f.Close();
-  ftrue.Close();
+    std::cout << "\b\b\b\b\b100%]" << std::endl;
 
-  vec_tr->clear();
-  vec_cl->clear();
-  delete vec_tr;
-  delete vec_cl;
+    f.cd();
+    tout.Write("", TObject::kOverwrite);
+    f.Close();
+    ftrue.Close();
+    delete ev;
 }
+
+
 
 void help_ana()
 {
