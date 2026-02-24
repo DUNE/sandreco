@@ -8,6 +8,28 @@ double ComputeStd(const std::vector<double>& values, double mean) {
   return std::sqrt(squared_difference / values.size());
 }
 
+Tracklet makeMeasurementTrackletFromTruth(const Truth& t,
+                                                        TRandom3& rand)
+{
+  Tracklet meas;
+  const double sigma_pos =
+      SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;              // mm
+  const double sigma_ang = SANDTrackerUtils::getSigmaAngleMeasurement();  // rad
+  const double theta_xz = std::atan2(t.dir_.X(), t.dir_.Z());
+  const double theta_yz = std::atan2(t.dir_.Y(), t.dir_.Z());
+
+  meas.x = t.pos_.X() + rand.Gaus(0.0, sigma_pos);
+  meas.y = t.pos_.Y() + rand.Gaus(0.0, sigma_pos);
+  meas.theta_xz = theta_xz + rand.Gaus(0.0, sigma_ang);
+  meas.theta_yz = theta_yz + rand.Gaus(0.0, sigma_ang);
+
+  meas.true_pos_ = t.pos_;
+  meas.true_dir_ = t.dir_;
+  meas.true_mom_ = t.mom_;
+
+  return meas;
+}
+
 std::vector<TVector3> getTrueTrackletOfCluster(TVector3 start, TVector3 stop, double z){
 
   // Interpolation of z coordinate

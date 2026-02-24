@@ -2159,107 +2159,54 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, ED
   std::string tracker_name = sand_reco::tracker::DigitCollection::getDigits().begin()->det;
   sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
 
-  sand_reco::kf::utils::TrackletMap z_to_tracklets;
-
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
   
   TRandom3 rand(0);
-  for (const auto& container:clusters.getContainers()) {
-    for (const auto& cluster_in_container:container->getClusters()) {
-
-      TVector3 first_point;
-      TVector3 last_point;
-
-    if (cluster_in_container.getDigits().empty()) return;
-
-    double min_z = std::numeric_limits<double>::infinity();
-    double max_z = -std::numeric_limits<double>::infinity();
-
-    for (size_t d = 0; d < cluster_in_container.getDigits().size(); ++d) {
-      auto digit = sand_reco::tracker::DigitCollection::getDigit(
-          cluster_in_container.getDigits()[d]);
-
-      if (digit.z > max_z) {
-        max_z = digit.z;
-        last_point = TVector3(digit.x, digit.y, digit.z);
-      }
-      if (digit.z < min_z) {
-        min_z = digit.z;
-        first_point = TVector3(digit.x, digit.y, digit.z);
-      }
-    }
-
-    //-------------------------------------------------------------------------
-    //  DetectorSegments option:  Given the 3D enpoints of cluster segment 
-    //  (start,stop) and z of the cluster the function returns a tracklet
-    //  associated to that cluster with :
-    //   - position = linear interpolation aloch the hit direction at plane z.
-    //   - direction = unit direction vector.
-    //-------------------------------------------------------------------------
-      auto true_tracklet = getTrueTrackletOfCluster(first_point, last_point, cluster_in_container.getZ());
-  
-      TVector3 true_pos     = true_tracklet[0];
-      TVector3 true_dir     = true_tracklet[1];     
-      double true_theta_yz  = atan(true_dir.Y() / true_dir.Z());
-      double true_theta_xz  = atan(true_dir.X() / true_dir.Z());
-      if (true_theta_xz > M_PI_2) true_theta_xz -= M_PI;
-
-      Tracklet measurement_from_true_tracklet;
-      measurement_from_true_tracklet.x = true_pos.X()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-      measurement_from_true_tracklet.y = true_pos.Y()  + rand.Gaus(0, SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3);
-      measurement_from_true_tracklet.theta_xz = true_theta_xz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
-      measurement_from_true_tracklet.theta_yz = true_theta_yz + rand.Gaus(0, SANDTrackerUtils::getSigmaAngleMeasurement());
-      
-      for (uint d = 0; d < cluster_in_container.getDigits().size(); d++) {
-        auto digit = sand_reco::tracker::DigitCollection::getDigit(cluster_in_container.getDigits()[d]);
-        measurement_from_true_tracklet.digits.push_back(digit);
-        }
-          z_to_tracklets[cluster_in_container.getZ()].push_back(measurement_from_true_tracklet);
-        }
-      }
-
-      if (z_to_tracklets.empty()) {
-        return;
-      }
 
   std::vector<EDEPTrajectory> primaryTrj;
-  tree->Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
-    [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
+  tree->Filter(
+      std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj),
+      [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1; });
 
   TDatabasePDG pdg_db;
-
   std::vector<SParticleInfo> particleInfos;
-  
-  double sigma_pos = 0;
-  double sigma_mom = 0;
-  for (auto trj:primaryTrj) {
 
-    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
+  std::vector<int> indeces;
+  int ii = -1;
+  for (auto trj : primaryTrj) {
+    ii++;
+
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) ==
+        trj.GetHitMap().end()) {
       continue;
     }
-    
-    if (trj.GetTrajectoryPoints().find(string_to_component[tracker_name]) == trj.GetTrajectoryPoints().end()) {
+
+    if (trj.GetTrajectoryPoints().find(string_to_component[tracker_name]) ==
+        trj.GetTrajectoryPoints().end()) {
       continue;
     }
 
     auto particle = pdg_db.GetParticle(trj.GetPDGCode());
+
     if (!particle) {
       continue;
     }
-    
+
     if (particle->Mass() == 0 || particle->Charge() == 0) {
       continue;
     }
 
     SParticleInfo pi;
     pi.pdg_code = trj.GetPDGCode();
-    pi.id       = trj.GetId();
-    pi.mass     = particle->Mass();
-    pi.charge   = particle->Charge() / 3;
+    pi.id = trj.GetId();
+    pi.mass = particle->Mass();
+    pi.charge = particle->Charge() / 3;
 
     double max_z = 0;
     bool to_be_reconstructed = false;
-    for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
+
+    for (auto& point :
+         trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
       if (point.GetPosition().Z() > max_z && point.GetMomentum().Z() > 100) {
         max_z = point.GetPosition().Z();
         pi.pos = point.GetPosition().Vect();
@@ -2269,6 +2216,10 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, ED
     }
 
     if (!to_be_reconstructed) continue;
+
+    double sigma_pos = SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
+    double sigma_mom = 0.05;
+
     double x_smeared = rand.Gaus(pi.pos.X(), sigma_pos);
     double y_smeared = rand.Gaus(pi.pos.Y(), sigma_pos);
     double px_smeared = pi.mom.X() * rand.Gaus(1, sigma_mom);
@@ -2277,70 +2228,53 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, ED
 
     pi.pos = TVector3(x_smeared, y_smeared, pi.pos.Z());
     pi.mom = TVector3(px_smeared, py_smeared, pz_smeared);
-    pi.initial_pos = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetPosition().Vect();
-    pi.initial_mom = trj.GetTrajectoryPoints().at(string_to_component[tracker_name])[0].GetMomentum();
+    pi.initial_pos = trj.GetTrajectoryPoints()
+                         .at(string_to_component[tracker_name])[0]
+                         .GetPosition()
+                         .Vect();
+    pi.initial_mom = trj.GetTrajectoryPoints()
+                         .at(string_to_component[tracker_name])[0]
+                         .GetMomentum();
     particleInfos.push_back(pi);
-
+    indeces.push_back(ii);
 
     //---------------------------------------------------------------------------
     //  TrajectoryPoints option: obtains the measurements as
     //  the smearing of the true tracklet computed from trajectory points at
-    //  user defined steps.There is no clustering here, the z is associated directly
+    //  defined steps.There is no clustering here, the z is ssociated directly
     //  to the closest avalaible MC-trajectory point.
     //---------------------------------------------------------------------------
-        // static inline Tracklet makeMeasurementTrackletFromTruth(const Truth& t,
-        //                                                         TRandom3& rand){
-        //   Tracklet meas;
-        //   const double sigma_pos =
-        //       SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;              // mm
-        //   const double sigma_ang = SANDTrackerUtils::getSigmaAngleMeasurement();  // rad
-        //   const double theta_xz = std::atan2(t.dir_.X(), t.dir_.Z());
-        //   const double theta_yz = std::atan2(t.dir_.Y(), t.dir_.Z());
+    std::map<double, std::vector<Tracklet>> z_to_tracklets;
+    auto points =
+        trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
+    const double step = 1.5;
+    auto z_truth = z_to_truth(points, step);
 
-        //   meas.x = t.pos_.X() + rand.Gaus(0.0, sigma_pos);
-        //   meas.y = t.pos_.Y() + rand.Gaus(0.0, sigma_pos);
-        //   meas.theta_xz = theta_xz + rand.Gaus(0.0, sigma_ang);
-        //   meas.theta_yz = theta_yz + rand.Gaus(0.0, sigma_ang);
+    for (const auto& kv : z_truth) {
+      const double z = kv.first;
+      const Truth& t = kv.second;
+      Tracklet measurements = makeMeasurementTrackletFromTruth(t, rand);
+      z_to_tracklets[z].push_back(measurements);
+    }
 
-        //   meas.true_pos_ = t.pos_;
-        //   meas.true_dir_ = t.dir_;
-        //   meas.true_mom_ = t.mom_;
+    // It keeps only one measurement per module, it has been used to test hypothesis on pull tests
+    for (auto& kv : z_to_tracklets) {
+      auto& vec = kv.second;
+      if (vec.size() > 1) {
+        int idx = rand.Integer(static_cast<int>(vec.size()));
+        Tracklet keep = vec[idx];
+        vec.clear();
+        vec.push_back(keep);
+      }
+    }
 
-        //   return meas;
-        // }
-
-        // auto points =
-        //     trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
-        // const double step = 0.5;
-        // auto z_truth = z_to_truth(points, step);
-
-        // for (const auto& kv : z_truth) {
-        //   const double z = kv.first;
-        //   const Truth& t = kv.second;
-        
-        // Tracklet measurement_from_true_tracklet = makeMeasurementTrackletFromTruth(t, rand);
-
-
-        //   z_to_tracklets[z].push_back(measurement_from_true_tracklet);
-        // }
-        // if (z_to_tracklets.empty()) continue;
-      // -------------------------------------------------------------------------------
-
-
-  }//loop trajectory
-
-  int nParticles = particleInfos.size();
-
-  if (nParticles == 0) {
-    std::cerr << "no particles to be reconstructed...process aborted"
-              << std::endl;
-    return;
-  }
-
-  for (int ip = 0; ip < nParticles; ip++) {
-    auto reco_track = runKalmanFilterManager(z_to_tracklets, particleInfos[ip]);
-    if (reco_track.tid != -1) {
-      tracks.push_back(reco_track);
+    if (z_to_tracklets.empty()) continue;
+    
+    for (int ip = 0; ip < (int)indeces.size(); ++ip) {
+      auto reco_track = runKalmanFilterManager(z_to_tracklets, particleInfos[ip]);
+      if (reco_track.tid != -1) {
+        tracks.push_back(reco_track);
+      }
     }
   }
 }
@@ -2583,7 +2517,7 @@ int main(int argc, char* argv[])
   double merging_radius = 15;
 
   for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "stt_mode") == 0) {
+    if (strstr(argv[i], "stt_mode") != nullptr) {
       if (strcmp(argv[i], "stt_mode::full") == 0) {
         stt_mode = STT_Mode::full;
         std::cout << "STT_Mode: full\n";

@@ -63,3 +63,5 @@ std::vector<double> computeZDistance(
 sand_reco::kf::utils::TrackletMap findBestTracklet(
     const sand_reco::kf::utils::TrackletMap& z_to_tracklets,
     const std::map<double, std::vector<TVector3>>& z_to_interpolated_tracklets);
+
+Tracklet makeMeasurementTrackletFromTruth(const Truth& t, TRandom3& rand);
