@@ -1379,7 +1379,7 @@ void SANDGeoManager::setDriftWireInfo(sand_geometry::tracker::Plane& plane)
     if (w.getLength() > tracker_module_configuration::drift::id_to_length[std::to_string(*plane.lId()())]) {
       plane.addCell(transverse_position, 
                     sand_geometry::tracker::Cell(cell_unique_id, w, 
-                    tracker_module_configuration::drift::id_to_offset[std::to_string(*plane.lId()())],
+                    tracker_module_configuration::drift::id_to_spacing[std::to_string(*plane.lId()())],
                     plane.getDimension().Z(),
                     tracker_module_configuration::drift::id_to_velocity[std::to_string(*plane.lId()())]));
       wire_id++;

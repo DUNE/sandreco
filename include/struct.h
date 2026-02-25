@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <TString.h>
 #include <TGeoManager.h>
+#include <TVector3.h>
 
 #ifndef STRUCT_H
 #define STRUCT_H
@@ -185,6 +186,20 @@ struct cluster
   std::vector<reco_cell> reco_cells; 
 };
 
+struct Tracklet {
+  double x;
+  double y;
+  double theta_xz;
+  double theta_yz;
+  double chi2;
+  std::vector<dg_wire> digits;
+
+  TVector3 true_pos_; 
+  TVector3 true_dir_;
+  TVector3 true_mom_;
+
+};
+
 struct track
 {
   int tid = -1;
@@ -203,6 +218,7 @@ struct track
   double chi2_ln = NAN;
   int ret_cr = -1;
   double chi2_cr = NAN;
+  int n_points = -1;
   std::vector<dg_wire> clX;
   std::vector<dg_wire> clY;
 };

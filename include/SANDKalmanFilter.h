@@ -16,6 +16,8 @@ struct SParticleInfo {
 
   TVector3 pos;
   TVector3 mom;
+  TVector3 initial_pos;
+  TVector3 initial_mom;
 };
 
 namespace sand_reco
@@ -27,7 +29,6 @@ namespace kf
 
 using StateCovarianceMatrix = TMatrixD;
 using Measurement = TMatrixD;
-using TrackletMap = std::map<double, std::vector<TVectorD>>;
 
 class Manager {
 
@@ -37,15 +38,11 @@ class Manager {
     sand_reco::kf::TrackStep::TrackStateStage current_stage_; // forward or backward
     int current_step_; // index of the sand_reco::kf::TrackStep in sand_reco::kf::Track
     double current_z_; 
-    TrackletMap* z_to_tracklets_;
+    sand_reco::kf::utils::TrackletMap* z_to_tracklets_;
     SParticleInfo particleInfo_;
 
 
   public:
-    enum class Orientation {
-      kVertical,
-      kHorizontal
-    };
     Orientation getOrientation() {return current_orientation_;};
     TVector3 getDirectiveCosinesFromStateVector(const sand_reco::kf::StateVector& state_vector);
     double getPhiFromTheta(double theta, int charge) { return theta - charge * 0.5*TMath::Pi(); };
@@ -69,7 +66,7 @@ class Manager {
   public:
     Orientation current_orientation_ = Orientation::kVertical;
 
-    sand_reco::kf::Measurement getMeasurementFromTracklet(const TVectorD& tracklet);
+    sand_reco::kf::Measurement getMeasurementFromTracklet(const Tracklet& tracklet);
     double deltaRadius(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const;
     inline double dEDTanl(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { auto tan = state_vector.tanLambda(); return de * tan / (1 + tan*tan); };
     inline double dEDPhi(const sand_reco::kf::StateVector& state_vector, double next_phi, double dz, double de, double particle_mass) const { 
@@ -214,13 +211,13 @@ class Manager {
     void setNextOrientation();
     void filter(const sand_reco::kf::Measurement& measurement, const sand_reco::kf::Measurement& prediction);
     void smooth();
-    void initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
-    void initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, double sx = 0.004, double sy = 0.004);
-    TrackletMap FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, int maxSteps=10);
-    double findClosestNonEmptyKey(const TrackletMap& myMap, double target);
+    void initFromMC(sand_reco::kf::utils::TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo);
+    void initFromSeed(sand_reco::kf::utils::TrackletMap* three_tracklets, sand_reco::kf::utils::TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, double sx = 0.004, double sy = 0.004);
+    sand_reco::kf::utils::TrackletMap FindSeedPoints_MCstart(sand_reco::kf::utils::TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, int maxSteps=10);
+    double findClosestNonEmptyKey(const sand_reco::kf::utils::TrackletMap& myMap, double target);
     void run();
     const sand_reco::kf::Track& getTrack() {return this_track_; };
-    void EvaluateInnovation(const SANDKFMeasurement& measurement, const SANDKFMeasurement& prediction, const TMatrixD& Sk);
+    void EvaluateInnovation(const Measurement& measurement, const Measurement& prediction, const TMatrixD& Sk);
 };
 
 } // namespace kf

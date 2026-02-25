@@ -1,4 +1,5 @@
 #include "SANDTrackletFinder.h"
+#include "TFile.h"
 
 double MinimizingFunction(const double* params, const sand_reco::tracker::Cluster& cluster, const std::map<sand_reco::tracker::DigitID, double>& digitId_to_drift_time)
 {
@@ -155,9 +156,9 @@ void TrackletFinder::computeDriftTime()
 }
 
 // To Do: find a minimizier able to escape local minima
-std::vector<TVectorD> TrackletFinder::findTracklets()
+std::vector<Tracklet> TrackletFinder::findTracklets()
 {
-  std::vector<TVectorD> minima;
+  std::vector<Tracklet> minima;
 
   auto minimizer = ROOT::Math::Factory::CreateMinimizer("Minuit", "");
   minimizer->SetMaxFunctionCalls(100000); 
@@ -182,16 +183,16 @@ std::vector<TVectorD> TrackletFinder::findTracklets()
     
   double theta_xz = atan(trajectory_.getDirection().Z() / trajectory_.getDirection().X());
   double theta_yz = atan(trajectory_.getDirection().Y() / trajectory_.getDirection().Z());
-  double theta_width = M_PI_4;
+  double theta_width = M_PI - M_PI / 40.;
 
   // std::cout << cells_intersections_[1].X() << " " << cells_intersections_[0].X() << std::endl;
   // std::cout << cells_intersections_[1].Y() << " " << cells_intersections_[0].Y() << std::endl;
 
-  double x_width = cells_intersections_[1].X() - cells_intersections_[0].X();
-  double y_width = cells_intersections_[1].Y() - cells_intersections_[0].Y();
+  double x_width = 150; // (cells_intersections_[1].X() - cells_intersections_[0].X());
+  double y_width = 150; // (cells_intersections_[1].Y() - cells_intersections_[0].Y());
   
   // To Do: should be a config parameter
-  int subdivisions = 2;
+  int subdivisions = 3;
   double x_sub_width = x_width / subdivisions;
   double y_sub_width = y_width / subdivisions;
   double theta_sub_width = theta_width / subdivisions;
@@ -203,10 +204,10 @@ std::vector<TVectorD> TrackletFinder::findTracklets()
         for (int z = 0; z <= subdivisions; z++) {
           TVectorD point(4);
 
-          point[0] = cells_intersections_[0].X() + i * x_sub_width;
-          point[1] = cells_intersections_[0].Y() + j * y_sub_width;
-          point[2] = theta_xz - theta_width + k * theta_sub_width;
-          point[3] = theta_yz - theta_width + z * theta_sub_width;
+          point[0] = cells_intersections_[0].X() - x_width / 2. + i * x_sub_width;
+          point[1] = cells_intersections_[0].Y() - y_width / 2. + j * y_sub_width;
+          point[2] = theta_xz - theta_width / 2. + k * theta_sub_width;
+          point[3] = theta_yz - theta_width / 2. + z * theta_sub_width;
 
           sampling_points.push_back(point);
         }
@@ -216,24 +217,24 @@ std::vector<TVectorD> TrackletFinder::findTracklets()
   // std::cout << "SAMPLING SIZE: " << sampling_points.size() << std::endl;
   for (uint i = 0; i < sampling_points.size(); i++) {
     double starting_point[4] = {sampling_points[i][0], sampling_points[i][1], sampling_points[i][2], sampling_points[i][3]};
-    minimizer->SetLimitedVariable(0, "px", starting_point[0], 0.1, cells_intersections_[0].X() - 200, cells_intersections_[1].X() + 200);
-    minimizer->SetLimitedVariable(1, "py", starting_point[1], 0.1, cells_intersections_[0].Y() - 200, cells_intersections_[1].Y() + 200);
-    minimizer->SetLimitedVariable(2, "dx", starting_point[2], 0.01, theta_xz - theta_width, theta_xz + theta_width);
-    minimizer->SetLimitedVariable(3, "dy", starting_point[3], 0.01, theta_yz - theta_width, theta_yz + theta_width);
+    minimizer->SetLimitedVariable(0, "px", starting_point[0], 0.1, cells_intersections_[0].X() - x_width / 2, cells_intersections_[1].X() + x_width / 2);
+    minimizer->SetLimitedVariable(1, "py", starting_point[1], 0.1, cells_intersections_[0].Y() - y_width / 2, cells_intersections_[1].Y() + y_width / 2);
+    minimizer->SetLimitedVariable(2, "dx", starting_point[2], 0.1, theta_xz - theta_width / 2., theta_xz + theta_width / 2.);
+    minimizer->SetLimitedVariable(3, "dy", starting_point[3], 0.1, theta_yz - theta_width / 2., theta_yz + theta_width / 2.);
 
     minimizer->Minimize();
     const double *xs = minimizer->X();
-    TVectorD min(9);
-    min[0] = xs[0];
-    min[1] = xs[1];
-    min[2] = xs[2];
-    min[3] = xs[3];
-    min[4] = minimizer->MinValue();
-    const double *err_xs = minimizer->Errors();
-    min[5] = err_xs[0];
-    min[6] = err_xs[1];
-    min[7] = err_xs[2];
-    min[8] = err_xs[3];
+    Tracklet min;
+    min.x = xs[0];
+    min.y = xs[1];
+    min.theta_xz = xs[2];
+    min.theta_yz = xs[3];
+    min.chi2 = minimizer->MinValue();
+    // const double *err_xs = minimizer->Errors();
+    // min[5] = err_xs[0];
+    // min[6] = err_xs[1];
+    // min[7] = err_xs[2];
+    // min[8] = err_xs[3];
     minima.push_back(min);
   }
   return minima;
@@ -345,33 +346,38 @@ void TrackletFinder::draw2DWires()
 
 }
 
-void TrackletFinder::draw2DDistance()
+void TrackletFinder::draw2DDistance(TFile* h)
 {
+  h->cd();
   gStyle->SetOptStat(0);
   TCanvas c("c2DMinimization","c2DMinimization",1500,1500);
   if (!c2_) {
     c2_ = new TCanvas("c2D","c2D",1500,1500);
 
   }
+
+  if (cells_intersections_.size() == 0) {
+    return;
+  }
   
-  TH2D* h2 = new TH2D("h","h", cells_intersections_[1].X()  - cells_intersections_[0].X(), 
-                               cells_intersections_[0].X(), cells_intersections_[1].X(),
-                               cells_intersections_[1].Y()  - cells_intersections_[0].Y(), 
-                               cells_intersections_[0].Y(), cells_intersections_[1].Y());
+  TH2D* h2 = new TH2D("h","h", 150, 
+                               trajectory_.getPoint().X() - 75, trajectory_.getPoint().X() + 75,
+                               150, 
+                               trajectory_.getPoint().Y() - 75, trajectory_.getPoint().Y() + 75);
 
   double min;
   auto digitId_to_drift_time = digitId_to_drift_time_;
   auto sand_geo = cluster_.getSandGeoManager();
-  
   double theta_xz = atan(trajectory_.getDirection().Z() / trajectory_.getDirection().X()) * 1000;
   double theta_yz = atan(trajectory_.getDirection().Y() / trajectory_.getDirection().Z()) * 1000;
   int count = 0;
-  for (int px = cells_intersections_[0].X(); px <= cells_intersections_[1].X(); px++) {
-    for (int py = cells_intersections_[0].Y(); py <= cells_intersections_[1].Y(); py++) {
+  for (int px = trajectory_.getPoint().X() - 75; px <= trajectory_.getPoint().X() + 75; px++) {
+    for (int py = trajectory_.getPoint().Y() - 75; py <= trajectory_.getPoint().Y() + 75; py++) {
       min = 1E9;
-      for (int angle_xz = theta_xz - 400; angle_xz < theta_xz + 400 ; angle_xz+=10) {
-        for (int angle_yz = theta_yz - 400; angle_yz < theta_yz + 400; angle_yz+=10) {
+      for (int angle_xz = theta_xz - 1500; angle_xz < theta_xz + 1500 ; angle_xz+=300) {
+        for (int angle_yz = theta_yz - 1500; angle_yz < theta_yz + 1500; angle_yz+=300) {
           double p[4] = {px / 1., py / 1., angle_xz / 1000., angle_yz / 1000.};
+          // double p[4] = {px / 1., py / 1., theta_xz / 1000., theta_yz / 1000.};
           double tmp_min = MinimizingFunction(p, cluster_, digitId_to_drift_time);
           if (tmp_min < min) {
             min = tmp_min;
@@ -383,9 +389,7 @@ void TrackletFinder::draw2DDistance()
     }
   }
 
-  h2->GetZaxis()->SetRangeUser(0, 10e-1);
-  h2->Draw("colz");
-
-  c2_->SaveAs("./c2D.png");
+  h2->Write();
+  h2->Delete();
 
 }

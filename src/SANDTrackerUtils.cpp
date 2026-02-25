@@ -7,6 +7,9 @@ const double SANDTrackerUtils::kEdepSimDensityToGCM3_ = 6.24E18;
 const double SANDTrackerUtils::k_ = 0.299792458;
 const double SANDTrackerUtils::c_ = SANDTrackerUtils::k_ * 1E3;  // mm/ns
 
+const double SANDTrackerUtils::sigma_pos_ = 200E-6;  // m
+const double SANDTrackerUtils::sigma_ang_ = 0.02;     // rad
+
 void SANDTrackerUtils::clear()
 {
   // sand_reco::stt::stL.clear();
@@ -85,6 +88,7 @@ double SANDTrackerUtils::getPathLengthInX0(double z,
   double pathLengthInX0 = 0.;
   int count = 0;
   while((lastPosition = geo_->GetCurrentPoint()) && lastPosition[2] > z) {
+    geo_->FindNextBoundary(1);
     auto Z = static_cast<int>(geo_->GetCurrentNode()->GetVolume()->GetMaterial()->GetZ());
     auto A = static_cast<int>(geo_->GetCurrentNode()->GetVolume()->GetMaterial()->GetA());
     auto name = static_cast<std::string>(geo_->GetCurrentNode()->GetVolume()->GetMaterial()->GetName());
@@ -93,7 +97,7 @@ double SANDTrackerUtils::getPathLengthInX0(double z,
     auto density = getDensityInGCM3();
     auto pathLength = getPathLengthInCM();
     pathLengthInX0 += pathLength * density / X0;
-    geo_->Step();
+    geo_->Step(true, true);
   }
   return pathLengthInX0;
 }
@@ -111,9 +115,10 @@ double SANDTrackerUtils::getPathLengthInCM(double z,
 
   double pathLengthInCM = 0.;
   while((lastPosition = geo_->GetCurrentPoint()) && lastPosition[2] > z) {
+    geo_->FindNextBoundary(1);
     auto pathLength = getPathLengthInCM();
     pathLengthInCM += pathLength;
-    geo_->Step();
+    geo_->Step(true, true);
   }
   return pathLengthInCM;
 }
@@ -185,14 +190,6 @@ double SANDTrackerUtils::getDE(double z,
   }
   return dE;
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -385,7 +382,7 @@ Double_t makePhi(Double_t z1,Double_t y1, Double_t z2,Double_t y2, Double_t z3, 
 //_____________________________________________________________________________
 Double_t makeTgln(Double_t z1,Double_t y1, Double_t z2,Double_t y2,Double_t x1,Double_t x2,Double_t c){
   //-----------------------------------------------------------------
-  // Initial approzimation of the tangent of the track dip angle
+  // Initial approximation of the tangent of the track dip angle
   //-----------------------------------------------------------------
   Double_t d  =  TMath::Sqrt((z1-z2)*(z1-z2)+(y1-y2)*(y1-y2));
   if (TMath::Abs(d*c*0.5)>1) return 0;

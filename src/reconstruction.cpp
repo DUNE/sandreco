@@ -5,6 +5,7 @@
 #include <TGeoManager.h>
 #include <TH1D.h>
 #include <TRandom3.h>
+#include<limits>
 
 #include "TG4Event.h"
 #include "TG4HitSegment.h"
@@ -18,13 +19,12 @@
 #include "utils.h"
 
 //added for kalman filter
+#include "SANDProcessTracklets.h"
 #include "SANDTrackletFinder.h"
 #include "SANDKalmanFilter.h"
 #include "SANDTrackerVertexing.h"
 
 #include <TDatabasePDG.h>
-
-#include "EDEPTree.h"
 
 using namespace sand_reco;
 
@@ -46,6 +46,7 @@ void reset(track& tr)
   tr.chi2_ln = 0.;
   tr.ret_cr = -1;
   tr.chi2_cr = 0.;
+  tr.n_points = 0.;
   tr.clX.clear();
   tr.clY.clear();
 }
@@ -2037,7 +2038,7 @@ void DetermineModulesPosition(TGeoManager* g, std::vector<double>& binning)
 ///////////////////////////////////////
 // Process events with Kalman Filter //
 ///////////////////////////////////////
-track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
+track runKalmanFilterManager(sand_reco::kf::utils::TrackletMap z_to_tracklets, SParticleInfo particleInfo) {
   sand_reco::kf::Manager manager;
   manager.initFromMC(&z_to_tracklets, particleInfo);
   manager.run();
@@ -2045,26 +2046,47 @@ track runKalmanFilterManager(sand_reco::kf::TrackletMap z_to_tracklets, SParticl
   auto reco_track = manager.getTrack();
 
   track trk;
-  if (reco_track.getSteps().size() > 3) {
-    auto step = reco_track.getSteps().back();
+  reset(trk);
+
+  if (reco_track.getSteps().size() > 0) { // was commented, with > 3
+    auto last_step = reco_track.getSteps().back(); //crash if empty due to the .back().
     auto reco_state =
-          step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
+          last_step.getStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing).getStateVector();
     auto reco_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(
                                   reco_state.radius(), reco_state.tanLambda());
 
+    auto initial_state = sand_reco::kf::utils::getStateVector(particleInfo.initial_mom * 1E-3, particleInfo.initial_pos * 1E-3, particleInfo.charge);
+    auto initial_mom = SANDTrackerUtils::getMomentumInMeVFromRadiusInMM(initial_state.radius(), initial_state.tanLambda());
+ 
+    std::cout << "Initial Momentum " << initial_mom << std::endl;
     std::cout << "Initial Smoothed Reco Momentum " << reco_mom << std::endl;
 
     trk.tid = particleInfo.id;
     trk.r   = reco_state.radius();
-    trk.h   = reco_state.charge();
+    trk.h   = -reco_state.charge();
     trk.b   = reco_state.tanLambda();
     trk.x0  = reco_state.x();
     trk.y0  = reco_state.y();
 
-    trk.z0 = step.getZ();
+    trk.ret_ln = 0;
+    trk.ret_cr = 0;
+    double chi2 = 0;
+    for (uint s = 2; s < reco_track.getSteps().size(); s++) {
+      chi2 += reco_track.getSteps()[s].getChi2();
+    }
+    trk.chi2_cr = chi2;
+    trk.n_points = reco_track.getSteps().size();
+    
+    trk.z0  = last_step.getZ() / 1000.;
+
     trk.yc = reco_state.y() - reco_state.radius() * sin(reco_state.phi());
-    trk.zc = step.getZ() - reco_state.radius() * cos(reco_state.phi());
-    std::cout << "tan(Phi) from KF = " << tan(reco_state.phi()) << std::endl;
+    trk.zc = trk.z0 - reco_state.radius() * cos(reco_state.phi());
+
+    for (const auto& s : reco_track.getSteps()) {
+      for (const auto& d : s.getDigits()) {
+        trk.clX.push_back(d);
+      }
+    }
   }
 
   return trk;
@@ -2129,8 +2151,6 @@ void ProcessEventWithMC(std::vector<track>& tracks, SANDGeoManager* sand_geo, TG
 
 void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, EDEPTree* tree, std::vector<dg_wire>* digits)
 {
-  int p[9] = {100, -2000, 2000, 100, -4000, -1000, 100, 23800, 26000};
-
   sand_reco::tracker::DigitCollection::fillMap(digits);
   auto digit_map =  sand_reco::tracker::DigitCollection::getDigits();
   if (sand_reco::tracker::DigitCollection::getDigits().empty()) {
@@ -2139,69 +2159,54 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, ED
   std::string tracker_name = sand_reco::tracker::DigitCollection::getDigits().begin()->det;
   sand_reco::tracker::ClusterCollection clusters(sand_geo, sand_reco::tracker::DigitCollection::getDigits(), sand_reco::tracker::ClusterCollection::ClusteringMethod::kCellAdjacency);
 
-  TrackletFinder traklet_finder;
-  traklet_finder.setVolumeParameters(p);
-  traklet_finder.setSigmaPosition(0.2);
-  traklet_finder.setSigmaAngle(0.2);
-
-  std::map<double, std::vector<TVectorD>> z_to_tracklets;
-
   SANDTrackerUtils::init(sand_geo->getTGeoManager());
   
-  int gg = 0;
-  for (const auto& container:clusters.getContainers()) {
-    for (const auto& cluster_in_container:container->getClusters()) {
-
-      traklet_finder.setCells(cluster_in_container);
-      auto minima = traklet_finder.findTracklets();
-      double z_start = cluster_in_container.getZ();
-      for (uint trk = 0; trk < minima.size(); trk++) {
-        if (minima[trk][4] < 1E-2) {
-          z_to_tracklets[cluster_in_container.getZ()].push_back(minima[trk]);
-        }
-      }
-      traklet_finder.clear();
-    }
-  }
-
-  int sum = 0;
-  for (auto el:z_to_tracklets) {
-    sum += el.second.size();
-  }
-  if (sum == 0) {
-    return;
-  }
+  TRandom3 rand(0);
 
   std::vector<EDEPTrajectory> primaryTrj;
-  tree->Filter(std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj), 
-    [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1;} );
+  tree->Filter(
+      std::back_insert_iterator<std::vector<EDEPTrajectory>>(primaryTrj),
+      [](const EDEPTrajectory& trj) { return trj.GetParentId() == -1; });
 
   TDatabasePDG pdg_db;
-
   std::vector<SParticleInfo> particleInfos;
-  for (auto trj:primaryTrj) {
+
+  std::vector<int> indeces;
+  int ii = -1;
+  for (auto trj : primaryTrj) {
+    ii++;
+
+    if (trj.GetHitMap().find(string_to_component[tracker_name]) ==
+        trj.GetHitMap().end()) {
+      continue;
+    }
+
+    if (trj.GetTrajectoryPoints().find(string_to_component[tracker_name]) ==
+        trj.GetTrajectoryPoints().end()) {
+      continue;
+    }
+
     auto particle = pdg_db.GetParticle(trj.GetPDGCode());
+
     if (!particle) {
       continue;
     }
-    
+
     if (particle->Mass() == 0 || particle->Charge() == 0) {
       continue;
     }
-    
-    if (trj.GetHitMap().find(string_to_component[tracker_name]) == trj.GetHitMap().end()) {
-      continue;
-    }
-    
+
     SParticleInfo pi;
     pi.pdg_code = trj.GetPDGCode();
-    pi.id       = trj.GetId();
+    pi.id = trj.GetId();
     pi.mass = particle->Mass();
     pi.charge = particle->Charge() / 3;
 
     double max_z = 0;
     bool to_be_reconstructed = false;
-    for (auto& point : trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
+
+    for (auto& point :
+         trj.GetTrajectoryPoints().at(string_to_component[tracker_name])) {
       if (point.GetPosition().Z() > max_z && point.GetMomentum().Z() > 100) {
         max_z = point.GetPosition().Z();
         pi.pos = point.GetPosition().Vect();
@@ -2212,21 +2217,65 @@ void ProcessEventWithKF(std::vector<track>& tracks, SANDGeoManager* sand_geo, ED
 
     if (!to_be_reconstructed) continue;
 
+    double sigma_pos = SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3;
+    double sigma_mom = 0.05;
+
+    double x_smeared = rand.Gaus(pi.pos.X(), sigma_pos);
+    double y_smeared = rand.Gaus(pi.pos.Y(), sigma_pos);
+    double px_smeared = pi.mom.X() * rand.Gaus(1, sigma_mom);
+    double py_smeared = pi.mom.Y() * rand.Gaus(1, sigma_mom);
+    double pz_smeared = pi.mom.Z() * rand.Gaus(1, sigma_mom);
+
+    pi.pos = TVector3(x_smeared, y_smeared, pi.pos.Z());
+    pi.mom = TVector3(px_smeared, py_smeared, pz_smeared);
+    pi.initial_pos = trj.GetTrajectoryPoints()
+                         .at(string_to_component[tracker_name])[0]
+                         .GetPosition()
+                         .Vect();
+    pi.initial_mom = trj.GetTrajectoryPoints()
+                         .at(string_to_component[tracker_name])[0]
+                         .GetMomentum();
     particleInfos.push_back(pi);
+    indeces.push_back(ii);
 
-    std::cout << "Initial selected momentum " << trj.GetInitialMomentum().Vect().Mag() << std::endl;
-  }
-  
-  int nParticles = particleInfos.size();
+    //---------------------------------------------------------------------------
+    //  TrajectoryPoints option: obtains the measurements as
+    //  the smearing of the true tracklet computed from trajectory points at
+    //  defined steps.There is no clustering here, the z is ssociated directly
+    //  to the closest avalaible MC-trajectory point.
+    //---------------------------------------------------------------------------
+    std::map<double, std::vector<Tracklet>> z_to_tracklets;
+    auto points =
+        trj.GetTrajectoryPoints().at(string_to_component[tracker_name]);
+    const double step = 1.5;
+    auto z_truth = z_to_truth(points, step);
 
-  if (nParticles == 0) {
-    std::cerr << "no particles to be reconstructed...process aborted"
-              << std::endl;
-    return;
-  }
+    for (const auto& kv : z_truth) {
+      const double z = kv.first;
+      const Truth& t = kv.second;
+      Tracklet measurements = makeMeasurementTrackletFromTruth(t, rand);
+      z_to_tracklets[z].push_back(measurements);
+    }
 
-  for (int ip = 0; ip < nParticles; ip++) {
-    tracks.push_back(runKalmanFilterManager(z_to_tracklets, particleInfos[ip]));
+    // It keeps only one measurement per module, it has been used to test hypothesis on pull tests
+    for (auto& kv : z_to_tracklets) {
+      auto& vec = kv.second;
+      if (vec.size() > 1) {
+        int idx = rand.Integer(static_cast<int>(vec.size()));
+        Tracklet keep = vec[idx];
+        vec.clear();
+        vec.push_back(keep);
+      }
+    }
+
+    if (z_to_tracklets.empty()) continue;
+    
+    for (int ip = 0; ip < (int)indeces.size(); ++ip) {
+      auto reco_track = runKalmanFilterManager(z_to_tracklets, particleInfos[ip]);
+      if (reco_track.tid != -1) {
+        tracks.push_back(reco_track);
+      }
+    }
   }
 }
 
@@ -2468,7 +2517,7 @@ int main(int argc, char* argv[])
   double merging_radius = 15;
 
   for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "stt_mode") == 0) {
+    if (strstr(argv[i], "stt_mode") != nullptr) {
       if (strcmp(argv[i], "stt_mode::full") == 0) {
         stt_mode = STT_Mode::full;
         std::cout << "STT_Mode: full\n";

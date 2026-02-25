@@ -2,7 +2,7 @@
 #define SANDKFTRACK_H
 
 #include "TMatrixD.h"
-
+#include "TVector3.h"
 // #include "SANDStrawTubeTracker.h"
 #include "SANDGeoManager.h"
 
@@ -13,7 +13,12 @@ namespace kf
 {
 
 using StateCovarianceMatrix = TMatrixD;
-using SANDKFMeasurement = TMatrixD;
+using Measurement = TMatrixD;
+
+enum class Orientation {
+  kVertical,
+  kHorizontal
+};
 
 class StateVector {
 
@@ -112,15 +117,6 @@ class TrackStep {
     };
 
   private:
-    State prediction_;
-    State filtered_;
-    State smoothed_;
-    std::vector<double> innovation_;
-    double z_;
-    double x_;
-    double y_;
-
-
     // the propagation that bring the vector in this state
     TMatrixD propagator_matrix_; 
     // TMatrixD fProjectionMatrix; 
@@ -128,37 +124,61 @@ class TrackStep {
     // TMatrixD fMeasurementNoiseMatrix; 
     // TMatrixD fKalmanGainMatrix; 
     // TMatrixD fTheAMatrix; 
-
+    Measurement measurement_;
+    Orientation orientation_;
+    TVector3 momentum_;
+    TVector3 position_;
+    State prediction_;
+    State filtered_;
+    State smoothed_;
+    std::vector<dg_wire> digits_;
+    std::vector<double> innovation_;
+    double z_;
+    double x_;
+    double y_;
+    double chi2_;
     // TrackStateStage fStage; // meglio  enumerato
-
+ 
     // ID piano di misura;
     sand_geometry::tracker::PlaneID plane_id_;
     int clusterid_;
 
   public:
-    TrackStep(): propagator_matrix_(5,5) {}; 
+    TrackStep():  propagator_matrix_(5,5), measurement_(2, 1) {}; 
     //                   fProjectionMatrix(2,5),
     //                   fProcessNoiseMatrix(5,5),
     //                   fMeasurementNoiseMatrix(2,2),
     //                   fKalmanGainMatrix(5,2),
     //                   fTheAMatrix(5,5) {};
     void setPlaneID(const sand_geometry::tracker::PlaneID& plane_id) {plane_id_ = plane_id; };
-    const sand_geometry::tracker::PlaneID& getPlaneID() const {return plane_id_; };
     void setClusterIDForThisState(int cluster_id) { clusterid_ = cluster_id; };
-    int getClusterIDForThisState() const { return clusterid_; }
-    void setStage(TrackStateStage stage, State state);
-    const State& getStage(TrackStateStage stage) const;
-    void setPropagatorMatrix(TMatrixD propagator_matrix) { propagator_matrix_ = propagator_matrix; };
-    const TMatrixD getPropagatorMatrix() { return propagator_matrix_; };
-    void setInnovation(std::vector<double> innovation) { innovation_ = innovation; };
-    const std::vector<double>& getInnovation() const { return innovation_ ;};
-    void setZ(double z){z_ = z;};
-    double getZ() const {return z_;};
     void setX(double x){x_ = x;};
-    double getX() const {return x_;};
     void setY(double y){y_ = y;};
+    void setZ(double z){z_ = z;};
+    void setChi2(double chi2) {chi2_ = chi2;};
+    void setStage(TrackStateStage stage, State state);
+    void setPropagatorMatrix(TMatrixD propagator_matrix) { propagator_matrix_ = propagator_matrix; };
+    void setInnovation(std::vector<double> innovation) { innovation_ = innovation; };
+    void setMeasurement(Measurement measurement) {measurement_ = measurement;};
+    void setOrientation(Orientation orientation){orientation_ = orientation;};
+    void setTrueMomentum(const TVector3& p_true){momentum_ = p_true;};
+    void setTruePosition(const TVector3& pos_true){position_ = pos_true;};
+    void addDigits(std::vector<dg_wire> digits ){digits_ = digits;};
+
+    const sand_geometry::tracker::PlaneID& getPlaneID() const {return plane_id_; };
+    int getClusterIDForThisState() const { return clusterid_; }
+    double getX() const {return x_;};
+    double getZ() const {return z_;};
     double getY() const {return y_;};
-    
+    double getChi2() const {return chi2_;};
+    const State& getStage(TrackStateStage stage) const;
+    const TMatrixD getPropagatorMatrix() { return propagator_matrix_; };
+    const std::vector<double>& getInnovation() const { return innovation_ ;};
+    const Measurement& getMeasurement() const {return measurement_;};
+    const Orientation& getOrientation() const {return orientation_;};
+    const TVector3& getTrueMomentum() const {return momentum_;};
+    const TVector3& getTruePosition() const {return position_;};
+    std::vector<dg_wire> getDigits() const {return digits_;};
 
 };
 
@@ -174,6 +194,12 @@ class Track {
     void setZ(int index, double z){steps_.at(index).setZ(z); };
     void setX(int index, double x){steps_.at(index).setX(x); };
     void setY(int index, double y){steps_.at(index).setY(y); };
+    void setMeasurement(int index, Measurement measurement){steps_.at(index).setMeasurement(measurement); };
+    void setOrientation(int index, Orientation orientation){steps_.at(index).setOrientation(orientation); };
+    void setChi2(int index, double chi2){steps_.at(index).setChi2(chi2); };
+    void addDigits(int index, std::vector<dg_wire> digits) {steps_.at(index).addDigits(digits);};
+    void setTrueMomentum(int index, const TVector3 p_true){steps_.at(index).setTrueMomentum(p_true);};
+    void setTruePosition(int index, const TVector3 pos_true){steps_.at(index).setTruePosition(pos_true);};
     void setClusterIDForState(int index, int cluster_id) { steps_.at(index).setClusterIDForThisState(cluster_id); };
     void removeLastStep() { steps_.erase(steps_.end()-1); };
     void Clear() {steps_.clear();}

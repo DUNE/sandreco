@@ -21,7 +21,7 @@ build/*
 *.sh
 *.png
 *.gdml
-tests/*
 tests/python_tools/__pycache__/
 install/*
+build2/*
 install
