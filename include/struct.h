@@ -213,7 +213,6 @@ struct track_grain_lens {
   int track_ids;
   int PDG_reco;
 	double energy_reco;
-  double energy_reco;
   double MCdirX, MCdirY, MCdirZ;
   double M1dirX, M1dirY, M1dirZ;
   double m2_zyX, m2_zyY, m2_zyZ; 
