@@ -207,16 +207,27 @@ struct track
   std::vector<dg_wire> clY;
 };
 
+struct energy_reco_t {
+    double Range;       ///< Energia da range
+    double Calorimetry; ///< Energia da calorimetria
+    int method_used;    ///< Metodo usato (enum PartEMethod)
+    ClassDef(energy_reco_t, 1);
+};
+
+
 struct track_grain_lens {
   double xstart, ystart, zstart;
   double xend, yend, zend;
+  double xmcvtx, ymcvtx, zmcvtx;
+  double xmcend, ymcend, zmcend;
   int track_ids;
   int PDG_reco;
-	double energy_reco;
+	energy_reco_t energy_reco;
   double MCdirX, MCdirY, MCdirZ;
   double M1dirX, M1dirY, M1dirZ;
   double m2_zyX, m2_zyY, m2_zyZ; 
   double m2_zxX, m2_zxY, m2_zxZ; 
+  ClassDef(track_grain_lens, 2);
 };
 
 struct vertex_grain_lens {
@@ -241,7 +252,9 @@ struct particle
   double ytrue;
   double ztrue;
   double ttrue;
-
+  double xend_true = 0.;
+  double yend_true = 0.;
+  double zend_true = 0.;
   double pxreco;
   double pyreco;
   double pzreco;
@@ -268,6 +281,7 @@ struct particle
   double zend = 0; 
   bool filled = false;
   bool isinGRAIN = false;
+  int track_id_reco = -1;
 
 };
 

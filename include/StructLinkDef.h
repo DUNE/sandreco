@@ -35,6 +35,7 @@
 #pragma link C++ class grain_event + ;
 #pragma link C++ class lar_track + ;
 #pragma link C++ class lar_point + ;
+#pragma link C++ class energy_reco_t+;
 #pragma link C++ class track_grain_lens + ;
 #pragma link C++ class vertex_grain_lens + ;
 #pragma link C++ class std::vector<track_grain_lens>+;

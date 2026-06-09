@@ -23,30 +23,30 @@ TDatabasePDG db;
 void reset(particle& p)
 {
   p.primary = false;
-  p.pdg = 0;
-  p.pdg_true = 0;
-  p.pdg_reco = 0;
-  p.tid = 0;
-  p.mass = 0.;
-  p.charge = 0.;
-  p.pxtrue = 0.;
-  p.pytrue = 0.;
-  p.pztrue = 0.;
-  p.Etrue = 0.;
-  p.xtrue = 0.;
-  p.ytrue = 0.;
-  p.ztrue = 0.;
-  p.ttrue = 0.;
+  p.pdg = -999;
+  p.pdg_true = -999;
+  p.pdg_reco = -999;
+  p.tid = -999;
+  p.mass = -999.;
+  p.charge = -999.;
+  p.pxtrue = -999.;
+  p.pytrue = -999.;
+  p.pztrue = -999.;
+  p.Etrue = -999.;
+  p.xtrue = -999.;
+  p.ytrue = -999.;
+  p.ztrue = -999.;
+  p.ttrue = -999.;
   p.has_track = false;
-  p.charge_reco = 0.;
-  p.pxreco = 0.;
-  p.pyreco = 0.;
-  p.pzreco = 0.;
-  p.Ereco = 0.;
-  p.xreco = 0.;
-  p.yreco = 0.;
-  p.zreco = 0.;
-  p.treco = 0.;
+  p.charge_reco = -999.;
+  p.pxreco = -999.;
+  p.pyreco = -999.;
+  p.pzreco = -999.;
+  p.Ereco = -999.;
+  p.xreco = -999.;
+  p.yreco = -999.;
+  p.zreco = -999.;
+  p.treco = -999.;
   p.has_cluster = false;
   p.has_daughter = false;
 }
@@ -144,6 +144,7 @@ TVector3 GetMuonEndpointInGRAIN(const TG4Trajectory& traj, const TVector3& vtx) 
     return TVector3(x0 + deltax, y0 + deltay, z0 + deltaz);
 }
 
+TVector3 shift(0., -2384.73, 22381.);
 
 void FillParticleInfo(TG4Event* ev,
                       std::map<int, particle>& map_part,
@@ -173,10 +174,20 @@ void FillParticleInfo(TG4Event* ev,
             p.Etrue  = traj.InitialMomentum.T();
 
             const auto& vtx = traj.Points.front().Position;
+
+            //The MC vtx is taken from the edep-sim file, so I DON'T need the shift to global coords
+
             p.xtrue = vtx.X();
             p.ytrue = vtx.Y();
             p.ztrue = vtx.Z();
             p.ttrue = vtx.T();
+
+            p.track_id_reco = trLens.track_ids;
+
+            p.xend_true  = trLens.xmcend + shift.X();
+            p.yend_true  = trLens.ymcend + shift.Y();
+            p.zend_true  = trLens.zmcend + shift.Z();
+
 
             map_part.emplace(p.tid, std::move(p));
         }
@@ -191,14 +202,6 @@ void FillParticleInfo(TG4Event* ev,
     if (std::abs(p.pdg_true) != 13)
         return;
 
-    p.xreco = trLens.xstart;
-    p.yreco = trLens.ystart;
-    p.zreco = trLens.zstart;
-
-    p.xend  = trLens.xend;
-    p.yend  = trLens.yend;
-    p.zend  = trLens.zend;
-
     const double ptrue =
         std::sqrt(p.pxtrue*p.pxtrue +
                   p.pytrue*p.pytrue +
@@ -209,8 +212,6 @@ void FillParticleInfo(TG4Event* ev,
 
     p.Ereco = std::sqrt(preco*preco + p.mass*p.mass);
 }
-
-
 
 
 /*
@@ -478,17 +479,22 @@ void ProcessParticle(event& evt, int index, const track_grain_lens& trLens, bool
 {
     particle& p = evt.particles.at(index);
     // Riempimento vertice
-    p.xreco = trLens.xstart;
-    p.yreco = trLens.ystart;
-    p.zreco = trLens.zstart;
+    p.xreco = trLens.xstart + shift.X();
+    p.yreco = trLens.ystart + shift.Y();
+    p.zreco = trLens.zstart + shift.Z();
 
     // Riempimento endpoint
-    p.xend = trLens.xend;
-    p.yend = trLens.yend;
-    p.zend = trLens.zend;
+    p.xend = trLens.xend + shift.X();
+    p.yend = trLens.yend + shift.Y();
+    p.zend = trLens.zend + shift.Z();
 
     // Energia e PDG ricostruiti
-    p.Ereco = trLens.energy_reco;
+    const auto& Ereco_struct = trLens.energy_reco;
+
+    if (Ereco_struct.method_used == 0)
+        p.Ereco = Ereco_struct.Range;
+    else
+        p.Ereco = Ereco_struct.Calorimetry;
     p.pdg_reco = trLens.PDG_reco;
     p.filled = true;
     p.isinGRAIN = isInGRAIN(p.xend, p.yend, p.zend);
@@ -506,24 +512,79 @@ void ProcessParticle(event& evt, int index, const track_grain_lens& trLens, bool
           << " Endpoint: (" << p.xend << ", "
                             << p.yend << ", "
                             << p.zend << ")"
-          << " Energy: " << p.Ereco
+          << "   Energy_RECO_used=" << p.Ereco
+          << " (Range=" << Ereco_struct.Range
+          << ", Calo=" << Ereco_struct.Calorimetry
+          << ", method=" << Ereco_struct.method_used << ")\n"
           << " isinGRAIN: " << p.isinGRAIN
           << std::endl;
     }
 }
 
 
+void FillParticleReco(event& evt,
+                      const track_grain_lens& trLens,
+                      bool debug = false)
+{
+    const TVector3 grain_origin(0., -2384.73, 22381.); // mm
+
+    for (auto& p : evt.particles)
+    {
+        if (p.tid != trLens.track_ids) continue;
+
+        // =========================
+        // MATCHING
+        // =========================
+        std::cout << "[DEBUG] MC Vertex prima dello SHIFT: (" << trLens.xmcvtx << ", "
+                                        << trLens.ymcvtx << ", "
+                                        << trLens.zmcvtx << ")\n"
+                  << "       MC Endpoint prima dello SHIFT: (" << trLens.xmcend << ", "
+                                            << trLens.ymcend << ", "
+                                            << trLens.zmcend << ")\n"
+                  << std::endl;
+
+
+        std::cout << "[DEBUG] MC Vertex CON SHIFT: (" << p.xtrue << ", "
+                                        << p.ytrue << ", "
+                                        << p.ztrue << ")\n"
+                  << "       MC Endpoint CON SHIFT: (" << p.xend_true << ", "
+                                            << p.yend_true << ", "
+                                            << p.zend_true << ")\n"
+                  << std::endl;
+
+        // =========================
+        // RECO
+        // =========================
+        p.xreco = trLens.xstart + shift.X();
+        p.yreco = trLens.ystart + shift.Y();
+        p.zreco = trLens.zstart + shift.Z();
+
+        p.xend  = trLens.xend + shift.X();
+        p.yend  = trLens.yend + shift.Y();
+        p.zend  = trLens.zend + shift.Z();
+
+        // ===== energia =====
+        const auto& Ereco_struct = trLens.energy_reco;
+
+        p.Ereco = (Ereco_struct.method_used == 0)
+                ? Ereco_struct.Range
+                : Ereco_struct.Calorimetry;
+
+        p.pdg_reco = trLens.PDG_reco;
+        p.filled   = true;
+        p.isinGRAIN = isInGRAIN(p.xend, p.yend, p.zend);
+
+        break;
+    }
+}
 void ProcessParticles(event& evt,
                       const std::vector<track_grain_lens>& tracks)
 {
-    for (unsigned int i = 0; 
-         i < evt.particles.size() && i < tracks.size(); 
-         i++) 
+    for (const auto& tr : tracks)
     {
-        ProcessParticle(evt, i, tracks[i], DEBUG_GRAIN);
+        FillParticleReco(evt, tr, DEBUG_GRAIN);
     }
 }
-
 /*void FillClusterInfo(TG4Event* ev, const cluster& cl, particle& p)
 {
   p.has_cluster = true;
@@ -818,10 +879,10 @@ cl.cells.at(i).tdc2, cl.cells.at(i).y);
 
 void EvalNuEnergy(event& ev)
 {
-  ev.Enureco = 0.;
-  ev.pxnureco = 0.;
-  ev.pynureco = 0.;
-  ev.pznureco = 0.;
+  ev.Enureco = -999.;
+  ev.pxnureco = -999.;
+  ev.pynureco = -999.;
+  ev.pznureco = -999.;
 
   for (unsigned int i = 0; i < ev.particles.size(); i++) {
     if (ev.particles.at(i).primary == 1) {
@@ -859,6 +920,7 @@ void Analyze(const char* fMc, const char* fIn)
     TTree* tReco       = (TTree*)f.Get("tReco");
     TTree* tTrueMC     = (TTree*)ftrue.Get("EDepSimEvents");
     TTree* gRooTracker = (TTree*)ftrue.Get("DetSimPassThru/gRooTracker");
+    TGeoManager* geo = (TGeoManager*)f.Get("EDepSimGeometry");
 
     if (!tReco || !tTrueMC) {
         std::cerr << "ERROR: missing required trees." << std::endl;
@@ -896,53 +958,55 @@ void Analyze(const char* fMc, const char* fIn)
         map_part.clear();
         evt.particles.clear();
 
-        if (!ev || ev->Primaries.empty()) continue;
-
-        if (!trackLens) continue;
-        if (!trackLens->empty()) {
-        evt.x = trackLens->at(0).xstart;  
-        evt.y = trackLens->at(0).ystart;
-        evt.z = trackLens->at(0).zstart;
-        evt.t = 0.;
-    }
-
-        std::cout << "[Event " << i << "] Vertice evento RECO: ("
-              << evt.x << ", " << evt.y << ", " << evt.z << ")\n";
-
-    
-        for (size_t j = 0; j < trackLens->size(); ++j) {
-        const auto& tr = trackLens->at(j);
-        std::cout << "   Track " << j
-                  << " vertex = (" << tr.xstart << ", "
-                  << tr.ystart << ", " << tr.zstart << ")\n";
-    }
+        evt.x = ev->Primaries.at(0).Position.X();
+        evt.y = ev->Primaries.at(0).Position.Y();
+        evt.z = ev->Primaries.at(0).Position.Z();
+        evt.t = ev->Primaries.at(0).Position.T();
 
         evt.pxnu = part_mom[0][0] * conversion::GeV_to_MeV;
         evt.pynu = part_mom[0][1] * conversion::GeV_to_MeV;
         evt.pznu = part_mom[0][2] * conversion::GeV_to_MeV;
-        evt.Enu  = part_mom[0][3] * conversion::GeV_to_MeV;
+        evt.Enu = part_mom[0][3] * conversion::GeV_to_MeV;
 
+        std::cout << "Event " << i
+          << " | StdHep[0] PDG = " << part_pdg[0]
+          << " | E_nu_MC (GeV) = " << part_mom[0][3]
+          << " | E_nu_MC (MeV) = " << evt.Enu
+          << " | p = ("
+          << part_mom[0][0] << ", "
+          << part_mom[0][1] << ", "
+          << part_mom[0][2] << ") GeV"
+          << std::endl;
+
+        if (!ev || ev->Primaries.empty()) continue;
+        if (!trackLens) continue;
+
+        // 1️⃣ Riempio info MC
+        map_part.clear();
         for (size_t j = 0; j < trackLens->size(); ++j) {
-          const auto& tr = trackLens->at(j);  
-          FillParticleInfo(ev, map_part, tr);
-
+            const auto& tr = trackLens->at(j);
+            FillParticleInfo(ev, map_part, tr);
         }
 
+        // 2️⃣ Copio in vector dell'evento
         for (auto& kv : map_part)
             evt.particles.push_back(kv.second);
 
-        ProcessParticles(evt, *trackLens); 
+        // 3️⃣ Aggiorno info RECO e debug match
+        for (size_t j = 0; j < trackLens->size(); ++j) {
+            const auto& tr = trackLens->at(j);
+            FillParticleReco(evt, tr, DEBUG_GRAIN);
+        }
+
+
+        // 4️⃣ Statistiche
         int nTotal = evt.particles.size();
         int nPrimary = 0;
         int nFilled = 0;
 
         for (const auto& p : evt.particles) {
-
-            if (p.primary == 1)
-                nPrimary++;
-
-            if (p.filled)
-                nFilled++;
+            if (p.primary) nPrimary++;
+            if (p.filled) nFilled++;
         }
 
         std::cout << "----------------------------------" << std::endl;
@@ -953,18 +1017,15 @@ void Analyze(const char* fMc, const char* fIn)
         std::cout << "----------------------------------" << std::endl;
 
         int nPrimaryInGRAIN = 0;
-        for (const auto& p : evt.particles) {
-            if (p.primary == 1 && p.filled) nPrimaryInGRAIN++;
-        }
+        for (const auto& p : evt.particles)
+            if (p.primary && p.filled) nPrimaryInGRAIN++;
         std::cout << "Primary particles with GRAIN track: " << nPrimaryInGRAIN << std::endl;
-        std::sort(evt.particles.begin(), evt.particles.end(),
-                  sand_reco::isAfter);
 
+        std::sort(evt.particles.begin(), evt.particles.end(), sand_reco::isAfter);
         EvalNuEnergy(evt);
-       
-        tout.Fill();
 
-  }
+        tout.Fill();
+    }
 
     std::cout << "\b\b\b\b\b100%]" << std::endl;
 
@@ -974,7 +1035,6 @@ void Analyze(const char* fMc, const char* fIn)
     ftrue.Close();
     delete ev;
 }
-
 
 
 void help_ana()
