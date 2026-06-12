@@ -2,9 +2,11 @@
 #include "SANDTrackerClusterCollection.h"
 #include "SANDTrackerUtils.h"
 
+
 #include <vector>
 
 #include "TVectorD.h"
+#include "TDecompChol.h"
 
 namespace sand_reco
 {
@@ -124,7 +126,7 @@ TMatrixD Manager::getProcessNoiseMatrix(
   auto dir = -1. * getDirectiveCosinesFromStateVector(stateVector);
   if (dir.Z() > 0) dir *= -1;
   auto pathLengthInX0 = dE!=0 ? SANDTrackerUtils::getPathLengthInX0(
-      (z + dZ)*1000, stateVector.x()*1000, stateVector.y()*1000, z*1000, dir.X(), dir.Y(), dir.Z()):0;
+      (z + dZ*1000), stateVector.x()*1000, stateVector.y()*1000, z, dir.X(), dir.Y(), dir.Z()):0;
 
   // MCS angle
   double radius = stateVector.radius();
@@ -158,14 +160,9 @@ TMatrixD Manager::getMeasurementNoiseMatrix()
   TMatrixD measurementNoiseMatrix(2, 2);
   measurementNoiseMatrix[0][0] = SANDTrackerUtils::getSigmaPositionMeasurement() *
                                  SANDTrackerUtils::getSigmaPositionMeasurement();
-  measurementNoiseMatrix[1][1] = SANDTrackerUtils::getSigmaAngleMeasurement() *
-                                 SANDTrackerUtils::getSigmaAngleMeasurement();
-  // double sigma_x = 2E-3; //m
-  // double sigma_y = 1E-3;
-  // double sigma_theta_x = 1.0; //rad
-  // double sigma_theta_y = 0.3;
 
-  
+  measurementNoiseMatrix[1][1] = SANDTrackerUtils::getSigmaAngleMeasurement()*
+                                 SANDTrackerUtils::getSigmaAngleMeasurement();
 //   switch (orientation) {
 //     case Orientation::kVertical:
 //         measurementNoiseMatrix[0][0] = sigma_x * sigma_x;
@@ -223,6 +220,7 @@ TMatrixD Manager::getAMatrix(
 {
   TMatrixD covarianceMatrixNextPredictedInverted(TMatrixD::kInverted,
                                                  covarianceMatrixNextPredicted);
+
   TMatrixD propagatorMatrixTransposed(TMatrixD::kTransposed, propagatorMatrix);
   return covarianceMatrixFiltered * propagatorMatrixTransposed *
          covarianceMatrixNextPredictedInverted;
@@ -386,13 +384,13 @@ void Manager::propagate(double& dE,
   auto predictedCovMatrix = propagateCovMatrix(
       currentStage.getStateCovMatrix(), propagatorMatrix, processNoiseMatrix);
 
-  sand_reco::kf::TrackStep predictedTrackState;
-  predictedTrackState.setStage(
+  sand_reco::kf::TrackStep predictedTrackStep;
+  predictedTrackStep.setStage(
       sand_reco::kf::TrackStep::TrackStateStage::kPrediction,
       sand_reco::kf::State(predictedStateVector, predictedCovMatrix));
-  predictedTrackState.setPropagatorMatrix(propagatorMatrix);
+  predictedTrackStep.setPropagatorMatrix(propagatorMatrix);
   
-  this_track_.addStep(predictedTrackState);
+  this_track_.addStep(predictedTrackStep);
 
   current_step_++;
   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kPrediction;
@@ -405,24 +403,24 @@ double Manager::evalChi2(
   auto residualVector = observation - prediction;
   TMatrixD residualVectorTransposed(TMatrixD::kTransposed, residualVector);
   TMatrixD measurementNoiseMatrixInverted(TMatrixD::kInverted,
-                                          measurementNoiseMatrix);
-  auto chi2Matrix = residualVectorTransposed * measurementNoiseMatrixInverted *
-                    residualVector;
+    measurementNoiseMatrix);
+    auto chi2Matrix = residualVectorTransposed * measurementNoiseMatrixInverted *
+    residualVector;
   return chi2Matrix[0][0];
 }
 
-sand_reco::kf::Measurement Manager::getMeasurementFromTracklet(const TVectorD& tracklet)
+sand_reco::kf::Measurement Manager::getMeasurementFromTracklet(const Tracklet& tracklet)
 {
   sand_reco::kf::Measurement measurement(2, 1);
   // To Do: vertical and horizontal are outdated and confusing. Replace with something more meaningful.
   // Notice: vertical planes means horizontal measurements and the opposite
   if (current_orientation_ == Orientation::kVertical) {
     // To Do: Check units!
-    measurement[0][0] = tracklet[0] / 1000.;
-    measurement[1][0] = M_PI_2 - tracklet[2];
+    measurement[0][0] = tracklet.x / 1000.;
+    measurement[1][0] = tracklet.theta_xz;
   } else {
-    measurement[0][0] = tracklet[1] / 1000.;
-    measurement[1][0] = tracklet[3];
+    measurement[0][0] = tracklet.y / 1000.;
+    measurement[1][0] = tracklet.theta_yz;
   }
 
   return measurement;
@@ -434,10 +432,10 @@ int Manager::findBestMatch(double& nextZ, const sand_reco::kf::Measurement& pred
   double best_chi = 1E9;
   auto& next_tracklets = z_to_tracklets_->at(nextZ);
   auto best_tracklet_index = -1;
-
+ 
   for (int i = 0; i < (int)next_tracklets.size(); i++) {
     sand_reco::kf::Measurement measurement = getMeasurementFromTracklet(next_tracklets[i]);
-
+    
     auto chi2 = evalChi2(measurement, prediction, Sk);
     if (chi2 < best_chi) {
       best_chi = chi2;
@@ -460,8 +458,8 @@ void Manager::setNextOrientation()
   }
 }
 
-void Manager::EvaluateInnovation(const SANDKFMeasurement& measurement, 
-                                                                const SANDKFMeasurement& prediction,
+void Manager::EvaluateInnovation(const Measurement& measurement, 
+                                                                const Measurement& prediction,
                                                                 const TMatrixD&  Sk)
 {       
   auto innovation = measurement - prediction;
@@ -480,6 +478,9 @@ void Manager::EvaluateInnovation(const SANDKFMeasurement& measurement,
 void Manager::filter(const sand_reco::kf::Measurement& measurement,
   const sand_reco::kf::Measurement& prediction)
 {
+
+  // measurement.Print();
+  // prediction.Print();
 
   auto currentState = this_track_.getStep(current_step_);
   auto predictedStage =
@@ -522,13 +523,29 @@ void Manager::smooth()
       currentState.getStage(sand_reco::kf::TrackStep::TrackStateStage::kFiltering);
   auto filteredStateVector = filteredState.getStateVector();
   auto filteredCovMatrix = filteredState.getStateCovMatrix();
-
+  auto step_measurement = this_track_.getStep(current_step_).getMeasurement();
+  Orientation step_orientation = this_track_.getStep(current_step_).getOrientation();
+  
   if (current_step_ == int(this_track_.getSteps().size()) - 1) {
     this_track_.setStage(current_step_,
-                        sand_reco::kf::TrackStep::TrackStateStage::kSmoothing,
-                        sand_reco::kf::State(filteredStateVector, filteredCovMatrix));
+      sand_reco::kf::TrackStep::TrackStateStage::kSmoothing,
+      sand_reco::kf::State(filteredStateVector, filteredCovMatrix));
+      
+      auto step_prediction = getPrediction(step_orientation, filteredStateVector);
+      auto projectionMatrix = getProjectionMatrix(step_orientation, filteredStateVector);
+      TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
+                                            projectionMatrix);
+      TMatrixD Sk = getMeasurementNoiseMatrix() + projectionMatrix * 
+                                                filteredCovMatrix *
+                                                projectionMatrixTransposed;
+
+      auto step_chi2 = evalChi2(step_measurement, step_prediction, Sk);
+      this_track_.setChi2(current_step_, step_chi2);
+
+
+    
   } else {
-    // previous state
+    // previous state;
     auto previousState = this_track_.getStep(current_step_ + 1);
 
     // previous smoothed
@@ -569,20 +586,32 @@ void Manager::smooth()
     // currentState.setStage(sand_reco::kf::TrackStep::TrackStateStage::kSmoothing,
     // sand_reco::kf::State(smoothedStateVector, smoothedCovMatrix));
 
+    auto step_prediction = getPrediction(step_orientation, smoothedStateVector);
+    auto projectionMatrix = getProjectionMatrix(step_orientation, smoothedStateVector);
+    TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
+                                          projectionMatrix);
+    TMatrixD Sk = getMeasurementNoiseMatrix() + projectionMatrix * 
+                                                smoothedCovMatrix *
+                                                projectionMatrixTransposed;
+
+    auto step_chi2 = evalChi2(step_measurement, step_prediction, Sk);
+    this_track_.setChi2(current_step_, step_chi2);
   }
+
   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
   current_step_--;
 }
 
-void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
+
+void Manager::initFromMC(sand_reco::kf::utils::TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo)
 {
 
   TMatrixD initial_cov_matrix(5, 5);
-  initial_cov_matrix[0][0] = 5*pow(200E-6, 2);
-  initial_cov_matrix[1][1] = 5*pow(200E-6, 2);
-  initial_cov_matrix[2][2] = 5*pow(0.1, 2);
-  initial_cov_matrix[3][3] = 5*pow(0.1, 2);
-  initial_cov_matrix[4][4] = 5*pow(0.1, 2);
+  initial_cov_matrix[0][0] = 3*pow(SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3, 2);
+  initial_cov_matrix[1][1] = 3*pow(SANDTrackerUtils::getSigmaPositionMeasurement() * 1E3, 2);
+  initial_cov_matrix[2][2] = 3*pow(0.1, 2);
+  initial_cov_matrix[3][3] = 3*pow(0.1, 2);
+  initial_cov_matrix[4][4] = 3*pow(0.1, 2);
 
   sand_reco::kf::StateVector initial_state_vector = sand_reco::kf::utils::getStateVector(particleInfo.mom * 1E-3,  // GeV
                                                                       particleInfo.pos * 1E-3,  // m
@@ -596,9 +625,17 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
 
 
   trackStep.setPropagatorMatrix(initial_cov_matrix);
+  
 
-  particleInfo_       = particleInfo;
-  z_to_tracklets_     = z_to_tracklets;
+  TMatrixD vectorMC(5,1);
+  vectorMC[0][0] = initial_state_vector.x();
+  vectorMC[1][0] = initial_state_vector.y();
+  vectorMC[2][0] = initial_state_vector.signedInverseRadius();
+  vectorMC[3][0] = initial_state_vector.tanLambda();
+  vectorMC[4][0] = initial_state_vector.phi();
+
+  particleInfo_        = particleInfo;
+  z_to_tracklets_      = z_to_tracklets;
   current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
   current_step_        = 0u;
   current_z_           = particleInfo.pos.Z(); //Notice: UNITS!!  mm, why?
@@ -614,7 +651,7 @@ void Manager::initFromMC(TrackletMap* z_to_tracklets, const SParticleInfo& parti
 }
 
 
-double Manager::findClosestNonEmptyKey(const TrackletMap& myMap, double target) {
+double Manager::findClosestNonEmptyKey(const sand_reco::kf::utils::TrackletMap& myMap, double target) {
   if (myMap.empty()) {
       throw std::runtime_error("Map is empty!");
   }
@@ -644,24 +681,17 @@ double Manager::findClosestNonEmptyKey(const TrackletMap& myMap, double target) 
   throw std::runtime_error("No valid key found that is <= target with a non-empty vector!");
 }
 
-TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, int maxSteps){
+sand_reco::kf::utils::TrackletMap Manager::FindSeedPoints_MCstart(sand_reco::kf::utils::TrackletMap* z_to_tracklets, const SParticleInfo& particloInfo, int maxSteps){
   
   double closest_key;  // Variable to store the closest key
-  TrackletMap tracklet_map; // Output tracklet map
+  sand_reco::kf::utils::TrackletMap tracklet_map; // Output tracklet map
   
   closest_key = findClosestNonEmptyKey(*z_to_tracklets, particloInfo.pos.Z());
-  
-  // std::cout << "Closest key in z: " << closest_key << std::endl;
-  // std::cout << "Number of traclets in closest key: " << z_to_tracklets->at(closest_key).size() << std::endl;
-
 
   // Add the last tracklet to the map
-  std::vector<TVectorD> last_traclet;
+  std::vector<Tracklet> last_traclet;
   last_traclet.push_back(z_to_tracklets->at(closest_key)[0]);
   tracklet_map[closest_key] = last_traclet;
-  // std::cout << "First tracklet found (x,y,z) : (" << z_to_tracklets->at(closest_key)[0][0] << " , "; 
-  // std::cout << z_to_tracklets->at(closest_key)[0][1] << " , "<<closest_key<<" )" << std::endl;
-
 
   // Find tracklet maxStep steps below or as close as possible without an empty vector
   auto trl = z_to_tracklets->find(closest_key);
@@ -680,9 +710,7 @@ TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const S
   auto finalStep = realStep;
   for (int step = 0; step < realStep; ++step) {
     if (!trl->second.empty()) {
-        // std::cout << "Found valid far key: " << trl->first << " for now choosing first value (x,y,z): (";
-        // std::cout << trl->second[0][0] << " , " << trl->second[0][1] << " , " << trl->first << " )" << std::endl;
-        std::vector<TVectorD> first_tracklet;
+        std::vector<Tracklet> first_tracklet;
         first_tracklet.push_back(trl->second[0]);
         tracklet_map[trl->first] = first_tracklet;
         break; // Stop searching after finding a valid key
@@ -699,7 +727,7 @@ TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const S
     if (!trl->second.empty() && step>= finalStep/2) {
         // std::cout << "Found valid middle key: " << trl->first << " for now choosing first value (x,y,z): (";
         // std::cout << trl->second[0][0] << " , " << trl->second[0][1] << " , " << trl->first << " )" << std::endl;
-        std::vector<TVectorD> first_tracklet;
+        std::vector<Tracklet> first_tracklet;
         first_tracklet.push_back(trl->second[0]);
         tracklet_map[trl->first] = first_tracklet;
         break; // Stop searching after finding a valid key
@@ -717,7 +745,7 @@ TrackletMap Manager::FindSeedPoints_MCstart(TrackletMap* z_to_tracklets, const S
 }
 
 // To Do: implement a seeding algorithm
-void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo, double sx, double sy)
+void Manager::initFromSeed(sand_reco::kf::utils::TrackletMap* three_tracklets, sand_reco::kf::utils::TrackletMap* z_to_tracklets, const SParticleInfo& particleInfo, double sx, double sy)
 {
   try{
     if(three_tracklets->size()==3){}
@@ -731,7 +759,7 @@ void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_track
   auto it = three_tracklets->begin();
   std::vector<std::array<double,3>> xyz;
   for (int i = 0; i < 3; ++i) {
-    std::array<double,3> xyzi = {1E-3*it->second[0][0], 1E-3*it->second[0][1], 1E-3*it->first};
+    std::array<double,3> xyzi = {1E-3*it->second[0].x, 1E-3*it->second[0].y, 1E-3*it->first};
     xyz.push_back(xyzi);
     ++it;
   }
@@ -749,8 +777,8 @@ void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_track
   
   this_track_.addStep(trackStep);
 
-  particleInfo_       = particleInfo;
-  z_to_tracklets_     = z_to_tracklets;
+  particleInfo_        = particleInfo;
+  z_to_tracklets_      = z_to_tracklets;
   current_stage_       = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
   current_step_        = 0u;
   current_z_           = xyz[2][2]; //Notice: UNITS!!  mm, why?
@@ -760,6 +788,7 @@ void Manager::initFromSeed(TrackletMap* three_tracklets, TrackletMap* z_to_track
 
 void Manager::run()
 {
+
   // criterio per quando fermare la ricerca
   int stepLength = 1;
   if (z_to_tracklets_->lower_bound(current_z_) == z_to_tracklets_->begin()) {
@@ -781,12 +810,17 @@ void Manager::run()
       }
       --it;
     }
-
+    
     if (!in_range) {
       break;
-
     }
     auto nextZ = std::prev(z_to_tracklets_->lower_bound(current_z_), stepLength)->first;   
+    double dZ = (nextZ - current_z_) / 1000;
+
+    if (fabs(dZ) > 0.16) {
+      std::cerr << "Single step along z larger than 16 cm. Stopping this track." << std::endl;
+      break;
+    }
 
     auto currentStep = this_track_.getStep(current_step_);
     auto filteredStateVector =
@@ -806,15 +840,21 @@ void Manager::run()
     double gamma = sqrt(current_mom * current_mom + particleInfo_.mass * particleInfo_.mass) /
                     particleInfo_.mass;
     double beta = sqrt(1 - pow(1 / gamma, 2));
-
-    // To Do: check all units
+    
     auto dE = SANDTrackerUtils::getDE(
-                        nextZ, 
-                        1000 * filteredStateVector.x(), 1000 * filteredStateVector.y(), current_z_, 
-                        dir.X(), dir.Y(), dir.Z(),
-                        beta, particleInfo_.mass, particleInfo_.charge) / 1000;
-
-    double dZ = (nextZ - current_z_) / 1000;
+      nextZ, 
+      1000 * filteredStateVector.x(), 1000 * filteredStateVector.y(), current_z_, 
+      dir.X(), dir.Y(), dir.Z(),
+      beta, particleInfo_.mass, particleInfo_.charge) / 1000;
+    
+    // if (dE > 50E-3) {
+    //   std::cout << "Energy loss in a single step is greater than 50 MeV. Something is wrong.. " << dE << std::endl;
+    //   std::cout << "Skipping this step" << std::endl;
+    //   std::cout << "Current z: " << current_z_ << ", next z: " << nextZ << " dirX: " << dir.X() << " dirY: " << dir.Y()<< " dirZ: " << dir.Z() << std::endl;
+    //   stepLength++;
+    //   current_stage_ = sand_reco::kf::TrackStep::TrackStateStage::kFiltering;
+    //   continue;
+    // }
 
     propagate(dE, dZ, beta);
 
@@ -830,21 +870,32 @@ void Manager::run()
                                                 predictionStateVector);
     TMatrixD projectionMatrixTransposed(TMatrixD::kTransposed,
                                           projectionMatrix);
-    auto Sk = measurementNoiseMatrix + projectionMatrix *
-                                              predictionStateCovMatrix *
+    auto Sk = measurementNoiseMatrix + projectionMatrix * predictionStateCovMatrix *
                                               projectionMatrixTransposed;
 
+    // measurementNoiseMatrix.Print();
+    // projectionMatrix.Print();
+    // predictionStateCovMatrix.Print();
     int tracklet_index = findBestMatch(nextZ, prediction, Sk);
 
     // // 3- If it is found: step = 1
     // //    else step++
+
     if (tracklet_index != -1) {
       stepLength = 1;
       auto measurement = getMeasurementFromTracklet(z_to_tracklets_->at(nextZ)[tracklet_index]);
       this_track_.setZ(current_step_, nextZ);
-      this_track_.setX(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][0]);
-      this_track_.setY(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index][1]);
+      this_track_.setX(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].x);
+      this_track_.setY(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].y);
+      this_track_.addDigits(current_step_, z_to_tracklets_->at(nextZ)[tracklet_index].digits);
+      this_track_.setMeasurement(current_step_, measurement);
+      this_track_.setOrientation(current_step_, current_orientation_);
+      this_track_.setTrueMomentum(current_step_,  z_to_tracklets_->at(nextZ)[tracklet_index].true_mom_);
+      this_track_.setTruePosition(current_step_,  z_to_tracklets_->at(nextZ)[tracklet_index].true_pos_);
+
+
       filter(measurement, prediction);
+
       current_z_ = nextZ;
     } else {
       stepLength++;

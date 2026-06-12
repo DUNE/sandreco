@@ -95,7 +95,7 @@ target_link_libraries(Digitize Struct SANDGeoManager Utils)
 
 # Creates Reconstruct executable.
 add_executable(Reconstruct src/reconstruction.cpp)
-target_link_libraries(Reconstruct PUBLIC Struct Utils SANDGeoManager SANDClustering EDEPTree TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils SANDKalmanFilter SANDTrackerVertexing ROOT::EG)
+target_link_libraries(Reconstruct PUBLIC Struct Utils SANDGeoManager SANDClustering EDEPTree TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils SANDKalmanFilter SANDTrackerVertexing ROOT::EG ProcessTracklets)
 
 # Creates Analyze executable.
 add_executable(Analyze src/analysis.cpp)
@@ -118,9 +118,28 @@ ROOT_GENERATE_DICTIONARY(SANDKFTrackDict SANDKFTrack.h MODULE SANDKFTrack LINKDE
 add_library(SANDKalmanFilter SHARED src/SANDKalmanFilter.cpp)
 target_link_libraries(SANDKalmanFilter PUBLIC SANDTrackerUtils SANDKFTrack)
 
+# Creates a libProcessTracklets shared library with a generated dictionary.
+add_library(ProcessTracklets SHARED src/SANDProcessTracklets.cpp)
+target_link_libraries(ProcessTracklets PUBLIC Utils EDEPTree)
+
+# Creates a libTryCompleteManager
+add_library(TryCompleteManager STATIC tests/TryCompleteManager.cpp)
+target_link_libraries(TryCompleteManager PUBLIC
+  SANDKalmanFilter
+  SANDTrackerUtils
+  ProcessTracklets
+  ROOT::RIO ROOT::Tree
+)
+
 # Creates TestKF executable.
 add_executable(TestKF tests/TestKF.cpp)
-target_link_libraries(TestKF PUBLIC BVH SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter)
+target_link_libraries(TestKF PUBLIC BVH SANDGeoManager Struct Utils TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDTrackerUtils ROOT::EG EDEPTree SANDKalmanFilter ProcessTracklets TryCompleteManager)
+
+# Creates PlotKF executabl.
+add_executable(PlotKF tests/PlotKF.cpp)
+target_link_libraries(PlotKF PUBLIC
+  TryCompleteManager ROOT::RIO ROOT::Tree ROOT::Hist ROOT::Graf ROOT::Gpad ROOT::MathCore
+)
 
 # Creates TestSeed executable.
 add_executable(TestSeed tests/TestSeed.cpp)
@@ -157,7 +176,7 @@ endif()
 # Copy setup.sh configuration file
 configure_file(setup.sh "${CMAKE_INSTALL_PREFIX}/setup.sh" COPYONLY)
 
- install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Display FastCheck eventDisplay TestKF TestSeed TestVertexing SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils SANDTrackerVertexing BVH
+ install(TARGETS Utils Struct SANDEventDisplay SANDGeoManager Digitize Reconstruct Analyze Display FastCheck eventDisplay TestKF TestSeed TestVertexing SANDClustering SANDECALClustering NoiseMatrixComputation TrackletFinder SANDTrackerCluster SANDTrackerDigit SANDKalmanFilter SANDKFTrack SANDTrackerUtils ProcessTracklets SANDTrackerVertexing BVH
         EXPORT SandRecoTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
         LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
